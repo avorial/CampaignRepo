@@ -19,6 +19,7 @@ export default async function DashboardPage() {
           <h1>Campaign dashboard</h1>
         </div>
         <div className="topbar-actions">
+          {user.isAdmin && <Link className="button secondary" href="/admin">Global Admin</Link>}
           <Link className="button secondary" href="/getting-started">Getting started</Link>
           <form action="/api/auth/logout" method="post">
             <button className="secondary">Sign out</button>

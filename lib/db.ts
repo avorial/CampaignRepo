@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS users (
   passwordHash TEXT NOT NULL,
   githubToken TEXT,
   mustChangePassword INTEGER NOT NULL DEFAULT 0,
+  isAdmin INTEGER NOT NULL DEFAULT 0,
+  disabled INTEGER NOT NULL DEFAULT 0,
   createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS sessions (
@@ -95,12 +97,19 @@ const userColumns = db.prepare("PRAGMA table_info(users)").all() as Array<{ name
 if (!userColumns.some((column) => column.name === "mustChangePassword")) {
   db.exec("ALTER TABLE users ADD COLUMN mustChangePassword INTEGER NOT NULL DEFAULT 0");
 }
+if (!userColumns.some((column) => column.name === "isAdmin")) {
+  db.exec("ALTER TABLE users ADD COLUMN isAdmin INTEGER NOT NULL DEFAULT 0");
+}
+if (!userColumns.some((column) => column.name === "disabled")) {
+  db.exec("ALTER TABLE users ADD COLUMN disabled INTEGER NOT NULL DEFAULT 0");
+}
 
 const adminHash = bcrypt.hashSync("admin", 12);
 db.prepare(
-  `INSERT OR IGNORE INTO users (email, name, passwordHash, mustChangePassword)
-   VALUES ('admin@example.local', 'admin', ?, 1)`
+  `INSERT OR IGNORE INTO users (email, name, passwordHash, mustChangePassword, isAdmin, disabled)
+   VALUES ('admin@example.local', 'admin', ?, 1, 1, 0)`
 ).run(adminHash);
+db.prepare("UPDATE users SET isAdmin = 1, disabled = 0 WHERE email = 'admin@example.local'").run();
 
 db.exec(`
 INSERT OR IGNORE INTO campaign_memberships (campaignId, userId, role)
@@ -119,6 +128,8 @@ export function publicUser(row: any): User | null {
     name: row.name,
     githubToken: row.githubToken,
     mustChangePassword: Boolean(row.mustChangePassword),
+    isAdmin: Boolean(row.isAdmin),
+    disabled: Boolean(row.disabled),
     createdAt: row.createdAt
   };
 }
@@ -149,10 +160,40 @@ export function revokeApiToken(userId: number, id: number) {
 
 export function getUserByApiToken(token: string): User | null {
   const hash = hashApiToken(token);
-  const row = db.prepare("SELECT users.* FROM api_tokens JOIN users ON users.id = api_tokens.userId WHERE api_tokens.tokenHash = ?").get(hash);
+  const row = db.prepare("SELECT users.* FROM api_tokens JOIN users ON users.id = api_tokens.userId WHERE api_tokens.tokenHash = ? AND users.disabled = 0").get(hash);
   if (!row) return null;
   db.prepare("UPDATE api_tokens SET lastUsedAt = CURRENT_TIMESTAMP WHERE tokenHash = ?").run(hash);
   return publicUser(row);
+}
+
+export function listUsers() {
+  return db
+    .prepare(
+      `SELECT users.id, users.email, users.name, users.mustChangePassword, users.isAdmin, users.disabled, users.createdAt,
+        COUNT(DISTINCT campaign_memberships.campaignId) AS campaignCount
+       FROM users
+       LEFT JOIN campaign_memberships ON campaign_memberships.userId = users.id
+       GROUP BY users.id
+       ORDER BY users.createdAt DESC`
+    )
+    .all() as Array<User & { campaignCount: number }>;
+}
+
+export function setUserDisabled(adminUserId: number, userId: number, disabled: boolean) {
+  if (adminUserId === userId && disabled) throw new Error("You cannot disable your own account.");
+  db.prepare("UPDATE users SET disabled = ? WHERE id = ?").run(disabled ? 1 : 0, userId);
+  if (disabled) db.prepare("DELETE FROM sessions WHERE userId = ?").run(userId);
+}
+
+export function setUserAdmin(adminUserId: number, userId: number, isAdmin: boolean) {
+  if (adminUserId === userId && !isAdmin) throw new Error("You cannot remove your own global admin access.");
+  db.prepare("UPDATE users SET isAdmin = ? WHERE id = ?").run(isAdmin ? 1 : 0, userId);
+}
+
+export function resetUserPassword(userId: number, passwordHash: string) {
+  db.prepare("UPDATE users SET passwordHash = ?, mustChangePassword = 1 WHERE id = ?").run(passwordHash, userId);
+  db.prepare("DELETE FROM sessions WHERE userId = ?").run(userId);
+  db.prepare("DELETE FROM api_tokens WHERE userId = ?").run(userId);
 }
 
 export function getCampaign(userId: number, campaignId: number): Campaign | null {

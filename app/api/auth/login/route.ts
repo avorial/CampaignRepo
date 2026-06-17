@@ -12,6 +12,9 @@ export async function POST(req: Request) {
   const input = schema.parse(await req.json());
   const login = input.login.toLowerCase();
   const row = getDb().prepare("SELECT * FROM users WHERE lower(email) = ? OR lower(name) = ?").get(login, login) as any;
+  if (row?.disabled) {
+    return NextResponse.json({ error: "This account is disabled." }, { status: 403 });
+  }
   if (!row || !(await verifyPassword(input.password, row.passwordHash))) {
     return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
   }

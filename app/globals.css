@@ -510,6 +510,57 @@ code {
   text-transform: uppercase;
 }
 
+.user-admin-list {
+  display: grid;
+  gap: 10px;
+}
+
+.user-admin-row {
+  align-items: center;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1.25fr) minmax(180px, 0.75fr) auto;
+  padding: 12px;
+}
+
+.user-admin-row > div:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.user-admin-row span,
+.user-admin-row small {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-secret {
+  align-items: center;
+  background: rgba(212, 169, 87, 0.12);
+  border: 1px solid rgba(212, 169, 87, 0.28);
+  border-radius: 8px;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding: 12px;
+}
+
+.admin-secret span {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
 .template-library {
   max-height: 560px;
   overflow: auto;
@@ -941,6 +992,15 @@ code {
 
   .review-row {
     grid-template-columns: 1fr;
+  }
+
+  .user-admin-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-secret {
+    align-items: stretch;
+    display: grid;
   }
 
   .media-row {

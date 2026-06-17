@@ -9,7 +9,7 @@ export async function currentUser() {
   const token = (await cookies()).get(cookieName)?.value;
   if (!token) return null;
   const row = getDb()
-    .prepare("SELECT users.* FROM sessions JOIN users ON users.id = sessions.userId WHERE sessions.token = ? AND sessions.expiresAt > CURRENT_TIMESTAMP")
+    .prepare("SELECT users.* FROM sessions JOIN users ON users.id = sessions.userId WHERE sessions.token = ? AND sessions.expiresAt > CURRENT_TIMESTAMP AND users.disabled = 0")
     .get(token);
   return publicUser(row);
 }

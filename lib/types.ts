@@ -10,6 +10,8 @@ export type User = {
   name: string;
   githubToken?: string | null;
   mustChangePassword: boolean;
+  isAdmin: boolean;
+  disabled: boolean;
   createdAt: string;
 };
 
