@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
-import { deleteFile, getContent, listDirectory, putBase64File } from "@/lib/github";
+import { deleteFile, getContent, GitHubError, listDirectory, putBase64File } from "@/lib/github";
 import { slugify } from "@/lib/slug";
 import type { CampaignMedia } from "@/lib/types";
 
@@ -15,6 +15,11 @@ const uploadSchema = z.object({
 
 const deleteSchema = z.object({
   path: z.string().min(1)
+});
+
+const renameSchema = z.object({
+  path: z.string().min(1),
+  fileName: z.string().min(1)
 });
 
 function mediaType(name: string, mimeType?: string): CampaignMedia["mediaType"] {
@@ -36,6 +41,10 @@ function markdownFor(name: string, type: CampaignMedia["mediaType"], alt?: strin
   const path = `/wiki/media/${name}`;
   if (type === "image") return `![${alt || name}](${path})`;
   return `[${alt || name}](${path})`;
+}
+
+function isEditableMediaPath(path: string) {
+  return path.startsWith("wiki/media/") && !path.includes("..") && !path.endsWith("/.gitkeep");
 }
 
 function toMedia(entry: { name: string; path: string; sha: string; size?: number; download_url?: string | null }): CampaignMedia {
@@ -81,6 +90,43 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       markdown: markdownFor(name, type, input.alt)
     }
   });
+}
+
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await requireUser();
+  const { id } = await params;
+  const campaign = getCampaign(user.id, Number(id));
+  if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const input = renameSchema.parse(await req.json());
+  if (!isEditableMediaPath(input.path)) {
+    return NextResponse.json({ error: "Only campaign media files can be renamed." }, { status: 400 });
+  }
+
+  const name = cleanFileName(input.fileName);
+  if (!name) return NextResponse.json({ error: "Choose a valid file name." }, { status: 400 });
+
+  const nextPath = `wiki/media/${name}`;
+  if (nextPath === input.path) {
+    const current = await getContent(user.githubToken, campaign, input.path);
+    return NextResponse.json({ media: toMedia({ name, path: nextPath, sha: current.sha }) });
+  }
+
+  try {
+    await getContent(user.githubToken, campaign, nextPath);
+    return NextResponse.json({ error: "A media file with that name already exists." }, { status: 409 });
+  } catch (error) {
+    if (!(error instanceof GitHubError && error.status === 404)) throw error;
+  }
+
+  const current = await getContent(user.githubToken, campaign, input.path);
+  if (current.type !== "file") return NextResponse.json({ error: "Only files can be renamed." }, { status: 400 });
+
+  await putBase64File(user.githubToken, campaign, nextPath, current.content.replace(/\n/g, ""), `CampaignRepo: rename media ${input.path.split("/").pop()} to ${name}`);
+  await deleteFile(user.githubToken, campaign, input.path, `CampaignRepo: remove old media path ${input.path.split("/").pop()}`, current.sha);
+  const renamed = await getContent(user.githubToken, campaign, nextPath);
+  return NextResponse.json({ media: toMedia({ name, path: nextPath, sha: renamed.sha }) });
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {

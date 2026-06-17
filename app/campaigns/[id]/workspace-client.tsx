@@ -168,6 +168,22 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     }
   }
 
+  async function renameMedia(item: CampaignMedia) {
+    const nextName = window.prompt("Rename media file", item.name);
+    if (!nextName || nextName === item.name) return;
+    const res = await fetch(`/api/campaigns/${campaign.id}/media`, {
+      method: "PATCH",
+      body: JSON.stringify({ path: item.path, fileName: nextName })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setMedia((current) => [data.media, ...current.filter((mediaItem) => mediaItem.path !== item.path)]);
+      setMessage("Media renamed in the campaign repo.");
+    } else {
+      setMessage(data.error || "Could not rename media.");
+    }
+  }
+
   async function repairRepo() {
     const res = await fetch(`/api/campaigns/${campaign.id}/validation`, { method: "POST" });
     const data = await res.json();
@@ -318,6 +334,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
                     </div>
                     <div className="member-actions">
                       <button type="button" className="secondary" onClick={() => copyText(item.markdown)}>Copy Markdown</button>
+                      <button type="button" className="secondary" onClick={() => renameMedia(item)}>Rename</button>
                       {item.downloadUrl && <a className="button secondary" href={item.downloadUrl}>Open</a>}
                       <button type="button" className="danger" onClick={() => deleteMedia(item)}>Delete</button>
                     </div>
