@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
-import type { Campaign, GameType, WikiPage, WikiTemplate } from "@/lib/types";
+import type { Campaign, CampaignMedia, GameType, WikiPage, WikiTemplate } from "@/lib/types";
 
 const gameTypes: GameType[] = ["Traveller", "Fantasy", "Modern", "Horror", "Sci-Fi", "Custom"];
 
 export default function CampaignClient({ campaign, categories }: { campaign: Campaign; categories: { id: string; label: string }[] }) {
   const [pages, setPages] = useState<WikiPage[]>([]);
   const [templates, setTemplates] = useState<WikiTemplate[]>([]);
+  const [media, setMedia] = useState<CampaignMedia[]>([]);
   const [setup, setSetup] = useState("");
   const [message, setMessage] = useState("");
   const [search, setSearch] = useState<any[]>([]);
@@ -16,17 +17,20 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
 
   async function load() {
     const canManage = campaign.role === "owner" || campaign.role === "gm";
-    const [pagesRes, setupRes, templatesRes] = await Promise.all([
+    const [pagesRes, setupRes, templatesRes, mediaRes] = await Promise.all([
       fetch(`/api/campaigns/${campaign.id}/pages`),
       fetch(`/api/campaigns/${campaign.id}/setup`),
-      canManage ? fetch(`/api/campaigns/${campaign.id}/templates`) : Promise.resolve(null)
+      canManage ? fetch(`/api/campaigns/${campaign.id}/templates`) : Promise.resolve(null),
+      canManage ? fetch(`/api/campaigns/${campaign.id}/media`) : Promise.resolve(null)
     ]);
     const pagesData = await pagesRes.json();
     const setupData = setupRes.ok ? await setupRes.json() : { markdown: "" };
     const templatesData = templatesRes && templatesRes.ok ? await templatesRes.json() : { templates: [] };
+    const mediaData = mediaRes && mediaRes.ok ? await mediaRes.json() : { media: [] };
     setPages(pagesData.pages || []);
     setSetup(setupData.markdown || "");
     setTemplates(templatesData.templates || []);
+    setMedia(mediaData.media || []);
   }
 
   useEffect(() => { load(); }, []);
@@ -95,6 +99,44 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     }
   }
 
+  async function uploadMedia(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const file = form.get("file");
+    if (!(file instanceof File) || !file.name) {
+      setMessage("Choose a media file first.");
+      return;
+    }
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+      reader.onerror = () => reject(new Error("Could not read file."));
+      reader.readAsDataURL(file);
+    });
+    const res = await fetch(`/api/campaigns/${campaign.id}/media`, {
+      method: "POST",
+      body: JSON.stringify({
+        fileName: file.name,
+        mimeType: file.type,
+        base64,
+        alt: form.get("alt")
+      })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setMedia((current) => [data.media, ...current.filter((item) => item.path !== data.media.path)]);
+      setMessage("Media uploaded to the campaign repo.");
+      event.currentTarget.reset();
+    } else {
+      setMessage(data.error || "Could not upload media.");
+    }
+  }
+
+  async function copyText(text: string) {
+    await navigator.clipboard.writeText(text);
+    setMessage("Copied Markdown link.");
+  }
+
   async function runSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const q = new FormData(event.currentTarget).get("q");
@@ -159,6 +201,39 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
                 <textarea name="json" rows={8} placeholder='{"name":"Victor Mendes","type":"npc"}' />
                 <button>Import character</button>
               </form>
+            </div>
+          </section>
+        )}
+
+        {canManage && (
+          <section className="dashboard-grid media-grid">
+            <div className="panel">
+              <h2>Media Manager</h2>
+              <form onSubmit={uploadMedia} className="stack">
+                <label>Media file<input name="file" type="file" accept="image/*,application/pdf,audio/*" required /></label>
+                <label>Alt text or link label<input name="alt" placeholder="Jardin subsector map" /></label>
+                <button>Upload to /wiki/media</button>
+              </form>
+            </div>
+
+            <div className="panel media-library">
+              <h2>Media Library</h2>
+              <div className="media-list">
+                {media.map((item) => (
+                  <article key={item.path} className="media-row">
+                    <div>
+                      <strong>{item.name}</strong>
+                      <span>{item.mediaType} · {item.path}</span>
+                      <code>{item.markdown}</code>
+                    </div>
+                    <div className="member-actions">
+                      <button type="button" className="secondary" onClick={() => copyText(item.markdown)}>Copy Markdown</button>
+                      {item.downloadUrl && <a className="button secondary" href={item.downloadUrl}>Open</a>}
+                    </div>
+                  </article>
+                ))}
+                {!media.length && <p className="muted">No media uploaded yet.</p>}
+              </div>
             </div>
           </section>
         )}

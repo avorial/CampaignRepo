@@ -469,6 +469,49 @@ button.danger {
   margin: 0;
 }
 
+.media-grid {
+  grid-template-columns: 360px minmax(0, 1fr);
+}
+
+.media-library {
+  max-height: 520px;
+  overflow: auto;
+}
+
+.media-list {
+  display: grid;
+  gap: 10px;
+}
+
+.media-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  background: #fffaf1;
+  border: 1px solid var(--line);
+  padding: 12px;
+}
+
+.media-row div:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.media-row span {
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+}
+
+.media-row code {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .editor-panel {
   background: var(--paper);
   border: 1px solid var(--line);
@@ -552,6 +595,10 @@ button.danger {
   }
 
   .review-row {
+    grid-template-columns: 1fr;
+  }
+
+  .media-row {
     grid-template-columns: 1fr;
   }
 }
