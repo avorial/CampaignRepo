@@ -195,6 +195,17 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     }
   }
 
+  async function rebuildIndex() {
+    const res = await fetch(`/api/campaigns/${campaign.id}/search-index`, { method: "POST" });
+    const data = await res.json();
+    if (res.ok) {
+      setMessage(`Search rebuilt for ${data.count} page${data.count === 1 ? "" : "s"}.`);
+      await load();
+    } else {
+      setMessage(data.error || "Could not rebuild search.");
+    }
+  }
+
   async function copyText(text: string) {
     await navigator.clipboard.writeText(text);
     setMessage("Copied Markdown link.");
@@ -387,7 +398,10 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
                 <h2>Repo validation</h2>
                 <p className="muted">Checks the GitHub repo for the required CampaignRepo folders and starter files.</p>
               </div>
-              <button type="button" className="secondary" onClick={repairRepo}>Repair structure</button>
+              <div className="member-actions">
+                <button type="button" className="secondary" onClick={rebuildIndex}>Rebuild search</button>
+                <button type="button" className="secondary" onClick={repairRepo}>Repair structure</button>
+              </div>
             </div>
             <div className="validation-list">
               {validation?.checks.map((check) => (
