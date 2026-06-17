@@ -31,7 +31,7 @@ export default async function DashboardPage() {
             <Link className="repo-card" key={campaign.id} href={`/campaigns/${campaign.id}`}>
               <strong>{campaign.name}</strong>
               <span>{campaign.owner}/{campaign.repo}</span>
-              <small>{campaign.gameType} · {campaign.branch}</small>
+              <small>{campaign.gameType} · {campaign.branch} · {campaign.role}</small>
             </Link>
           ))}
           {!campaigns.length && <p className="muted">No campaign repos connected yet.</p>}

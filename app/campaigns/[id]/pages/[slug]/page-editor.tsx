@@ -22,6 +22,7 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
   const [frontmatter, setFrontmatter] = useState<any>({});
   const [mode, setMode] = useState<"gm" | "player">("gm");
   const [message, setMessage] = useState("");
+  const canManage = campaign.role === "owner" || campaign.role === "gm";
 
   useEffect(() => {
     fetch(`/api/campaigns/${campaign.id}/pages/${slug}`)
@@ -79,10 +80,10 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
         <div className="editor-toolbar">
           <button type="button" className={mode === "gm" ? "active" : ""} onClick={() => setMode("gm")}>GM preview</button>
           <button type="button" className={mode === "player" ? "active" : ""} onClick={() => setMode("player")}>Player preview</button>
-          <button type="submit">Save commit</button>
+          {canManage && <button type="submit">Save commit</button>}
         </div>
         <div className="editor-split">
-          <textarea value={content} onChange={(e) => setContent(e.target.value)} spellCheck={false} />
+          <textarea value={content} onChange={(e) => setContent(e.target.value)} spellCheck={false} readOnly={!canManage} />
           <article className="preview" dangerouslySetInnerHTML={{ __html: preview }} />
         </div>
         {message && <p className="toast">{message}</p>}

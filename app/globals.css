@@ -132,6 +132,12 @@ code {
   margin-bottom: 22px;
 }
 
+.topbar-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .topbar h1,
 .auth-panel h1 {
   margin: 0;
@@ -176,6 +182,12 @@ code {
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
   gap: 16px;
 }
 
@@ -330,6 +342,52 @@ code {
   text-transform: uppercase;
 }
 
+.member-list {
+  display: grid;
+  gap: 10px;
+}
+
+.member-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--line);
+  background: #fffaf1;
+  padding: 12px;
+}
+
+.member-row div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.member-row span {
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+}
+
+.member-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.role-badge {
+  align-items: center;
+  border: 1px solid var(--line);
+  display: inline-flex;
+  min-height: 40px;
+  padding: 0 10px;
+  text-transform: uppercase;
+}
+
+button.danger {
+  color: var(--accent);
+}
+
 .editor-panel {
   background: var(--paper);
   border: 1px solid var(--line);
@@ -395,6 +453,7 @@ code {
 
 @media (max-width: 980px) {
   .dashboard-grid,
+  .admin-grid,
   .workspace,
   .page-grid,
   .editor-split {

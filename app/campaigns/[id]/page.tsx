@@ -19,7 +19,10 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
           <h1>{campaign.name}</h1>
           <p className="muted">{campaign.owner}/{campaign.repo} · {campaign.gameType}</p>
         </div>
-        <a className="button secondary" href={`https://github.com/${campaign.owner}/${campaign.repo}`}>Open GitHub</a>
+        <div className="topbar-actions">
+          {(campaign.role === "owner" || campaign.role === "gm") && <Link className="button secondary" href={`/campaigns/${campaign.id}/admin`}>GM Admin</Link>}
+          <a className="button secondary" href={`https://github.com/${campaign.owner}/${campaign.repo}`}>Open GitHub</a>
+        </div>
       </header>
       <CampaignClient campaign={campaign} categories={categories} />
     </main>

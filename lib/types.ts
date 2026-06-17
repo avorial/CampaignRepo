@@ -2,6 +2,7 @@ export type GameType = "Traveller" | "Fantasy" | "Modern" | "Horror" | "Sci-Fi" 
 export type Category = "character" | "npc" | "location" | "event" | "game";
 export type Visibility = "gm" | "players";
 export type ApprovalStatus = "approved" | "unapproved" | "rejected";
+export type CampaignRole = "owner" | "gm" | "player";
 
 export type User = {
   id: number;
@@ -19,6 +20,17 @@ export type Campaign = {
   repo: string;
   branch: string;
   gameType: GameType;
+  role?: CampaignRole;
+  createdAt: string;
+};
+
+export type CampaignMembership = {
+  id: number;
+  campaignId: number;
+  userId: number;
+  role: CampaignRole;
+  email: string;
+  name: string;
   createdAt: string;
 };
 

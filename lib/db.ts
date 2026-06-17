@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
-import type { Campaign, SearchDocument, User } from "@/lib/types";
+import type { Campaign, CampaignMembership, CampaignRole, SearchDocument, User } from "@/lib/types";
 
 const dataDir = path.join(process.cwd(), "data");
 const dbPath = path.join(dataDir, "campaignrepo.sqlite");
@@ -39,6 +39,16 @@ CREATE TABLE IF NOT EXISTS campaigns (
   UNIQUE(userId, owner, repo),
   FOREIGN KEY (userId) REFERENCES users(id)
 );
+CREATE TABLE IF NOT EXISTS campaign_memberships (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  campaignId INTEGER NOT NULL,
+  userId INTEGER NOT NULL,
+  role TEXT NOT NULL CHECK(role IN ('owner', 'gm', 'player')),
+  createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(campaignId, userId),
+  FOREIGN KEY (campaignId) REFERENCES campaigns(id),
+  FOREIGN KEY (userId) REFERENCES users(id)
+);
 CREATE TABLE IF NOT EXISTS imports (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   campaignId INTEGER NOT NULL,
@@ -68,6 +78,11 @@ CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(
 );
 `);
 
+db.exec(`
+INSERT OR IGNORE INTO campaign_memberships (campaignId, userId, role)
+SELECT id, userId, 'owner' FROM campaigns;
+`);
+
 export function getDb() {
   return db;
 }
@@ -88,11 +103,72 @@ export function getUserById(id: number) {
 }
 
 export function getCampaign(userId: number, campaignId: number): Campaign | null {
-  return (db.prepare("SELECT * FROM campaigns WHERE userId = ? AND id = ?").get(userId, campaignId) as Campaign | undefined) || null;
+  return (
+    db
+      .prepare(
+        `SELECT campaigns.*, campaign_memberships.role
+         FROM campaigns
+         JOIN campaign_memberships ON campaign_memberships.campaignId = campaigns.id
+         WHERE campaign_memberships.userId = ? AND campaigns.id = ?`
+      )
+      .get(userId, campaignId) as Campaign | undefined
+  ) || null;
 }
 
 export function listCampaigns(userId: number): Campaign[] {
-  return db.prepare("SELECT * FROM campaigns WHERE userId = ? ORDER BY createdAt DESC").all(userId) as Campaign[];
+  return db
+    .prepare(
+      `SELECT campaigns.*, campaign_memberships.role
+       FROM campaigns
+       JOIN campaign_memberships ON campaign_memberships.campaignId = campaigns.id
+       WHERE campaign_memberships.userId = ?
+       ORDER BY campaigns.createdAt DESC`
+    )
+    .all(userId) as Campaign[];
+}
+
+export function getCampaignRole(userId: number, campaignId: number): CampaignRole | null {
+  const row = db.prepare("SELECT role FROM campaign_memberships WHERE userId = ? AND campaignId = ?").get(userId, campaignId) as { role: CampaignRole } | undefined;
+  return row?.role || null;
+}
+
+export function canManageCampaign(userId: number, campaignId: number) {
+  const role = getCampaignRole(userId, campaignId);
+  return role === "owner" || role === "gm";
+}
+
+export function listCampaignMembers(userId: number, campaignId: number): CampaignMembership[] {
+  if (!canManageCampaign(userId, campaignId)) return [];
+  return db
+    .prepare(
+      `SELECT campaign_memberships.*, users.email, users.name
+       FROM campaign_memberships
+       JOIN users ON users.id = campaign_memberships.userId
+       WHERE campaign_memberships.campaignId = ?
+       ORDER BY CASE campaign_memberships.role WHEN 'owner' THEN 0 WHEN 'gm' THEN 1 ELSE 2 END, users.name`
+    )
+    .all(campaignId) as CampaignMembership[];
+}
+
+export function addCampaignMember(adminUserId: number, campaignId: number, email: string, role: CampaignRole) {
+  if (!canManageCampaign(adminUserId, campaignId)) throw new Error("Forbidden");
+  const user = db.prepare("SELECT id FROM users WHERE lower(email) = lower(?)").get(email) as { id: number } | undefined;
+  if (!user) throw new Error("No CampaignRepo account exists for that email.");
+  db.prepare("INSERT OR REPLACE INTO campaign_memberships (campaignId, userId, role) VALUES (?, ?, ?)").run(campaignId, user.id, role);
+}
+
+export function updateCampaignMember(adminUserId: number, campaignId: number, memberUserId: number, role: CampaignRole) {
+  if (!canManageCampaign(adminUserId, campaignId)) throw new Error("Forbidden");
+  const existing = getCampaignRole(memberUserId, campaignId);
+  if (existing === "owner" && role !== "owner") throw new Error("Owners cannot be demoted in the MVP.");
+  db.prepare("UPDATE campaign_memberships SET role = ? WHERE campaignId = ? AND userId = ?").run(role, campaignId, memberUserId);
+}
+
+export function removeCampaignMember(adminUserId: number, campaignId: number, memberUserId: number) {
+  if (!canManageCampaign(adminUserId, campaignId)) throw new Error("Forbidden");
+  const existing = getCampaignRole(memberUserId, campaignId);
+  if (existing === "owner") throw new Error("Owners cannot be removed in the MVP.");
+  db.prepare("DELETE FROM campaign_memberships WHERE campaignId = ? AND userId = ?").run(campaignId, memberUserId);
 }
 
 export function upsertSearchDocuments(campaignId: number, docs: SearchDocument[]) {
@@ -135,6 +211,11 @@ export function searchDocs(userId: number, query: string, campaignId?: number, m
   if (!ids.length) return [];
   const table = query.trim() ? "search_index(?)" : "search_index";
   const params: unknown[] = query.trim() ? [query.trim()] : [];
+  const roles = new Map(campaigns.map((campaign) => [campaign.id, campaign.role]));
   const rows = db.prepare(`SELECT * FROM ${table} WHERE campaignId IN (${ids.map(() => "?").join(",")}) ORDER BY rank LIMIT 50`).all(...params, ...ids) as any[];
-  return rows.filter((row) => mode === "gm" || (row.visibility === "players" && row.approvalStatus === "approved"));
+  return rows.filter((row) => {
+    const role = roles.get(Number(row.campaignId));
+    const playerSafe = row.visibility === "players" && row.approvalStatus === "approved";
+    return mode === "player" || role === "player" ? playerSafe : true;
+  });
 }

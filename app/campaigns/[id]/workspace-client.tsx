@@ -68,6 +68,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   }
 
   const grouped = categories.map((cat) => ({ ...cat, pages: pages.filter((page) => page.frontmatter.category === cat.id) }));
+  const canManage = campaign.role === "owner" || campaign.role === "gm";
 
   return (
     <section className="workspace">
@@ -94,34 +95,38 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
       </aside>
 
       <div className="workspace-main">
-        <section className="dashboard-grid">
-          <div className="panel">
-            <h2>Create page</h2>
-            <form onSubmit={createPage} className="stack">
-              <label>Name<input name="name" required placeholder="Victor Mendes" /></label>
-              <label>Category<select name="category">{categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.label}</option>)}</select></label>
-              <label>Visibility<select name="visibility"><option value="gm">GM only</option><option value="players">Player visible</option></select></label>
-              <button>Create page</button>
-            </form>
-          </div>
+        {canManage && (
+          <section className="dashboard-grid">
+            <div className="panel">
+              <h2>Create page</h2>
+              <form onSubmit={createPage} className="stack">
+                <label>Name<input name="name" required placeholder="Victor Mendes" /></label>
+                <label>Category<select name="category">{categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.label}</option>)}</select></label>
+                <label>Visibility<select name="visibility"><option value="gm">GM only</option><option value="players">Player visible</option></select></label>
+                <button>Create page</button>
+              </form>
+            </div>
 
-          <div className="panel">
-            <h2>Import character JSON</h2>
-            <form onSubmit={importCharacter} className="stack">
-              <label>Source<select name="source"><option value="foundry">Foundry Actor JSON</option><option value="generic">Generic JSON</option></select></label>
-              <label>Visibility<select name="visibility"><option value="gm">GM only</option><option value="players">Player visible</option></select></label>
-              <label>Approval<select name="approvalStatus"><option value="approved">Approved</option><option value="unapproved">Unapproved</option></select></label>
-              <textarea name="json" rows={8} placeholder='{"name":"Victor Mendes","type":"npc"}' />
-              <button>Import character</button>
-            </form>
-          </div>
-        </section>
+            <div className="panel">
+              <h2>Import character JSON</h2>
+              <form onSubmit={importCharacter} className="stack">
+                <label>Source<select name="source"><option value="foundry">Foundry Actor JSON</option><option value="generic">Generic JSON</option></select></label>
+                <label>Visibility<select name="visibility"><option value="gm">GM only</option><option value="players">Player visible</option></select></label>
+                <label>Approval<select name="approvalStatus"><option value="approved">Approved</option><option value="unapproved">Unapproved</option></select></label>
+                <textarea name="json" rows={8} placeholder='{"name":"Victor Mendes","type":"npc"}' />
+                <button>Import character</button>
+              </form>
+            </div>
+          </section>
+        )}
 
-        <section className="panel">
-          <h2>Setup instructions</h2>
-          <textarea readOnly rows={10} value={setup} />
-          <button onClick={() => navigator.clipboard.writeText(setup)}>Copy setup instructions</button>
-        </section>
+        {canManage && (
+          <section className="panel">
+            <h2>Setup instructions</h2>
+            <textarea readOnly rows={10} value={setup} />
+            <button onClick={() => navigator.clipboard.writeText(setup)}>Copy setup instructions</button>
+          </section>
+        )}
       </div>
       {message && <p className="toast">{message}</p>}
     </section>

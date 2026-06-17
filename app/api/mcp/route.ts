@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
-import { getCampaign, listCampaigns, searchDocs } from "@/lib/db";
+import { canManageCampaign, getCampaign, listCampaigns, searchDocs } from "@/lib/db";
 import { getTextFile, putFile } from "@/lib/github";
 import { parsePage, serializePage } from "@/lib/markdown";
 import { defaultFrontmatter, starterBody } from "@/lib/templates";
@@ -70,12 +70,14 @@ export async function POST(req: Request) {
     if (name === "get_page") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
       if (!campaign || !user.githubToken) throw new Error("Campaign not found");
+      if (!canManageCampaign(user.id, campaign.id)) throw new Error("Forbidden");
       const file = await getTextFile(user.githubToken, campaign, `wiki/pages/${args.slug}.md`);
       return rpc(body.id, { content: parsePage(args.slug, file.text, file.sha) });
     }
     if (name === "create_page") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
       if (!campaign || !user.githubToken) throw new Error("Campaign not found");
+      if (!canManageCampaign(user.id, campaign.id)) throw new Error("Forbidden");
       const title = String(args.name || "AI Draft");
       const slug = slugify(title);
       const fm = { ...defaultFrontmatter(title, args.category || "npc", "gm"), approvalStatus: "unapproved" as const, lastEditedBy: "AI via MCP" };
@@ -87,6 +89,7 @@ export async function POST(req: Request) {
     if (name === "propose_page_update") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
       if (!campaign || !user.githubToken) throw new Error("Campaign not found");
+      if (!canManageCampaign(user.id, campaign.id)) throw new Error("Forbidden");
       const current = await getTextFile(user.githubToken, campaign, `wiki/pages/${args.slug}.md`);
       const page = parsePage(args.slug, current.text, current.sha);
       const fm = { ...page.frontmatter, ...(args.frontmatter || {}), approvalStatus: "unapproved" as const, lastEditedBy: "AI via MCP" };

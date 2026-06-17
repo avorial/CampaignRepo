@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { getCampaign } from "@/lib/db";
+import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getTextFile, putFile } from "@/lib/github";
 import { parsePage, serializePage } from "@/lib/markdown";
 import { rebuildSearchIndex } from "@/lib/search";
@@ -19,7 +19,11 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const file = await getTextFile(user.githubToken, campaign, `wiki/pages/${slug}.md`);
-  return NextResponse.json({ page: parsePage(slug, file.text, file.sha) });
+  const page = parsePage(slug, file.text, file.sha);
+  if (campaign.role === "player" && (page.frontmatter.visibility !== "players" || page.frontmatter.approvalStatus !== "approved")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  return NextResponse.json({ page });
 }
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string; slug: string }> }) {
@@ -27,6 +31,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const { id, slug } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const input = schema.parse(await req.json());
   const frontmatter = {
     ...input.frontmatter,

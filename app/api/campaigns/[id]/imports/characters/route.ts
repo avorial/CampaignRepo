@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { getCampaign, getDb } from "@/lib/db";
+import { canManageCampaign, getCampaign, getDb } from "@/lib/db";
 import { putFile } from "@/lib/github";
 import { defaultFrontmatter } from "@/lib/templates";
 import { serializePage } from "@/lib/markdown";
@@ -47,6 +47,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const input = schema.parse(await req.json());
   const name = importName(input.sourceJson);
   const slug = slugify(name);

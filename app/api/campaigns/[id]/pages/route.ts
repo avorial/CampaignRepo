@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { getCampaign } from "@/lib/db";
+import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getTextFile, listDirectory, putFile } from "@/lib/github";
 import { parsePage, serializePage } from "@/lib/markdown";
 import { defaultFrontmatter, starterBody } from "@/lib/templates";
@@ -29,7 +29,11 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
         return parsePage(slug, file.text, file.sha);
       })
   );
-  return NextResponse.json({ pages });
+  const visiblePages =
+    campaign.role === "player"
+      ? pages.filter((page) => page.frontmatter.visibility === "players" && page.frontmatter.approvalStatus === "approved")
+      : pages;
+  return NextResponse.json({ pages: visiblePages });
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -37,6 +41,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const input = schema.parse(await req.json());
   const slug = slugify(input.name);
   const frontmatter = defaultFrontmatter(input.name, input.category, input.visibility);

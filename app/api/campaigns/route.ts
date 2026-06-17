@@ -37,6 +37,7 @@ export async function POST(req: Request) {
   const result = getDb()
     .prepare("INSERT INTO campaigns (userId, name, owner, repo, branch, gameType) VALUES (?, ?, ?, ?, ?, ?)")
     .run(user.id, input.name, owner, repo, branch, input.gameType);
+  getDb().prepare("INSERT OR IGNORE INTO campaign_memberships (campaignId, userId, role) VALUES (?, ?, 'owner')").run(result.lastInsertRowid, user.id);
   const campaign = getDb().prepare("SELECT * FROM campaigns WHERE id = ?").get(result.lastInsertRowid) as any;
   await initializeRepo(user.githubToken, campaign);
   return NextResponse.json({ campaign });
