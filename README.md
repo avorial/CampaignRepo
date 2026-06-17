@@ -7,7 +7,7 @@ CampaignRepo is a GitHub-backed RPG campaign wiki. One app manages many campaign
 - Username/password app accounts.
 - Private dashboard for creating or connecting campaign repos.
 - GitHub token connection for repo creation and file commits.
-- Game template packs for Traveller, Fantasy, Modern, Horror, Sci-Fi, and Custom.
+- Game template packs for Sword Chronicle, Dungeons & Dragons, World of Darkness, Traveller, and Custom.
 - Wiki categories for Characters, NPCs, Locations, Events, and Games.
 - Markdown pages with `[[Page]]` links, `[[Page|Label]]` aliases, key links, backlinks, tags, visibility, and approval status.
 - GM-only Markdown blocks with `:::gm`.
@@ -17,6 +17,70 @@ CampaignRepo is a GitHub-backed RPG campaign wiki. One app manages many campaign
 - MCP-style JSON-RPC endpoint at `/api/mcp` for AI search, reads, page creation, unapproved updates, templates, media, graph, review queue, and setup instructions.
 - External MCP clients authenticate with a personal access token (`Authorization: Bearer`), minted from the dashboard; the in-app session also works.
 - Dashboard review queue aggregating unapproved AI/import changes across every campaign you manage.
+
+## Project Goals
+
+CampaignRepo's goal is to become a practical, RPG-first, GitHub-backed campaign wiki rather than a general-purpose wiki clone. The current MVP is usable for early testing, but these are the remaining product goals in priority order.
+
+### 1. GitHub Connection
+
+- Replace pasted GitHub tokens with a real GitHub OAuth or GitHub App installation flow.
+- Keep manual token support only as a local/dev fallback.
+- Improve GitHub API error handling for repo access, branch conflicts, rate limits, and missing permissions.
+
+### 2. Editing Experience
+
+- Upgrade the Markdown textarea into a true rich Markdown editor while preserving frontmatter, `[[wiki-links]]`, media links, and `:::gm` blocks.
+- Add insert controls for wiki links, media, GM blocks, and templates.
+- Keep GM, Player, and Handout previews visible and trustworthy.
+
+### 3. Character Import
+
+- Add a generic JSON field-mapping UI before import.
+- Improve Foundry Actor import rendering for stats, items, biography, images, and system-specific fields.
+- Add a re-import flow that compares the new source JSON against the preserved source file before updating pages.
+
+### 4. Player Experience
+
+- Build a dedicated player portal instead of relying only on the filtered GM workspace.
+- Add a handout library, player-safe timeline, player-safe search, and session-facing navigation.
+- Keep the current rule firm: players only see approved, player-visible content with GM blocks stripped.
+
+### 5. MCP And AI Workflow
+
+- Harden `/api/mcp` into a more complete MCP-compatible surface with stronger tool schemas, better resource reads, and prompt templates.
+- Add MCP prompts for NPCs, locations, factions, session summaries, rumors/news, handouts, and Traveller world metadata.
+- Keep AI-created or AI-edited content routed through the unapproved review queue.
+
+### 6. Admin And Permissions
+
+- Add a global admin panel for users, password resets, account disabling, and invite management.
+- Add owner transfer and safer owner demotion/removal flows.
+- Add campaign invitations so players and GMs do not need to pre-create accounts manually.
+
+### 7. Media Manager
+
+- Add media delete/rename actions.
+- Persist media captions, alt text, and tags.
+- Add image/PDF/audio previews and include media metadata in search.
+
+### 8. Search, Graph, And Timeline
+
+- Improve search ranking, highlighting, filters, and reindex controls.
+- Add a visual relationship graph with editable relationship labels/types.
+- Expand timeline controls beyond event-page sorting.
+
+### 9. Repo Operations
+
+- Add a visible repo validation/repair report.
+- Add better conflict handling when GitHub files change outside CampaignRepo.
+- Add branch/workflow controls for testing, staging, and publishing.
+
+### 10. Deployment And Operations
+
+- Document production environment variables, HTTPS/session-cookie settings, and backup/restore for SQLite.
+- Add deployment examples beyond Docker Compose.
+- Add broader integration tests for repo initialization, player secrecy, MCP writes, imports, and review flows.
 
 ## Development
 

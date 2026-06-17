@@ -5,11 +5,26 @@ import { FormEvent, useEffect, useState } from "react";
 import type { Campaign, CampaignGraphEdge, CampaignGraphNode, CampaignMedia, CampaignTimelineItem, WikiPage, WikiTemplate } from "@/lib/types";
 import { gameTypes } from "@/lib/templates";
 
+type RepoValidationCheck = {
+  label: string;
+  path: string;
+  ok: boolean;
+  status: "ok" | "missing" | "wrong-type" | "error";
+  actualType?: string;
+  error?: string;
+};
+
+type RepoValidation = {
+  ok: boolean;
+  checks: RepoValidationCheck[];
+};
+
 export default function CampaignClient({ campaign, categories }: { campaign: Campaign; categories: { id: string; label: string }[] }) {
   const [pages, setPages] = useState<WikiPage[]>([]);
   const [templates, setTemplates] = useState<WikiTemplate[]>([]);
   const [media, setMedia] = useState<CampaignMedia[]>([]);
   const [graph, setGraph] = useState<{ nodes: CampaignGraphNode[]; edges: CampaignGraphEdge[]; timeline: CampaignTimelineItem[] }>({ nodes: [], edges: [], timeline: [] });
+  const [validation, setValidation] = useState<RepoValidation | null>(null);
   const [setup, setSetup] = useState("");
   const [message, setMessage] = useState("");
   const [search, setSearch] = useState<any[]>([]);
@@ -17,23 +32,26 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
 
   async function load() {
     const canManage = campaign.role === "owner" || campaign.role === "gm";
-    const [pagesRes, graphRes, setupRes, templatesRes, mediaRes] = await Promise.all([
+    const [pagesRes, graphRes, setupRes, templatesRes, mediaRes, validationRes] = await Promise.all([
       fetch(`/api/campaigns/${campaign.id}/pages`),
       fetch(`/api/campaigns/${campaign.id}/graph`),
       fetch(`/api/campaigns/${campaign.id}/setup`),
       canManage ? fetch(`/api/campaigns/${campaign.id}/templates`) : Promise.resolve(null),
-      canManage ? fetch(`/api/campaigns/${campaign.id}/media`) : Promise.resolve(null)
+      canManage ? fetch(`/api/campaigns/${campaign.id}/media`) : Promise.resolve(null),
+      canManage ? fetch(`/api/campaigns/${campaign.id}/validation`) : Promise.resolve(null)
     ]);
     const pagesData = await pagesRes.json();
     const graphData = graphRes.ok ? await graphRes.json() : { nodes: [], edges: [], timeline: [] };
     const setupData = setupRes.ok ? await setupRes.json() : { markdown: "" };
     const templatesData = templatesRes && templatesRes.ok ? await templatesRes.json() : { templates: [] };
     const mediaData = mediaRes && mediaRes.ok ? await mediaRes.json() : { media: [] };
+    const validationData = validationRes && validationRes.ok ? await validationRes.json() : null;
     setPages(pagesData.pages || []);
     setGraph({ nodes: graphData.nodes || [], edges: graphData.edges || [], timeline: graphData.timeline || [] });
     setSetup(setupData.markdown || "");
     setTemplates(templatesData.templates || []);
     setMedia(mediaData.media || []);
+    setValidation(validationData);
   }
 
   useEffect(() => { load(); }, []);
@@ -132,6 +150,17 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
       event.currentTarget.reset();
     } else {
       setMessage(data.error || "Could not upload media.");
+    }
+  }
+
+  async function repairRepo() {
+    const res = await fetch(`/api/campaigns/${campaign.id}/validation`, { method: "POST" });
+    const data = await res.json();
+    if (res.ok) {
+      setValidation(data);
+      setMessage(data.ok ? "Repo structure is healthy." : "Repair ran, but some checks still need attention.");
+    } else {
+      setMessage(data.error || "Could not repair repo structure.");
     }
   }
 
@@ -314,6 +343,31 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
                   {!group.templates.length && <p className="muted">No templates yet.</p>}
                 </div>
               ))}
+            </div>
+          </section>
+        )}
+
+        {canManage && (
+          <section className="panel">
+            <div className="section-heading">
+              <div>
+                <h2>Repo validation</h2>
+                <p className="muted">Checks the GitHub repo for the required CampaignRepo folders and starter files.</p>
+              </div>
+              <button type="button" className="secondary" onClick={repairRepo}>Repair structure</button>
+            </div>
+            <div className="validation-list">
+              {validation?.checks.map((check) => (
+                <article key={check.path} className={`validation-row ${check.ok ? "ok" : "needs-work"}`}>
+                  <div>
+                    <strong>{check.label}</strong>
+                    <span>{check.path}</span>
+                  </div>
+                  <code>{check.status}{check.actualType && check.status !== "ok" ? `: ${check.actualType}` : ""}</code>
+                  {check.error && <p className="error">{check.error}</p>}
+                </article>
+              ))}
+              {!validation && <p className="muted">Connect GitHub to run repo validation.</p>}
             </div>
           </section>
         )}
