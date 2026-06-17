@@ -645,6 +645,14 @@ button.danger {
   padding: 12px;
 }
 
+.token-row {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+
 .toast,
 .error {
   color: var(--accent-2);

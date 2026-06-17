@@ -1,7 +1,7 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import type { Campaign, GameType, User } from "@/lib/types";
+import { FormEvent, useEffect, useState } from "react";
+import type { ApiToken, Campaign, GameType, User } from "@/lib/types";
 
 export default function DashboardClient({
   user,
@@ -16,6 +16,36 @@ export default function DashboardClient({
   const [message, setMessage] = useState("");
   const [mode, setMode] = useState<"create" | "connect">("create");
   const [search, setSearch] = useState<any[]>([]);
+  const [tokens, setTokens] = useState<ApiToken[]>([]);
+  const [newToken, setNewToken] = useState("");
+  const mcpUrl = typeof window !== "undefined" ? `${window.location.origin}/api/mcp` : "/api/mcp";
+
+  useEffect(() => {
+    fetch("/api/tokens")
+      .then((res) => res.json())
+      .then((data) => setTokens(data.tokens || []));
+  }, []);
+
+  async function mintToken(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const name = new FormData(form).get("tokenName");
+    const res = await fetch("/api/tokens", { method: "POST", body: JSON.stringify({ name }) });
+    const data = await res.json();
+    if (res.ok) {
+      setTokens(data.tokens || []);
+      setNewToken(data.token?.token || "");
+      form.reset();
+    } else {
+      setMessage(data.error || "Could not create token.");
+    }
+  }
+
+  async function revokeToken(id: number) {
+    const res = await fetch("/api/tokens", { method: "DELETE", body: JSON.stringify({ id }) });
+    const data = await res.json();
+    if (res.ok) setTokens(data.tokens || []);
+  }
 
   async function connectGithub(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -80,6 +110,26 @@ export default function DashboardClient({
             {mode === "create" && <label className="check"><input type="checkbox" name="private" defaultChecked /> Private repo</label>}
             <button>{mode === "create" ? "Create and initialize" : "Connect and repair"}</button>
           </form>
+        </div>
+
+        <div className="panel">
+          <h2>MCP access tokens</h2>
+          <p className="muted">Connect an external AI/MCP client to <code>{mcpUrl}</code> with an <code>Authorization: Bearer</code> token.</p>
+          <form onSubmit={mintToken} className="inline-form">
+            <input name="tokenName" placeholder="Claude Desktop" />
+            <button>Mint token</button>
+          </form>
+          {newToken && (
+            <p className="muted">Copy now (shown once): <code>{newToken}</code></p>
+          )}
+          <div className="results">
+            {tokens.map((token) => (
+              <div key={token.id} className="token-row">
+                <span><strong>{token.name}</strong> · last used {token.lastUsedAt || "never"}</span>
+                <button type="button" onClick={() => revokeToken(token.id)}>Revoke</button>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="panel">

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth";
+import { requireApiUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign, listCampaigns, searchDocs } from "@/lib/db";
 import { getTextFile, listDirectory, putFile } from "@/lib/github";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
@@ -157,8 +157,8 @@ async function listReviewPages(token: string, campaign: Campaign) {
   }));
 }
 
-export async function GET() {
-  const user = await requireUser();
+export async function GET(req: Request) {
+  const user = await requireApiUser(req);
   return NextResponse.json({
     name: "CampaignRepo MCP",
     resources: [
@@ -189,9 +189,24 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const user = await requireUser();
   const body = (await req.json()) as RpcRequest;
   const params = body.params || {};
+
+  // MCP lifecycle: initialize advertises capabilities; the initialized
+  // notification needs no response. Both run before auth so a client can
+  // complete the handshake, but every data method below requires a user.
+  if (body.method === "initialize") {
+    return rpc(body.id, {
+      protocolVersion: "2024-11-05",
+      capabilities: { tools: {}, resources: {} },
+      serverInfo: { name: "CampaignRepo MCP", version: "0.1.0" }
+    });
+  }
+  if (body.method === "notifications/initialized" || body.method === "notifications/cancelled") {
+    return new NextResponse(null, { status: 202 });
+  }
+
+  const user = await requireApiUser(req);
 
   if (body.method === "resources/list") {
     return rpc(body.id, {

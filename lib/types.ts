@@ -25,6 +25,13 @@ export type Campaign = {
   createdAt: string;
 };
 
+export type ApiToken = {
+  id: number;
+  name: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+};
+
 export type CampaignMembership = {
   id: number;
   campaignId: number;

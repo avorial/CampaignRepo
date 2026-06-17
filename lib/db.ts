@@ -1,8 +1,9 @@
 import Database from "better-sqlite3";
 import bcrypt from "bcryptjs";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import type { Campaign, CampaignMembership, CampaignRole, SearchDocument, User } from "@/lib/types";
+import type { ApiToken, Campaign, CampaignMembership, CampaignRole, SearchDocument, User } from "@/lib/types";
 
 const dataDir = path.join(process.cwd(), "data");
 const dbPath = path.join(dataDir, "campaignrepo.sqlite");
@@ -59,6 +60,15 @@ CREATE TABLE IF NOT EXISTS imports (
   pageSlug TEXT NOT NULL,
   createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS api_tokens (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  userId INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  tokenHash TEXT NOT NULL UNIQUE,
+  createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  lastUsedAt TEXT,
+  FOREIGN KEY (userId) REFERENCES users(id)
+);
 CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(
   id UNINDEXED,
   campaignId UNINDEXED,
@@ -114,6 +124,34 @@ export function publicUser(row: any): User | null {
 
 export function getUserById(id: number) {
   return publicUser(db.prepare("SELECT * FROM users WHERE id = ?").get(id));
+}
+
+function hashApiToken(token: string) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+/** Mint a personal access token for MCP/API use. Returns the plaintext once. */
+export function createApiToken(userId: number, name: string): { id: number; name: string; token: string } {
+  const label = name.trim() || "MCP token";
+  const token = `crepo_${crypto.randomBytes(24).toString("hex")}`;
+  const info = db.prepare("INSERT INTO api_tokens (userId, name, tokenHash) VALUES (?, ?, ?)").run(userId, label, hashApiToken(token));
+  return { id: Number(info.lastInsertRowid), name: label, token };
+}
+
+export function listApiTokens(userId: number): ApiToken[] {
+  return db.prepare("SELECT id, name, createdAt, lastUsedAt FROM api_tokens WHERE userId = ? ORDER BY createdAt DESC").all(userId) as ApiToken[];
+}
+
+export function revokeApiToken(userId: number, id: number) {
+  db.prepare("DELETE FROM api_tokens WHERE id = ? AND userId = ?").run(id, userId);
+}
+
+export function getUserByApiToken(token: string): User | null {
+  const hash = hashApiToken(token);
+  const row = db.prepare("SELECT users.* FROM api_tokens JOIN users ON users.id = api_tokens.userId WHERE api_tokens.tokenHash = ?").get(hash);
+  if (!row) return null;
+  db.prepare("UPDATE api_tokens SET lastUsedAt = CURRENT_TIMESTAMP WHERE tokenHash = ?").run(hash);
+  return publicUser(row);
 }
 
 export function getCampaign(userId: number, campaignId: number): Campaign | null {

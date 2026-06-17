@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import { cookies } from "next/headers";
-import { getDb, publicUser } from "@/lib/db";
+import { getDb, getUserByApiToken, publicUser } from "@/lib/db";
 
 const cookieName = "campaignrepo_session";
 
@@ -19,6 +19,22 @@ export async function requireUser(options: { allowPasswordChange?: boolean } = {
   if (!user) throw new Error("Unauthorized");
   if (user.mustChangePassword && !options.allowPasswordChange) throw new Error("Password change required");
   return user;
+}
+
+/**
+ * Authenticate an API/MCP request. Prefers an `Authorization: Bearer <token>`
+ * personal access token (used by external MCP clients) and falls back to the
+ * in-app session cookie. Throws "Unauthorized" when neither is valid.
+ */
+export async function requireApiUser(req: Request) {
+  const header = req.headers.get("authorization") || "";
+  const match = /^bearer\s+(.+)$/i.exec(header.trim());
+  if (match) {
+    const user = getUserByApiToken(match[1].trim());
+    if (!user) throw new Error("Unauthorized");
+    return user;
+  }
+  return requireUser();
 }
 
 export async function createSession(userId: number) {
