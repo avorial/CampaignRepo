@@ -2,42 +2,15 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
-import { getTextFile, listDirectory, putFile } from "@/lib/github";
+import { getTextFile, putFile } from "@/lib/github";
 import { parsePage, serializePage } from "@/lib/markdown";
+import { listReviewPages } from "@/lib/reviews";
 import { rebuildSearchIndex } from "@/lib/search";
 
 const decisionSchema = z.object({
   slug: z.string().min(1),
   decision: z.enum(["approved", "rejected"])
 });
-
-async function listReviewPages(token: string, campaign: NonNullable<ReturnType<typeof getCampaign>>) {
-  const entries = await listDirectory(token, campaign, "wiki/pages");
-  const pages = await Promise.all(
-    entries
-      .filter((entry) => entry.type === "file" && entry.name.endsWith(".md"))
-      .map(async (entry) => {
-        const slug = entry.name.replace(/\.md$/, "");
-        const file = await getTextFile(token, campaign, entry.path);
-        return parsePage(slug, file.text, file.sha);
-      })
-  );
-
-  return pages
-    .filter((page) => page.frontmatter.approvalStatus !== "approved")
-    .map((page) => ({
-      slug: page.slug,
-      sha: page.sha,
-      name: page.frontmatter.name,
-      category: page.frontmatter.category,
-      visibility: page.frontmatter.visibility,
-      approvalStatus: page.frontmatter.approvalStatus,
-      summary: page.frontmatter.summary,
-      lastEditedBy: page.frontmatter.lastEditedBy,
-      sourceImport: page.frontmatter.sourceImport,
-      excerpt: page.content.replace(/:::gm[\s\S]*?:::/g, "").replace(/\s+/g, " ").trim().slice(0, 260)
-    }));
-}
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();

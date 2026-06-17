@@ -18,12 +18,16 @@ export default function DashboardClient({
   const [search, setSearch] = useState<any[]>([]);
   const [tokens, setTokens] = useState<ApiToken[]>([]);
   const [newToken, setNewToken] = useState("");
+  const [reviewGroups, setReviewGroups] = useState<any[]>([]);
   const mcpUrl = typeof window !== "undefined" ? `${window.location.origin}/api/mcp` : "/api/mcp";
 
   useEffect(() => {
     fetch("/api/tokens")
       .then((res) => res.json())
       .then((data) => setTokens(data.tokens || []));
+    fetch("/api/reviews")
+      .then((res) => res.json())
+      .then((data) => setReviewGroups(data.campaigns || []));
   }, []);
 
   async function mintToken(event: FormEvent<HTMLFormElement>) {
@@ -147,6 +151,26 @@ export default function DashboardClient({
           </div>
         </div>
       </section>
+
+      {reviewGroups.length > 0 && (
+        <section className="band">
+          <h2>Review unapproved changes</h2>
+          <p className="muted">AI- and import-generated pages awaiting GM approval across your campaigns.</p>
+          {reviewGroups.map((group) => (
+            <div key={group.campaignId} className="review-group">
+              <h3>{group.campaignName} <a href={`/campaigns/${group.campaignId}/admin`}>Open review queue</a></h3>
+              <div className="results">
+                {group.reviews.map((review: any) => (
+                  <a key={review.slug} href={`/campaigns/${group.campaignId}/pages/${review.slug}`}>
+                    <strong>{review.name}</strong>
+                    <span>{review.category} · {review.approvalStatus}{review.sourceImport ? ` · ${review.sourceImport}` : ""}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
 
       <section className="band instructions">
         <h2>GitHub repo instructions</h2>
