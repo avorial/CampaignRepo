@@ -7,6 +7,7 @@ import PageEditor from "./page-editor";
 export default async function WikiPage({ params }: { params: Promise<{ id: string; slug: string }> }) {
   const user = await currentUser();
   if (!user) redirect("/login");
+  if (user.mustChangePassword) redirect("/change-password");
   const { id, slug } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) redirect("/dashboard");

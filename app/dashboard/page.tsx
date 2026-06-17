@@ -8,6 +8,7 @@ import DashboardClient from "./dashboard-client";
 export default async function DashboardPage() {
   const user = await currentUser();
   if (!user) redirect("/login");
+  if (user.mustChangePassword) redirect("/change-password");
   const campaigns = listCampaigns(user.id);
 
   return (

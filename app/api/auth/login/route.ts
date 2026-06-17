@@ -4,16 +4,17 @@ import { createSession, verifyPassword } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 
 const schema = z.object({
-  email: z.string().email(),
+  login: z.string().min(1),
   password: z.string().min(1)
 });
 
 export async function POST(req: Request) {
   const input = schema.parse(await req.json());
-  const row = getDb().prepare("SELECT * FROM users WHERE email = ?").get(input.email.toLowerCase()) as any;
+  const login = input.login.toLowerCase();
+  const row = getDb().prepare("SELECT * FROM users WHERE lower(email) = ? OR lower(name) = ?").get(login, login) as any;
   if (!row || !(await verifyPassword(input.password, row.passwordHash))) {
     return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
   }
   await createSession(row.id);
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, mustChangePassword: Boolean(row.mustChangePassword) });
 }

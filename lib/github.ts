@@ -53,12 +53,16 @@ export async function getTextFile(token: string, campaign: Campaign, filePath: s
 }
 
 export async function putFile(token: string, campaign: Pick<Campaign, "owner" | "repo" | "branch">, filePath: string, content: string, message: string, sha?: string) {
+  return putBase64File(token, campaign, filePath, Buffer.from(content, "utf8").toString("base64"), message, sha);
+}
+
+export async function putBase64File(token: string, campaign: Pick<Campaign, "owner" | "repo" | "branch">, filePath: string, base64Content: string, message: string, sha?: string) {
   const encoded = filePath.split("/").map(encodeURIComponent).join("/");
   return gh(token, `/repos/${campaign.owner}/${campaign.repo}/contents/${encoded}`, {
     method: "PUT",
     body: JSON.stringify({
       message,
-      content: Buffer.from(content, "utf8").toString("base64"),
+      content: base64Content,
       branch: campaign.branch,
       sha
     })

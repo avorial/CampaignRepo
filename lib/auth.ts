@@ -14,9 +14,10 @@ export async function currentUser() {
   return publicUser(row);
 }
 
-export async function requireUser() {
+export async function requireUser(options: { allowPasswordChange?: boolean } = {}) {
   const user = await currentUser();
   if (!user) throw new Error("Unauthorized");
+  if (user.mustChangePassword && !options.allowPasswordChange) throw new Error("Password change required");
   return user;
 }
 

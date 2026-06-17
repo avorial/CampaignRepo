@@ -9,6 +9,7 @@ export type User = {
   email: string;
   name: string;
   githubToken?: string | null;
+  mustChangePassword: boolean;
   createdAt: string;
 };
 
@@ -81,6 +82,16 @@ export type WikiTemplate = {
   name: string;
   summary: string;
   content: string;
+};
+
+export type CampaignMedia = {
+  name: string;
+  path: string;
+  sha: string;
+  size?: number;
+  downloadUrl?: string;
+  mediaType: "image" | "pdf" | "audio" | "other";
+  markdown: string;
 };
 
 export type SearchDocument = {

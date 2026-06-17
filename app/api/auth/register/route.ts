@@ -14,7 +14,7 @@ export async function POST(req: Request) {
   const passwordHash = await hashPassword(input.password);
   try {
     const result = getDb()
-      .prepare("INSERT INTO users (email, name, passwordHash) VALUES (?, ?, ?)")
+      .prepare("INSERT INTO users (email, name, passwordHash, mustChangePassword) VALUES (?, ?, ?, 0)")
       .run(input.email.toLowerCase(), input.name, passwordHash);
     await createSession(Number(result.lastInsertRowid));
     return NextResponse.json({ ok: true });

@@ -3,5 +3,6 @@ import { currentUser } from "@/lib/auth";
 
 export default async function Home() {
   const user = await currentUser();
-  redirect(user ? "/dashboard" : "/login");
+  if (!user) redirect("/login");
+  redirect(user.mustChangePassword ? "/change-password" : "/dashboard");
 }

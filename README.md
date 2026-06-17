@@ -24,6 +24,13 @@ npm run dev
 
 Open `http://127.0.0.1:3000`.
 
+The local database seeds a first admin account:
+
+- Username: `admin`
+- Password: `admin`
+
+CampaignRepo forces this password to be changed on first login before the dashboard or APIs can be used.
+
 ## Verification
 
 ```bash

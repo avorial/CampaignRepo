@@ -8,6 +8,7 @@ import CampaignClient from "./workspace-client";
 export default async function CampaignPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await currentUser();
   if (!user) redirect("/login");
+  if (user.mustChangePassword) redirect("/change-password");
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) redirect("/dashboard");

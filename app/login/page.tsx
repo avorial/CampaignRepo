@@ -14,13 +14,14 @@ export default function LoginPage() {
     const form = new FormData(event.currentTarget);
     const res = await fetch("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email: form.get("email"), password: form.get("password") })
+      body: JSON.stringify({ login: form.get("login"), password: form.get("password") })
     });
     if (!res.ok) {
       setError((await res.json()).error || "Login failed.");
       return;
     }
-    router.push("/dashboard");
+    const data = await res.json();
+    router.push(data.mustChangePassword ? "/change-password" : "/dashboard");
   }
 
   return (
@@ -32,7 +33,7 @@ export default function LoginPage() {
           <p className="muted">Manage GitHub-backed RPG campaign wikis from one private dashboard.</p>
         </div>
         <form onSubmit={submit} className="stack">
-          <label>Email<input name="email" type="email" required /></label>
+          <label>Email or username<input name="login" required /></label>
           <label>Password<input name="password" type="password" required /></label>
           {error && <p className="error">{error}</p>}
           <button type="submit">Sign in</button>

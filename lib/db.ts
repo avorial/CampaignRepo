@@ -1,4 +1,5 @@
 import Database from "better-sqlite3";
+import bcrypt from "bcryptjs";
 import fs from "node:fs";
 import path from "node:path";
 import type { Campaign, CampaignMembership, CampaignRole, SearchDocument, User } from "@/lib/types";
@@ -18,6 +19,7 @@ CREATE TABLE IF NOT EXISTS users (
   name TEXT NOT NULL,
   passwordHash TEXT NOT NULL,
   githubToken TEXT,
+  mustChangePassword INTEGER NOT NULL DEFAULT 0,
   createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS sessions (
@@ -78,6 +80,17 @@ CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(
 );
 `);
 
+const userColumns = db.prepare("PRAGMA table_info(users)").all() as Array<{ name: string }>;
+if (!userColumns.some((column) => column.name === "mustChangePassword")) {
+  db.exec("ALTER TABLE users ADD COLUMN mustChangePassword INTEGER NOT NULL DEFAULT 0");
+}
+
+const adminHash = bcrypt.hashSync("admin", 12);
+db.prepare(
+  `INSERT OR IGNORE INTO users (email, name, passwordHash, mustChangePassword)
+   VALUES ('admin@example.local', 'admin', ?, 1)`
+).run(adminHash);
+
 db.exec(`
 INSERT OR IGNORE INTO campaign_memberships (campaignId, userId, role)
 SELECT id, userId, 'owner' FROM campaigns;
@@ -94,6 +107,7 @@ export function publicUser(row: any): User | null {
     email: row.email,
     name: row.name,
     githubToken: row.githubToken,
+    mustChangePassword: Boolean(row.mustChangePassword),
     createdAt: row.createdAt
   };
 }
