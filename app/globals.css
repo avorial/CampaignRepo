@@ -707,6 +707,63 @@ code {
   margin-top: 8px;
 }
 
+.player-portal {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: 300px minmax(0, 1fr);
+}
+
+.player-library {
+  align-self: start;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  position: sticky;
+  top: 16px;
+}
+
+.player-library .nav-link {
+  background: transparent;
+  border: 0;
+  color: var(--text-primary);
+  display: grid;
+  font-family: var(--font-body);
+  gap: 3px;
+  height: auto;
+  justify-content: stretch;
+  letter-spacing: 0;
+  min-height: 0;
+  padding: 9px;
+  text-align: left;
+  text-transform: none;
+  width: 100%;
+}
+
+.player-library .nav-link span {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.player-library .nav-link.active {
+  background: rgba(212, 169, 87, 0.12);
+  color: var(--gold-bright);
+}
+
+.player-reader {
+  min-height: 620px;
+}
+
+.player-reader-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: -6px 0 14px;
+}
+
 .wiki-link {
   color: var(--gold);
   font-weight: 600;
@@ -865,12 +922,14 @@ code {
   .dashboard-grid,
   .admin-grid,
   .workspace,
+  .player-portal,
   .page-grid,
   .editor-split {
     grid-template-columns: 1fr;
   }
 
   .side-nav,
+  .player-library,
   .page-sidebar {
     position: static;
   }

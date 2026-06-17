@@ -27,7 +27,7 @@ function sanitizePlayerPage<T extends ReturnType<typeof parsePage>>(page: T): T 
   };
 }
 
-export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
@@ -42,8 +42,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
         return parsePage(slug, file.text, file.sha);
       })
   );
+  const mode = new URL(req.url).searchParams.get("mode");
   const visiblePages =
-    campaign.role === "player"
+    campaign.role === "player" || mode === "player"
       ? pages
           .filter((page) => page.frontmatter.visibility === "players" && page.frontmatter.approvalStatus === "approved")
           .map(sanitizePlayerPage)

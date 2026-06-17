@@ -25,17 +25,19 @@ function sanitizePlayerPage<T extends ReturnType<typeof parsePage>>(page: T): T 
   };
 }
 
-export async function GET(_: Request, { params }: { params: Promise<{ id: string; slug: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string; slug: string }> }) {
   const user = await requireUser();
   const { id, slug } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const file = await getTextFile(user.githubToken, campaign, `wiki/pages/${slug}.md`);
   const page = parsePage(slug, file.text, file.sha);
-  if (campaign.role === "player" && (page.frontmatter.visibility !== "players" || page.frontmatter.approvalStatus !== "approved")) {
+  const mode = new URL(req.url).searchParams.get("mode");
+  const playerSafeMode = campaign.role === "player" || mode === "player";
+  if (playerSafeMode && (page.frontmatter.visibility !== "players" || page.frontmatter.approvalStatus !== "approved")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  return NextResponse.json({ page: campaign.role === "player" ? sanitizePlayerPage(page) : page });
+  return NextResponse.json({ page: playerSafeMode ? sanitizePlayerPage(page) : page });
 }
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string; slug: string }> }) {
