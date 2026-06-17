@@ -6,9 +6,10 @@ import path from "node:path";
 import type { ApiToken, Campaign, CampaignMembership, CampaignRole, SearchDocument, User } from "@/lib/types";
 
 const dataDir = path.join(process.cwd(), "data");
-const dbPath = path.join(dataDir, "campaignrepo.sqlite");
+// CAMPAIGNREPO_DB lets tests point at an in-memory (":memory:") database.
+const dbPath = process.env.CAMPAIGNREPO_DB || path.join(dataDir, "campaignrepo.sqlite");
 
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+if (dbPath !== ":memory:" && !fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
 const db = new Database(dbPath);
 db.pragma("journal_mode = WAL");
