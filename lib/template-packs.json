@@ -1,0 +1,610 @@
+{
+  "Sword Chronicle": [
+    {
+      "slug": "house",
+      "frontmatter": {
+        "category": "npc",
+        "type": "npc",
+        "name": "House",
+        "summary": "",
+        "tags": [
+          "faction",
+          "house"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# House\n\n![arms](/wiki/media/REPLACE.png)\n*Words • Seat • Liege*\n\n**Coat of Arms:**\n**Seat:** [[Holding]]\n**Liege:** [[House]]\n**Founded:**\n\n## House Fortunes\n\n| Defense | Influence | Lands | Law | Population | Power | Wealth |\n| --- | --- | --- | --- | --- | --- | --- |\n|  |  |  |  |  |  |  |\n\n## History\n\nHow the house rose, and where it stands in the realm now.\n\n## Members\n\n- [[Player Character]] — head of house\n- [[NPC]] — heir / steward\n\n## Banner Houses\n\n- [[House]]\n\n:::gm\n## GM Truth\n\nSecret debts, hidden bastards, and the lever that could topple them.\n:::\n"
+    },
+    {
+      "slug": "character",
+      "frontmatter": {
+        "category": "character",
+        "type": "character",
+        "name": "Character",
+        "summary": "",
+        "tags": [
+          "pc",
+          "character"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Character\n\n![portrait](/wiki/media/REPLACE.jpg)\n*House • Age • Role*\n\n**House:** [[House]]\n**Age:**\n**Status:** alive\n\n## Abilities & Specialties\n\n- Notable abilities and the specialties that set them apart.\n\n## Benefits & Drawbacks\n\n- **Benefit:**\n- **Drawback:**\n\n## Destiny & Glory\n\n- **Destiny Points:**\n- **Glory:**\n\n## Goals\n\n- Short-term:\n- Long-term:\n\n:::gm\n## GM Notes\n\nBonds to exploit and secrets the character may not yet know.\n:::\n"
+    },
+    {
+      "slug": "npc",
+      "frontmatter": {
+        "category": "npc",
+        "type": "npc",
+        "name": "NPC",
+        "summary": "",
+        "tags": [
+          "npc"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# NPC\n\n![portrait](/wiki/media/REPLACE.jpg)\n*Role • Allegiance*\n\n**House / Affiliation:** [[House]]\n**Status:** alive\n\n## Public Face\n\nHow the world sees them and what the party can learn by asking around.\n\n## Relationships\n\n- [[Someone]] — ally / rival\n\n:::gm\n## GM Truth\n\nWhat they want, hide, and know.\n:::\n"
+    },
+    {
+      "slug": "holding",
+      "frontmatter": {
+        "category": "location",
+        "type": "location",
+        "name": "Holding",
+        "summary": "",
+        "tags": [
+          "location",
+          "holding"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Holding\n\n![view](/wiki/media/REPLACE.png)\n*Type • Held by*\n\n**Type:** castle / town / keep\n**Held by:** [[House]]\n**Region:** [[Place]]\n\n## Overview\n\nWhat the holding controls and is known for.\n\n## Notable Sites\n\n- A landmark, with a hook.\n\n:::gm\n## GM Truth\n\nHidden defenses, caches, and dangers.\n:::\n"
+    },
+    {
+      "slug": "warfare-unit",
+      "frontmatter": {
+        "category": "game",
+        "type": "game",
+        "name": "Warfare Unit",
+        "summary": "",
+        "tags": [
+          "warfare",
+          "unit"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Warfare Unit\n\n*Type • Allegiance*\n\n**Type:** infantry / cavalry / archers / scouts\n**Allegiance:** [[House]]\n\n## Attributes\n\n- **Discipline:**\n- **Training:**\n- **Experience:**\n\n## Facing & Orders\n\n- Strengths, weaknesses, and standing orders.\n\n:::gm\n## GM Notes\n\nMorale breakpoints and hidden capabilities.\n:::\n"
+    },
+    {
+      "slug": "session",
+      "frontmatter": {
+        "category": "event",
+        "type": "event",
+        "name": "Session",
+        "summary": "Recap layout for a play session; fill in eventDate for the timeline.",
+        "tags": [
+          "session"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo",
+        "eventDate": ""
+      },
+      "body": "# Session\n\n**Chapter:**\n**In-world date:**\n**Present:** [[Character]], [[Character]]\n\n## Recap\n\nWhere we left off and the hook into this session.\n\n## Scenes\n\n1. **Scene** — what happened.\n\n## Glory & Rewards\n\n- Glory gained and by whom.\n\n## Open Threads\n\n- Hooks carried forward.\n\n:::gm\n## GM Notes\n\nSetups, consequences now in motion.\n:::\n"
+    },
+    {
+      "slug": "rumor",
+      "frontmatter": {
+        "category": "event",
+        "type": "event",
+        "name": "Rumor",
+        "summary": "",
+        "tags": [
+          "rumor"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo",
+        "eventDate": ""
+      },
+      "body": "# Rumor\n\n**Heard in:** [[Holding]]\n**Subject:** [[House]]\n**Reliability:** common talk / single source / firsthand\n\n## The Word\n\nWhat people are saying, in their words.\n\n## Where It Leads\n\n- A place or person to chase for more.\n\n:::gm\n## The Truth\n\nHow much is real, who started it, and why.\n:::\n"
+    }
+  ],
+  "Dungeons & Dragons": [
+    {
+      "slug": "npc",
+      "frontmatter": {
+        "category": "npc",
+        "type": "npc",
+        "name": "NPC",
+        "summary": "",
+        "tags": [
+          "npc",
+          "statblock"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# NPC\n\n![portrait](/wiki/media/REPLACE.jpg)\n*Race • Role • Alignment*\n\n**AC:**  **HP:**  **Speed:**\n**CR:**\n\n## Stat Block\n\n| STR | DEX | CON | INT | WIS | CHA |\n| --- | --- | --- | --- | --- | --- |\n|  |  |  |  |  |  |\n\n**Actions:**\n\n## Roleplay\n\nVoice, mannerism, ideal/bond/flaw, and what they want.\n\n:::gm\n## GM Truth\n\nHidden motives, tactics, and treasure.\n:::\n"
+    },
+    {
+      "slug": "player-character",
+      "frontmatter": {
+        "category": "character",
+        "type": "character",
+        "name": "Player Character",
+        "summary": "",
+        "tags": [
+          "pc",
+          "character"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Player Character\n\n![portrait](/wiki/media/REPLACE.jpg)\n*Player • Pronouns • Concept*\n\n**Class & Level:**\n**Race:**  **Background:**\n**Alignment:**\n\n## Backstory\n\nA few lines on where they come from.\n\n## Ties\n\n- [[NPC]] — relationship\n- [[Faction]] — allegiance\n\n## Goals\n\n- Short-term / long-term.\n\n:::gm\n## GM Notes\n\nBackstory hooks to pay off.\n:::\n"
+    },
+    {
+      "slug": "location",
+      "frontmatter": {
+        "category": "location",
+        "type": "location",
+        "name": "Location",
+        "summary": "",
+        "tags": [
+          "location"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Location\n\n![map](/wiki/media/REPLACE.png)\n*Type • Ruler*\n\n**Type:** city / dungeon / wilds\n**Ruler / Power:** [[Faction]]\n\n## Overview\n\nWhat it looks like and is known for.\n\n## Points of Interest\n\n- A site, with a hook.\n\n## Encounters\n\n- What the party may run into.\n\n:::gm\n## GM Truth\n\nSecrets, traps, and treasure here.\n:::\n"
+    },
+    {
+      "slug": "faction",
+      "frontmatter": {
+        "category": "npc",
+        "type": "npc",
+        "name": "Faction",
+        "summary": "",
+        "tags": [
+          "faction"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Faction\n\n![symbol](/wiki/media/REPLACE.png)\n*Type • Seat*\n\n**Type:** guild / cult / order / crown\n**Headquarters:** [[Location]]\n**Leader:** [[NPC]]\n\n## Goals & Methods\n\nWhat they want and how they pursue it.\n\n## Allies & Enemies\n\n- Allies / enemies.\n\n:::gm\n## GM Truth\n\nHidden agenda and assets.\n:::\n"
+    },
+    {
+      "slug": "magic-item",
+      "frontmatter": {
+        "category": "game",
+        "type": "game",
+        "name": "Magic Item",
+        "summary": "",
+        "tags": [
+          "item",
+          "magic-item"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Magic Item\n\n![item](/wiki/media/REPLACE.png)\n*Type • Rarity*\n\n**Type:** weapon / wondrous item / potion\n**Rarity:** common / uncommon / rare / very rare / legendary\n**Attunement:** yes / no\n\n## Description\n\nWhat it looks like and does.\n\n## Properties\n\n- Mechanical effects.\n\n:::gm\n## GM Truth\n\nCurses, charges, and its true history.\n:::\n"
+    },
+    {
+      "slug": "session",
+      "frontmatter": {
+        "category": "event",
+        "type": "event",
+        "name": "Session",
+        "summary": "Recap layout for a play session; fill in eventDate for the timeline.",
+        "tags": [
+          "session"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo",
+        "eventDate": ""
+      },
+      "body": "# Session\n\n**Present:** [[Player Character]], [[Player Character]]\n\n## Recap\n\nWhere we left off and tonight's hook.\n\n## Scenes\n\n1. **Scene** — what happened.\n\n## Loot & XP\n\n- Rewards gained.\n\n## Open Threads\n\n- Hooks carried forward.\n\n:::gm\n## GM Notes\n\nSetups and consequences.\n:::\n"
+    }
+  ],
+  "World of Darkness": [
+    {
+      "slug": "vampire",
+      "frontmatter": {
+        "category": "character",
+        "type": "character",
+        "name": "Vampire",
+        "summary": "",
+        "tags": [
+          "pc",
+          "vampire"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Vampire\n\n![portrait](/wiki/media/REPLACE.jpg)\n*Clan • Generation • Sire*\n\n**Clan:**\n**Generation:**\n**Sire:** [[NPC]]\n**Predator Type:**\n**Humanity:**\n\n## Disciplines\n\n- Discipline • dots\n\n## Mask & Mien\n\nHow they pass among mortals, and what they truly are.\n\n## Touchstones & Convictions\n\n- A touchstone and the conviction it anchors.\n\n:::gm\n## GM Notes\n\nThe Beast's triggers and looming hooks.\n:::\n"
+    },
+    {
+      "slug": "mortal",
+      "frontmatter": {
+        "category": "npc",
+        "type": "npc",
+        "name": "Mortal NPC",
+        "summary": "",
+        "tags": [
+          "npc",
+          "mortal"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Mortal NPC\n\n![portrait](/wiki/media/REPLACE.jpg)\n*Role • Connection*\n\n**Occupation:**\n**Connection:** [[Vampire]] / [[Coterie]]\n\n## Public Face\n\nHow they present and what they offer.\n\n:::gm\n## GM Truth\n\nWhat they know, suspect, or are being used for.\n:::\n"
+    },
+    {
+      "slug": "domain",
+      "frontmatter": {
+        "category": "location",
+        "type": "location",
+        "name": "Domain",
+        "summary": "",
+        "tags": [
+          "location",
+          "domain"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Domain\n\n![view](/wiki/media/REPLACE.png)\n*Regent • Status*\n\n**Regent / Prince:** [[Vampire]]\n**Territory:**\n\n## Overview\n\nThe feeding grounds, hot spots, and rules of the night here.\n\n## Hot Spots\n\n- A location, with a hook.\n\n:::gm\n## GM Truth\n\nHidden hazards and contested ground.\n:::\n"
+    },
+    {
+      "slug": "coterie",
+      "frontmatter": {
+        "category": "npc",
+        "type": "npc",
+        "name": "Coterie",
+        "summary": "",
+        "tags": [
+          "faction",
+          "coterie"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Coterie\n\n![symbol](/wiki/media/REPLACE.png)\n*Type • Domain*\n\n**Type:** pack / cabal / faction\n**Domain:** [[Domain]]\n**Members:** [[Vampire]]\n\n## Purpose\n\nWhat binds them and what they pursue.\n\n## Standing\n\n- Allies and rivals among the Kindred.\n\n:::gm\n## GM Truth\n\nFractures, betrayals, and secret deals.\n:::\n"
+    },
+    {
+      "slug": "story",
+      "frontmatter": {
+        "category": "event",
+        "type": "event",
+        "name": "Story / Session",
+        "summary": "Recap layout for a chronicle session; fill in eventDate for the timeline.",
+        "tags": [
+          "session",
+          "story"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo",
+        "eventDate": ""
+      },
+      "body": "# Story / Session\n\n**Chronicle:**\n**Present:** [[Vampire]], [[Vampire]]\n\n## Recap\n\nWhere we left off and tonight's hook.\n\n## Scenes\n\n1. **Scene** — what happened.\n\n## Consequences\n\n- Humanity tests, boons owed, Masquerade risks.\n\n:::gm\n## GM Notes\n\nThreads tightening behind the scenes.\n:::\n"
+    },
+    {
+      "slug": "rumor",
+      "frontmatter": {
+        "category": "event",
+        "type": "event",
+        "name": "Rumor",
+        "summary": "",
+        "tags": [
+          "rumor"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo",
+        "eventDate": ""
+      },
+      "body": "# Rumor\n\n**Heard in:** [[Domain]]\n**Subject:** [[Vampire]] / [[Coterie]]\n**Reliability:** Elysium gossip / single source / firsthand\n\n## The Word\n\nWhat the Kindred are whispering.\n\n## Where It Leads\n\n- A contact or place to press for more.\n\n:::gm\n## The Truth\n\nWho planted it and what it conceals.\n:::\n"
+    }
+  ],
+  "Traveller": [
+    {
+      "slug": "npc",
+      "frontmatter": {
+        "category": "npc",
+        "type": "npc",
+        "name": "NPC",
+        "summary": "",
+        "tags": [
+          "npc"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo",
+        "allegiance": ""
+      },
+      "body": "# NPC\n\n![portrait](/wiki/media/REPLACE.jpg)\n*Career • Allegiance*\n\n**UPP:**\n**Career / Rank:**\n**Affiliation:** [[Faction]]\n\n## Profile\n\nBackground, manner, and what they want.\n\n## Connections\n\n- [[NPC]] — relationship.\n\n:::gm\n## GM Truth\n\nHidden loyalties and leverage.\n:::\n"
+    },
+    {
+      "slug": "world",
+      "frontmatter": {
+        "category": "location",
+        "type": "location",
+        "name": "World",
+        "summary": "",
+        "tags": [
+          "location",
+          "world"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo",
+        "uwp": "",
+        "allegiance": "",
+        "tradeCodes": [],
+        "subsector": "",
+        "techLevel": ""
+      },
+      "body": "# World\n\n![map](/wiki/media/REPLACE.png)\n*UWP • Subsector*\n\n**UWP:**\n**Allegiance:**\n**Trade Codes:**\n**Subsector:**\n**Tech Level:**\n\n## Overview\n\nStarport, government, and what travellers find here.\n\n## Points of Interest\n\n- A site, with a hook.\n\n:::gm\n## GM Truth\n\nWhat the survey missed.\n:::\n"
+    },
+    {
+      "slug": "patron",
+      "frontmatter": {
+        "category": "npc",
+        "type": "npc",
+        "name": "Patron",
+        "summary": "",
+        "tags": [
+          "npc",
+          "patron"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo",
+        "patron": ""
+      },
+      "body": "# Patron\n\n![portrait](/wiki/media/REPLACE.jpg)\n*Role • Reach*\n\n**Affiliation:** [[Faction]]\n**Offers:** the job, the pay, the risk.\n\n## The Offer\n\nWhat the patron wants done, and the stated terms.\n\n## Complications\n\n- What they aren't telling the crew.\n\n:::gm\n## GM Truth\n\nThe real goal, the double-cross, and the true payoff.\n:::\n"
+    },
+    {
+      "slug": "faction",
+      "frontmatter": {
+        "category": "npc",
+        "type": "npc",
+        "name": "Faction",
+        "summary": "",
+        "tags": [
+          "faction"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Faction\n\n![symbol](/wiki/media/REPLACE.png)\n*Type • Reach*\n\n**Type:** corporation / noble line / government / criminal\n**Headquarters:** [[World]]\n**Leader:** [[NPC]]\n\n## Goals & Methods\n\nWhat they want and how far their reach extends.\n\n:::gm\n## GM Truth\n\nHidden assets and agenda.\n:::\n"
+    },
+    {
+      "slug": "ship",
+      "frontmatter": {
+        "category": "game",
+        "type": "game",
+        "name": "Ship",
+        "summary": "",
+        "tags": [
+          "ship"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Ship\n\n![ship](/wiki/media/REPLACE.png)\n*Class • Tonnage*\n\n**Tonnage:**\n**Jump:**  **Maneuver:**\n**Owner / Crew:** [[NPC]]\n\n## Specifications\n\nArmament, cargo, staterooms, and quirks.\n\n:::gm\n## GM Notes\n\nLiens, hidden compartments, and history.\n:::\n"
+    },
+    {
+      "slug": "session",
+      "frontmatter": {
+        "category": "event",
+        "type": "event",
+        "name": "Session",
+        "summary": "Recap layout for a play session; fill in eventDate for the timeline.",
+        "tags": [
+          "session"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo",
+        "eventDate": ""
+      },
+      "body": "# Session\n\n**Present:** [[NPC]], [[NPC]]\n\n## Recap\n\nWhere the crew left off and the current job.\n\n## Scenes\n\n1. **Scene** — what happened.\n\n## Payout\n\n- Credits, salvage, reputation.\n\n## Open Threads\n\n- Hooks carried forward.\n\n:::gm\n## GM Notes\n\nSetups and consequences.\n:::\n"
+    }
+  ],
+  "Custom": [
+    {
+      "slug": "character",
+      "frontmatter": {
+        "category": "character",
+        "type": "character",
+        "name": "Character",
+        "summary": "",
+        "tags": [
+          "character"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Character\n\n## Overview\n\n## Ties\n\n- [[Someone]]\n\n:::gm\nGM-only truth.\n:::\n"
+    },
+    {
+      "slug": "npc",
+      "frontmatter": {
+        "category": "npc",
+        "type": "npc",
+        "name": "NPC",
+        "summary": "",
+        "tags": [
+          "npc"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# NPC\n\n## Public Face\n\n## Relationships\n\n- [[Someone]]\n\n:::gm\nWhat they want, hide, and know.\n:::\n"
+    },
+    {
+      "slug": "location",
+      "frontmatter": {
+        "category": "location",
+        "type": "location",
+        "name": "Location",
+        "summary": "",
+        "tags": [
+          "location"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Location\n\n## Overview\n\n## Notable Sites\n\n:::gm\nHidden truths here.\n:::\n"
+    },
+    {
+      "slug": "event",
+      "frontmatter": {
+        "category": "event",
+        "type": "event",
+        "name": "Event",
+        "summary": "",
+        "tags": [
+          "event"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo",
+        "eventDate": ""
+      },
+      "body": "# Event\n\n## Summary\n\n## Aftermath\n\n:::gm\nWhat really happened.\n:::\n"
+    },
+    {
+      "slug": "game",
+      "frontmatter": {
+        "category": "game",
+        "type": "game",
+        "name": "Game Note",
+        "summary": "",
+        "tags": [
+          "game"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Game Note\n\n## Overview\n\n:::gm\nGM-only rules notes.\n:::\n"
+    }
+  ]
+}

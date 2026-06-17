@@ -1,5 +1,6 @@
 import type { Campaign, GameType } from "@/lib/types";
-import { campaignYaml, categories, repoReadme, starterTemplate } from "@/lib/templates";
+import { campaignYaml, repoReadme } from "@/lib/templates";
+import { packFor } from "@/lib/template-packs";
 import { serializePage } from "@/lib/markdown";
 
 const apiBase = "https://api.github.com";
@@ -97,14 +98,13 @@ export async function initializeRepo(token: string, campaign: Campaign) {
   await ensureFile(token, campaign, "wiki/search/index.json", "[]\n", "CampaignRepo: add search snapshot");
   await ensureFile(token, campaign, "wiki/media/.gitkeep", "", "CampaignRepo: add media folder");
   await ensureFile(token, campaign, "wiki/imports/characters/.gitkeep", "", "CampaignRepo: add imports folder");
-  for (const category of categories) {
-    const template = starterTemplate(campaign.gameType as GameType, category.id);
+  for (const def of packFor(campaign.gameType)) {
     await ensureFile(
       token,
       campaign,
-      `wiki/templates/${campaign.gameType}/${template.slug}.md`,
-      serializePage(template.frontmatter, template.content),
-      `CampaignRepo: add ${campaign.gameType} ${category.label} template`
+      `wiki/templates/${campaign.gameType}/${def.slug}.md`,
+      serializePage(def.frontmatter, def.body),
+      `CampaignRepo: add ${campaign.gameType} ${def.slug} template`
     );
   }
 }

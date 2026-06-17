@@ -1,7 +1,7 @@
 import type { Category, GameType, WikiPageFrontmatter } from "@/lib/types";
 import { slugify } from "@/lib/slug";
 
-export const gameTypes: GameType[] = ["Traveller", "Fantasy", "Modern", "Horror", "Sci-Fi", "Custom"];
+export const gameTypes: GameType[] = ["Sword Chronicle", "Dungeons & Dragons", "World of Darkness", "Traveller", "Custom"];
 export const categories: { id: Category; label: string }[] = [
   { id: "character", label: "Characters" },
   { id: "npc", label: "NPCs" },

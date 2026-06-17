@@ -31,7 +31,7 @@ beforeAll(() => {
   const db = getDb();
   gmId = Number(db.prepare("INSERT INTO users (email, name, passwordHash) VALUES (?, ?, ?)").run("gm@test", "GM", "x").lastInsertRowid);
   playerId = Number(db.prepare("INSERT INTO users (email, name, passwordHash) VALUES (?, ?, ?)").run("player@test", "Player", "x").lastInsertRowid);
-  campaignId = Number(db.prepare("INSERT INTO campaigns (userId, name, owner, repo, gameType) VALUES (?, ?, ?, ?, ?)").run(gmId, "Test", "o", "r", "Fantasy").lastInsertRowid);
+  campaignId = Number(db.prepare("INSERT INTO campaigns (userId, name, owner, repo, gameType) VALUES (?, ?, ?, ?, ?)").run(gmId, "Test", "o", "r", "Sword Chronicle").lastInsertRowid);
   db.prepare("INSERT INTO campaign_memberships (campaignId, userId, role) VALUES (?, ?, ?)").run(campaignId, gmId, "owner");
   db.prepare("INSERT INTO campaign_memberships (campaignId, userId, role) VALUES (?, ?, ?)").run(campaignId, playerId, "player");
   upsertSearchDocuments(campaignId, [

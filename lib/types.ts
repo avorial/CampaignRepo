@@ -1,4 +1,4 @@
-export type GameType = "Traveller" | "Fantasy" | "Modern" | "Horror" | "Sci-Fi" | "Custom";
+export type GameType = "Sword Chronicle" | "Dungeons & Dragons" | "World of Darkness" | "Traveller" | "Custom";
 export type Category = "character" | "npc" | "location" | "event" | "game";
 export type Visibility = "gm" | "players";
 export type ApprovalStatus = "approved" | "unapproved" | "rejected";

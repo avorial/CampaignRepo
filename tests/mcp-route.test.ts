@@ -30,7 +30,7 @@ beforeAll(() => {
   const db = getDb();
   const gmId = Number(db.prepare("INSERT INTO users (email, name, passwordHash, githubToken) VALUES (?, ?, ?, ?)").run("gm@mcp", "GM", "x", "ghp_test").lastInsertRowid);
   const playerId = Number(db.prepare("INSERT INTO users (email, name, passwordHash, githubToken) VALUES (?, ?, ?, ?)").run("player@mcp", "Player", "x", "ghp_test").lastInsertRowid);
-  campaignId = Number(db.prepare("INSERT INTO campaigns (userId, name, owner, repo, gameType) VALUES (?, ?, ?, ?, ?)").run(gmId, "C", "o", "r", "Fantasy").lastInsertRowid);
+  campaignId = Number(db.prepare("INSERT INTO campaigns (userId, name, owner, repo, gameType) VALUES (?, ?, ?, ?, ?)").run(gmId, "C", "o", "r", "Sword Chronicle").lastInsertRowid);
   db.prepare("INSERT INTO campaign_memberships (campaignId, userId, role) VALUES (?, ?, ?)").run(campaignId, gmId, "owner");
   db.prepare("INSERT INTO campaign_memberships (campaignId, userId, role) VALUES (?, ?, ?)").run(campaignId, playerId, "player");
   gmToken = createApiToken(gmId, "gm").token;
