@@ -5,6 +5,7 @@ import { getTextFile, listDirectory, putFile } from "@/lib/github";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { defaultFrontmatter, gameTypes, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
+import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import { rebuildSearchIndex } from "@/lib/search";
 import type { Campaign, CampaignGraphEdge, CampaignGraphNode, CampaignMedia, CampaignTimelineItem, Category, GameType, WikiPage, WikiTemplate } from "@/lib/types";
 
@@ -95,18 +96,13 @@ async function buildMcpGraph(token: string, campaign: Campaign) {
       })
   );
   const pages = allPages.filter((page) => visibleForRole(page, campaign.role));
-  const aliases = new Map<string, string>();
-  for (const page of pages) {
-    aliases.set(page.slug.toLowerCase(), page.slug);
-    aliases.set(page.frontmatter.name.toLowerCase(), page.slug);
-    for (const alias of page.frontmatter.aliases) aliases.set(alias.toLowerCase(), page.slug);
-  }
+  const aliases = aliasMapFromPages(pages);
   const visibleSlugs = new Set(pages.map((page) => page.slug));
   const backlinks = new Map<string, string[]>();
   const edges: CampaignGraphEdge[] = [];
   for (const page of pages) {
     for (const link of page.outgoingLinks) {
-      const target = aliases.get(link.target.toLowerCase()) || slugify(link.target);
+      const target = resolveTarget(aliases, link.target);
       const missing = !visibleSlugs.has(target);
       if (!missing) backlinks.set(target, [...(backlinks.get(target) || []), page.slug]);
       if (campaign.role !== "player" || !missing) edges.push({ source: page.slug, target, label: link.label, missing });
@@ -121,7 +117,7 @@ async function buildMcpGraph(token: string, campaign: Campaign) {
     visibility: page.frontmatter.visibility,
     approvalStatus: page.frontmatter.approvalStatus,
     keyLinks: page.frontmatter.keyLinks,
-    outgoingLinks: page.outgoingLinks.map((link) => aliases.get(link.target.toLowerCase()) || slugify(link.target)).filter((target) => campaign.role !== "player" || visibleSlugs.has(target)),
+    outgoingLinks: page.outgoingLinks.map((link) => resolveTarget(aliases, link.target)).filter((target) => campaign.role !== "player" || visibleSlugs.has(target)),
     backlinks: backlinks.get(page.slug) || []
   }));
   const timeline: CampaignTimelineItem[] = pages

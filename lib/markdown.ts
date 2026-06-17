@@ -1,5 +1,7 @@
 import matter from "gray-matter";
 import yaml from "yaml";
+import { marked } from "marked";
+import DOMPurify from "isomorphic-dompurify";
 import type { ApprovalStatus, Category, Visibility, WikiLink, WikiPage, WikiPageFrontmatter } from "@/lib/types";
 import { defaultFrontmatter } from "@/lib/templates";
 
@@ -59,16 +61,63 @@ export function serializePage(frontmatter: WikiPageFrontmatter, content: string)
   return `---\n${fm}\n---\n\n${content.trimStart()}`;
 }
 
-export function renderMarkdownLite(content: string, mode: "gm" | "player") {
-  const source = mode === "player" ? stripGmBlocks(content) : content.replace(/:::gm/g, '<section class="gm-block"><strong>GM</strong>').replace(/:::/g, "</section>");
-  return source
-    .replace(/^# (.*)$/gm, "<h1>$1</h1>")
-    .replace(/^## (.*)$/gm, "<h2>$1</h2>")
-    .replace(/^### (.*)$/gm, "<h3>$1</h3>")
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '<a data-wikilink="$1">$2</a>')
-    .replace(/\[\[([^\]]+)\]\]/g, '<a data-wikilink="$1">$1</a>')
-    .split(/\n{2,}/)
-    .map((block) => (block.startsWith("<") ? block : `<p>${block.replace(/\n/g, "<br />")}</p>`))
-    .join("\n");
+export type RenderMode = "gm" | "player" | "handout";
+
+/** Resolve a `[[target]]` to an href and whether the page is missing. */
+export type WikiLinkResolver = (target: string) => { href: string; missing: boolean };
+
+const gmBlockSplitter = /:::gm\s*([\s\S]*?):::/g;
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function renderWikiLink(target: string, label: string, resolve?: WikiLinkResolver) {
+  const text = escapeHtml((label || target).trim());
+  if (!resolve) return `<a class="wiki-link">${text}</a>`;
+  const { href, missing } = resolve(target.trim());
+  const attrs = missing
+    ? `class="wiki-link missing" href="${escapeHtml(href)}" data-missing="true" data-target="${escapeHtml(target.trim())}"`
+    : `class="wiki-link" href="${escapeHtml(href)}"`;
+  return `<a ${attrs}>${text}</a>`;
+}
+
+/** Convert wiki-link syntax, run through marked, but do not sanitize (caller wraps). */
+function renderInline(markdown: string, resolve?: WikiLinkResolver) {
+  const withLinks = markdown.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_match, target, label) =>
+    renderWikiLink(String(target), label ? String(label) : "", resolve)
+  );
+  return marked.parse(withLinks, { async: false }) as string;
+}
+
+/**
+ * Render campaign Markdown to sanitized HTML.
+ * - `player`/`handout` modes strip `:::gm` secret blocks entirely.
+ * - `gm` mode renders each secret block as a styled `.gm-block` section.
+ * - `[[Wiki Links]]` become anchors via the optional resolver.
+ * Output is always passed through DOMPurify, so untrusted page bodies cannot
+ * inject script or event-handler attributes.
+ */
+export function renderMarkdown(content: string, mode: RenderMode, resolve?: WikiLinkResolver) {
+  let html: string;
+  if (mode !== "gm") {
+    html = renderInline(stripGmBlocks(content), resolve);
+  } else {
+    let out = "";
+    let last = 0;
+    for (const match of content.matchAll(gmBlockSplitter)) {
+      const index = match.index ?? 0;
+      out += renderInline(content.slice(last, index), resolve);
+      out += `<section class="gm-block"><strong>GM</strong>${renderInline(match[1], resolve)}</section>`;
+      last = index + match[0].length;
+    }
+    out += renderInline(content.slice(last), resolve);
+    html = out;
+  }
+  return DOMPurify.sanitize(html, { ADD_ATTR: ["data-missing", "data-target"] });
 }

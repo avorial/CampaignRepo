@@ -1,25 +1,17 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Campaign, WikiPage } from "@/lib/types";
-
-function render(content: string, mode: "gm" | "player" | "handout") {
-  let html = mode === "player" || mode === "handout" ? content.replace(/:::gm[\s\S]*?:::/g, "") : content.replace(/:::gm/g, '<section class="gm-block"><strong>GM</strong>').replace(/:::/g, "</section>");
-  html = html
-    .replace(/^# (.*)$/gm, "<h1>$1</h1>")
-    .replace(/^## (.*)$/gm, "<h2>$1</h2>")
-    .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '<a class="wiki-link">$2</a>')
-    .replace(/\[\[([^\]]+)\]\]/g, '<a class="wiki-link">$1</a>')
-    .split(/\n{2,}/)
-    .map((block) => (block.startsWith("<") ? block : `<p>${block.replace(/\n/g, "<br />")}</p>`))
-    .join("");
-  return html;
-}
+import { renderMarkdown, type WikiLinkResolver } from "@/lib/markdown";
+import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
 
 export default function PageEditor({ campaign, slug }: { campaign: Campaign; slug: string }) {
+  const router = useRouter();
   const [page, setPage] = useState<WikiPage | null>(null);
   const [content, setContent] = useState("");
   const [frontmatter, setFrontmatter] = useState<any>({});
+  const [knownPages, setKnownPages] = useState<WikiPage[]>([]);
   const canManage = campaign.role === "owner" || campaign.role === "gm";
   const [mode, setMode] = useState<"gm" | "player" | "handout">(canManage ? "gm" : "player");
   const [message, setMessage] = useState("");
@@ -32,9 +24,48 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
         setContent(data.page.content);
         setFrontmatter(data.page.frontmatter);
       });
+    fetch(`/api/campaigns/${campaign.id}/pages`)
+      .then((res) => res.json())
+      .then((data) => setKnownPages(Array.isArray(data.pages) ? data.pages : []));
   }, [campaign.id, slug]);
 
-  const preview = useMemo(() => render(content, mode), [content, mode]);
+  const resolveLink = useMemo<WikiLinkResolver>(() => {
+    const aliasMap = buildAliasMap(
+      knownPages.map((p) => ({ slug: p.slug, name: p.frontmatter.name, aliases: p.frontmatter.aliases || [] }))
+    );
+    const knownSlugs = new Set(knownPages.map((p) => p.slug));
+    return (target: string) => {
+      const { slug: target_slug, missing } = resolveLinkTarget(aliasMap, knownSlugs, target);
+      return { href: `/campaigns/${campaign.id}/pages/${target_slug}`, missing };
+    };
+  }, [knownPages, campaign.id]);
+
+  const preview = useMemo(() => renderMarkdown(content, mode, resolveLink), [content, mode, resolveLink]);
+
+  const onPreviewClick = useCallback(
+    async (event: MouseEvent<HTMLDivElement>) => {
+      const anchor = (event.target as HTMLElement).closest("a.wiki-link");
+      if (!anchor) return;
+      event.preventDefault();
+      const href = anchor.getAttribute("href");
+      const missing = anchor.getAttribute("data-missing") === "true";
+      const target = anchor.getAttribute("data-target") || "";
+      if (!missing) {
+        if (href) router.push(href);
+        return;
+      }
+      if (!canManage) return;
+      if (!confirm(`"${target}" has no page yet. Create it now?`)) return;
+      const res = await fetch(`/api/campaigns/${campaign.id}/pages`, {
+        method: "POST",
+        body: JSON.stringify({ name: target, category: "npc", visibility: "gm" })
+      });
+      const data = await res.json();
+      if (res.ok && data.slug) router.push(`/campaigns/${campaign.id}/pages/${data.slug}`);
+      else setMessage(data.error || "Could not create page.");
+    },
+    [campaign.id, canManage, router]
+  );
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -134,7 +165,7 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
                 {frontmatter.summary && <span>{frontmatter.summary}</span>}
               </header>
             )}
-            <div dangerouslySetInnerHTML={{ __html: preview }} />
+            <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
           </article>
         </div>
         {message && <p className="toast">{message}</p>}

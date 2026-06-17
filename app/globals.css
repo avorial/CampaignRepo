@@ -630,6 +630,12 @@ button.danger {
 .wiki-link {
   color: var(--accent);
   font-weight: 700;
+  cursor: pointer;
+}
+
+.wiki-link.missing {
+  color: var(--accent-2);
+  border-bottom: 1px dashed var(--accent-2);
 }
 
 .gm-block {

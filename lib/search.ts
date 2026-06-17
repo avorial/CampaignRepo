@@ -1,20 +1,15 @@
 import { getTextFile, listDirectory, putFile } from "@/lib/github";
 import { parsePage, stripGmBlocks } from "@/lib/markdown";
-import { slugify } from "@/lib/slug";
+import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import type { Campaign, SearchDocument, WikiPage } from "@/lib/types";
 import { upsertSearchDocuments } from "@/lib/db";
 
 function withBacklinks(pages: WikiPage[]) {
-  const aliases = new Map<string, string>();
-  for (const page of pages) {
-    aliases.set(page.slug.toLowerCase(), page.slug);
-    aliases.set(page.frontmatter.name.toLowerCase(), page.slug);
-    for (const alias of page.frontmatter.aliases) aliases.set(alias.toLowerCase(), page.slug);
-  }
+  const aliases = aliasMapFromPages(pages);
   const backlinks = new Map<string, string[]>();
   for (const page of pages) {
     for (const link of page.outgoingLinks) {
-      const target = aliases.get(link.target.toLowerCase()) || slugify(link.target);
+      const target = resolveTarget(aliases, link.target);
       backlinks.set(target, [...(backlinks.get(target) || []), page.slug]);
     }
   }

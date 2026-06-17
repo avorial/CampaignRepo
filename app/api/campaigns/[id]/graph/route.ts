@@ -3,22 +3,12 @@ import { requireUser } from "@/lib/auth";
 import { getCampaign } from "@/lib/db";
 import { getTextFile, listDirectory } from "@/lib/github";
 import { parsePage, stripGmBlocks } from "@/lib/markdown";
-import { slugify } from "@/lib/slug";
+import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import type { CampaignGraphEdge, CampaignGraphNode, CampaignTimelineItem, WikiPage } from "@/lib/types";
 
 function visibleForRole(page: WikiPage, role?: string) {
   if (role !== "player") return true;
   return page.frontmatter.visibility === "players" && page.frontmatter.approvalStatus === "approved";
-}
-
-function resolvePages(pages: WikiPage[]) {
-  const aliases = new Map<string, string>();
-  for (const page of pages) {
-    aliases.set(page.slug.toLowerCase(), page.slug);
-    aliases.set(page.frontmatter.name.toLowerCase(), page.slug);
-    for (const alias of page.frontmatter.aliases) aliases.set(alias.toLowerCase(), page.slug);
-  }
-  return aliases;
 }
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -41,19 +31,19 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
   const pages = allPages.filter((page) => visibleForRole(page, campaign.role));
   const visibleSlugs = new Set(pages.map((page) => page.slug));
-  const aliases = resolvePages(pages);
+  const aliases = aliasMapFromPages(pages);
   const backlinks = new Map<string, string[]>();
   const edges: CampaignGraphEdge[] = [];
 
   for (const page of pages) {
     for (const link of page.outgoingLinks) {
-      const target = aliases.get(link.target.toLowerCase()) || slugify(link.target);
+      const target = resolveTarget(aliases, link.target);
       const missing = !visibleSlugs.has(target);
       if (!missing) backlinks.set(target, [...(backlinks.get(target) || []), page.slug]);
       if (campaign.role !== "player" || !missing) edges.push({ source: page.slug, target, label: link.label, missing });
     }
     for (const keyLink of page.frontmatter.keyLinks) {
-      const target = aliases.get(keyLink.toLowerCase()) || slugify(keyLink);
+      const target = resolveTarget(aliases, keyLink);
       const missing = !visibleSlugs.has(target);
       if (campaign.role !== "player" || !missing) edges.push({ source: page.slug, target, label: "key link", missing });
     }
@@ -69,9 +59,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     approvalStatus: page.frontmatter.approvalStatus,
     keyLinks:
       campaign.role === "player"
-        ? page.frontmatter.keyLinks.map((keyLink) => aliases.get(keyLink.toLowerCase()) || slugify(keyLink)).filter((target) => visibleSlugs.has(target))
+        ? page.frontmatter.keyLinks.map((keyLink) => resolveTarget(aliases, keyLink)).filter((target) => visibleSlugs.has(target))
         : page.frontmatter.keyLinks,
-    outgoingLinks: page.outgoingLinks.map((link) => aliases.get(link.target.toLowerCase()) || slugify(link.target)).filter((target) => campaign.role !== "player" || visibleSlugs.has(target)),
+    outgoingLinks: page.outgoingLinks.map((link) => resolveTarget(aliases, link.target)).filter((target) => campaign.role !== "player" || visibleSlugs.has(target)),
     backlinks: backlinks.get(page.slug) || []
   }));
 
