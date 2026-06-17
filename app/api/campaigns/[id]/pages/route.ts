@@ -1,0 +1,47 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { requireUser } from "@/lib/auth";
+import { getCampaign } from "@/lib/db";
+import { getTextFile, listDirectory, putFile } from "@/lib/github";
+import { parsePage, serializePage } from "@/lib/markdown";
+import { defaultFrontmatter, starterBody } from "@/lib/templates";
+import { slugify } from "@/lib/slug";
+import { rebuildSearchIndex } from "@/lib/search";
+
+const schema = z.object({
+  name: z.string().min(1),
+  category: z.enum(["character", "npc", "location", "event", "game"]),
+  visibility: z.enum(["gm", "players"]).default("gm")
+});
+
+export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await requireUser();
+  const { id } = await params;
+  const campaign = getCampaign(user.id, Number(id));
+  if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const entries = await listDirectory(user.githubToken, campaign, "wiki/pages");
+  const pages = await Promise.all(
+    entries
+      .filter((entry) => entry.type === "file" && entry.name.endsWith(".md"))
+      .map(async (entry) => {
+        const slug = entry.name.replace(/\.md$/, "");
+        const file = await getTextFile(user.githubToken!, campaign, entry.path);
+        return parsePage(slug, file.text, file.sha);
+      })
+  );
+  return NextResponse.json({ pages });
+}
+
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await requireUser();
+  const { id } = await params;
+  const campaign = getCampaign(user.id, Number(id));
+  if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const input = schema.parse(await req.json());
+  const slug = slugify(input.name);
+  const frontmatter = defaultFrontmatter(input.name, input.category, input.visibility);
+  const content = starterBody(input.name, input.category, campaign.gameType as any);
+  await putFile(user.githubToken, campaign, `wiki/pages/${slug}.md`, serializePage(frontmatter, content), `CampaignRepo: create ${input.name}`);
+  await rebuildSearchIndex(user.githubToken, campaign);
+  return NextResponse.json({ slug });
+}

@@ -1,0 +1,27 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { currentUser } from "@/lib/auth";
+import { getCampaign } from "@/lib/db";
+import { categories } from "@/lib/templates";
+import CampaignClient from "./workspace-client";
+
+export default async function CampaignPage({ params }: { params: Promise<{ id: string }> }) {
+  const user = await currentUser();
+  if (!user) redirect("/login");
+  const { id } = await params;
+  const campaign = getCampaign(user.id, Number(id));
+  if (!campaign) redirect("/dashboard");
+  return (
+    <main className="app-shell">
+      <header className="topbar">
+        <div>
+          <Link href="/dashboard" className="quiet-link">Dashboard</Link>
+          <h1>{campaign.name}</h1>
+          <p className="muted">{campaign.owner}/{campaign.repo} · {campaign.gameType}</p>
+        </div>
+        <a className="button secondary" href={`https://github.com/${campaign.owner}/${campaign.repo}`}>Open GitHub</a>
+      </header>
+      <CampaignClient campaign={campaign} categories={categories} />
+    </main>
+  );
+}
