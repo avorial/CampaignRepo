@@ -3,14 +3,32 @@
 import { FormEvent, useEffect, useState } from "react";
 import type { Campaign, CampaignMembership } from "@/lib/types";
 
+type ReviewItem = {
+  slug: string;
+  name: string;
+  category: string;
+  visibility: string;
+  approvalStatus: string;
+  summary: string;
+  lastEditedBy?: string;
+  sourceImport?: string;
+  excerpt: string;
+};
+
 export default function AdminClient({ campaign }: { campaign: Campaign }) {
   const [members, setMembers] = useState<CampaignMembership[]>([]);
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [message, setMessage] = useState("");
 
   async function load() {
-    const res = await fetch(`/api/campaigns/${campaign.id}/admin/members`);
-    const data = await res.json();
-    setMembers(data.members || []);
+    const [membersRes, reviewsRes] = await Promise.all([
+      fetch(`/api/campaigns/${campaign.id}/admin/members`),
+      fetch(`/api/campaigns/${campaign.id}/admin/reviews`)
+    ]);
+    const membersData = await membersRes.json();
+    const reviewsData = await reviewsRes.json();
+    setMembers(membersData.members || []);
+    setReviews(reviewsData.reviews || []);
   }
 
   useEffect(() => {
@@ -65,6 +83,21 @@ export default function AdminClient({ campaign }: { campaign: Campaign }) {
     }
   }
 
+  async function decideReview(slug: string, decision: "approved" | "rejected") {
+    setMessage("");
+    const res = await fetch(`/api/campaigns/${campaign.id}/admin/reviews`, {
+      method: "PATCH",
+      body: JSON.stringify({ slug, decision })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setReviews(data.reviews);
+      setMessage(decision === "approved" ? "Page approved." : "Page rejected.");
+    } else {
+      setMessage(data.error || "Could not update review.");
+    }
+  }
+
   return (
     <section className="admin-grid">
       <div className="panel">
@@ -103,6 +136,31 @@ export default function AdminClient({ campaign }: { campaign: Campaign }) {
           ))}
         </div>
         {message && <p className="toast">{message}</p>}
+      </div>
+
+      <div className="panel admin-wide">
+        <h2>Review queue</h2>
+        <p className="muted">AI edits and imported material marked unapproved stay visible to GMs here, but remain hidden from players until approved.</p>
+        <div className="review-list">
+          {reviews.map((review) => (
+            <article key={review.slug} className="review-row">
+              <div>
+                <a href={`/campaigns/${campaign.id}/pages/${review.slug}`}><strong>{review.name}</strong></a>
+                <p>{review.excerpt || review.summary || "No preview text yet."}</p>
+                <span>
+                  {review.category} · {review.visibility} · {review.approvalStatus}
+                  {review.lastEditedBy ? ` · ${review.lastEditedBy}` : ""}
+                  {review.sourceImport ? ` · ${review.sourceImport}` : ""}
+                </span>
+              </div>
+              <div className="member-actions">
+                <button type="button" onClick={() => decideReview(review.slug, "approved")}>Approve</button>
+                <button type="button" className="secondary danger" onClick={() => decideReview(review.slug, "rejected")}>Reject</button>
+              </div>
+            </article>
+          ))}
+          {!reviews.length && <p className="muted">No unapproved pages are waiting for review.</p>}
+        </div>
       </div>
     </section>
   );

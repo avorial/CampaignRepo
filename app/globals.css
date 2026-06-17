@@ -191,6 +191,10 @@ code {
   gap: 16px;
 }
 
+.admin-wide {
+  grid-column: 1 / -1;
+}
+
 .band {
   margin-top: 18px;
   padding: 22px 0;
@@ -388,6 +392,44 @@ button.danger {
   color: var(--accent);
 }
 
+.review-list {
+  display: grid;
+  gap: 12px;
+}
+
+.review-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  border: 1px solid var(--line);
+  background: #fffaf1;
+  padding: 14px;
+}
+
+.review-row p {
+  margin: 8px 0;
+}
+
+.review-row span {
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+}
+
+.review-callout {
+  display: block;
+  margin-top: 14px;
+  border: 1px solid var(--gold);
+  background: #fff4df;
+  color: var(--ink);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 10px;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
 .editor-panel {
   background: var(--paper);
   border: 1px solid var(--line);
@@ -468,5 +510,9 @@ button.danger {
   .topbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .review-row {
+    grid-template-columns: 1fr;
   }
 }

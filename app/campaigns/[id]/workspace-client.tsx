@@ -9,6 +9,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const [setup, setSetup] = useState("");
   const [message, setMessage] = useState("");
   const [search, setSearch] = useState<any[]>([]);
+  const pendingReviews = pages.filter((page) => page.frontmatter.approvalStatus !== "approved").length;
 
   async function load() {
     const [pagesRes, setupRes] = await Promise.all([
@@ -92,6 +93,11 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
             ))}
           </div>
         ))}
+        {canManage && pendingReviews > 0 && (
+          <Link href={`/campaigns/${campaign.id}/admin`} className="review-callout">
+            {pendingReviews} review{pendingReviews === 1 ? "" : "s"} waiting
+          </Link>
+        )}
       </aside>
 
       <div className="workspace-main">
