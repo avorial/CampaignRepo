@@ -313,6 +313,14 @@ code {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+.field-group {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
 .workspace-main {
   display: grid;
   gap: 16px;
@@ -587,6 +595,36 @@ button.danger {
 .preview h1 {
   font-size: 34px;
   font-weight: 500;
+}
+
+.handout-preview {
+  background: #fffaf1;
+}
+
+.handout-header {
+  border-bottom: 2px solid var(--ink);
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+}
+
+.handout-header p {
+  color: var(--accent);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+
+.handout-header h1 {
+  margin: 0;
+}
+
+.handout-header span {
+  color: var(--muted);
+  display: block;
+  font-family: Arial, Helvetica, sans-serif;
+  margin-top: 8px;
 }
 
 .wiki-link {
