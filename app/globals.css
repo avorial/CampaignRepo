@@ -645,6 +645,12 @@ code {
   white-space: nowrap;
 }
 
+.mapper-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+}
+
 .lore-grid {
   grid-template-columns: 360px minmax(0, 1fr);
 }
@@ -1004,6 +1010,10 @@ code {
   }
 
   .media-row {
+    grid-template-columns: 1fr;
+  }
+
+  .mapper-grid {
     grid-template-columns: 1fr;
   }
 

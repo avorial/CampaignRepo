@@ -84,6 +84,14 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
         source: form.get("source"),
         visibility: form.get("visibility"),
         approvalStatus: form.get("approvalStatus"),
+        mapping: {
+          name: form.get("mapName"),
+          biography: form.get("mapBiography"),
+          items: form.get("mapItems"),
+          category: form.get("mapCategory"),
+          summary: form.get("mapSummary"),
+          tags: form.get("mapTags")
+        },
         sourceJson
       })
     });
@@ -281,6 +289,14 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
                 <label>Source<select name="source"><option value="foundry">Foundry Actor JSON</option><option value="generic">Generic JSON</option></select></label>
                 <label>Visibility<select name="visibility"><option value="gm">GM only</option><option value="players">Player visible</option></select></label>
                 <label>Approval<select name="approvalStatus"><option value="approved">Approved</option><option value="unapproved">Unapproved</option></select></label>
+                <div className="mapper-grid">
+                  <label>Name path<input name="mapName" placeholder="name" /></label>
+                  <label>Biography path<input name="mapBiography" placeholder="bio or system.biography.value" /></label>
+                  <label>Items path<input name="mapItems" placeholder="items" /></label>
+                  <label>Category path<input name="mapCategory" placeholder="type" /></label>
+                  <label>Summary path<input name="mapSummary" placeholder="summary" /></label>
+                  <label>Tags path<input name="mapTags" placeholder="tags" /></label>
+                </div>
                 <textarea name="json" rows={8} placeholder='{"name":"Victor Mendes","type":"npc"}' />
                 <button>Import character</button>
               </form>
