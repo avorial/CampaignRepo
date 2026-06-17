@@ -34,6 +34,21 @@ The local database seeds a first admin account:
 
 CampaignRepo forces this password to be changed on first login before the dashboard or APIs can be used.
 
+## Docker
+
+Pull the repo and run it in a container (data persists in a named volume):
+
+```bash
+docker compose up -d --build
+```
+
+Open `http://127.0.0.1:3000`. The SQLite database (accounts, sessions, search
+index) is stored in the `campaignrepo-data` volume at `/app/data`.
+
+- Serving behind HTTPS? Set `SECURE_COOKIES=true` (in `docker-compose.yml` or the
+  environment) so session cookies get the `Secure` flag.
+- Without compose: `docker build -t campaignrepo . && docker run -p 3000:3000 -v campaignrepo-data:/app/data campaignrepo`.
+
 ## Verification
 
 ```bash

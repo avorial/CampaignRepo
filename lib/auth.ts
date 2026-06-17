@@ -45,7 +45,9 @@ export async function createSession(userId: number) {
   (await cookies()).set(cookieName, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    // Opt-in so the app works over plain HTTP locally / in Docker; enable
+    // SECURE_COOKIES=true when serving behind HTTPS in production.
+    secure: process.env.SECURE_COOKIES === "true",
     path: "/",
     maxAge: 60 * 60 * 24 * 30
   });
