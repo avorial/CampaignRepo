@@ -49,6 +49,8 @@ export type WikiPageFrontmatter = {
   foundryLink?: string;
   sourceImport?: string;
   status?: string;
+  eventDate?: string;
+  timelineDate?: string;
   uwp?: string;
   allegiance?: string;
   tradeCodes?: string[];
@@ -92,6 +94,36 @@ export type CampaignMedia = {
   downloadUrl?: string;
   mediaType: "image" | "pdf" | "audio" | "other";
   markdown: string;
+};
+
+export type CampaignGraphNode = {
+  slug: string;
+  name: string;
+  category: Category;
+  summary: string;
+  tags: string[];
+  visibility: Visibility;
+  approvalStatus: ApprovalStatus;
+  keyLinks: string[];
+  outgoingLinks: string[];
+  backlinks: string[];
+};
+
+export type CampaignGraphEdge = {
+  source: string;
+  target: string;
+  label: string;
+  missing: boolean;
+};
+
+export type CampaignTimelineItem = {
+  slug: string;
+  name: string;
+  summary: string;
+  eventDate?: string;
+  tags: string[];
+  visibility: Visibility;
+  approvalStatus: ApprovalStatus;
 };
 
 export type SearchDocument = {

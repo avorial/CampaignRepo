@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
-import type { Campaign, CampaignMedia, GameType, WikiPage, WikiTemplate } from "@/lib/types";
+import type { Campaign, CampaignGraphEdge, CampaignGraphNode, CampaignMedia, CampaignTimelineItem, GameType, WikiPage, WikiTemplate } from "@/lib/types";
 
 const gameTypes: GameType[] = ["Traveller", "Fantasy", "Modern", "Horror", "Sci-Fi", "Custom"];
 
@@ -10,6 +10,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const [pages, setPages] = useState<WikiPage[]>([]);
   const [templates, setTemplates] = useState<WikiTemplate[]>([]);
   const [media, setMedia] = useState<CampaignMedia[]>([]);
+  const [graph, setGraph] = useState<{ nodes: CampaignGraphNode[]; edges: CampaignGraphEdge[]; timeline: CampaignTimelineItem[] }>({ nodes: [], edges: [], timeline: [] });
   const [setup, setSetup] = useState("");
   const [message, setMessage] = useState("");
   const [search, setSearch] = useState<any[]>([]);
@@ -17,17 +18,20 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
 
   async function load() {
     const canManage = campaign.role === "owner" || campaign.role === "gm";
-    const [pagesRes, setupRes, templatesRes, mediaRes] = await Promise.all([
+    const [pagesRes, graphRes, setupRes, templatesRes, mediaRes] = await Promise.all([
       fetch(`/api/campaigns/${campaign.id}/pages`),
+      fetch(`/api/campaigns/${campaign.id}/graph`),
       fetch(`/api/campaigns/${campaign.id}/setup`),
       canManage ? fetch(`/api/campaigns/${campaign.id}/templates`) : Promise.resolve(null),
       canManage ? fetch(`/api/campaigns/${campaign.id}/media`) : Promise.resolve(null)
     ]);
     const pagesData = await pagesRes.json();
+    const graphData = graphRes.ok ? await graphRes.json() : { nodes: [], edges: [], timeline: [] };
     const setupData = setupRes.ok ? await setupRes.json() : { markdown: "" };
     const templatesData = templatesRes && templatesRes.ok ? await templatesRes.json() : { templates: [] };
     const mediaData = mediaRes && mediaRes.ok ? await mediaRes.json() : { media: [] };
     setPages(pagesData.pages || []);
+    setGraph({ nodes: graphData.nodes || [], edges: graphData.edges || [], timeline: graphData.timeline || [] });
     setSetup(setupData.markdown || "");
     setTemplates(templatesData.templates || []);
     setMedia(mediaData.media || []);
@@ -148,6 +152,15 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const grouped = categories.map((cat) => ({ ...cat, pages: pages.filter((page) => page.frontmatter.category === cat.id) }));
   const canManage = campaign.role === "owner" || campaign.role === "gm";
   const templatesByGame = gameTypes.map((gameType) => ({ gameType, templates: templates.filter((template) => template.gameType === gameType) }));
+  const linkedNodes = graph.nodes
+    .map((node) => ({
+      ...node,
+      linkCount: node.outgoingLinks.length + node.backlinks.length + node.keyLinks.length,
+      missingLinks: graph.edges.filter((edge) => edge.source === node.slug && edge.missing).length
+    }))
+    .filter((node) => node.linkCount > 0 || node.missingLinks > 0)
+    .sort((a, b) => b.linkCount - a.linkCount || a.name.localeCompare(b.name))
+    .slice(0, 12);
 
   return (
     <section className="workspace">
@@ -204,6 +217,40 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
             </div>
           </section>
         )}
+
+        <section className="dashboard-grid lore-grid">
+          <div className="panel">
+            <h2>Timeline</h2>
+            <div className="timeline-list">
+              {graph.timeline.map((item) => (
+                <Link key={item.slug} href={`/campaigns/${campaign.id}/pages/${item.slug}`} className="timeline-row">
+                  <span>{item.eventDate || "Undated"}</span>
+                  <strong>{item.name}</strong>
+                  <small>{item.summary || item.tags.join(", ") || item.visibility}</small>
+                </Link>
+              ))}
+              {!graph.timeline.length && <p className="muted">Create Event pages to build the campaign timeline.</p>}
+            </div>
+          </div>
+
+          <div className="panel">
+            <h2>Relationships</h2>
+            <div className="relationship-list">
+              {linkedNodes.map((node) => (
+                <article key={node.slug} className="relationship-row">
+                  <div>
+                    <Link href={`/campaigns/${campaign.id}/pages/${node.slug}`}><strong>{node.name}</strong></Link>
+                    <span>{node.category} · {node.linkCount} links{node.missingLinks ? ` · ${node.missingLinks} missing` : ""}</span>
+                  </div>
+                  <p>
+                    Out: {node.outgoingLinks.length} · Back: {node.backlinks.length} · Key: {node.keyLinks.length}
+                  </p>
+                </article>
+              ))}
+              {!linkedNodes.length && <p className="muted">Use wiki links like [[Jardin]] to grow relationships.</p>}
+            </div>
+          </div>
+        </section>
 
         {canManage && (
           <section className="dashboard-grid media-grid">

@@ -512,6 +512,42 @@ button.danger {
   white-space: nowrap;
 }
 
+.lore-grid {
+  grid-template-columns: 360px minmax(0, 1fr);
+}
+
+.timeline-list,
+.relationship-list {
+  display: grid;
+  gap: 10px;
+}
+
+.timeline-row,
+.relationship-row {
+  background: #fffaf1;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  text-decoration: none;
+}
+
+.timeline-row span,
+.relationship-row span,
+.timeline-row small,
+.relationship-row p {
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  margin: 0;
+}
+
+.relationship-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
 .editor-panel {
   background: var(--paper);
   border: 1px solid var(--line);
@@ -599,6 +635,10 @@ button.danger {
   }
 
   .media-row {
+    grid-template-columns: 1fr;
+  }
+
+  .relationship-row {
     grid-template-columns: 1fr;
   }
 }
