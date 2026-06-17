@@ -734,6 +734,58 @@ code {
   color: var(--purple);
 }
 
+.steps {
+  display: grid;
+  gap: 14px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.step-num {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(212, 169, 87, 0.12);
+  border: 1px solid var(--gold);
+  color: var(--gold-bright);
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.step-body h2 {
+  margin: 4px 0 8px;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.step-body p {
+  margin: 0 0 8px;
+}
+
+.step-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  color: var(--text-secondary);
+}
+
+.step-list strong {
+  color: var(--text-primary);
+}
+
 .token-row {
   align-items: center;
   display: flex;

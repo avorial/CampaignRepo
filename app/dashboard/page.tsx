@@ -18,9 +18,12 @@ export default async function DashboardPage() {
           <p className="eyebrow">CampaignRepo</p>
           <h1>Campaign dashboard</h1>
         </div>
-        <form action="/api/auth/logout" method="post">
-          <button className="secondary">Sign out</button>
-        </form>
+        <div className="topbar-actions">
+          <Link className="button secondary" href="/getting-started">Getting started</Link>
+          <form action="/api/auth/logout" method="post">
+            <button className="secondary">Sign out</button>
+          </form>
+        </div>
       </header>
 
       <DashboardClient user={user} campaigns={campaigns} gameTypes={gameTypes} categories={categories} />

@@ -39,6 +39,7 @@ export default function LoginPage() {
           <button type="submit">Sign in</button>
         </form>
         <p className="muted">No account yet? <Link href="/register">Create one</Link>.</p>
+        <p className="muted">New here? <Link href="/getting-started">Read the getting-started guide</Link>.</p>
       </section>
     </main>
   );
