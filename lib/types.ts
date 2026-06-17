@@ -72,6 +72,17 @@ export type WikiLink = {
   label: string;
 };
 
+export type WikiTemplate = {
+  slug: string;
+  path: string;
+  sha?: string;
+  gameType: GameType;
+  category: Category;
+  name: string;
+  summary: string;
+  content: string;
+};
+
 export type SearchDocument = {
   id: string;
   campaignId: number;

@@ -11,7 +11,8 @@ import { rebuildSearchIndex } from "@/lib/search";
 const schema = z.object({
   name: z.string().min(1),
   category: z.enum(["character", "npc", "location", "event", "game"]),
-  visibility: z.enum(["gm", "players"]).default("gm")
+  visibility: z.enum(["gm", "players"]).default("gm"),
+  templatePath: z.string().optional()
 });
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -44,8 +45,24 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const input = schema.parse(await req.json());
   const slug = slugify(input.name);
-  const frontmatter = defaultFrontmatter(input.name, input.category, input.visibility);
-  const content = starterBody(input.name, input.category, campaign.gameType as any);
+  let frontmatter = defaultFrontmatter(input.name, input.category, input.visibility);
+  let content = starterBody(input.name, input.category, campaign.gameType as any);
+  if (input.templatePath?.startsWith("wiki/templates/") && input.templatePath.endsWith(".md")) {
+    const template = await getTextFile(user.githubToken, campaign, input.templatePath);
+    const parsedTemplate = parsePage(slug, template.text, template.sha);
+    frontmatter = {
+      ...parsedTemplate.frontmatter,
+      name: input.name,
+      category: input.category,
+      type: input.category,
+      visibility: input.visibility,
+      approvalStatus: "approved",
+      knownToPlayers: input.visibility === "players",
+      sourceImport: undefined,
+      lastEditedBy: user.name
+    };
+    content = parsedTemplate.content.replace(/^# .*/m, `# ${input.name}`);
+  }
   await putFile(user.githubToken, campaign, `wiki/pages/${slug}.md`, serializePage(frontmatter, content), `CampaignRepo: create ${input.name}`);
   await rebuildSearchIndex(user.githubToken, campaign);
   return NextResponse.json({ slug });

@@ -2,24 +2,31 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
-import type { Campaign, WikiPage } from "@/lib/types";
+import type { Campaign, GameType, WikiPage, WikiTemplate } from "@/lib/types";
+
+const gameTypes: GameType[] = ["Traveller", "Fantasy", "Modern", "Horror", "Sci-Fi", "Custom"];
 
 export default function CampaignClient({ campaign, categories }: { campaign: Campaign; categories: { id: string; label: string }[] }) {
   const [pages, setPages] = useState<WikiPage[]>([]);
+  const [templates, setTemplates] = useState<WikiTemplate[]>([]);
   const [setup, setSetup] = useState("");
   const [message, setMessage] = useState("");
   const [search, setSearch] = useState<any[]>([]);
   const pendingReviews = pages.filter((page) => page.frontmatter.approvalStatus !== "approved").length;
 
   async function load() {
-    const [pagesRes, setupRes] = await Promise.all([
+    const canManage = campaign.role === "owner" || campaign.role === "gm";
+    const [pagesRes, setupRes, templatesRes] = await Promise.all([
       fetch(`/api/campaigns/${campaign.id}/pages`),
-      fetch(`/api/campaigns/${campaign.id}/setup`)
+      fetch(`/api/campaigns/${campaign.id}/setup`),
+      canManage ? fetch(`/api/campaigns/${campaign.id}/templates`) : Promise.resolve(null)
     ]);
     const pagesData = await pagesRes.json();
-    const setupData = await setupRes.json();
+    const setupData = setupRes.ok ? await setupRes.json() : { markdown: "" };
+    const templatesData = templatesRes && templatesRes.ok ? await templatesRes.json() : { templates: [] };
     setPages(pagesData.pages || []);
     setSetup(setupData.markdown || "");
+    setTemplates(templatesData.templates || []);
   }
 
   useEffect(() => { load(); }, []);
@@ -29,7 +36,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     const form = new FormData(event.currentTarget);
     const res = await fetch(`/api/campaigns/${campaign.id}/pages`, {
       method: "POST",
-      body: JSON.stringify({ name: form.get("name"), category: form.get("category"), visibility: form.get("visibility") })
+      body: JSON.stringify({ name: form.get("name"), category: form.get("category"), visibility: form.get("visibility"), templatePath: form.get("templatePath") || undefined })
     });
     const data = await res.json();
     if (res.ok) window.location.href = `/campaigns/${campaign.id}/pages/${data.slug}`;
@@ -60,6 +67,34 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     else setMessage(data.error || "Import failed.");
   }
 
+  async function createTemplate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const tags = String(form.get("tags") || "")
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    const res = await fetch(`/api/campaigns/${campaign.id}/templates`, {
+      method: "POST",
+      body: JSON.stringify({
+        name: form.get("templateName"),
+        gameType: form.get("gameType"),
+        category: form.get("templateCategory"),
+        summary: form.get("summary"),
+        tags,
+        content: form.get("content")
+      })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setTemplates((current) => [...current, data.template].sort((a, b) => `${a.gameType}:${a.category}:${a.name}`.localeCompare(`${b.gameType}:${b.category}:${b.name}`)));
+      setMessage("Template saved to the campaign repo.");
+      event.currentTarget.reset();
+    } else {
+      setMessage(data.error || "Could not create template.");
+    }
+  }
+
   async function runSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const q = new FormData(event.currentTarget).get("q");
@@ -70,6 +105,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
 
   const grouped = categories.map((cat) => ({ ...cat, pages: pages.filter((page) => page.frontmatter.category === cat.id) }));
   const canManage = campaign.role === "owner" || campaign.role === "gm";
+  const templatesByGame = gameTypes.map((gameType) => ({ gameType, templates: templates.filter((template) => template.gameType === gameType) }));
 
   return (
     <section className="workspace">
@@ -108,6 +144,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
               <form onSubmit={createPage} className="stack">
                 <label>Name<input name="name" required placeholder="Victor Mendes" /></label>
                 <label>Category<select name="category">{categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.label}</option>)}</select></label>
+                <label>Template<select name="templatePath"><option value="">Starter default</option>{templates.map((template) => <option key={template.path} value={template.path}>{template.gameType} · {template.category} · {template.name}</option>)}</select></label>
                 <label>Visibility<select name="visibility"><option value="gm">GM only</option><option value="players">Player visible</option></select></label>
                 <button>Create page</button>
               </form>
@@ -122,6 +159,40 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
                 <textarea name="json" rows={8} placeholder='{"name":"Victor Mendes","type":"npc"}' />
                 <button>Import character</button>
               </form>
+            </div>
+          </section>
+        )}
+
+        {canManage && (
+          <section className="dashboard-grid">
+            <div className="panel">
+              <h2>Template Creator</h2>
+              <form onSubmit={createTemplate} className="stack">
+                <label>Template name<input name="templateName" required placeholder="Solomani Patron" /></label>
+                <label>Game type<select name="gameType" defaultValue={campaign.gameType}>{gameTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
+                <label>Content type<select name="templateCategory">{categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.label}</option>)}</select></label>
+                <label>Summary<input name="summary" placeholder="Reusable structure for..." /></label>
+                <label>Tags<input name="tags" placeholder="traveller, patron, navy" /></label>
+                <label>Markdown body<textarea name="content" rows={10} placeholder={"# {{name}}\n\n## Overview\n\n\n:::gm\nSecret notes.\n::: "} /></label>
+                <button>Save template</button>
+              </form>
+            </div>
+
+            <div className="panel template-library">
+              <h2>Template Library</h2>
+              {templatesByGame.map((group) => (
+                <div key={group.gameType} className="template-group">
+                  <h3>{group.gameType}</h3>
+                  {group.templates.map((template) => (
+                    <article key={template.path} className="template-row">
+                      <strong>{template.name}</strong>
+                      <span>{template.category} · {template.path}</span>
+                      {template.summary && <p>{template.summary}</p>}
+                    </article>
+                  ))}
+                  {!group.templates.length && <p className="muted">No templates yet.</p>}
+                </div>
+              ))}
             </div>
           </section>
         )}

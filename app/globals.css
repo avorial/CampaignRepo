@@ -430,6 +430,45 @@ button.danger {
   text-transform: uppercase;
 }
 
+.template-library {
+  max-height: 560px;
+  overflow: auto;
+}
+
+.template-group {
+  border-top: 1px solid var(--line);
+  padding: 12px 0;
+}
+
+.template-group:first-of-type {
+  border-top: 0;
+}
+
+.template-group h3 {
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.template-row {
+  background: #fffaf1;
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 4px;
+  margin-bottom: 8px;
+  padding: 10px;
+}
+
+.template-row span,
+.template-row p {
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  margin: 0;
+}
+
 .editor-panel {
   background: var(--paper);
   border: 1px solid var(--line);
