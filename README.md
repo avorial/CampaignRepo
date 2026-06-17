@@ -13,7 +13,10 @@ CampaignRepo is a GitHub-backed RPG campaign wiki. One app manages many campaign
 - GM-only Markdown blocks with `:::gm`.
 - Foundry Actor JSON and generic JSON character import.
 - SQLite full-text search plus portable repo snapshots at `/wiki/search/index.json`.
-- MCP-style JSON-RPC endpoint at `/api/mcp` for AI search, reads, page creation, unapproved updates, and setup instructions.
+- Safe Markdown rendering (sanitized) with real `[[wiki-links]]` and GM create-page prompts for missing targets.
+- MCP-style JSON-RPC endpoint at `/api/mcp` for AI search, reads, page creation, unapproved updates, templates, media, graph, review queue, and setup instructions.
+- External MCP clients authenticate with a personal access token (`Authorization: Bearer`), minted from the dashboard; the in-app session also works.
+- Dashboard review queue aggregating unapproved AI/import changes across every campaign you manage.
 
 ## Development
 
@@ -35,6 +38,7 @@ CampaignRepo forces this password to be changed on first login before the dashbo
 
 ```bash
 npm run typecheck
+npm test
 npm run build
 ```
 
