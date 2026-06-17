@@ -70,6 +70,18 @@ export async function putBase64File(token: string, campaign: Pick<Campaign, "own
   });
 }
 
+export async function deleteFile(token: string, campaign: Pick<Campaign, "owner" | "repo" | "branch">, filePath: string, message: string, sha: string) {
+  const encoded = filePath.split("/").map(encodeURIComponent).join("/");
+  return gh(token, `/repos/${campaign.owner}/${campaign.repo}/contents/${encoded}`, {
+    method: "DELETE",
+    body: JSON.stringify({
+      message,
+      branch: campaign.branch,
+      sha
+    })
+  });
+}
+
 export async function listDirectory(token: string, campaign: Campaign, dir: string) {
   const encoded = dir.split("/").map(encodeURIComponent).join("/");
   try {

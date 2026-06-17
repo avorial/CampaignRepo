@@ -153,6 +153,21 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     }
   }
 
+  async function deleteMedia(item: CampaignMedia) {
+    if (!window.confirm(`Delete ${item.name} from the campaign repo?`)) return;
+    const res = await fetch(`/api/campaigns/${campaign.id}/media`, {
+      method: "DELETE",
+      body: JSON.stringify({ path: item.path })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setMedia((current) => current.filter((mediaItem) => mediaItem.path !== item.path));
+      setMessage("Media deleted from the campaign repo.");
+    } else {
+      setMessage(data.error || "Could not delete media.");
+    }
+  }
+
   async function repairRepo() {
     const res = await fetch(`/api/campaigns/${campaign.id}/validation`, { method: "POST" });
     const data = await res.json();
@@ -304,6 +319,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
                     <div className="member-actions">
                       <button type="button" className="secondary" onClick={() => copyText(item.markdown)}>Copy Markdown</button>
                       {item.downloadUrl && <a className="button secondary" href={item.downloadUrl}>Open</a>}
+                      <button type="button" className="danger" onClick={() => deleteMedia(item)}>Delete</button>
                     </div>
                   </article>
                 ))}

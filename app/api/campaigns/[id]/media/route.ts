@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
-import { listDirectory, putBase64File } from "@/lib/github";
+import { deleteFile, getContent, listDirectory, putBase64File } from "@/lib/github";
 import { slugify } from "@/lib/slug";
 import type { CampaignMedia } from "@/lib/types";
 
@@ -11,6 +11,10 @@ const uploadSchema = z.object({
   mimeType: z.string().optional(),
   base64: z.string().min(1),
   alt: z.string().optional()
+});
+
+const deleteSchema = z.object({
+  path: z.string().min(1)
 });
 
 function mediaType(name: string, mimeType?: string): CampaignMedia["mediaType"] {
@@ -77,4 +81,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       markdown: markdownFor(name, type, input.alt)
     }
   });
+}
+
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await requireUser();
+  const { id } = await params;
+  const campaign = getCampaign(user.id, Number(id));
+  if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const input = deleteSchema.parse(await req.json());
+  if (!input.path.startsWith("wiki/media/") || input.path.includes("..") || input.path.endsWith("/.gitkeep")) {
+    return NextResponse.json({ error: "Only campaign media files can be deleted." }, { status: 400 });
+  }
+
+  const file = await getContent(user.githubToken, campaign, input.path);
+  if (file.type !== "file") return NextResponse.json({ error: "Only files can be deleted." }, { status: 400 });
+
+  await deleteFile(user.githubToken, campaign, input.path, `CampaignRepo: delete media ${input.path.split("/").pop()}`, file.sha);
+  return NextResponse.json({ ok: true });
 }
