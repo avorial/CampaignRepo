@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getTextFile, listDirectory, putFile } from "@/lib/github";
-import { parsePage, serializePage } from "@/lib/markdown";
+import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { defaultFrontmatter, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
 import { rebuildSearchIndex } from "@/lib/search";
@@ -14,6 +14,18 @@ const schema = z.object({
   visibility: z.enum(["gm", "players"]).default("gm"),
   templatePath: z.string().optional()
 });
+
+function sanitizePlayerPage<T extends ReturnType<typeof parsePage>>(page: T): T {
+  return {
+    ...page,
+    content: stripGmBlocks(page.content),
+    raw: stripGmBlocks(page.raw),
+    frontmatter: {
+      ...page.frontmatter,
+      sourceImport: undefined
+    }
+  };
+}
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -32,7 +44,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   );
   const visiblePages =
     campaign.role === "player"
-      ? pages.filter((page) => page.frontmatter.visibility === "players" && page.frontmatter.approvalStatus === "approved")
+      ? pages
+          .filter((page) => page.frontmatter.visibility === "players" && page.frontmatter.approvalStatus === "approved")
+          .map(sanitizePlayerPage)
       : pages;
   return NextResponse.json({ pages: visiblePages });
 }

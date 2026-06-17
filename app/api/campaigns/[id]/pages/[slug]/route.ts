@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getTextFile, putFile } from "@/lib/github";
-import { parsePage, serializePage } from "@/lib/markdown";
+import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { rebuildSearchIndex } from "@/lib/search";
 
 const schema = z.object({
@@ -12,6 +12,18 @@ const schema = z.object({
   sha: z.string().optional(),
   ai: z.boolean().default(false)
 });
+
+function sanitizePlayerPage<T extends ReturnType<typeof parsePage>>(page: T): T {
+  return {
+    ...page,
+    content: stripGmBlocks(page.content),
+    raw: stripGmBlocks(page.raw),
+    frontmatter: {
+      ...page.frontmatter,
+      sourceImport: undefined
+    }
+  };
+}
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string; slug: string }> }) {
   const user = await requireUser();
@@ -23,7 +35,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   if (campaign.role === "player" && (page.frontmatter.visibility !== "players" || page.frontmatter.approvalStatus !== "approved")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  return NextResponse.json({ page });
+  return NextResponse.json({ page: campaign.role === "player" ? sanitizePlayerPage(page) : page });
 }
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string; slug: string }> }) {

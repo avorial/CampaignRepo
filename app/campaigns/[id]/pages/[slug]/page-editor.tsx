@@ -20,9 +20,9 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
   const [page, setPage] = useState<WikiPage | null>(null);
   const [content, setContent] = useState("");
   const [frontmatter, setFrontmatter] = useState<any>({});
-  const [mode, setMode] = useState<"gm" | "player" | "handout">("gm");
-  const [message, setMessage] = useState("");
   const canManage = campaign.role === "owner" || campaign.role === "gm";
+  const [mode, setMode] = useState<"gm" | "player" | "handout">(canManage ? "gm" : "player");
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     fetch(`/api/campaigns/${campaign.id}/pages/${slug}`)
@@ -119,7 +119,7 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
 
       <section className="editor-panel">
         <div className="editor-toolbar">
-          <button type="button" className={mode === "gm" ? "active" : ""} onClick={() => setMode("gm")}>GM preview</button>
+          {canManage && <button type="button" className={mode === "gm" ? "active" : ""} onClick={() => setMode("gm")}>GM preview</button>}
           <button type="button" className={mode === "player" ? "active" : ""} onClick={() => setMode("player")}>Player preview</button>
           <button type="button" className={mode === "handout" ? "active" : ""} onClick={() => setMode("handout")}>Handout</button>
           {canManage && <button type="submit">Save commit</button>}

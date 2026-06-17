@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { getCampaign } from "@/lib/db";
 import { getTextFile, listDirectory } from "@/lib/github";
-import { parsePage } from "@/lib/markdown";
+import { parsePage, stripGmBlocks } from "@/lib/markdown";
 import { slugify } from "@/lib/slug";
 import type { CampaignGraphEdge, CampaignGraphNode, CampaignTimelineItem, WikiPage } from "@/lib/types";
 
@@ -34,7 +34,8 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       .map(async (entry) => {
         const slug = entry.name.replace(/\.md$/, "");
         const file = await getTextFile(user.githubToken!, campaign, entry.path);
-        return parsePage(slug, file.text, file.sha);
+        const text = campaign.role === "player" ? stripGmBlocks(file.text) : file.text;
+        return parsePage(slug, text, file.sha);
       })
   );
 
@@ -49,12 +50,12 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       const target = aliases.get(link.target.toLowerCase()) || slugify(link.target);
       const missing = !visibleSlugs.has(target);
       if (!missing) backlinks.set(target, [...(backlinks.get(target) || []), page.slug]);
-      edges.push({ source: page.slug, target, label: link.label, missing });
+      if (campaign.role !== "player" || !missing) edges.push({ source: page.slug, target, label: link.label, missing });
     }
     for (const keyLink of page.frontmatter.keyLinks) {
       const target = aliases.get(keyLink.toLowerCase()) || slugify(keyLink);
       const missing = !visibleSlugs.has(target);
-      edges.push({ source: page.slug, target, label: "key link", missing });
+      if (campaign.role !== "player" || !missing) edges.push({ source: page.slug, target, label: "key link", missing });
     }
   }
 
@@ -66,8 +67,11 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     tags: page.frontmatter.tags,
     visibility: page.frontmatter.visibility,
     approvalStatus: page.frontmatter.approvalStatus,
-    keyLinks: page.frontmatter.keyLinks,
-    outgoingLinks: page.outgoingLinks.map((link) => aliases.get(link.target.toLowerCase()) || slugify(link.target)),
+    keyLinks:
+      campaign.role === "player"
+        ? page.frontmatter.keyLinks.map((keyLink) => aliases.get(keyLink.toLowerCase()) || slugify(keyLink)).filter((target) => visibleSlugs.has(target))
+        : page.frontmatter.keyLinks,
+    outgoingLinks: page.outgoingLinks.map((link) => aliases.get(link.target.toLowerCase()) || slugify(link.target)).filter((target) => campaign.role !== "player" || visibleSlugs.has(target)),
     backlinks: backlinks.get(page.slug) || []
   }));
 
