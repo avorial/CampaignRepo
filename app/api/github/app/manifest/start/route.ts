@@ -18,7 +18,6 @@ export async function GET(req: NextRequest) {
     redirect_url: `${origin}/api/github/app/manifest/callback`,
     callback_urls: [`${origin}/api/github/app/callback`],
     setup_url: `${origin}/api/github/app/callback`,
-    hook_attributes: { active: false },
     public: false,
     default_permissions: {
       contents: "write",
@@ -29,14 +28,26 @@ export async function GET(req: NextRequest) {
 
   const html = `<!doctype html>
 <html>
-  <head><title>Connect GitHub</title></head>
+  <head>
+    <title>Connect GitHub</title>
+    <style>
+      body { background: #08050f; color: #f7ecd7; font: 16px system-ui, sans-serif; padding: 48px; }
+      main { max-width: 680px; margin: 0 auto; }
+      code { background: #1a1029; border-radius: 6px; color: #e0b957; padding: 3px 6px; }
+      button { background: #d8b157; border: 0; border-radius: 8px; color: #160d20; cursor: pointer; font-weight: 800; padding: 14px 18px; text-transform: uppercase; }
+      p { color: #c4b6e7; line-height: 1.5; }
+    </style>
+  </head>
   <body>
-    <form id="manifest" action="https://github.com/settings/apps/new" method="post">
-      <input type="hidden" name="state" value="${escapeHtml(state)}" />
-      <input type="hidden" name="manifest" value="${escapeHtml(JSON.stringify(manifest))}" />
-      <button type="submit">Continue to GitHub</button>
-    </form>
-    <script>document.getElementById("manifest").submit();</script>
+    <main>
+      <h1>Connect CampaignRepo to GitHub</h1>
+      <p>This will create a GitHub App for <code>${escapeHtml(origin)}</code> with contents read/write access on only the repos you choose.</p>
+      <form action="https://github.com/settings/apps/new" method="post">
+        <input type="hidden" name="state" value="${escapeHtml(state)}" />
+        <input type="hidden" name="manifest" value="${escapeHtml(JSON.stringify(manifest))}" />
+        <button type="submit">Continue to GitHub</button>
+      </form>
+    </main>
   </body>
 </html>`;
 
