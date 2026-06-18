@@ -144,7 +144,7 @@ export default function DashboardClient({
           </form>
           <div className="results">
             {search.map((row) => (
-              <a key={row.id} href={`/campaigns/${row.campaignId}/pages/${row.slug}`}>
+              <a key={row.id} href={row.category === "media" ? `/campaigns/${row.campaignId}#media` : `/campaigns/${row.campaignId}/pages/${row.slug}`}>
                 <strong>{row.title}</strong><span>{row.campaignName} · {row.category}</span>
               </a>
             ))}

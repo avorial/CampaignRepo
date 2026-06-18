@@ -157,7 +157,7 @@ export type SearchDocument = {
   campaignName: string;
   slug: string;
   title: string;
-  category: string;
+  category: Category | "media" | string;
   summary: string;
   tags: string[];
   aliases: string[];

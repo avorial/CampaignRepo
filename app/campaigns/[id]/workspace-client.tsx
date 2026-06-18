@@ -292,7 +292,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
           <button>Search</button>
         </form>
         {search.map((row) => (
-          <Link key={row.id} href={`/campaigns/${campaign.id}/pages/${row.slug}`} className="nav-link">
+          <Link key={row.id} href={row.category === "media" ? `/campaigns/${campaign.id}#media` : `/campaigns/${campaign.id}/pages/${row.slug}`} className="nav-link">
             {row.title}
           </Link>
         ))}
@@ -316,7 +316,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
       <div className="workspace-main">
         {canManage && (
           <section className="dashboard-grid">
-            <div className="panel">
+            <div className="panel" id="media">
               <h2>Create page</h2>
               <form onSubmit={createPage} className="stack">
                 <label>Name<input name="name" required placeholder="Victor Mendes" /></label>
