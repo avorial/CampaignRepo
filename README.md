@@ -124,6 +124,18 @@ index) is stored in the `campaignrepo-data` volume at `/app/data`.
   `https://campaignrepo.example.com`. GitHub App setup uses this for callback URLs.
 - Without compose: `docker build -t campaignrepo . && docker run -p 3000:3000 -v campaignrepo-data:/app/data campaignrepo`.
 
+## Portainer Auto-Redeploy
+
+CampaignRepo includes a GitHub Actions workflow that can trigger a Portainer stack webhook after every push to `main`.
+
+1. In Portainer, open the CampaignRepo stack.
+2. Enable the stack webhook and copy the webhook URL.
+3. In GitHub, open this repo's **Settings -> Secrets and variables -> Actions**.
+4. Add a repository secret named `PORTAINER_WEBHOOK_URL`.
+5. Paste the Portainer webhook URL as the secret value.
+
+After that, pushes to `main` will call Portainer automatically. The workflow can also be run manually from GitHub Actions.
+
 ## GitHub App Setup
 
 For normal testing, use a GitHub App instead of storing a personal SSH key.
