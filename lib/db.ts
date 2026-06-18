@@ -204,6 +204,16 @@ export function setUserAdmin(adminUserId: number, userId: number, isAdmin: boole
   db.prepare("UPDATE users SET isAdmin = ? WHERE id = ?").run(isAdmin ? 1 : 0, userId);
 }
 
+export function updateUserIdentity(userId: number, email: string, name: string) {
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanName = name.trim();
+  if (!cleanEmail || !cleanName) throw new Error("Name and email are required.");
+  const existing = db.prepare("SELECT id FROM users WHERE lower(email) = ? AND id != ?").get(cleanEmail, userId) as { id: number } | undefined;
+  if (existing) throw new Error("Another user already has that email.");
+  const info = db.prepare("UPDATE users SET email = ?, name = ? WHERE id = ?").run(cleanEmail, cleanName, userId);
+  if (info.changes === 0) throw new Error("User not found.");
+}
+
 export function resetUserPassword(userId: number, passwordHash: string) {
   db.prepare("UPDATE users SET passwordHash = ?, mustChangePassword = 1 WHERE id = ?").run(passwordHash, userId);
   db.prepare("DELETE FROM sessions WHERE userId = ?").run(userId);

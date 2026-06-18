@@ -532,6 +532,24 @@ code {
   min-width: 0;
 }
 
+.identity-editor {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.identity-editor label {
+  display: grid;
+  gap: 6px;
+}
+
+.identity-editor label span {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
 .user-admin-row span,
 .user-admin-row small {
   color: var(--text-secondary);
@@ -1163,6 +1181,10 @@ code {
   }
 
   .user-admin-row {
+    grid-template-columns: 1fr;
+  }
+
+  .identity-editor {
     grid-template-columns: 1fr;
   }
 

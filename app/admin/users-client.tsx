@@ -11,6 +11,8 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [message, setMessage] = useState("");
   const [temporaryPassword, setTemporaryPassword] = useState("");
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [identityDraft, setIdentityDraft] = useState({ name: "", email: "" });
 
   async function load() {
     const res = await fetch("/api/admin/users");
@@ -19,7 +21,9 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
     else setMessage(data.error || "Could not load users.");
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   async function updateUser(body: Record<string, unknown>) {
     setTemporaryPassword("");
@@ -33,9 +37,28 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
       } else {
         setMessage("User updated.");
       }
-    } else {
-      setMessage(data.error || "User update failed.");
+      return true;
     }
+
+    setMessage(data.error || "User update failed.");
+    return false;
+  }
+
+  function startIdentityEdit(user: AdminUser) {
+    setEditingUserId(user.id);
+    setIdentityDraft({ name: user.name, email: user.email });
+    setMessage("");
+    setTemporaryPassword("");
+  }
+
+  async function saveIdentity(userId: number) {
+    const saved = await updateUser({
+      action: "update-identity",
+      userId,
+      name: identityDraft.name,
+      email: identityDraft.email
+    });
+    if (saved) setEditingUserId(null);
   }
 
   async function copyTemporaryPassword() {
@@ -48,7 +71,7 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
       <div className="section-heading">
         <div>
           <h2>User accounts</h2>
-          <p className="muted">Reset passwords, disable accounts, and assign global admin access.</p>
+          <p className="muted">Edit login emails, reset passwords, disable accounts, and assign global admin access.</p>
         </div>
       </div>
 
@@ -56,17 +79,41 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
         <div className="admin-secret">
           <span>Temporary password</span>
           <code>{temporaryPassword}</code>
-          <button type="button" className="secondary" onClick={copyTemporaryPassword}>Copy</button>
+          <button type="button" className="secondary" onClick={copyTemporaryPassword}>
+            Copy
+          </button>
         </div>
       )}
 
       <div className="user-admin-list">
         {users.map((user) => (
           <article key={user.id} className="user-admin-row">
-            <div>
-              <strong>{user.name}</strong>
-              <span>{user.email}</span>
-              <small>{user.campaignCount} campaign{user.campaignCount === 1 ? "" : "s"} · joined {user.createdAt}</small>
+            <div className="user-identity">
+              {editingUserId === user.id ? (
+                <div className="identity-editor">
+                  <label>
+                    <span>Name</span>
+                    <input
+                      value={identityDraft.name}
+                      onChange={(event) => setIdentityDraft((draft) => ({ ...draft, name: event.target.value }))}
+                    />
+                  </label>
+                  <label>
+                    <span>Email login</span>
+                    <input
+                      type="email"
+                      value={identityDraft.email}
+                      onChange={(event) => setIdentityDraft((draft) => ({ ...draft, email: event.target.value }))}
+                    />
+                  </label>
+                </div>
+              ) : (
+                <>
+                  <strong>{user.name}</strong>
+                  <span>{user.email}</span>
+                  <small>{user.campaignCount} campaign{user.campaignCount === 1 ? "" : "s"} - joined {user.createdAt}</small>
+                </>
+              )}
             </div>
             <div className="badges">
               {user.isAdmin && <span>admin</span>}
@@ -77,6 +124,20 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
               <button type="button" className="secondary" onClick={() => updateUser({ action: "reset-password", userId: user.id })}>
                 Reset Password
               </button>
+              {editingUserId === user.id ? (
+                <>
+                  <button type="button" onClick={() => saveIdentity(user.id)}>
+                    Save User
+                  </button>
+                  <button type="button" className="secondary" onClick={() => setEditingUserId(null)}>
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button type="button" className="secondary" onClick={() => startIdentityEdit(user)}>
+                  Edit User
+                </button>
+              )}
               <button
                 type="button"
                 className="secondary"

@@ -9,6 +9,7 @@ import {
   removeCampaignMember,
   revokeCampaignInvite,
   searchDocs,
+  updateUserIdentity,
   updateCampaignMember,
   upsertSearchDocuments
 } from "@/lib/db";
@@ -88,6 +89,26 @@ describe("campaign invites", () => {
 
     expect(() => acceptCampaignInvite(invitedId, invite.token)).toThrow("Invite is no longer active.");
     expect(getCampaignRole(invitedId, campaignId)).toBeNull();
+  });
+});
+
+describe("global admin user identity", () => {
+  it("updates a user's login email and display name", () => {
+    const db = getDb();
+    const id = Number(db.prepare("INSERT INTO users (email, name, passwordHash) VALUES (?, ?, ?)").run("rename@test", "Rename", "x").lastInsertRowid);
+
+    updateUserIdentity(id, "renamed@test", "Renamed User");
+
+    const user = db.prepare("SELECT email, name FROM users WHERE id = ?").get(id) as { email: string; name: string };
+    expect(user).toEqual({ email: "renamed@test", name: "Renamed User" });
+  });
+
+  it("rejects duplicate login emails", () => {
+    const db = getDb();
+    const id = Number(db.prepare("INSERT INTO users (email, name, passwordHash) VALUES (?, ?, ?)").run("duplicate-source@test", "Source", "x").lastInsertRowid);
+    db.prepare("INSERT INTO users (email, name, passwordHash) VALUES (?, ?, ?)").run("duplicate-target@test", "Target", "x");
+
+    expect(() => updateUserIdentity(id, "duplicate-target@test", "Source")).toThrow("Another user already has that email.");
   });
 });
 
