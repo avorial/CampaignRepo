@@ -103,12 +103,15 @@ export default function DashboardClient({
             </div>
           ) : (
             <div className="setup-callout">
-              <strong>GitHub App connection is not configured yet.</strong>
-              <span>For quick testing, create a fine-grained GitHub token and paste it below.</span>
-              <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">
-                Create GitHub token
+              <strong>Connect GitHub with a GitHub App.</strong>
+              <span>This creates a CampaignRepo GitHub App, stores its generated credentials in this server, then lets you choose the repos it can access.</span>
+              <a className="button" href="/api/github/app/manifest/start">
+                Connect GitHub
               </a>
-              <span>For GitHub App access, set <code>GITHUB_APP_ID</code>, <code>GITHUB_APP_SLUG</code>, and <code>GITHUB_APP_PRIVATE_KEY</code> in Portainer, then redeploy.</span>
+              <span>Fallback: create a fine-grained token and paste it below if you only need quick testing.</span>
+              <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">
+                Create token instead
+              </a>
             </div>
           )}
           <form onSubmit={connectGithub} className="stack">

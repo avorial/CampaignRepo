@@ -593,12 +593,16 @@ code {
   color: var(--text-primary);
 }
 
-.setup-callout a {
+.setup-callout a:not(.button) {
   color: var(--gold-bright);
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
+}
+
+.setup-callout .button {
+  justify-self: start;
 }
 
 .template-library {

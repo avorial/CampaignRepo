@@ -86,6 +86,11 @@ CREATE TABLE IF NOT EXISTS api_tokens (
   lastUsedAt TEXT,
   FOREIGN KEY (userId) REFERENCES users(id)
 );
+CREATE TABLE IF NOT EXISTS app_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(
   id UNINDEXED,
   campaignId UNINDEXED,
@@ -132,6 +137,22 @@ SELECT id, userId, 'owner' FROM campaigns;
 
 export function getDb() {
   return db;
+}
+
+export function getAppSetting(key: string) {
+  const row = db.prepare("SELECT value FROM app_settings WHERE key = ?").get(key) as { value: string } | undefined;
+  return row?.value || "";
+}
+
+export function setAppSettings(settings: Record<string, string>) {
+  const stmt = db.prepare(
+    `INSERT INTO app_settings (key, value, updatedAt) VALUES (?, ?, CURRENT_TIMESTAMP)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updatedAt = CURRENT_TIMESTAMP`
+  );
+  const write = db.transaction((items: Array<[string, string]>) => {
+    for (const [key, value] of items) stmt.run(key, value);
+  });
+  write(Object.entries(settings));
 }
 
 export function publicUser(row: any): User | null {

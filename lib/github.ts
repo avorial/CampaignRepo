@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { getAppSetting } from "@/lib/db";
 import type { Campaign, GameType } from "@/lib/types";
 import { campaignYaml, repoReadme } from "@/lib/templates";
 import { packFor } from "@/lib/template-packs";
@@ -10,6 +11,13 @@ const appTokenPrefix = "github-app:";
 type InstallationToken = {
   token: string;
   expiresAt: number;
+};
+
+export type GitHubAppManifestConversion = {
+  id: number;
+  slug: string;
+  pem: string;
+  webhook_secret: string;
 };
 
 const installationTokenCache = new Map<string, InstallationToken>();
@@ -25,9 +33,9 @@ function base64url(input: string | Buffer) {
 }
 
 function githubAppConfig() {
-  const appId = process.env.GITHUB_APP_ID;
-  const slug = process.env.GITHUB_APP_SLUG;
-  const privateKey = process.env.GITHUB_APP_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  const appId = process.env.GITHUB_APP_ID || getAppSetting("github_app_id");
+  const slug = process.env.GITHUB_APP_SLUG || getAppSetting("github_app_slug");
+  const privateKey = (process.env.GITHUB_APP_PRIVATE_KEY || getAppSetting("github_app_private_key"))?.replace(/\\n/g, "\n");
   if (!appId || !slug || !privateKey) return null;
   return { appId, slug, privateKey };
 }
@@ -64,6 +72,10 @@ export function githubAppConnectionToken(installation: string | number) {
   return `${appTokenPrefix}${installation}`;
 }
 
+export async function convertGitHubAppManifest(code: string) {
+  return gh<GitHubAppManifestConversion>("", `/app-manifests/${encodeURIComponent(code)}/conversions`, { method: "POST" }, false);
+}
+
 async function appInstallationAccessToken(token: string) {
   const id = installationId(token);
   if (!id) return token;
@@ -78,14 +90,15 @@ async function appInstallationAccessToken(token: string) {
 
 async function gh<T>(token: string, path: string, init: RequestInit = {}, resolveAppToken = true): Promise<T> {
   const authToken = resolveAppToken ? await appInstallationAccessToken(token) : token;
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+    ...((init.headers as Record<string, string> | undefined) || {})
+  };
+  if (authToken) headers.Authorization = `Bearer ${authToken}`;
   const res = await fetch(`${apiBase}${path}`, {
     ...init,
-    headers: {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${authToken}`,
-      "X-GitHub-Api-Version": "2022-11-28",
-      ...(init.headers || {})
-    }
+    headers
   });
   if (!res.ok) {
     const text = await res.text();

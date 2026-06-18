@@ -126,7 +126,15 @@ index) is stored in the `campaignrepo-data` volume at `/app/data`.
 
 For normal testing, use a GitHub App instead of storing a personal SSH key.
 
-Create a GitHub App at `https://github.com/settings/apps/new`:
+The easiest path is from the dashboard:
+
+1. Sign in as a global admin.
+2. Click **Connect GitHub** in the GitHub connection panel.
+3. GitHub creates a CampaignRepo GitHub App from a manifest.
+4. Choose which repos the app can access.
+5. CampaignRepo stores the generated app id/private key in SQLite and uses short-lived installation tokens for repo read/write.
+
+If you prefer to create the GitHub App manually, create it at `https://github.com/settings/apps/new`:
 
 - Homepage URL: your CampaignRepo URL.
 - Callback URL: `https://YOUR-CAMPAIGNREPO-HOST/api/github/app/callback`.
@@ -136,7 +144,7 @@ Create a GitHub App at `https://github.com/settings/apps/new`:
   - Metadata: read-only.
 - Enable installation on the campaign repos you want CampaignRepo to manage.
 
-Set these environment variables in Docker/Portainer:
+Then set these environment variables in Docker/Portainer:
 
 ```bash
 GITHUB_APP_ID=123456
