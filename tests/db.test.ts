@@ -1,5 +1,17 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { getDb, canManageCampaign, searchDocs, upsertSearchDocuments, updateCampaignMember, removeCampaignMember } from "@/lib/db";
+import {
+  acceptCampaignInvite,
+  canManageCampaign,
+  createCampaignInvite,
+  getCampaignRole,
+  getDb,
+  listCampaignInvites,
+  removeCampaignMember,
+  revokeCampaignInvite,
+  searchDocs,
+  updateCampaignMember,
+  upsertSearchDocuments
+} from "@/lib/db";
 import type { SearchDocument } from "@/lib/types";
 
 let gmId: number;
@@ -49,6 +61,33 @@ describe("role checks", () => {
   it("guards owner demotion and removal", () => {
     expect(() => updateCampaignMember(gmId, campaignId, gmId, "player")).toThrow();
     expect(() => removeCampaignMember(gmId, campaignId, gmId)).toThrow();
+  });
+});
+
+describe("campaign invites", () => {
+  it("creates and accepts player invites", () => {
+    const db = getDb();
+    const invitedId = Number(db.prepare("INSERT INTO users (email, name, passwordHash) VALUES (?, ?, ?)").run("invited@test", "Invited", "x").lastInsertRowid);
+    const invite = createCampaignInvite(gmId, campaignId, "player");
+
+    expect(invite.token).toMatch(/^invite_/);
+    expect(listCampaignInvites(gmId, campaignId).some((item) => item.id === invite.id)).toBe(true);
+
+    const accepted = acceptCampaignInvite(invitedId, invite.token);
+    expect(accepted.campaignId).toBe(campaignId);
+    expect(getCampaignRole(invitedId, campaignId)).toBe("player");
+    expect(() => acceptCampaignInvite(invitedId, invite.token)).toThrow("Invite is no longer active.");
+  });
+
+  it("does not accept revoked invites", () => {
+    const db = getDb();
+    const invitedId = Number(db.prepare("INSERT INTO users (email, name, passwordHash) VALUES (?, ?, ?)").run("revoked@test", "Revoked", "x").lastInsertRowid);
+    const invite = createCampaignInvite(gmId, campaignId, "gm");
+
+    revokeCampaignInvite(gmId, campaignId, invite.id);
+
+    expect(() => acceptCampaignInvite(invitedId, invite.token)).toThrow("Invite is no longer active.");
+    expect(getCampaignRole(invitedId, campaignId)).toBeNull();
   });
 });
 

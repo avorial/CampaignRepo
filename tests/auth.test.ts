@@ -30,4 +30,11 @@ describe("requireApiUser bearer auth", () => {
     const req = new Request("http://localhost/api/mcp", { headers: { Authorization: "Bearer crepo_nope" } });
     await expect(requireApiUser(req)).rejects.toThrow("Unauthorized");
   });
+
+  it("rejects bearer tokens for disabled users", async () => {
+    getDb().prepare("UPDATE users SET disabled = 1 WHERE id = ?").run(userId);
+    const req = new Request("http://localhost/api/mcp", { headers: { Authorization: `Bearer ${token}` } });
+    await expect(requireApiUser(req)).rejects.toThrow("Unauthorized");
+    getDb().prepare("UPDATE users SET disabled = 0 WHERE id = ?").run(userId);
+  });
 });
