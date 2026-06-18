@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { githubAppConnectionToken, getInstallationRepositories } from "@/lib/github";
+import { publicUrl } from "@/lib/url";
 
 export async function GET(req: NextRequest) {
   const user = await requireUser();
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
   await getInstallationRepositories(token);
   getDb().prepare("UPDATE users SET githubToken = ? WHERE id = ?").run(token, user.id);
 
-  const response = NextResponse.redirect(new URL("/dashboard?github=app-connected", req.url));
+  const response = NextResponse.redirect(publicUrl(req, "/dashboard?github=app-connected"));
   response.cookies.delete("github_app_state");
   return response;
 }

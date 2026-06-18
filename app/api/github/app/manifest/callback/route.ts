@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { setAppSettings } from "@/lib/db";
 import { convertGitHubAppManifest } from "@/lib/github";
+import { publicUrl } from "@/lib/url";
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char] || char);
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
     return errorPage("GitHub App setup failed", error instanceof Error ? error.message : "CampaignRepo could not finish GitHub App setup.", 500);
   }
 
-  const response = NextResponse.redirect(new URL("/api/github/app/start", req.url));
+  const response = NextResponse.redirect(publicUrl(req, "/api/github/app/start"));
   response.cookies.delete("github_manifest_state");
   return response;
 }

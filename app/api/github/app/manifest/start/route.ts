@@ -1,22 +1,10 @@
 import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
+import { isInternalOrigin, publicOrigin } from "@/lib/url";
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char] || char);
-}
-
-function publicOrigin(req: NextRequest) {
-  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
-  const forwardedHost = req.headers.get("x-forwarded-host");
-  const forwardedProto = req.headers.get("x-forwarded-proto") || "https";
-  if (forwardedHost) return `${forwardedProto.split(",")[0]}://${forwardedHost.split(",")[0]}`;
-  const origin = new URL(req.url).origin;
-  return origin;
-}
-
-function isInternalOrigin(origin: string) {
-  return /^https?:\/\/(0\.0\.0\.0|localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
 }
 
 export async function GET(req: NextRequest) {
@@ -25,9 +13,10 @@ export async function GET(req: NextRequest) {
 
   const origin = publicOrigin(req);
   const internalOrigin = isInternalOrigin(origin);
+  const host = new URL(origin).hostname;
   const state = crypto.randomBytes(24).toString("base64url");
   const manifest = {
-    name: "CampaignRepo",
+    name: `CampaignRepo ${host}`,
     url: origin,
     redirect_url: `${origin}/api/github/app/manifest/callback`,
     callback_urls: [`${origin}/api/github/app/callback`],
