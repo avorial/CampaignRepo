@@ -120,6 +120,8 @@ index) is stored in the `campaignrepo-data` volume at `/app/data`.
 
 - Serving behind HTTPS? Set `SECURE_COOKIES=true` (in `docker-compose.yml` or the
   environment) so session cookies get the `Secure` flag.
+- Set `APP_URL` to the public HTTPS URL for the app, for example
+  `https://campaignrepo.example.com`. GitHub App setup uses this for callback URLs.
 - Without compose: `docker build -t campaignrepo . && docker run -p 3000:3000 -v campaignrepo-data:/app/data campaignrepo`.
 
 ## GitHub App Setup

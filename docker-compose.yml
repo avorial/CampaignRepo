@@ -6,6 +6,8 @@ services:
     environment:
       # Set to "true" only when serving behind HTTPS (e.g. a reverse proxy).
       SECURE_COOKIES: "false"
+      # Public URL used for GitHub App callbacks, e.g. https://campaignrepo.example.com
+      APP_URL: "${APP_URL:-}"
       # Optional GitHub App connection. In Portainer, set these as stack env vars.
       # GITHUB_APP_PRIVATE_KEY may use escaped newlines: -----BEGIN...\n...\n-----END...
       GITHUB_APP_ID: "${GITHUB_APP_ID:-}"
