@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { getDb, listCampaigns } from "@/lib/db";
 import { createRepo, GitHubError, initializeRepo, isGitHubAppConnection } from "@/lib/github";
+import { parseRepoInput } from "@/lib/repo";
 import { gameTypes } from "@/lib/templates";
 
 const createSchema = z.object({
@@ -24,8 +25,7 @@ export async function POST(req: Request) {
   const user = await requireUser();
   if (!user.githubToken) return NextResponse.json({ error: "Connect GitHub first." }, { status: 400 });
   const input = createSchema.parse(await req.json());
-  let owner = input.owner || "";
-  let repo = input.repo || "";
+  let { owner, repo } = parseRepoInput(input.owner || "", input.repo || "");
   let branch = input.branch || "main";
   try {
     if (input.mode === "create") {

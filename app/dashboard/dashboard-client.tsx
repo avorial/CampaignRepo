@@ -129,8 +129,8 @@ export default function DashboardClient({
           </div>
           <form onSubmit={buildRepo} className="stack">
             <label>Campaign name<input name="name" required placeholder="The Jardin File" /></label>
-            {mode === "connect" && <label>Owner<input name="owner" placeholder="github-owner" /></label>}
-            <label>Repo name<input name="repo" required placeholder="jardin-campaign" /></label>
+            {mode === "connect" && <label>Owner<input name="owner" placeholder="avorial (optional if pasting URL)" /></label>}
+            <label>{mode === "connect" ? "Repo name or URL" : "Repo name"}<input name="repo" required placeholder={mode === "connect" ? "kdwiki or https://github.com/avorial/kdwiki" : "jardin-campaign"} /></label>
             <label>Branch<input name="branch" defaultValue="main" /></label>
             <label>Game template pack<select name="gameType">{gameTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
             {mode === "create" && <label className="check"><input type="checkbox" name="private" defaultChecked /> Private repo</label>}
