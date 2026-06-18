@@ -197,6 +197,30 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     }
   }
 
+  async function editMediaMetadata(item: CampaignMedia) {
+    const alt = window.prompt("Alt text or link label", item.alt || item.name);
+    if (alt === null) return;
+    const caption = window.prompt("Caption", item.caption || "");
+    if (caption === null) return;
+    const tagsInput = window.prompt("Tags, comma separated", item.tags?.join(", ") || "");
+    if (tagsInput === null) return;
+    const tags = tagsInput
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    const res = await fetch(`/api/campaigns/${campaign.id}/media`, {
+      method: "PATCH",
+      body: JSON.stringify({ path: item.path, alt, caption, tags })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setMedia((current) => [data.media, ...current.filter((mediaItem) => mediaItem.path !== item.path)]);
+      setMessage("Media metadata updated.");
+    } else {
+      setMessage(data.error || "Could not update media metadata.");
+    }
+  }
+
   async function repairRepo() {
     const res = await fetch(`/api/campaigns/${campaign.id}/validation`, { method: "POST" });
     const data = await res.json();
@@ -417,6 +441,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
                     </div>
                     <div className="member-actions">
                       <button type="button" className="secondary" onClick={() => copyText(item.markdown)}>Copy Markdown</button>
+                      <button type="button" className="secondary" onClick={() => editMediaMetadata(item)}>Edit Metadata</button>
                       <button type="button" className="secondary" onClick={() => renameMedia(item)}>Rename</button>
                       {item.downloadUrl && <a className="button secondary" href={item.downloadUrl}>Open</a>}
                       <button type="button" className="danger" onClick={() => deleteMedia(item)}>Delete</button>

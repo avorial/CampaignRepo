@@ -29,7 +29,10 @@ const deleteSchema = z.object({
 
 const renameSchema = z.object({
   path: z.string().min(1),
-  fileName: z.string().min(1)
+  fileName: z.string().min(1).optional(),
+  alt: z.string().optional(),
+  caption: z.string().optional(),
+  tags: z.array(z.string()).optional()
 });
 
 function mediaType(name: string, mimeType?: string): CampaignMedia["mediaType"] {
@@ -146,7 +149,26 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const input = renameSchema.parse(await req.json());
   if (!isEditableMediaPath(input.path)) {
-    return NextResponse.json({ error: "Only campaign media files can be renamed." }, { status: 400 });
+    return NextResponse.json({ error: "Only campaign media files can be updated." }, { status: 400 });
+  }
+
+  const current = await getContent(user.githubToken, campaign, input.path);
+  if (current.type !== "file") return NextResponse.json({ error: "Only files can be updated." }, { status: 400 });
+
+  if (!input.fileName) {
+    const name = input.path.split("/").pop() || input.path;
+    const metadataFile = await readMetadata(user.githubToken, campaign);
+    const currentMetadata = metadataFile.metadata[input.path] || {};
+    const nextMetadata = {
+      ...metadataFile.metadata,
+      [input.path]: {
+        alt: input.alt ?? currentMetadata.alt ?? name,
+        caption: input.caption ?? currentMetadata.caption ?? "",
+        tags: input.tags ?? currentMetadata.tags ?? []
+      }
+    };
+    await writeMetadata(user.githubToken, campaign, nextMetadata, metadataFile.sha);
+    return NextResponse.json({ media: toMedia({ name, path: input.path, sha: current.sha }, nextMetadata[input.path]) });
   }
 
   const name = cleanFileName(input.fileName);
@@ -165,9 +187,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   } catch (error) {
     if (!(error instanceof GitHubError && error.status === 404)) throw error;
   }
-
-  const current = await getContent(user.githubToken, campaign, input.path);
-  if (current.type !== "file") return NextResponse.json({ error: "Only files can be renamed." }, { status: 400 });
 
   await putBase64File(user.githubToken, campaign, nextPath, current.content.replace(/\n/g, ""), `CampaignRepo: rename media ${input.path.split("/").pop()} to ${name}`);
   await deleteFile(user.githubToken, campaign, input.path, `CampaignRepo: remove old media path ${input.path.split("/").pop()}`, current.sha);
