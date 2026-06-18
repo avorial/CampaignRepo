@@ -22,7 +22,9 @@ export default function DashboardClient({
   const [newToken, setNewToken] = useState("");
   const [reviewGroups, setReviewGroups] = useState<any[]>([]);
   const mcpUrl = typeof window !== "undefined" ? `${window.location.origin}/api/mcp` : "/api/mcp";
-  const githubConnection = user.githubToken?.startsWith("github-app:") ? "GitHub App installed" : user.githubToken ? "Manual token connected" : "Not connected";
+  const githubConnection = user.githubToken?.startsWith("github-app:") ? "GitHub App" : user.githubToken ? "Manual token" : "Not connected";
+  const githubConnected = Boolean(user.githubToken);
+  const githubUser = user.githubToken?.startsWith("github-app:") ? "Avorial" : user.githubToken ? "GitHub token user" : "";
 
   useEffect(() => {
     fetch("/api/tokens")
@@ -95,30 +97,47 @@ export default function DashboardClient({
       <section className="dashboard-grid">
         <div className="panel">
           <h2>GitHub connection</h2>
-          <p className="muted">Signed in as {user.email}. Status: {githubConnection}.</p>
-          {githubAppConfigured ? (
-            <div className="stack">
-              <p className="muted">Install the GitHub App on the repos CampaignRepo can manage. This avoids storing a personal SSH key or broad personal token.</p>
-              <a className="button" href="/api/github/app/start">Install or update GitHub App access</a>
+          {githubConnected ? (
+            <div className="connection-status">
+              <strong>Currently connected</strong>
+              <span>User {githubUser}</span>
+              <small>{githubConnection} access active for {user.email}</small>
             </div>
           ) : (
-            <div className="setup-callout">
-              <strong>Connect GitHub with a GitHub App.</strong>
-              <span>This creates a CampaignRepo GitHub App, stores its generated credentials in this server, then lets you choose the repos it can access.</span>
-              <a className="button" href="/api/github/app/manifest/start">
-                Connect GitHub
-              </a>
-              <span>Fallback: create a fine-grained token and paste it below if you only need quick testing.</span>
-              <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">
-                Create token instead
-              </a>
-            </div>
+            <p className="muted">Signed in as {user.email}. GitHub is not connected yet.</p>
           )}
-          <form onSubmit={connectGithub} className="stack">
-            <label>Manual GitHub token fallback<input name="token" type="password" placeholder="github_pat_..." /></label>
-            <button>Connect token</button>
-          </form>
-          <p className="muted">Token needs repository contents read/write access. Use it for testing or creating repos; GitHub App access is better once configured.</p>
+          {!githubConnected && (
+            githubAppConfigured ? (
+              <div className="stack">
+                <p className="muted">Install the GitHub App on the repos CampaignRepo can manage. This avoids storing a personal SSH key or broad personal token.</p>
+                <a className="button" href="/api/github/app/start">Install GitHub App access</a>
+              </div>
+            ) : (
+              <div className="setup-callout">
+                <strong>Connect GitHub with a GitHub App.</strong>
+                <span>This creates a CampaignRepo GitHub App, stores its generated credentials in this server, then lets you choose the repos it can access.</span>
+                <a className="button" href="/api/github/app/manifest/start">
+                  Connect GitHub
+                </a>
+              </div>
+            )
+          )}
+          <details className="troubleshooting">
+            <summary>Connection troubleshooting</summary>
+            {githubAppConfigured ? (
+              <a className="button secondary" href="/api/github/app/start">Install or update GitHub App access</a>
+            ) : (
+              <a className="button secondary" href="/api/github/app/manifest/start">Rebuild GitHub App connection</a>
+            )}
+            <form onSubmit={connectGithub} className="stack">
+              <label>Manual GitHub token fallback<input name="token" type="password" placeholder="github_pat_..." /></label>
+              <button>Connect token</button>
+            </form>
+            <p className="muted">Token needs repository contents read/write access. Use this only for testing, repo creation, or repairing the GitHub App connection.</p>
+            <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">
+              Create token instead
+            </a>
+          </details>
         </div>
 
         <div className="panel">

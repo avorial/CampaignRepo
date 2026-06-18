@@ -605,6 +605,65 @@ code {
   justify-self: start;
 }
 
+.connection-status {
+  background: rgba(212, 169, 87, 0.14);
+  border: 1px solid rgba(212, 169, 87, 0.38);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  margin-bottom: 18px;
+  padding: 14px;
+}
+
+.connection-status strong {
+  color: var(--gold-bright);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.connection-status span {
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.connection-status small {
+  color: var(--text-secondary);
+}
+
+.troubleshooting {
+  border-top: 1px solid var(--border-soft);
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 14px;
+}
+
+.troubleshooting summary {
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.troubleshooting[open] summary {
+  color: var(--gold-bright);
+  margin-bottom: 12px;
+}
+
+.troubleshooting a:not(.button) {
+  color: var(--gold-bright);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
 .template-library {
   max-height: 560px;
   overflow: auto;
