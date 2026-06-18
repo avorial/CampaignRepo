@@ -1,7 +1,6 @@
 services:
   campaignrepo:
     build: .
-    image: campaignrepo:latest
     ports:
       - "3000:3000"
     environment:
