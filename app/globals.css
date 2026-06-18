@@ -24,6 +24,39 @@
   --font-display: "Fraunces", "Cormorant Garamond", Georgia, serif;
   --font-mono: "Geist Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
 
+  /* category hues (wiki node types) */
+  --cat-character: rgba(212, 169, 87, 0.70);
+  --cat-npc: rgba(160, 117, 255, 0.75);
+  --cat-location: rgba(107, 184, 255, 0.60);
+  --cat-event: rgba(255, 138, 138, 0.60);
+  --cat-game: rgba(184, 169, 207, 0.60);
+
+  /* radii / control sizing / layout */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 12px;
+  --radius-pill: 999px;
+  --control-h: 40px;
+  --control-h-sm: 28px;
+
+  /* effects — signature backdrop, shadows, focus rings, motion */
+  --shadow-panel: 0 24px 60px rgba(0, 0, 0, 0.55);
+  --ring-gold: 0 0 0 3px var(--gold-glow);
+  --ring-purple: 0 0 0 3px var(--purple-glow);
+  --wash-gold: rgba(212, 169, 87, 0.12);
+  --wash-purple: rgba(160, 117, 255, 0.10);
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 0.15s;
+  --backdrop:
+    radial-gradient(1200px 600px at 50% -10%, rgba(160, 117, 255, 0.10), transparent 60%),
+    linear-gradient(180deg, rgba(155, 120, 220, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(155, 120, 220, 0.03) 1px, transparent 1px),
+    var(--bg-base);
+  --backdrop-size: auto, 80px 80px, 80px 80px, auto;
+  --logo-plate: #f5efe2;
+
   /* legacy aliases still referenced across the stylesheet */
   --bg: var(--bg-base);
   --paper: var(--bg-surface);
@@ -42,15 +75,40 @@
 
 body {
   margin: 0;
-  background:
-    radial-gradient(1200px 600px at 50% -10%, rgba(160, 117, 255, 0.10), transparent 60%),
-    linear-gradient(180deg, rgba(155, 120, 220, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(155, 120, 220, 0.03) 1px, transparent 1px),
-    var(--bg-base);
-  background-size: auto, 80px 80px, 80px 80px, auto;
+  background: var(--backdrop);
+  background-size: var(--backdrop-size);
+  background-attachment: fixed;
   color: var(--text-primary);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Brand lockup — die mark + Fraunces "CampaignRepo" wordmark (Repo in gold) */
+.brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  text-decoration: none;
+  margin-bottom: 10px;
+}
+
+.brand-mark {
+  display: block;
+  flex: none;
+  object-fit: contain;
+}
+
+.brand-word {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: var(--tracking-tight, -0.015em);
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.brand-word b {
+  font-weight: 500;
+  color: var(--gold);
 }
 
 h1, h2, h3 {
@@ -324,6 +382,25 @@ code {
 .repo-icon {
   color: var(--gold);
   flex: none;
+}
+
+/* Game template-pack logos ride a light plate (third-party brands, varied bg) */
+.repo-logo-plate {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background: var(--logo-plate);
+  display: grid;
+  place-items: center;
+  flex: none;
+  overflow: hidden;
+}
+
+.repo-logo-plate img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 3px;
 }
 
 .repo-remove {

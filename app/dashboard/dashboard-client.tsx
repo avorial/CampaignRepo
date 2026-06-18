@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
-import { Crown, Swords, Moon, Rocket, Dice5, type LucideIcon } from "lucide-react";
+import { Dice5 } from "lucide-react";
 import type { ApiToken, Campaign, GameType, User } from "@/lib/types";
 
-const gameIcons: Record<string, LucideIcon> = {
-  "Sword Chronicle": Crown,
-  "Dungeons & Dragons": Swords,
-  "World of Darkness": Moon,
-  Traveller: Rocket,
-  Custom: Dice5
+// Third-party game-system marks shown on a light plate; Custom has no logo.
+const gameLogos: Record<string, string> = {
+  "Sword Chronicle": "/brand/sword-chronicle.avif",
+  "Dungeons & Dragons": "/brand/dungeons-and-dragons.webp",
+  "World of Darkness": "/brand/world-of-darkness.jpg",
+  Traveller: "/brand/traveller.jpg"
 };
 
 export default function DashboardClient({
@@ -121,12 +121,17 @@ export default function DashboardClient({
         <h2>Connected repos</h2>
         <div className="repo-grid">
           {repos.map((campaign) => {
-            const Icon = gameIcons[campaign.gameType] || Dice5;
+            const logo = gameLogos[campaign.gameType];
             return (
               <div className="repo-card" key={campaign.id}>
                 <Link className="repo-card-link" href={`/campaigns/${campaign.id}`}>
                   <div className="repo-head">
-                    <Icon className="repo-icon" size={18} aria-hidden />
+                    {logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <span className="repo-logo-plate"><img src={logo} alt={campaign.gameType} /></span>
+                    ) : (
+                      <Dice5 className="repo-icon" size={20} aria-hidden />
+                    )}
                     <strong>{campaign.name}</strong>
                   </div>
                   <span>{campaign.owner}/{campaign.repo}</span>

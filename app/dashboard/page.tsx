@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import Logo from "@/app/components/logo";
 import { currentUser } from "@/lib/auth";
 import { listCampaigns } from "@/lib/db";
 import { isGitHubAppConfigured } from "@/lib/github";
@@ -16,7 +17,7 @@ export default async function DashboardPage() {
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">CampaignRepo</p>
+          <Logo href={null} />
           <h1>Campaign dashboard</h1>
         </div>
         <div className="topbar-actions">

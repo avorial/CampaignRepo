@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useState } from "react";
+import Logo from "@/app/components/logo";
 
 function LoginForm() {
   const router = useRouter();
@@ -31,7 +32,7 @@ function LoginForm() {
     <main className="auth-shell">
       <section className="auth-panel">
         <div>
-          <p className="eyebrow">CampaignRepo</p>
+          <Logo href={null} size={40} />
           <h1>Sign in</h1>
           <p className="muted">Manage GitHub-backed RPG campaign wikis from one private dashboard.</p>
         </div>
