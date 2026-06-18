@@ -704,6 +704,21 @@ code {
   border-bottom: 1px solid var(--border-soft);
 }
 
+.conflict-banner {
+  align-items: center;
+  background: rgba(255, 138, 138, 0.10);
+  border-bottom: 1px solid rgba(255, 138, 138, 0.28);
+  color: var(--danger);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 10px;
+}
+
+.conflict-banner span {
+  font-weight: 600;
+}
+
 .editor-split {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1027,6 +1042,11 @@ code {
   }
 
   .section-heading {
+    display: grid;
+  }
+
+  .conflict-banner {
+    align-items: stretch;
     display: grid;
   }
 }

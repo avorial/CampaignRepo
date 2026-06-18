@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
-import { getTextFile, putFile } from "@/lib/github";
+import { getTextFile, GitHubError, putFile } from "@/lib/github";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { rebuildSearchIndex } from "@/lib/search";
 
@@ -54,7 +54,22 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   };
   const raw = serializePage(frontmatter, input.content);
   const current = input.sha ? { sha: input.sha } : await getTextFile(user.githubToken, campaign, `wiki/pages/${slug}.md`);
-  await putFile(user.githubToken, campaign, `wiki/pages/${slug}.md`, raw, `CampaignRepo: update ${frontmatter.name || slug}`, current.sha);
-  await rebuildSearchIndex(user.githubToken, campaign);
-  return NextResponse.json({ ok: true });
+  try {
+    const saved = (await putFile(user.githubToken, campaign, `wiki/pages/${slug}.md`, raw, `CampaignRepo: update ${frontmatter.name || slug}`, current.sha)) as { content?: { sha?: string } };
+    await rebuildSearchIndex(user.githubToken, campaign);
+    return NextResponse.json({ ok: true, sha: saved.content?.sha });
+  } catch (error) {
+    if (error instanceof GitHubError && error.status === 409) {
+      const latest = await getTextFile(user.githubToken, campaign, `wiki/pages/${slug}.md`);
+      return NextResponse.json(
+        {
+          error: "This page changed on GitHub after you opened it. Reload the latest version before saving.",
+          conflict: true,
+          latest: parsePage(slug, latest.text, latest.sha)
+        },
+        { status: 409 }
+      );
+    }
+    throw error;
+  }
 }

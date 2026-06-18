@@ -15,19 +15,28 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
   const canManage = campaign.role === "owner" || campaign.role === "gm";
   const [mode, setMode] = useState<"gm" | "player" | "handout">(canManage ? "gm" : "player");
   const [message, setMessage] = useState("");
+  const [conflictPage, setConflictPage] = useState<WikiPage | null>(null);
 
-  useEffect(() => {
-    fetch(`/api/campaigns/${campaign.id}/pages/${slug}`)
+  const applyPage = useCallback((nextPage: WikiPage) => {
+    setPage(nextPage);
+    setContent(nextPage.content);
+    setFrontmatter(nextPage.frontmatter);
+  }, []);
+
+  const loadPage = useCallback(() => {
+    return fetch(`/api/campaigns/${campaign.id}/pages/${slug}`)
       .then((res) => res.json())
       .then((data) => {
-        setPage(data.page);
-        setContent(data.page.content);
-        setFrontmatter(data.page.frontmatter);
+        if (data.page) applyPage(data.page);
       });
+  }, [applyPage, campaign.id, slug]);
+
+  useEffect(() => {
+    loadPage();
     fetch(`/api/campaigns/${campaign.id}/pages`)
       .then((res) => res.json())
       .then((data) => setKnownPages(Array.isArray(data.pages) ? data.pages : []));
-  }, [campaign.id, slug]);
+  }, [campaign.id, loadPage, slug]);
 
   const resolveLink = useMemo<WikiLinkResolver>(() => {
     const aliasMap = buildAliasMap(
@@ -73,7 +82,26 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
       method: "PUT",
       body: JSON.stringify({ frontmatter, content, sha: page?.sha })
     });
-    setMessage(res.ok ? "Saved and committed to GitHub." : "Save failed.");
+    const data = await res.json();
+    if (res.ok) {
+      setConflictPage(null);
+      setPage((current) => (current ? { ...current, sha: data.sha || current.sha } : current));
+      setMessage("Saved and committed to GitHub.");
+      return;
+    }
+    if (res.status === 409 && data.latest) {
+      setConflictPage(data.latest);
+      setMessage(data.error || "This page has a GitHub conflict.");
+      return;
+    }
+    setMessage(data.error || "Save failed.");
+  }
+
+  function reloadConflict() {
+    if (!conflictPage) return;
+    applyPage(conflictPage);
+    setConflictPage(null);
+    setMessage("Loaded the latest GitHub version.");
   }
 
   function updateField(field: string, value: unknown) {
@@ -155,6 +183,12 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
           <button type="button" className={mode === "handout" ? "active" : ""} onClick={() => setMode("handout")}>Handout</button>
           {canManage && <button type="submit">Save commit</button>}
         </div>
+        {conflictPage && (
+          <div className="conflict-banner">
+            <span>This page changed on GitHub after you opened it.</span>
+            <button type="button" className="secondary" onClick={reloadConflict}>Load latest</button>
+          </div>
+        )}
         <div className="editor-split">
           <textarea value={content} onChange={(e) => setContent(e.target.value)} spellCheck={false} readOnly={!canManage} />
           <article className={mode === "handout" ? "preview handout-preview" : "preview"}>
