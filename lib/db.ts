@@ -144,7 +144,7 @@ export function getAppSetting(key: string) {
   return row?.value || "";
 }
 
-export function setAppSettings(settings: Record<string, string>) {
+export function setAppSettings(settings: Record<string, string | undefined | null>) {
   const stmt = db.prepare(
     `INSERT INTO app_settings (key, value, updatedAt) VALUES (?, ?, CURRENT_TIMESTAMP)
      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updatedAt = CURRENT_TIMESTAMP`
@@ -152,7 +152,7 @@ export function setAppSettings(settings: Record<string, string>) {
   const write = db.transaction((items: Array<[string, string]>) => {
     for (const [key, value] of items) stmt.run(key, value);
   });
-  write(Object.entries(settings));
+  write(Object.entries(settings).map(([key, value]) => [key, value || ""]));
 }
 
 export function publicUser(row: any): User | null {

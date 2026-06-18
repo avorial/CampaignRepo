@@ -17,7 +17,7 @@ export type GitHubAppManifestConversion = {
   id: number;
   slug: string;
   pem: string;
-  webhook_secret: string;
+  webhook_secret?: string;
 };
 
 const installationTokenCache = new Map<string, InstallationToken>();
