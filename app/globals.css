@@ -948,6 +948,12 @@ code {
   overflow: auto;
 }
 
+.page-reader {
+  border-left: 0;
+  min-height: 680px;
+  padding: 36px;
+}
+
 .preview h1 {
   font-size: 34px;
   font-weight: 500;
@@ -1233,6 +1239,13 @@ code {
   color: var(--gold-bright);
   font-weight: 600;
   margin-top: 12px;
+}
+
+.editor-toast {
+  border-bottom: 1px solid var(--border-soft);
+  border-top: 1px solid var(--border-soft);
+  margin: 0;
+  padding: 10px 12px;
 }
 
 .error {

@@ -17,6 +17,8 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
   const canManage = campaign.role === "owner" || campaign.role === "gm";
   const [mode, setMode] = useState<"gm" | "player" | "handout">(canManage ? "gm" : "player");
   const [message, setMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(canManage);
   const [conflictPage, setConflictPage] = useState<WikiPage | null>(null);
   const [sourceJsonDraft, setSourceJsonDraft] = useState("");
   const [sourceDiff, setSourceDiff] = useState<any | null>(null);
@@ -85,25 +87,39 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
     [campaign.id, canManage, router]
   );
 
+  async function savePage(finish = false) {
+    if (isSaving) return;
+    setIsSaving(true);
+    setMessage("Saving commit to GitHub...");
+    try {
+      const res = await fetch(`/api/campaigns/${campaign.id}/pages/${slug}`, {
+        method: "PUT",
+        body: JSON.stringify({ frontmatter, content, sha: page?.sha })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setConflictPage(null);
+        setPage((current) => (current ? { ...current, sha: data.sha || current.sha } : current));
+        setMessage(finish ? "Saved and finished." : "Saved. Keep working when ready.");
+        if (finish) setIsEditing(false);
+        return;
+      }
+      if (res.status === 409 && data.latest) {
+        setConflictPage(data.latest);
+        setMessage(data.error || "This page has a GitHub conflict.");
+        return;
+      }
+      setMessage(data.error || "Save failed.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Save failed.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const res = await fetch(`/api/campaigns/${campaign.id}/pages/${slug}`, {
-      method: "PUT",
-      body: JSON.stringify({ frontmatter, content, sha: page?.sha })
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setConflictPage(null);
-      setPage((current) => (current ? { ...current, sha: data.sha || current.sha } : current));
-      setMessage("Saved and committed to GitHub.");
-      return;
-    }
-    if (res.status === 409 && data.latest) {
-      setConflictPage(data.latest);
-      setMessage(data.error || "This page has a GitHub conflict.");
-      return;
-    }
-    setMessage(data.error || "Save failed.");
+    await savePage(false);
   }
 
   function reloadConflict() {
@@ -172,6 +188,7 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
   }
 
   if (!page) return <p className="muted">Loading page...</p>;
+  const fieldsEditable = canManage && isEditing;
   const keyLinks = Array.isArray(frontmatter.keyLinks) ? frontmatter.keyLinks : [];
   const tags = Array.isArray(frontmatter.tags) ? frontmatter.tags : [];
   const tradeCodes = Array.isArray(frontmatter.tradeCodes) ? frontmatter.tradeCodes : [];
@@ -192,43 +209,43 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
 
         <div className="field-group">
           <h3>Page</h3>
-          <label>Name<input value={frontmatter.name || ""} onChange={(e) => updateField("name", e.target.value)} readOnly={!canManage} /></label>
-          <label>Summary<textarea value={frontmatter.summary || ""} onChange={(e) => updateField("summary", e.target.value)} readOnly={!canManage} /></label>
-          <label>Status<input value={frontmatter.status || ""} onChange={(e) => updateField("status", e.target.value)} readOnly={!canManage} placeholder="alive, active, destroyed..." /></label>
-          <label>Tags<input value={tags.join(", ")} onChange={(e) => updateField("tags", e.target.value.split(",").map((v) => v.trim()).filter(Boolean))} readOnly={!canManage} /></label>
-          <label>Aliases<input value={(frontmatter.aliases || []).join(", ")} onChange={(e) => updateField("aliases", e.target.value.split(",").map((v) => v.trim()).filter(Boolean))} readOnly={!canManage} /></label>
+          <label>Name<input value={frontmatter.name || ""} onChange={(e) => updateField("name", e.target.value)} readOnly={!fieldsEditable} /></label>
+          <label>Summary<textarea value={frontmatter.summary || ""} onChange={(e) => updateField("summary", e.target.value)} readOnly={!fieldsEditable} /></label>
+          <label>Status<input value={frontmatter.status || ""} onChange={(e) => updateField("status", e.target.value)} readOnly={!fieldsEditable} placeholder="alive, active, destroyed..." /></label>
+          <label>Tags<input value={tags.join(", ")} onChange={(e) => updateField("tags", e.target.value.split(",").map((v) => v.trim()).filter(Boolean))} readOnly={!fieldsEditable} /></label>
+          <label>Aliases<input value={(frontmatter.aliases || []).join(", ")} onChange={(e) => updateField("aliases", e.target.value.split(",").map((v) => v.trim()).filter(Boolean))} readOnly={!fieldsEditable} /></label>
         </div>
 
         <div className="field-group">
           <h3>Visibility</h3>
-          <label>Visibility<select value={frontmatter.visibility} onChange={(e) => updateField("visibility", e.target.value)} disabled={!canManage}><option value="gm">GM only</option><option value="players">Players</option></select></label>
-          <label>Approval<select value={frontmatter.approvalStatus} onChange={(e) => updateField("approvalStatus", e.target.value)} disabled={!canManage}><option value="approved">Approved</option><option value="unapproved">Unapproved</option><option value="rejected">Rejected</option></select></label>
-          <label className="check"><input type="checkbox" checked={Boolean(frontmatter.knownToPlayers)} onChange={(e) => updateField("knownToPlayers", e.target.checked)} disabled={!canManage} /> Known to players</label>
+          <label>Visibility<select value={frontmatter.visibility} onChange={(e) => updateField("visibility", e.target.value)} disabled={!fieldsEditable}><option value="gm">GM only</option><option value="players">Players</option></select></label>
+          <label>Approval<select value={frontmatter.approvalStatus} onChange={(e) => updateField("approvalStatus", e.target.value)} disabled={!fieldsEditable}><option value="approved">Approved</option><option value="unapproved">Unapproved</option><option value="rejected">Rejected</option></select></label>
+          <label className="check"><input type="checkbox" checked={Boolean(frontmatter.knownToPlayers)} onChange={(e) => updateField("knownToPlayers", e.target.checked)} disabled={!fieldsEditable} /> Known to players</label>
         </div>
 
         <div className="field-group">
           <h3>Links</h3>
-          <label>Key links<input value={keyLinks.join(", ")} onChange={(e) => updateField("keyLinks", e.target.value.split(",").map((v) => v.trim()).filter(Boolean))} readOnly={!canManage} /></label>
-          <label>Foundry link<input value={frontmatter.foundryLink || ""} onChange={(e) => updateField("foundryLink", e.target.value)} readOnly={!canManage} placeholder="Actor UUID or scene URL" /></label>
+          <label>Key links<input value={keyLinks.join(", ")} onChange={(e) => updateField("keyLinks", e.target.value.split(",").map((v) => v.trim()).filter(Boolean))} readOnly={!fieldsEditable} /></label>
+          <label>Foundry link<input value={frontmatter.foundryLink || ""} onChange={(e) => updateField("foundryLink", e.target.value)} readOnly={!fieldsEditable} placeholder="Actor UUID or scene URL" /></label>
         </div>
 
         {isEvent && (
           <div className="field-group">
             <h3>Timeline</h3>
-            <label>Event date<input value={frontmatter.eventDate || ""} onChange={(e) => updateField("eventDate", e.target.value)} readOnly={!canManage} placeholder="1105-123 or 2026-06-17" /></label>
-            <label>Timeline date<input value={frontmatter.timelineDate || ""} onChange={(e) => updateField("timelineDate", e.target.value)} readOnly={!canManage} /></label>
+            <label>Event date<input value={frontmatter.eventDate || ""} onChange={(e) => updateField("eventDate", e.target.value)} readOnly={!fieldsEditable} placeholder="1105-123 or 2026-06-17" /></label>
+            <label>Timeline date<input value={frontmatter.timelineDate || ""} onChange={(e) => updateField("timelineDate", e.target.value)} readOnly={!fieldsEditable} /></label>
           </div>
         )}
 
         {isTraveller && (
           <div className="field-group">
             <h3>Traveller</h3>
-            <label>UWP<input value={frontmatter.uwp || ""} onChange={(e) => updateField("uwp", e.target.value)} readOnly={!canManage} placeholder="A867A74-C" /></label>
-            <label>Allegiance<input value={frontmatter.allegiance || ""} onChange={(e) => updateField("allegiance", e.target.value)} readOnly={!canManage} placeholder="Solomani Confederation" /></label>
-            <label>Trade codes<input value={tradeCodes.join(", ")} onChange={(e) => updateField("tradeCodes", e.target.value.split(",").map((v) => v.trim()).filter(Boolean))} readOnly={!canManage} /></label>
-            <label>Subsector<input value={frontmatter.subsector || ""} onChange={(e) => updateField("subsector", e.target.value)} readOnly={!canManage} /></label>
-            <label>Patron<input value={frontmatter.patron || ""} onChange={(e) => updateField("patron", e.target.value)} readOnly={!canManage} /></label>
-            <label>Tech level<input value={frontmatter.techLevel || ""} onChange={(e) => updateField("techLevel", e.target.value)} readOnly={!canManage} /></label>
+            <label>UWP<input value={frontmatter.uwp || ""} onChange={(e) => updateField("uwp", e.target.value)} readOnly={!fieldsEditable} placeholder="A867A74-C" /></label>
+            <label>Allegiance<input value={frontmatter.allegiance || ""} onChange={(e) => updateField("allegiance", e.target.value)} readOnly={!fieldsEditable} placeholder="Solomani Confederation" /></label>
+            <label>Trade codes<input value={tradeCodes.join(", ")} onChange={(e) => updateField("tradeCodes", e.target.value.split(",").map((v) => v.trim()).filter(Boolean))} readOnly={!fieldsEditable} /></label>
+            <label>Subsector<input value={frontmatter.subsector || ""} onChange={(e) => updateField("subsector", e.target.value)} readOnly={!fieldsEditable} /></label>
+            <label>Patron<input value={frontmatter.patron || ""} onChange={(e) => updateField("patron", e.target.value)} readOnly={!fieldsEditable} /></label>
+            <label>Tech level<input value={frontmatter.techLevel || ""} onChange={(e) => updateField("techLevel", e.target.value)} readOnly={!fieldsEditable} /></label>
           </div>
         )}
 
@@ -236,7 +253,7 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
           <div className="field-group">
             <h3>Source Import</h3>
             <p className="muted">{frontmatter.sourceImport}</p>
-            {canManage && (
+            {fieldsEditable && (
               <>
                 <label>New source JSON<textarea value={sourceJsonDraft} onChange={(event) => setSourceJsonDraft(event.target.value)} rows={6} placeholder='{"name":"Updated Actor"}' /></label>
                 <button type="button" className="secondary" onClick={compareSourceImport}>Compare source</button>
@@ -270,9 +287,12 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
           {canManage && <button type="button" className={mode === "gm" ? "active" : ""} onClick={() => setMode("gm")}>GM preview</button>}
           <button type="button" className={mode === "player" ? "active" : ""} onClick={() => setMode("player")}>Player preview</button>
           <button type="button" className={mode === "handout" ? "active" : ""} onClick={() => setMode("handout")}>Handout</button>
-          {canManage && <button type="submit">Save commit</button>}
+          {fieldsEditable && <button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Save"}</button>}
+          {fieldsEditable && <button type="button" disabled={isSaving} onClick={() => savePage(true)}>{isSaving ? "Saving..." : "Save and finish"}</button>}
+          {canManage && !isEditing && <button type="button" onClick={() => setIsEditing(true)}>Edit page</button>}
         </div>
-        {canManage && (
+        {message && <p className="toast editor-toast">{message}</p>}
+        {fieldsEditable && (
           <div className="insert-toolbar">
             <label>
               Wiki link
@@ -298,9 +318,22 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
             <button type="button" className="secondary" onClick={reloadConflict}>Load latest</button>
           </div>
         )}
-        <div className="editor-split">
-          <textarea ref={textareaRef} value={content} onChange={(e) => setContent(e.target.value)} spellCheck={false} readOnly={!canManage} />
-          <article className={mode === "handout" ? "preview handout-preview" : "preview"}>
+        {isEditing ? (
+          <div className="editor-split">
+            <textarea ref={textareaRef} value={content} onChange={(e) => setContent(e.target.value)} spellCheck={false} readOnly={!fieldsEditable} />
+            <article className={mode === "handout" ? "preview handout-preview" : "preview"}>
+              {mode === "handout" && (
+                <header className="handout-header">
+                  <p>Player Handout</p>
+                  <h1>{frontmatter.name}</h1>
+                  {frontmatter.summary && <span>{frontmatter.summary}</span>}
+                </header>
+              )}
+              <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
+            </article>
+          </div>
+        ) : (
+          <article className={mode === "handout" ? "preview page-reader handout-preview" : "preview page-reader"}>
             {mode === "handout" && (
               <header className="handout-header">
                 <p>Player Handout</p>
@@ -310,8 +343,7 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
             )}
             <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
           </article>
-        </div>
-        {message && <p className="toast">{message}</p>}
+        )}
       </section>
     </form>
   );

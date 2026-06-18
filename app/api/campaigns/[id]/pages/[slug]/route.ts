@@ -70,6 +70,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         { status: 409 }
       );
     }
-    throw error;
+    const message =
+      error instanceof GitHubError
+        ? `GitHub error${error.status ? ` ${error.status}` : ""}: ${error.message}`
+        : error instanceof Error
+          ? error.message
+          : "Save failed.";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }
