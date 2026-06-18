@@ -1052,6 +1052,48 @@ code {
   border-color: rgba(255, 138, 138, 0.32);
 }
 
+.diff-list {
+  display: grid;
+  gap: 8px;
+}
+
+.diff-row {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  display: grid;
+  gap: 5px;
+  padding: 9px;
+}
+
+.diff-row strong {
+  color: var(--gold-bright);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.diff-row span,
+.diff-row code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diff-row span {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.diff-row.added {
+  border-color: rgba(212, 169, 87, 0.28);
+}
+
+.diff-row.removed {
+  border-color: rgba(255, 138, 138, 0.28);
+}
+
 .toast {
   color: var(--gold-bright);
   font-weight: 600;

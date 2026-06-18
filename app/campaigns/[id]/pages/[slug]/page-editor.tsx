@@ -18,6 +18,8 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
   const [mode, setMode] = useState<"gm" | "player" | "handout">(canManage ? "gm" : "player");
   const [message, setMessage] = useState("");
   const [conflictPage, setConflictPage] = useState<WikiPage | null>(null);
+  const [sourceJsonDraft, setSourceJsonDraft] = useState("");
+  const [sourceDiff, setSourceDiff] = useState<any | null>(null);
 
   const applyPage = useCallback((nextPage: WikiPage) => {
     setPage(nextPage);
@@ -147,6 +149,28 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
     insertSnippet(item.markdown);
   }
 
+  async function compareSourceImport() {
+    if (!frontmatter.sourceImport) return;
+    let sourceJson: unknown;
+    try {
+      sourceJson = JSON.parse(sourceJsonDraft);
+    } catch {
+      setMessage("New source JSON is invalid.");
+      return;
+    }
+    const res = await fetch(`/api/campaigns/${campaign.id}/imports/characters/diff`, {
+      method: "POST",
+      body: JSON.stringify({ sourcePath: frontmatter.sourceImport, sourceJson })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setSourceDiff(data);
+      setMessage("Source JSON compared.");
+    } else {
+      setMessage(data.error || "Could not compare source JSON.");
+    }
+  }
+
   if (!page) return <p className="muted">Loading page...</p>;
   const keyLinks = Array.isArray(frontmatter.keyLinks) ? frontmatter.keyLinks : [];
   const tags = Array.isArray(frontmatter.tags) ? frontmatter.tags : [];
@@ -208,7 +232,33 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
           </div>
         )}
 
-        {frontmatter.sourceImport && <p className="muted">Source: {frontmatter.sourceImport}</p>}
+        {frontmatter.sourceImport && (
+          <div className="field-group">
+            <h3>Source Import</h3>
+            <p className="muted">{frontmatter.sourceImport}</p>
+            {canManage && (
+              <>
+                <label>New source JSON<textarea value={sourceJsonDraft} onChange={(event) => setSourceJsonDraft(event.target.value)} rows={6} placeholder='{"name":"Updated Actor"}' /></label>
+                <button type="button" className="secondary" onClick={compareSourceImport}>Compare source</button>
+                {sourceDiff && (
+                  <div className="diff-list">
+                    <p className="muted">
+                      {sourceDiff.counts.added} added · {sourceDiff.counts.changed} changed · {sourceDiff.counts.removed} removed
+                    </p>
+                    {sourceDiff.changes.map((change: any) => (
+                      <article key={`${change.type}-${change.path}`} className={`diff-row ${change.type}`}>
+                        <strong>{change.type}</strong>
+                        <span>{change.path}</span>
+                        <code>{change.type === "added" ? String(change.after) : change.type === "removed" ? String(change.before) : `${String(change.before)} -> ${String(change.after)}`}</code>
+                      </article>
+                    ))}
+                    {!sourceDiff.changes.length && <p className="muted">No source changes detected.</p>}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
         <h3>Key links</h3>
         {keyLinks.map((link: string) => <a key={link} className="nav-link" href={`/campaigns/${campaign.id}/pages/${link}`}>{link}</a>)}
         <h3>Backlinks</h3>
