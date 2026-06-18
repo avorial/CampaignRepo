@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import type { Campaign, CampaignMembership } from "@/lib/types";
+import type { Campaign, CampaignInvite, CampaignMembership } from "@/lib/types";
 
 type ReviewItem = {
   slug: string;
@@ -17,17 +17,21 @@ type ReviewItem = {
 
 export default function AdminClient({ campaign }: { campaign: Campaign }) {
   const [members, setMembers] = useState<CampaignMembership[]>([]);
+  const [invites, setInvites] = useState<CampaignInvite[]>([]);
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [message, setMessage] = useState("");
 
   async function load() {
-    const [membersRes, reviewsRes] = await Promise.all([
+    const [membersRes, invitesRes, reviewsRes] = await Promise.all([
       fetch(`/api/campaigns/${campaign.id}/admin/members`),
+      fetch(`/api/campaigns/${campaign.id}/admin/invites`),
       fetch(`/api/campaigns/${campaign.id}/admin/reviews`)
     ]);
     const membersData = await membersRes.json();
+    const invitesData = await invitesRes.json();
     const reviewsData = await reviewsRes.json();
     setMembers(membersData.members || []);
+    setInvites(invitesData.invites || []);
     setReviews(reviewsData.reviews || []);
   }
 
@@ -51,6 +55,43 @@ export default function AdminClient({ campaign }: { campaign: Campaign }) {
     } else {
       setMessage(data.error || "Could not add member.");
     }
+  }
+
+  async function createInvite(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("");
+    const form = new FormData(event.currentTarget);
+    const res = await fetch(`/api/campaigns/${campaign.id}/admin/invites`, {
+      method: "POST",
+      body: JSON.stringify({ role: form.get("role") })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setInvites(data.invites || []);
+      setMessage("Invite link created.");
+    } else {
+      setMessage(data.error || "Could not create invite.");
+    }
+  }
+
+  async function revokeInvite(inviteId: number) {
+    setMessage("");
+    const res = await fetch(`/api/campaigns/${campaign.id}/admin/invites`, {
+      method: "DELETE",
+      body: JSON.stringify({ inviteId })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setInvites(data.invites || []);
+      setMessage("Invite revoked.");
+    } else {
+      setMessage(data.error || "Could not revoke invite.");
+    }
+  }
+
+  async function copyInvite(token: string) {
+    await navigator.clipboard.writeText(`${window.location.origin}/invite/${token}`);
+    setMessage("Invite link copied.");
   }
 
   async function setRole(userId: number, role: "gm" | "player") {
@@ -108,6 +149,34 @@ export default function AdminClient({ campaign }: { campaign: Campaign }) {
           <label>Role<select name="role"><option value="player">Player</option><option value="gm">GM</option></select></label>
           <button>Add to campaign</button>
         </form>
+      </div>
+
+      <div className="panel">
+        <h2>Invite links</h2>
+        <p className="muted">Create a link for a GM or player. New users can register from the link; existing users can sign in and accept it.</p>
+        <form onSubmit={createInvite} className="inline-form">
+          <select name="role"><option value="player">Player</option><option value="gm">GM</option></select>
+          <button>Create invite</button>
+        </form>
+        <div className="member-list invite-list">
+          {invites.map((invite) => (
+            <article key={invite.id} className="member-row">
+              <div>
+                <strong>{invite.role}</strong>
+                <span>{invite.acceptedAt ? "accepted" : invite.revokedAt ? "revoked" : "active"} · {invite.createdAt}</span>
+              </div>
+              <div className="member-actions">
+                {!invite.acceptedAt && !invite.revokedAt && (
+                  <>
+                    <button type="button" className="secondary" onClick={() => copyInvite(invite.token)}>Copy</button>
+                    <button type="button" className="secondary danger" onClick={() => revokeInvite(invite.id)}>Revoke</button>
+                  </>
+                )}
+              </div>
+            </article>
+          ))}
+          {!invites.length && <p className="muted">No invites yet.</p>}
+        </div>
       </div>
 
       <div className="panel">

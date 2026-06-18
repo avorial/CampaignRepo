@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useState } from "react";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next") || "";
+  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "";
   const [error, setError] = useState("");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -21,7 +24,7 @@ export default function LoginPage() {
       return;
     }
     const data = await res.json();
-    router.push(data.mustChangePassword ? "/change-password" : "/dashboard");
+    router.push(data.mustChangePassword ? "/change-password" : safeNext || "/dashboard");
   }
 
   return (
@@ -42,5 +45,13 @@ export default function LoginPage() {
         <p className="muted">New here? <Link href="/getting-started">Read the getting-started guide</Link>.</p>
       </section>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

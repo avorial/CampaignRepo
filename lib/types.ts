@@ -44,6 +44,19 @@ export type CampaignMembership = {
   createdAt: string;
 };
 
+export type CampaignInvite = {
+  id: number;
+  campaignId: number;
+  token: string;
+  role: Exclude<CampaignRole, "owner">;
+  createdBy: number;
+  createdByName?: string;
+  revokedAt?: string | null;
+  acceptedAt?: string | null;
+  acceptedBy?: number | null;
+  createdAt: string;
+};
+
 export type WikiPageFrontmatter = {
   category: Category;
   type: string;

@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import type { ApiToken, Campaign, CampaignMembership, CampaignRole, SearchDocument, User } from "@/lib/types";
+import type { ApiToken, Campaign, CampaignInvite, CampaignMembership, CampaignRole, SearchDocument, User } from "@/lib/types";
 
 const dataDir = path.join(process.cwd(), "data");
 // CAMPAIGNREPO_DB lets tests point at an in-memory (":memory:") database.
@@ -54,6 +54,20 @@ CREATE TABLE IF NOT EXISTS campaign_memberships (
   UNIQUE(campaignId, userId),
   FOREIGN KEY (campaignId) REFERENCES campaigns(id),
   FOREIGN KEY (userId) REFERENCES users(id)
+);
+CREATE TABLE IF NOT EXISTS campaign_invites (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  campaignId INTEGER NOT NULL,
+  token TEXT NOT NULL UNIQUE,
+  role TEXT NOT NULL CHECK(role IN ('gm', 'player')),
+  createdBy INTEGER NOT NULL,
+  revokedAt TEXT,
+  acceptedAt TEXT,
+  acceptedBy INTEGER,
+  createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (campaignId) REFERENCES campaigns(id),
+  FOREIGN KEY (createdBy) REFERENCES users(id),
+  FOREIGN KEY (acceptedBy) REFERENCES users(id)
 );
 CREATE TABLE IF NOT EXISTS imports (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -263,6 +277,59 @@ export function removeCampaignMember(adminUserId: number, campaignId: number, me
   const existing = getCampaignRole(memberUserId, campaignId);
   if (existing === "owner") throw new Error("Owners cannot be removed in the MVP.");
   db.prepare("DELETE FROM campaign_memberships WHERE campaignId = ? AND userId = ?").run(campaignId, memberUserId);
+}
+
+export function createCampaignInvite(adminUserId: number, campaignId: number, role: Exclude<CampaignRole, "owner">) {
+  if (!canManageCampaign(adminUserId, campaignId)) throw new Error("Forbidden");
+  const token = `invite_${crypto.randomBytes(24).toString("hex")}`;
+  const info = db
+    .prepare("INSERT INTO campaign_invites (campaignId, token, role, createdBy) VALUES (?, ?, ?, ?)")
+    .run(campaignId, token, role, adminUserId);
+  return db.prepare("SELECT * FROM campaign_invites WHERE id = ?").get(info.lastInsertRowid) as CampaignInvite;
+}
+
+export function listCampaignInvites(adminUserId: number, campaignId: number): CampaignInvite[] {
+  if (!canManageCampaign(adminUserId, campaignId)) return [];
+  return db
+    .prepare(
+      `SELECT campaign_invites.*, users.name AS createdByName
+       FROM campaign_invites
+       JOIN users ON users.id = campaign_invites.createdBy
+       WHERE campaign_invites.campaignId = ?
+       ORDER BY campaign_invites.createdAt DESC`
+    )
+    .all(campaignId) as CampaignInvite[];
+}
+
+export function revokeCampaignInvite(adminUserId: number, campaignId: number, inviteId: number) {
+  if (!canManageCampaign(adminUserId, campaignId)) throw new Error("Forbidden");
+  db.prepare("UPDATE campaign_invites SET revokedAt = CURRENT_TIMESTAMP WHERE id = ? AND campaignId = ? AND acceptedAt IS NULL").run(inviteId, campaignId);
+}
+
+export function getCampaignInvite(token: string) {
+  return (
+    db
+      .prepare(
+        `SELECT campaign_invites.*, campaigns.name AS campaignName, campaigns.owner, campaigns.repo, campaigns.gameType
+         FROM campaign_invites
+         JOIN campaigns ON campaigns.id = campaign_invites.campaignId
+         WHERE campaign_invites.token = ?`
+      )
+      .get(token) as
+      | (CampaignInvite & { campaignName: string; owner: string; repo: string; gameType: string })
+      | undefined
+  );
+}
+
+export function acceptCampaignInvite(userId: number, token: string) {
+  const invite = getCampaignInvite(token);
+  if (!invite || invite.revokedAt || invite.acceptedAt) throw new Error("Invite is no longer active.");
+  const tx = db.transaction(() => {
+    db.prepare("INSERT OR REPLACE INTO campaign_memberships (campaignId, userId, role) VALUES (?, ?, ?)").run(invite.campaignId, userId, invite.role);
+    db.prepare("UPDATE campaign_invites SET acceptedAt = CURRENT_TIMESTAMP, acceptedBy = ? WHERE id = ?").run(userId, invite.id);
+  });
+  tx();
+  return invite;
 }
 
 export function upsertSearchDocuments(campaignId: number, docs: SearchDocument[]) {
