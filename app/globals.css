@@ -617,7 +617,7 @@ code {
 
 .media-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 128px minmax(0, 1fr) auto;
   gap: 14px;
   align-items: center;
   background: var(--bg-elevated);
@@ -626,10 +626,42 @@ code {
   padding: 12px;
 }
 
-.media-row div:first-child {
+.media-row > div:nth-child(2) {
   min-width: 0;
   display: grid;
   gap: 6px;
+}
+
+.media-preview {
+  align-items: center;
+  aspect-ratio: 4 / 3;
+  background: var(--field-bg);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  display: grid;
+  justify-items: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.media-preview img,
+.media-preview iframe {
+  border: 0;
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.media-preview audio {
+  width: calc(100% - 12px);
+}
+
+.media-preview span {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
 }
 
 .media-row span {

@@ -432,6 +432,12 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
               <div className="media-list">
                 {media.map((item) => (
                   <article key={item.path} className="media-row">
+                    <div className={`media-preview media-preview-${item.mediaType}`}>
+                      {item.downloadUrl && item.mediaType === "image" && <img src={item.downloadUrl} alt={item.alt || item.name} />}
+                      {item.downloadUrl && item.mediaType === "pdf" && <iframe title={item.alt || item.name} src={item.downloadUrl} />}
+                      {item.downloadUrl && item.mediaType === "audio" && <audio controls src={item.downloadUrl} />}
+                      {(!item.downloadUrl || item.mediaType === "other") && <span>{item.mediaType}</span>}
+                    </div>
                     <div>
                       <strong>{item.name}</strong>
                       <span>{item.mediaType} · {item.path}</span>
