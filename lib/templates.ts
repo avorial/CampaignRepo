@@ -1,5 +1,4 @@
 import type { Category, GameType, WikiPageFrontmatter } from "@/lib/types";
-import { slugify } from "@/lib/slug";
 
 export const gameTypes: GameType[] = ["Sword Chronicle", "Dungeons & Dragons", "World of Darkness", "Traveller", "Custom"];
 export const categories: { id: Category; label: string }[] = [
@@ -36,15 +35,6 @@ export function starterBody(name: string, category: Category, gameType: GameType
     return `${heading}\n\n## Public Face\n\n\n## Relationships\n\n\n## Secrets\n\n:::gm\nWhat they really want, know, or fear.\n:::\n`;
   }
   return `${heading}${common}`;
-}
-
-export function starterTemplate(gameType: GameType, category: Category) {
-  const name = `${gameType} ${category} template`;
-  return {
-    slug: slugify(`${gameType}-${category}`),
-    frontmatter: defaultFrontmatter(name, category),
-    content: starterBody(name, category, gameType)
-  };
 }
 
 export function campaignYaml(name: string, gameType: GameType) {
