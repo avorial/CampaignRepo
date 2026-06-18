@@ -1,9 +1,18 @@
+import crypto from "node:crypto";
 import type { Campaign, GameType } from "@/lib/types";
 import { campaignYaml, repoReadme } from "@/lib/templates";
 import { packFor } from "@/lib/template-packs";
 import { serializePage } from "@/lib/markdown";
 
 const apiBase = "https://api.github.com";
+const appTokenPrefix = "github-app:";
+
+type InstallationToken = {
+  token: string;
+  expiresAt: number;
+};
+
+const installationTokenCache = new Map<string, InstallationToken>();
 
 export class GitHubError extends Error {
   constructor(message: string, public status?: number) {
@@ -11,12 +20,69 @@ export class GitHubError extends Error {
   }
 }
 
-async function gh<T>(token: string, path: string, init: RequestInit = {}): Promise<T> {
+function base64url(input: string | Buffer) {
+  return Buffer.from(input).toString("base64url");
+}
+
+function githubAppConfig() {
+  const appId = process.env.GITHUB_APP_ID;
+  const slug = process.env.GITHUB_APP_SLUG;
+  const privateKey = process.env.GITHUB_APP_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  if (!appId || !slug || !privateKey) return null;
+  return { appId, slug, privateKey };
+}
+
+function githubAppJwt() {
+  const config = githubAppConfig();
+  if (!config) throw new GitHubError("GitHub App is not configured.", 400);
+  const now = Math.floor(Date.now() / 1000);
+  const header = base64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const payload = base64url(JSON.stringify({ iat: now - 60, exp: now + 9 * 60, iss: config.appId }));
+  const signature = crypto.createSign("RSA-SHA256").update(`${header}.${payload}`).sign(config.privateKey, "base64url");
+  return `${header}.${payload}.${signature}`;
+}
+
+function installationId(token: string) {
+  return token.startsWith(appTokenPrefix) ? token.slice(appTokenPrefix.length) : "";
+}
+
+export function isGitHubAppConnection(token?: string | null) {
+  return Boolean(token?.startsWith(appTokenPrefix));
+}
+
+export function isGitHubAppConfigured() {
+  return Boolean(githubAppConfig());
+}
+
+export function githubAppInstallUrl(state: string) {
+  const config = githubAppConfig();
+  if (!config) return null;
+  return `https://github.com/apps/${config.slug}/installations/new?state=${encodeURIComponent(state)}`;
+}
+
+export function githubAppConnectionToken(installation: string | number) {
+  return `${appTokenPrefix}${installation}`;
+}
+
+async function appInstallationAccessToken(token: string) {
+  const id = installationId(token);
+  if (!id) return token;
+  const cached = installationTokenCache.get(id);
+  if (cached && cached.expiresAt > Date.now() + 60_000) return cached.token;
+
+  const jwt = githubAppJwt();
+  const response = await gh<{ token: string; expires_at: string }>(jwt, `/app/installations/${id}/access_tokens`, { method: "POST" }, false);
+  installationTokenCache.set(id, { token: response.token, expiresAt: new Date(response.expires_at).getTime() });
+  return response.token;
+}
+
+async function gh<T>(token: string, path: string, init: RequestInit = {}, resolveAppToken = true): Promise<T> {
+  const authToken = resolveAppToken ? await appInstallationAccessToken(token) : token;
   const res = await fetch(`${apiBase}${path}`, {
     ...init,
     headers: {
       Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${authToken}`,
       "X-GitHub-Api-Version": "2022-11-28",
       ...(init.headers || {})
     }
@@ -30,10 +96,21 @@ async function gh<T>(token: string, path: string, init: RequestInit = {}): Promi
 }
 
 export async function getViewer(token: string) {
+  if (isGitHubAppConnection(token)) {
+    const id = installationId(token);
+    return { login: `GitHub App installation ${id}` };
+  }
   return gh<{ login: string }>(token, "/user");
 }
 
+export async function getInstallationRepositories(token: string) {
+  return gh<{ repositories: Array<{ full_name: string }> }>(token, "/installation/repositories");
+}
+
 export async function createRepo(token: string, name: string, isPrivate = true) {
+  if (isGitHubAppConnection(token)) {
+    throw new GitHubError("GitHub App connections can connect existing repos, but creating a new repo still requires a GitHub token.", 400);
+  }
   return gh<{ name: string; owner: { login: string }; default_branch: string }>(token, "/user/repos", {
     method: "POST",
     body: JSON.stringify({ name, private: isPrivate, auto_init: true })

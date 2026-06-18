@@ -28,10 +28,11 @@ const steps: Step[] = [
     body: (
       <>
         <p className="muted">
-          Each campaign is a GitHub repo, so CampaignRepo needs a token to read and write it. On the dashboard,
-          paste a GitHub personal access token under <strong>GitHub connection</strong>.
+          Each campaign is a GitHub repo, so CampaignRepo needs read/write access. On the dashboard, use
+          <strong> Install or update GitHub App access</strong> and install the app on the campaign repos you want managed.
         </p>
         <p className="muted">
+          The manual token fallback is still available for local testing and creating brand-new repos from inside CampaignRepo.
           Create one at{" "}
           <a href="https://github.com/settings/tokens" target="_blank" rel="noreferrer">github.com/settings/tokens</a>{" "}
           with <strong>read &amp; write access to repository contents</strong>. A fine-grained token scoped to the

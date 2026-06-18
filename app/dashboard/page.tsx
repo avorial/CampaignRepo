@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { listCampaigns } from "@/lib/db";
+import { isGitHubAppConfigured } from "@/lib/github";
 import { categories, gameTypes } from "@/lib/templates";
 import DashboardClient from "./dashboard-client";
 
@@ -27,7 +28,7 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <DashboardClient user={user} campaigns={campaigns} gameTypes={gameTypes} categories={categories} />
+      <DashboardClient user={user} campaigns={campaigns} gameTypes={gameTypes} categories={categories} githubAppConfigured={isGitHubAppConfigured()} />
 
       <section className="band">
         <h2>Connected repos</h2>

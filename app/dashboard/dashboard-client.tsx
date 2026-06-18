@@ -6,12 +6,14 @@ import type { ApiToken, Campaign, GameType, User } from "@/lib/types";
 export default function DashboardClient({
   user,
   campaigns,
-  gameTypes
+  gameTypes,
+  githubAppConfigured
 }: {
   user: User;
   campaigns: Campaign[];
   gameTypes: GameType[];
   categories: { id: string; label: string }[];
+  githubAppConfigured: boolean;
 }) {
   const [message, setMessage] = useState("");
   const [mode, setMode] = useState<"create" | "connect">("create");
@@ -20,6 +22,7 @@ export default function DashboardClient({
   const [newToken, setNewToken] = useState("");
   const [reviewGroups, setReviewGroups] = useState<any[]>([]);
   const mcpUrl = typeof window !== "undefined" ? `${window.location.origin}/api/mcp` : "/api/mcp";
+  const githubConnection = user.githubToken?.startsWith("github-app:") ? "GitHub App installed" : user.githubToken ? "Manual token connected" : "Not connected";
 
   useEffect(() => {
     fetch("/api/tokens")
@@ -92,11 +95,20 @@ export default function DashboardClient({
       <section className="dashboard-grid">
         <div className="panel">
           <h2>GitHub connection</h2>
-          <p className="muted">Signed in as {user.email}. Add a GitHub token with repo contents read/write access to create or connect campaign repos.</p>
+          <p className="muted">Signed in as {user.email}. Status: {githubConnection}.</p>
+          {githubAppConfigured ? (
+            <div className="stack">
+              <p className="muted">Install the GitHub App on the repos CampaignRepo can manage. This avoids storing a personal SSH key or broad personal token.</p>
+              <a className="button" href="/api/github/app/start">Install or update GitHub App access</a>
+            </div>
+          ) : (
+            <p className="muted">GitHub App connection is not configured on this server yet.</p>
+          )}
           <form onSubmit={connectGithub} className="stack">
-            <label>GitHub token<input name="token" type="password" placeholder="ghp_..." /></label>
-            <button>Connect GitHub</button>
+            <label>Manual GitHub token fallback<input name="token" type="password" placeholder="github_pat_..." /></label>
+            <button>Connect token</button>
           </form>
+          <p className="muted">Use the token fallback only for local testing or repo creation. Existing repo read/write works through the GitHub App.</p>
         </div>
 
         <div className="panel">

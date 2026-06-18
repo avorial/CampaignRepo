@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { getDb, listCampaigns } from "@/lib/db";
-import { createRepo, initializeRepo } from "@/lib/github";
+import { createRepo, GitHubError, initializeRepo, isGitHubAppConnection } from "@/lib/github";
 import { gameTypes } from "@/lib/templates";
 
 const createSchema = z.object({
@@ -22,23 +22,36 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const user = await requireUser();
-  if (!user.githubToken) return NextResponse.json({ error: "Connect a GitHub token first." }, { status: 400 });
+  if (!user.githubToken) return NextResponse.json({ error: "Connect GitHub first." }, { status: 400 });
   const input = createSchema.parse(await req.json());
   let owner = input.owner || "";
   let repo = input.repo || "";
   let branch = input.branch || "main";
-  if (input.mode === "create") {
-    const created = await createRepo(user.githubToken, input.repo || input.name, input.private);
-    owner = created.owner.login;
-    repo = created.name;
-    branch = created.default_branch || "main";
+  try {
+    if (input.mode === "create") {
+      if (isGitHubAppConnection(user.githubToken)) {
+        return NextResponse.json({ error: "GitHub App access can connect existing repos. To create repos from CampaignRepo, connect a manual GitHub token fallback." }, { status: 400 });
+      }
+      const created = await createRepo(user.githubToken, input.repo || input.name, input.private);
+      owner = created.owner.login;
+      repo = created.name;
+      branch = created.default_branch || "main";
+    }
+    if (!owner || !repo) return NextResponse.json({ error: "Owner and repo are required." }, { status: 400 });
+    const result = getDb()
+      .prepare("INSERT INTO campaigns (userId, name, owner, repo, branch, gameType) VALUES (?, ?, ?, ?, ?, ?)")
+      .run(user.id, input.name, owner, repo, branch, input.gameType);
+    getDb().prepare("INSERT OR IGNORE INTO campaign_memberships (campaignId, userId, role) VALUES (?, ?, 'owner')").run(result.lastInsertRowid, user.id);
+    const campaign = getDb().prepare("SELECT * FROM campaigns WHERE id = ?").get(result.lastInsertRowid) as any;
+    await initializeRepo(user.githubToken, campaign);
+    return NextResponse.json({ campaign });
+  } catch (error) {
+    const message =
+      error instanceof GitHubError
+        ? `GitHub error${error.status ? ` ${error.status}` : ""}: ${error.message}`
+        : error instanceof Error
+          ? error.message
+          : "Could not build repo.";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
-  if (!owner || !repo) return NextResponse.json({ error: "Owner and repo are required." }, { status: 400 });
-  const result = getDb()
-    .prepare("INSERT INTO campaigns (userId, name, owner, repo, branch, gameType) VALUES (?, ?, ?, ?, ?, ?)")
-    .run(user.id, input.name, owner, repo, branch, input.gameType);
-  getDb().prepare("INSERT OR IGNORE INTO campaign_memberships (campaignId, userId, role) VALUES (?, ?, 'owner')").run(result.lastInsertRowid, user.id);
-  const campaign = getDb().prepare("SELECT * FROM campaigns WHERE id = ?").get(result.lastInsertRowid) as any;
-  await initializeRepo(user.githubToken, campaign);
-  return NextResponse.json({ campaign });
 }

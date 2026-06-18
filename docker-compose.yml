@@ -7,6 +7,11 @@ services:
     environment:
       # Set to "true" only when serving behind HTTPS (e.g. a reverse proxy).
       SECURE_COOKIES: "false"
+      # Optional GitHub App connection. In Portainer, set these as stack env vars.
+      # GITHUB_APP_PRIVATE_KEY may use escaped newlines: -----BEGIN...\n...\n-----END...
+      GITHUB_APP_ID: "${GITHUB_APP_ID:-}"
+      GITHUB_APP_SLUG: "${GITHUB_APP_SLUG:-}"
+      GITHUB_APP_PRIVATE_KEY: "${GITHUB_APP_PRIVATE_KEY:-}"
     volumes:
       # Persists the SQLite DB (accounts, sessions, search index).
       - campaignrepo-data:/app/data

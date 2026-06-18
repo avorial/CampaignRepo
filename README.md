@@ -8,7 +8,8 @@ CampaignRepo is a GitHub-backed RPG campaign wiki. One app manages many campaign
 - Seeded `admin` account with forced first-login password change.
 - Global admin panel for user review, password resets, account disabling, and global admin assignment.
 - Private dashboard for creating or connecting campaign repos.
-- GitHub token connection for repo creation and file commits.
+- GitHub App installation connection for existing repo read/write access.
+- Manual GitHub token fallback for local testing and repo creation.
 - Game template packs for Sword Chronicle, Dungeons & Dragons, World of Darkness, Traveller, and Custom.
 - Wiki categories for Characters, NPCs, Locations, Events, and Games.
 - Markdown pages with `[[Page]]` links, `[[Page|Label]]` aliases, key links, backlinks, tags, visibility, and approval status.
@@ -36,8 +37,8 @@ CampaignRepo's goal is to become a practical, RPG-first, GitHub-backed campaign 
 
 ### 1. GitHub Connection
 
-- Replace pasted GitHub tokens with a real GitHub OAuth or GitHub App installation flow.
-- Keep manual token support only as a local/dev fallback.
+- Expand the GitHub App flow with richer installation status and repo picker UX.
+- Keep manual token support only as a local/dev fallback and for GitHub repo creation.
 - Improve GitHub API error handling for repo access, rate limits, and missing permissions.
 
 ### 2. Editing Experience
@@ -120,6 +121,30 @@ index) is stored in the `campaignrepo-data` volume at `/app/data`.
 - Serving behind HTTPS? Set `SECURE_COOKIES=true` (in `docker-compose.yml` or the
   environment) so session cookies get the `Secure` flag.
 - Without compose: `docker build -t campaignrepo . && docker run -p 3000:3000 -v campaignrepo-data:/app/data campaignrepo`.
+
+## GitHub App Setup
+
+For normal testing, use a GitHub App instead of storing a personal SSH key.
+
+Create a GitHub App at `https://github.com/settings/apps/new`:
+
+- Homepage URL: your CampaignRepo URL.
+- Callback URL: `https://YOUR-CAMPAIGNREPO-HOST/api/github/app/callback`.
+- Setup URL: `https://YOUR-CAMPAIGNREPO-HOST/api/github/app/callback`.
+- Request repository permissions:
+  - Contents: read/write.
+  - Metadata: read-only.
+- Enable installation on the campaign repos you want CampaignRepo to manage.
+
+Set these environment variables in Docker/Portainer:
+
+```bash
+GITHUB_APP_ID=123456
+GITHUB_APP_SLUG=your-github-app-slug
+GITHUB_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----"
+```
+
+After restarting CampaignRepo, open the dashboard and use **Install or update GitHub App access**. GitHub App access can connect and repair existing repos. To create brand-new repos from inside CampaignRepo, connect a manual GitHub token fallback.
 
 ## Verification
 

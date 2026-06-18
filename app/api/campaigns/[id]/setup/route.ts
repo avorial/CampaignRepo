@@ -14,8 +14,9 @@ Repository: https://github.com/${campaign.owner}/${campaign.repo}
 
 ## Required GitHub access
 
-- The connected GitHub token needs contents read/write access.
-- Private repos require a token with private repository access.
+- Preferred: install the CampaignRepo GitHub App on this repo with contents read/write access.
+- Fallback: connect a fine-grained GitHub token with contents read/write access.
+- Private repos require either a GitHub App installation on the repo or a token with private repository access.
 - Manual GitHub repo creation docs: https://docs.github.com/repositories/creating-and-managing-repositories/creating-a-new-repository
 
 ## Expected structure
