@@ -102,13 +102,20 @@ export default function DashboardClient({
               <a className="button" href="/api/github/app/start">Install or update GitHub App access</a>
             </div>
           ) : (
-            <p className="muted">GitHub App connection is not configured on this server yet.</p>
+            <div className="setup-callout">
+              <strong>GitHub App connection is not configured yet.</strong>
+              <span>For quick testing, create a fine-grained GitHub token and paste it below.</span>
+              <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">
+                Create GitHub token
+              </a>
+              <span>For GitHub App access, set <code>GITHUB_APP_ID</code>, <code>GITHUB_APP_SLUG</code>, and <code>GITHUB_APP_PRIVATE_KEY</code> in Portainer, then redeploy.</span>
+            </div>
           )}
           <form onSubmit={connectGithub} className="stack">
             <label>Manual GitHub token fallback<input name="token" type="password" placeholder="github_pat_..." /></label>
             <button>Connect token</button>
           </form>
-          <p className="muted">Use the token fallback only for local testing or repo creation. Existing repo read/write works through the GitHub App.</p>
+          <p className="muted">Token needs repository contents read/write access. Use it for testing or creating repos; GitHub App access is better once configured.</p>
         </div>
 
         <div className="panel">
