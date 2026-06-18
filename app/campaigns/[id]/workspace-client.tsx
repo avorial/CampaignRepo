@@ -244,6 +244,21 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     .filter((node) => node.linkCount > 0 || node.missingLinks > 0)
     .sort((a, b) => b.linkCount - a.linkCount || a.name.localeCompare(b.name))
     .slice(0, 12);
+  const graphMapNodes = linkedNodes.slice(0, 10).map((node, index, list) => {
+    const angle = list.length === 1 ? -Math.PI / 2 : (index / list.length) * Math.PI * 2 - Math.PI / 2;
+    const rx = 220;
+    const ry = 105;
+    return {
+      ...node,
+      x: 260 + Math.cos(angle) * rx,
+      y: 145 + Math.sin(angle) * ry
+    };
+  });
+  const graphMapNodeLookup = new Map(graphMapNodes.map((node) => [node.slug, node]));
+  const graphMapEdges = graph.edges
+    .filter((edge) => !edge.missing && graphMapNodeLookup.has(edge.source) && graphMapNodeLookup.has(edge.target))
+    .slice(0, 28);
+  const shortLabel = (value: string) => (value.length > 18 ? `${value.slice(0, 16)}...` : value);
 
   return (
     <section className="workspace">
@@ -310,6 +325,38 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
         )}
 
         <section className="dashboard-grid lore-grid">
+          <div className="panel relationship-map-panel">
+            <h2>Relationship Map</h2>
+            {graphMapNodes.length > 1 ? (
+              <svg className="relationship-map" viewBox="0 0 520 290" role="img" aria-label="Campaign relationship map">
+                {graphMapEdges.map((edge, index) => {
+                  const source = graphMapNodeLookup.get(edge.source)!;
+                  const target = graphMapNodeLookup.get(edge.target)!;
+                  return (
+                    <line
+                      key={`${edge.source}-${edge.target}-${index}`}
+                      x1={source.x}
+                      y1={source.y}
+                      x2={target.x}
+                      y2={target.y}
+                      className={edge.label === "key link" ? "key-edge" : ""}
+                    />
+                  );
+                })}
+                {graphMapNodes.map((node) => (
+                  <a key={node.slug} href={`/campaigns/${campaign.id}/pages/${node.slug}`}>
+                    <g className={`graph-node graph-node-${node.category}`}>
+                      <circle cx={node.x} cy={node.y} r="25" />
+                      <text x={node.x} y={node.y + 43} textAnchor="middle">{shortLabel(node.name)}</text>
+                    </g>
+                  </a>
+                ))}
+              </svg>
+            ) : (
+              <p className="muted">Add wiki links or key links to draw the relationship map.</p>
+            )}
+          </div>
+
           <div className="panel">
             <h2>Timeline</h2>
             <div className="timeline-list">

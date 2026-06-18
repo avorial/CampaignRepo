@@ -655,6 +655,66 @@ code {
   grid-template-columns: 360px minmax(0, 1fr);
 }
 
+.relationship-map-panel {
+  grid-column: 1 / -1;
+}
+
+.relationship-map {
+  aspect-ratio: 52 / 29;
+  display: block;
+  max-height: 360px;
+  width: 100%;
+}
+
+.relationship-map line {
+  stroke: rgba(160, 117, 255, 0.30);
+  stroke-width: 1.5;
+}
+
+.relationship-map line.key-edge {
+  stroke: rgba(212, 169, 87, 0.58);
+  stroke-width: 2.5;
+}
+
+.graph-node circle {
+  fill: var(--bg-elevated);
+  stroke: var(--border-strong);
+  stroke-width: 2;
+  transition: fill 0.15s ease, stroke 0.15s ease;
+}
+
+.graph-node text {
+  fill: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.relationship-map a:hover .graph-node circle {
+  fill: rgba(212, 169, 87, 0.14);
+  stroke: var(--gold);
+}
+
+.graph-node-character circle {
+  stroke: rgba(212, 169, 87, 0.70);
+}
+
+.graph-node-npc circle {
+  stroke: rgba(160, 117, 255, 0.75);
+}
+
+.graph-node-location circle {
+  stroke: rgba(107, 184, 255, 0.60);
+}
+
+.graph-node-event circle {
+  stroke: rgba(255, 138, 138, 0.60);
+}
+
+.graph-node-game circle {
+  stroke: rgba(184, 169, 207, 0.60);
+}
+
 .timeline-list,
 .relationship-list {
   display: grid;
