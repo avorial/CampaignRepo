@@ -115,6 +115,9 @@ export type CampaignMedia = {
   size?: number;
   downloadUrl?: string;
   mediaType: "image" | "pdf" | "audio" | "other";
+  alt?: string;
+  caption?: string;
+  tags?: string[];
   markdown: string;
 };
 

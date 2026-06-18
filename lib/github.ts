@@ -110,6 +110,7 @@ export async function initializeRepo(token: string, campaign: Campaign) {
   await ensureFile(token, campaign, "wiki/pages/.gitkeep", "", "CampaignRepo: add pages folder");
   await ensureFile(token, campaign, "wiki/search/index.json", "[]\n", "CampaignRepo: add search snapshot");
   await ensureFile(token, campaign, "wiki/media/.gitkeep", "", "CampaignRepo: add media folder");
+  await ensureFile(token, campaign, "wiki/media/media.json", "{}\n", "CampaignRepo: add media metadata");
   await ensureFile(token, campaign, "wiki/imports/characters/.gitkeep", "", "CampaignRepo: add imports folder");
   for (const def of packFor(campaign.gameType)) {
     await ensureFile(

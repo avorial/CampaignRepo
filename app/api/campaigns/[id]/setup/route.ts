@@ -22,6 +22,7 @@ Repository: https://github.com/${campaign.owner}/${campaign.repo}
 
 - \`/wiki/pages\` for Markdown pages
 - \`/wiki/media\` for images, maps, PDFs, and audio
+- \`/wiki/media/media.json\` for media captions, alt text, and tags
 - \`/wiki/templates/${campaign.gameType}\` for game templates
 - \`/wiki/imports/characters\` for preserved VTT/source JSON
 - \`/wiki/search/index.json\` for the portable search snapshot

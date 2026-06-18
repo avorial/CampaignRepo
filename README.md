@@ -127,6 +127,7 @@ npm run build
 /wiki
   /pages
   /media
+    media.json
   /templates/<game-type>
   /imports/characters
   /search/index.json

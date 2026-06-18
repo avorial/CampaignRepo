@@ -148,7 +148,12 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
         fileName: file.name,
         mimeType: file.type,
         base64,
-        alt: form.get("alt")
+        alt: form.get("alt"),
+        caption: form.get("caption"),
+        tags: String(form.get("tags") || "")
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean)
       })
     });
     const data = await res.json();
@@ -345,6 +350,8 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
               <form onSubmit={uploadMedia} className="stack">
                 <label>Media file<input name="file" type="file" accept="image/*,application/pdf,audio/*" required /></label>
                 <label>Alt text or link label<input name="alt" placeholder="Jardin subsector map" /></label>
+                <label>Caption<input name="caption" placeholder="Player-facing map of Jardin highport" /></label>
+                <label>Tags<input name="tags" placeholder="map, handout, jardin" /></label>
                 <button>Upload to /wiki/media</button>
               </form>
             </div>
@@ -357,6 +364,8 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
                     <div>
                       <strong>{item.name}</strong>
                       <span>{item.mediaType} · {item.path}</span>
+                      {item.caption && <span>{item.caption}</span>}
+                      {Boolean(item.tags?.length) && <span>{item.tags?.join(", ")}</span>}
                       <code>{item.markdown}</code>
                     </div>
                     <div className="member-actions">

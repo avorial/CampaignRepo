@@ -2,15 +2,25 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
-import { deleteFile, getContent, GitHubError, listDirectory, putBase64File } from "@/lib/github";
+import { deleteFile, getContent, getTextFile, GitHubError, listDirectory, putBase64File, putFile } from "@/lib/github";
 import { slugify } from "@/lib/slug";
-import type { CampaignMedia } from "@/lib/types";
+import type { Campaign, CampaignMedia } from "@/lib/types";
+
+type MediaMetadata = {
+  alt?: string;
+  caption?: string;
+  tags?: string[];
+};
+
+const metadataPath = "wiki/media/media.json";
 
 const uploadSchema = z.object({
   fileName: z.string().min(1),
   mimeType: z.string().optional(),
   base64: z.string().min(1),
-  alt: z.string().optional()
+  alt: z.string().optional(),
+  caption: z.string().optional(),
+  tags: z.array(z.string()).default([])
 });
 
 const deleteSchema = z.object({
@@ -43,11 +53,26 @@ function markdownFor(name: string, type: CampaignMedia["mediaType"], alt?: strin
   return `[${alt || name}](${path})`;
 }
 
-function isEditableMediaPath(path: string) {
-  return path.startsWith("wiki/media/") && !path.includes("..") && !path.endsWith("/.gitkeep");
+async function readMetadata(token: string, campaign: Campaign) {
+  try {
+    const file = await getTextFile(token, campaign, metadataPath);
+    const parsed = JSON.parse(file.text || "{}") as Record<string, MediaMetadata>;
+    return { sha: file.sha, metadata: parsed && typeof parsed === "object" ? parsed : {} };
+  } catch (error) {
+    if (error instanceof GitHubError && error.status === 404) return { sha: undefined, metadata: {} as Record<string, MediaMetadata> };
+    throw error;
+  }
 }
 
-function toMedia(entry: { name: string; path: string; sha: string; size?: number; download_url?: string | null }): CampaignMedia {
+async function writeMetadata(token: string, campaign: Campaign, metadata: Record<string, MediaMetadata>, sha?: string) {
+  await putFile(token, campaign, metadataPath, JSON.stringify(metadata, null, 2) + "\n", "CampaignRepo: update media metadata", sha);
+}
+
+function isEditableMediaPath(path: string) {
+  return path.startsWith("wiki/media/") && !path.includes("..") && !path.endsWith("/.gitkeep") && path !== metadataPath;
+}
+
+function toMedia(entry: { name: string; path: string; sha: string; size?: number; download_url?: string | null }, metadata: MediaMetadata = {}): CampaignMedia {
   const type = mediaType(entry.name);
   return {
     name: entry.name,
@@ -56,7 +81,10 @@ function toMedia(entry: { name: string; path: string; sha: string; size?: number
     size: entry.size,
     downloadUrl: entry.download_url || undefined,
     mediaType: type,
-    markdown: markdownFor(entry.name, type)
+    alt: metadata.alt,
+    caption: metadata.caption,
+    tags: metadata.tags || [],
+    markdown: markdownFor(entry.name, type, metadata.alt)
   };
 }
 
@@ -65,8 +93,10 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const entries = await listDirectory(user.githubToken, campaign, "wiki/media");
-  const media = entries.filter((entry) => entry.type === "file" && entry.name !== ".gitkeep").map(toMedia);
+  const [entries, metadataFile] = await Promise.all([listDirectory(user.githubToken, campaign, "wiki/media"), readMetadata(user.githubToken, campaign)]);
+  const media = entries
+    .filter((entry) => entry.type === "file" && entry.name !== ".gitkeep" && entry.path !== metadataPath)
+    .map((entry) => toMedia(entry, metadataFile.metadata[entry.path]));
   return NextResponse.json({ media });
 }
 
@@ -82,10 +112,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const type = mediaType(name, input.mimeType);
   const path = `wiki/media/${name}`;
   await putBase64File(user.githubToken, campaign, path, input.base64, `CampaignRepo: upload media ${name}`);
+  const uploaded = await getContent(user.githubToken, campaign, path);
+  const metadataFile = await readMetadata(user.githubToken, campaign);
+  const metadata = {
+    ...metadataFile.metadata,
+    [path]: {
+      alt: input.alt || name,
+      caption: input.caption || "",
+      tags: input.tags
+    }
+  };
+  await writeMetadata(user.githubToken, campaign, metadata, metadataFile.sha);
   return NextResponse.json({
     media: {
       name,
       path,
+      sha: uploaded.sha,
+      alt: input.alt || name,
+      caption: input.caption || "",
+      tags: input.tags,
       mediaType: type,
       markdown: markdownFor(name, type, input.alt)
     }
@@ -110,7 +155,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const nextPath = `wiki/media/${name}`;
   if (nextPath === input.path) {
     const current = await getContent(user.githubToken, campaign, input.path);
-    return NextResponse.json({ media: toMedia({ name, path: nextPath, sha: current.sha }) });
+    const metadataFile = await readMetadata(user.githubToken, campaign);
+    return NextResponse.json({ media: toMedia({ name, path: nextPath, sha: current.sha }, metadataFile.metadata[nextPath]) });
   }
 
   try {
@@ -125,8 +171,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   await putBase64File(user.githubToken, campaign, nextPath, current.content.replace(/\n/g, ""), `CampaignRepo: rename media ${input.path.split("/").pop()} to ${name}`);
   await deleteFile(user.githubToken, campaign, input.path, `CampaignRepo: remove old media path ${input.path.split("/").pop()}`, current.sha);
+  const metadataFile = await readMetadata(user.githubToken, campaign);
+  const nextMetadata = { ...metadataFile.metadata };
+  nextMetadata[nextPath] = nextMetadata[input.path] || { alt: name, tags: [] };
+  delete nextMetadata[input.path];
+  await writeMetadata(user.githubToken, campaign, nextMetadata, metadataFile.sha);
   const renamed = await getContent(user.githubToken, campaign, nextPath);
-  return NextResponse.json({ media: toMedia({ name, path: nextPath, sha: renamed.sha }) });
+  return NextResponse.json({ media: toMedia({ name, path: nextPath, sha: renamed.sha }, nextMetadata[nextPath]) });
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -137,7 +188,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const input = deleteSchema.parse(await req.json());
-  if (!input.path.startsWith("wiki/media/") || input.path.includes("..") || input.path.endsWith("/.gitkeep")) {
+  if (!isEditableMediaPath(input.path)) {
     return NextResponse.json({ error: "Only campaign media files can be deleted." }, { status: 400 });
   }
 
@@ -145,5 +196,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   if (file.type !== "file") return NextResponse.json({ error: "Only files can be deleted." }, { status: 400 });
 
   await deleteFile(user.githubToken, campaign, input.path, `CampaignRepo: delete media ${input.path.split("/").pop()}`, file.sha);
+  const metadataFile = await readMetadata(user.githubToken, campaign);
+  const metadata = { ...metadataFile.metadata };
+  delete metadata[input.path];
+  await writeMetadata(user.githubToken, campaign, metadata, metadataFile.sha);
   return NextResponse.json({ ok: true });
 }

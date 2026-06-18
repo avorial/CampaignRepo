@@ -8,6 +8,7 @@ const expectedPaths = [
   { path: "wiki/campaign.yaml", type: "file", label: "Campaign config" },
   { path: "wiki/pages", type: "dir", label: "Markdown pages folder" },
   { path: "wiki/media", type: "dir", label: "Media folder" },
+  { path: "wiki/media/media.json", type: "file", label: "Media metadata manifest" },
   { path: "wiki/templates", type: "dir", label: "Templates folder" },
   { path: "wiki/templates/{gameType}", type: "dir", label: "Selected game template folder" },
   { path: "wiki/imports/characters", type: "dir", label: "Character import source folder" },

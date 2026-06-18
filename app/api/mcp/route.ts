@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign, listCampaigns, searchDocs } from "@/lib/db";
-import { getTextFile, listDirectory, putFile } from "@/lib/github";
+import { getTextFile, GitHubError, listDirectory, putFile } from "@/lib/github";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { defaultFrontmatter, gameTypes, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
@@ -37,8 +37,14 @@ function mediaType(name: string): CampaignMedia["mediaType"] {
   return "other";
 }
 
-function mediaMarkdown(name: string, type: CampaignMedia["mediaType"]) {
-  return type === "image" ? `![${name}](/wiki/media/${name})` : `[${name}](/wiki/media/${name})`;
+async function readMediaMetadata(token: string, campaign: Campaign) {
+  try {
+    const file = await getTextFile(token, campaign, "wiki/media/media.json");
+    return JSON.parse(file.text || "{}") as Record<string, { alt?: string; caption?: string; tags?: string[] }>;
+  } catch (error) {
+    if (error instanceof GitHubError && error.status === 404) return {};
+    throw error;
+  }
 }
 
 async function listMcpTemplates(token: string, campaign: Campaign): Promise<WikiTemplate[]> {
@@ -66,11 +72,12 @@ async function listMcpTemplates(token: string, campaign: Campaign): Promise<Wiki
 }
 
 async function listMcpMedia(token: string, campaign: Campaign): Promise<CampaignMedia[]> {
-  const entries = await listDirectory(token, campaign, "wiki/media");
+  const [entries, metadata] = await Promise.all([listDirectory(token, campaign, "wiki/media"), readMediaMetadata(token, campaign)]);
   return entries
-    .filter((entry) => entry.type === "file" && entry.name !== ".gitkeep")
+    .filter((entry) => entry.type === "file" && entry.name !== ".gitkeep" && entry.path !== "wiki/media/media.json")
     .map((entry) => {
       const type = mediaType(entry.name);
+      const itemMetadata = metadata[entry.path] || {};
       return {
         name: entry.name,
         path: entry.path,
@@ -78,7 +85,10 @@ async function listMcpMedia(token: string, campaign: Campaign): Promise<Campaign
         size: (entry as any).size,
         downloadUrl: (entry as any).download_url || undefined,
         mediaType: type,
-        markdown: mediaMarkdown(entry.name, type)
+        alt: itemMetadata.alt,
+        caption: itemMetadata.caption,
+        tags: itemMetadata.tags || [],
+        markdown: type === "image" ? `![${itemMetadata.alt || entry.name}](/wiki/media/${entry.name})` : `[${itemMetadata.alt || entry.name}](/wiki/media/${entry.name})`
       };
     });
 }
