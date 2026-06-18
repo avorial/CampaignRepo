@@ -1,7 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
+import { Crown, Swords, Moon, Rocket, Dice5, type LucideIcon } from "lucide-react";
 import type { ApiToken, Campaign, GameType, User } from "@/lib/types";
+
+const gameIcons: Record<string, LucideIcon> = {
+  "Sword Chronicle": Crown,
+  "Dungeons & Dragons": Swords,
+  "World of Darkness": Moon,
+  Traveller: Rocket,
+  Custom: Dice5
+};
 
 export default function DashboardClient({
   user,
@@ -16,6 +26,7 @@ export default function DashboardClient({
   githubAppConfigured: boolean;
 }) {
   const [message, setMessage] = useState("");
+  const [repos, setRepos] = useState<Campaign[]>(campaigns);
   const [mode, setMode] = useState<"create" | "connect">("create");
   const [search, setSearch] = useState<any[]>([]);
   const [tokens, setTokens] = useState<ApiToken[]>([]);
@@ -84,6 +95,18 @@ export default function DashboardClient({
     else setMessage(data.error || "Could not build repo.");
   }
 
+  async function removeRepo(id: number, name: string) {
+    if (!confirm(`Remove "${name}" from CampaignRepo? This disconnects the repo here — the GitHub repository is not deleted.`)) return;
+    const res = await fetch("/api/campaigns", { method: "DELETE", body: JSON.stringify({ id }) });
+    const data = await res.json();
+    if (res.ok) {
+      setRepos((current) => current.filter((campaign) => campaign.id !== id));
+      setMessage(`Removed ${name}.`);
+    } else {
+      setMessage(data.error || "Could not remove campaign.");
+    }
+  }
+
   async function runSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const q = new FormData(event.currentTarget).get("q");
@@ -94,6 +117,33 @@ export default function DashboardClient({
 
   return (
     <>
+      <section className="band repos-band">
+        <h2>Connected repos</h2>
+        <div className="repo-grid">
+          {repos.map((campaign) => {
+            const Icon = gameIcons[campaign.gameType] || Dice5;
+            return (
+              <div className="repo-card" key={campaign.id}>
+                <Link className="repo-card-link" href={`/campaigns/${campaign.id}`}>
+                  <div className="repo-head">
+                    <Icon className="repo-icon" size={18} aria-hidden />
+                    <strong>{campaign.name}</strong>
+                  </div>
+                  <span>{campaign.owner}/{campaign.repo}</span>
+                  <small>{campaign.gameType} · {campaign.branch} · {campaign.role}</small>
+                </Link>
+                {campaign.role === "owner" && (
+                  <button type="button" className="repo-remove danger" onClick={() => removeRepo(campaign.id, campaign.name)}>
+                    Remove
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          {!repos.length && <p className="muted">No campaign repos connected yet.</p>}
+        </div>
+      </section>
+
       <section className="dashboard-grid">
         <div className="panel">
           <h2>GitHub connection</h2>

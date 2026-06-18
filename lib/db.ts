@@ -276,6 +276,19 @@ export function canManageCampaign(userId: number, campaignId: number) {
   return role === "owner" || role === "gm";
 }
 
+/** Disconnect a campaign from CampaignRepo (owner only). The GitHub repo is untouched. */
+export function removeCampaign(userId: number, campaignId: number) {
+  if (getCampaignRole(userId, campaignId) !== "owner") throw new Error("Only the campaign owner can remove it.");
+  const tx = db.transaction(() => {
+    db.prepare("DELETE FROM search_index WHERE campaignId = ?").run(campaignId);
+    db.prepare("DELETE FROM campaign_memberships WHERE campaignId = ?").run(campaignId);
+    db.prepare("DELETE FROM imports WHERE campaignId = ?").run(campaignId);
+    db.prepare("DELETE FROM campaign_invites WHERE campaignId = ?").run(campaignId);
+    db.prepare("DELETE FROM campaigns WHERE id = ?").run(campaignId);
+  });
+  tx();
+}
+
 export function listCampaignMembers(userId: number, campaignId: number): CampaignMembership[] {
   if (!canManageCampaign(userId, campaignId)) return [];
   return db

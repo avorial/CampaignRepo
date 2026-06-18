@@ -29,20 +29,6 @@ export default async function DashboardPage() {
       </header>
 
       <DashboardClient user={user} campaigns={campaigns} gameTypes={gameTypes} categories={categories} githubAppConfigured={isGitHubAppConfigured()} />
-
-      <section className="band">
-        <h2>Connected repos</h2>
-        <div className="repo-grid">
-          {campaigns.map((campaign) => (
-            <Link className="repo-card" key={campaign.id} href={`/campaigns/${campaign.id}`}>
-              <strong>{campaign.name}</strong>
-              <span>{campaign.owner}/{campaign.repo}</span>
-              <small>{campaign.gameType} · {campaign.branch} · {campaign.role}</small>
-            </Link>
-          ))}
-          {!campaigns.length && <p className="muted">No campaign repos connected yet.</p>}
-        </div>
-      </section>
     </main>
   );
 }

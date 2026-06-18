@@ -276,6 +276,7 @@ code {
 }
 
 .repo-card {
+  position: relative;
   min-height: 120px;
   display: grid;
   align-content: space-between;
@@ -291,6 +292,48 @@ code {
 .repo-card:hover {
   border-color: var(--border-strong);
   transform: translateY(-2px);
+}
+
+.repo-card-link {
+  display: grid;
+  gap: 6px;
+  align-content: space-between;
+  height: 100%;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.repo-card-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.repo-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 76px;
+}
+
+.repo-head strong {
+  color: var(--text-primary);
+}
+
+.repo-icon {
+  color: var(--gold);
+  flex: none;
+}
+
+.repo-remove {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 11px;
 }
 
 .repo-card span,

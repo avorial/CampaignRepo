@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { getDb, listCampaigns } from "@/lib/db";
+import { getDb, listCampaigns, removeCampaign } from "@/lib/db";
 import { createRepo, GitHubError, initializeRepo, isGitHubAppConnection } from "@/lib/github";
 import { parseRepoInput } from "@/lib/repo";
 import { gameTypes } from "@/lib/templates";
@@ -16,9 +16,22 @@ const createSchema = z.object({
   gameType: z.enum(gameTypes as [string, ...string[]])
 });
 
+const deleteSchema = z.object({ id: z.number().int().positive() });
+
 export async function GET() {
   const user = await requireUser();
   return NextResponse.json({ campaigns: listCampaigns(user.id) });
+}
+
+export async function DELETE(req: Request) {
+  const user = await requireUser();
+  const { id } = deleteSchema.parse(await req.json());
+  try {
+    removeCampaign(user.id, id);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Could not remove campaign." }, { status: 400 });
+  }
 }
 
 export async function POST(req: Request) {
