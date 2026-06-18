@@ -5,15 +5,27 @@ CampaignRepo is a GitHub-backed RPG campaign wiki. One app manages many campaign
 ## Current MVP
 
 - Username/password app accounts.
+- Seeded `admin` account with forced first-login password change.
+- Global admin panel for user review, password resets, account disabling, and global admin assignment.
 - Private dashboard for creating or connecting campaign repos.
 - GitHub token connection for repo creation and file commits.
 - Game template packs for Sword Chronicle, Dungeons & Dragons, World of Darkness, Traveller, and Custom.
 - Wiki categories for Characters, NPCs, Locations, Events, and Games.
 - Markdown pages with `[[Page]]` links, `[[Page|Label]]` aliases, key links, backlinks, tags, visibility, and approval status.
 - GM-only Markdown blocks with `:::gm`.
-- Foundry Actor JSON and generic JSON character import.
+- Editor insert controls for wiki links, alias links, media snippets, and GM-only blocks.
+- GitHub save conflict detection with a reload-latest path when files changed outside CampaignRepo.
+- Dedicated player portal showing only approved, player-visible pages with GM blocks stripped.
+- Campaign invite links for players and GMs.
+- Foundry Actor JSON and generic JSON character import with optional field mapping.
+- Import source JSON diffing for re-import review.
+- Media upload, rename, delete, captions, alt text, tags, and repo-persisted `/wiki/media/media.json`.
 - SQLite full-text search plus portable repo snapshots at `/wiki/search/index.json`.
+- Manual per-campaign search rebuild.
 - Safe Markdown rendering (sanitized) with real `[[wiki-links]]` and GM create-page prompts for missing targets.
+- Relationship lists plus a visual relationship map.
+- Timeline view for Event pages.
+- Repo setup instructions plus visible repo validation and repair.
 - MCP-style JSON-RPC endpoint at `/api/mcp` for AI search, reads, page creation, unapproved updates, templates, media, graph, review queue, and setup instructions.
 - External MCP clients authenticate with a personal access token (`Authorization: Bearer`), minted from the dashboard; the in-app session also works.
 - Dashboard review queue aggregating unapproved AI/import changes across every campaign you manage.
@@ -26,24 +38,22 @@ CampaignRepo's goal is to become a practical, RPG-first, GitHub-backed campaign 
 
 - Replace pasted GitHub tokens with a real GitHub OAuth or GitHub App installation flow.
 - Keep manual token support only as a local/dev fallback.
-- Improve GitHub API error handling for repo access, branch conflicts, rate limits, and missing permissions.
+- Improve GitHub API error handling for repo access, rate limits, and missing permissions.
 
 ### 2. Editing Experience
 
 - Upgrade the Markdown textarea into a true rich Markdown editor while preserving frontmatter, `[[wiki-links]]`, media links, and `:::gm` blocks.
-- Add insert controls for wiki links, media, GM blocks, and templates.
-- Keep GM, Player, and Handout previews visible and trustworthy.
+- Add insert controls for templates and frontmatter snippets.
+- Improve keyboard shortcuts, split-view ergonomics, and source/preview scrolling.
 
 ### 3. Character Import
 
-- Add a generic JSON field-mapping UI before import.
 - Improve Foundry Actor import rendering for stats, items, biography, images, and system-specific fields.
-- Add a re-import flow that compares the new source JSON against the preserved source file before updating pages.
+- Extend re-import from source diffing into an update workflow that can refresh Markdown and preserved source JSON safely.
 
 ### 4. Player Experience
 
-- Build a dedicated player portal instead of relying only on the filtered GM workspace.
-- Add a handout library, player-safe timeline, player-safe search, and session-facing navigation.
+- Expand the player portal with a richer handout library, player-safe timeline, and session-facing navigation.
 - Keep the current rule firm: players only see approved, player-visible content with GM blocks stripped.
 
 ### 5. MCP And AI Workflow
@@ -54,27 +64,25 @@ CampaignRepo's goal is to become a practical, RPG-first, GitHub-backed campaign 
 
 ### 6. Admin And Permissions
 
-- Add a global admin panel for users, password resets, account disabling, and invite management.
 - Add owner transfer and safer owner demotion/removal flows.
-- Add campaign invitations so players and GMs do not need to pre-create accounts manually.
+- Add invite expiration, invite email delivery, and invitation audit history.
 
 ### 7. Media Manager
 
-- Add media delete/rename actions.
-- Persist media captions, alt text, and tags.
-- Add image/PDF/audio previews and include media metadata in search.
+- Add image/PDF/audio previews.
+- Include media metadata in SQLite and portable search snapshots.
+- Add media metadata editing after upload.
 
 ### 8. Search, Graph, And Timeline
 
 - Improve search ranking, highlighting, filters, and reindex controls.
-- Add a visual relationship graph with editable relationship labels/types.
+- Add editable relationship labels/types.
 - Expand timeline controls beyond event-page sorting.
 
 ### 9. Repo Operations
 
-- Add a visible repo validation/repair report.
-- Add better conflict handling when GitHub files change outside CampaignRepo.
 - Add branch/workflow controls for testing, staging, and publishing.
+- Add broader conflict workflows, including side-by-side merge for page saves and media metadata.
 
 ### 10. Deployment And Operations
 
