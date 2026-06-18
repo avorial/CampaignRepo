@@ -28,7 +28,9 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const [setup, setSetup] = useState("");
   const [message, setMessage] = useState("");
   const [search, setSearch] = useState<any[]>([]);
+  const [pageCategory, setPageCategory] = useState(categories[0]?.id || "character");
   const pendingReviews = pages.filter((page) => page.frontmatter.approvalStatus !== "approved").length;
+  const pageTemplates = templates.filter((template) => template.category === pageCategory);
 
   async function load() {
     const canManage = campaign.role === "owner" || campaign.role === "gm";
@@ -58,6 +60,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
 
   async function createPage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setMessage("Creating page...");
     const form = new FormData(event.currentTarget);
     const res = await fetch(`/api/campaigns/${campaign.id}/pages`, {
       method: "POST",
@@ -320,8 +323,8 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
               <h2>Create page</h2>
               <form onSubmit={createPage} className="stack">
                 <label>Name<input name="name" required placeholder="Victor Mendes" /></label>
-                <label>Category<select name="category">{categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.label}</option>)}</select></label>
-                <label>Template<select name="templatePath"><option value="">Starter default</option>{templates.map((template) => <option key={template.path} value={template.path}>{template.gameType} · {template.category} · {template.name}</option>)}</select></label>
+                <label>Category<select name="category" value={pageCategory} onChange={(event) => setPageCategory(event.target.value)}>{categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.label}</option>)}</select></label>
+                <label>Template<select name="templatePath"><option value="">Starter default</option>{pageTemplates.map((template) => <option key={template.path} value={template.path}>{template.gameType} - {template.category} - {template.name}</option>)}</select></label>
                 <label>Visibility<select name="visibility"><option value="gm">GM only</option><option value="players">Player visible</option></select></label>
                 <button>Create page</button>
               </form>
