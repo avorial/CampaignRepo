@@ -704,6 +704,19 @@ code {
   border-bottom: 1px solid var(--border-soft);
 }
 
+.insert-toolbar {
+  align-items: end;
+  border-bottom: 1px solid var(--border-soft);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) auto auto;
+  padding: 10px;
+}
+
+.insert-toolbar label {
+  min-width: 0;
+}
+
 .conflict-banner {
   align-items: center;
   background: rgba(255, 138, 138, 0.10);
@@ -1048,5 +1061,9 @@ code {
   .conflict-banner {
     align-items: stretch;
     display: grid;
+  }
+
+  .insert-toolbar {
+    grid-template-columns: 1fr;
   }
 }

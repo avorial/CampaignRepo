@@ -1,8 +1,8 @@
 "use client";
 
-import { FormEvent, MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Campaign, WikiPage } from "@/lib/types";
+import type { Campaign, CampaignMedia, WikiPage } from "@/lib/types";
 import { renderMarkdown, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
 
@@ -12,6 +12,8 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
   const [content, setContent] = useState("");
   const [frontmatter, setFrontmatter] = useState<any>({});
   const [knownPages, setKnownPages] = useState<WikiPage[]>([]);
+  const [media, setMedia] = useState<CampaignMedia[]>([]);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const canManage = campaign.role === "owner" || campaign.role === "gm";
   const [mode, setMode] = useState<"gm" | "player" | "handout">(canManage ? "gm" : "player");
   const [message, setMessage] = useState("");
@@ -36,7 +38,12 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
     fetch(`/api/campaigns/${campaign.id}/pages`)
       .then((res) => res.json())
       .then((data) => setKnownPages(Array.isArray(data.pages) ? data.pages : []));
-  }, [campaign.id, loadPage, slug]);
+    if (canManage) {
+      fetch(`/api/campaigns/${campaign.id}/media`)
+        .then((res) => res.json())
+        .then((data) => setMedia(Array.isArray(data.media) ? data.media : []));
+    }
+  }, [campaign.id, canManage, loadPage, slug]);
 
   const resolveLink = useMemo<WikiLinkResolver>(() => {
     const aliasMap = buildAliasMap(
@@ -106,6 +113,38 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
 
   function updateField(field: string, value: unknown) {
     setFrontmatter((current: any) => ({ ...current, [field]: value }));
+  }
+
+  function insertSnippet(snippet: string) {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setContent((current) => `${current}${current.endsWith("\n") || !current ? "" : "\n"}${snippet}`);
+      return;
+    }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const before = content.slice(0, start);
+    const selected = content.slice(start, end);
+    const after = content.slice(end);
+    const text = snippet.includes("{{selection}}") ? snippet.replace("{{selection}}", selected || "Secret notes.") : snippet;
+    const next = `${before}${text}${after}`;
+    setContent(next);
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const cursor = start + text.length;
+      textarea.setSelectionRange(cursor, cursor);
+    });
+  }
+
+  function insertWikiLink(target: string) {
+    if (!target) return;
+    insertSnippet(`[[${target}]]`);
+  }
+
+  function insertMedia(path: string) {
+    const item = media.find((mediaItem) => mediaItem.path === path);
+    if (!item) return;
+    insertSnippet(item.markdown);
   }
 
   if (!page) return <p className="muted">Loading page...</p>;
@@ -183,6 +222,26 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
           <button type="button" className={mode === "handout" ? "active" : ""} onClick={() => setMode("handout")}>Handout</button>
           {canManage && <button type="submit">Save commit</button>}
         </div>
+        {canManage && (
+          <div className="insert-toolbar">
+            <label>
+              Wiki link
+              <select defaultValue="" onChange={(event) => { insertWikiLink(event.target.value); event.target.value = ""; }}>
+                <option value="">Insert page link</option>
+                {knownPages.map((knownPage) => <option key={knownPage.slug} value={knownPage.frontmatter.name}>{knownPage.frontmatter.name}</option>)}
+              </select>
+            </label>
+            <label>
+              Media
+              <select defaultValue="" onChange={(event) => { insertMedia(event.target.value); event.target.value = ""; }}>
+                <option value="">Insert media</option>
+                {media.map((item) => <option key={item.path} value={item.path}>{item.name}</option>)}
+              </select>
+            </label>
+            <button type="button" className="secondary" onClick={() => insertSnippet(":::gm\n{{selection}}\n:::")}>GM Block</button>
+            <button type="button" className="secondary" onClick={() => insertSnippet("[[Page Name|label]]")}>Alias Link</button>
+          </div>
+        )}
         {conflictPage && (
           <div className="conflict-banner">
             <span>This page changed on GitHub after you opened it.</span>
@@ -190,7 +249,7 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
           </div>
         )}
         <div className="editor-split">
-          <textarea value={content} onChange={(e) => setContent(e.target.value)} spellCheck={false} readOnly={!canManage} />
+          <textarea ref={textareaRef} value={content} onChange={(e) => setContent(e.target.value)} spellCheck={false} readOnly={!canManage} />
           <article className={mode === "handout" ? "preview handout-preview" : "preview"}>
             {mode === "handout" && (
               <header className="handout-header">
