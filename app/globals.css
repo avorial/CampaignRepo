@@ -912,6 +912,34 @@ code {
   min-width: 0;
 }
 
+.editor-workspace {
+  display: grid;
+}
+
+.format-toolbar {
+  align-items: center;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px;
+}
+
+.icon-button {
+  align-items: center;
+  aspect-ratio: 1;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0;
+  width: 36px;
+}
+
+.icon-button svg {
+  pointer-events: none;
+}
+
 .conflict-banner {
   align-items: center;
   background: rgba(255, 138, 138, 0.10);

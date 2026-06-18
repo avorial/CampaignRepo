@@ -1,7 +1,8 @@
 "use client";
 
-import { FormEvent, MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Bold, Code2, Heading1, Heading2, Heading3, Italic, Link2, List, ListOrdered, Quote } from "lucide-react";
 import type { Campaign, CampaignMedia, WikiPage } from "@/lib/types";
 import { renderMarkdown, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
@@ -152,6 +153,82 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
       const cursor = start + text.length;
       textarea.setSelectionRange(cursor, cursor);
     });
+  }
+
+  function replaceSelection(replacer: (selected: string) => { text: string; cursorOffset?: number }) {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const before = content.slice(0, start);
+    const selected = content.slice(start, end);
+    const after = content.slice(end);
+    const { text, cursorOffset } = replacer(selected);
+    setContent(`${before}${text}${after}`);
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const nextCursor = start + (cursorOffset ?? text.length);
+      textarea.setSelectionRange(nextCursor, nextCursor);
+    });
+  }
+
+  function wrapSelection(prefix: string, suffix = prefix, fallback = "text") {
+    replaceSelection((selected) => {
+      const inner = selected || fallback;
+      return {
+        text: `${prefix}${inner}${suffix}`,
+        cursorOffset: selected ? `${prefix}${inner}${suffix}`.length : prefix.length + inner.length
+      };
+    });
+  }
+
+  function prefixSelectedLines(prefix: string) {
+    replaceSelection((selected) => {
+      const text = selected || "List item";
+      return { text: text.split("\n").map((line) => (line.trim() ? `${prefix}${line}` : line)).join("\n") };
+    });
+  }
+
+  function heading(level: 1 | 2 | 3) {
+    replaceSelection((selected) => {
+      const marks = "#".repeat(level);
+      const text = selected || "Heading";
+      return { text: text.split("\n").map((line) => `${marks} ${line.replace(/^#{1,6}\s+/, "")}`).join("\n") };
+    });
+  }
+
+  function numberedList() {
+    replaceSelection((selected) => {
+      const lines = (selected || "List item").split("\n");
+      let index = 1;
+      return { text: lines.map((line) => (line.trim() ? `${index++}. ${line}` : line)).join("\n") };
+    });
+  }
+
+  function codeBlock() {
+    replaceSelection((selected) => ({ text: `\`\`\`text\n${selected || "code"}\n\`\`\`` }));
+  }
+
+  function markdownLink() {
+    replaceSelection((selected) => ({
+      text: `[${selected || "label"}](https://example.com)`,
+      cursorOffset: selected ? selected.length + 3 : 6
+    }));
+  }
+
+  function onEditorKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (!(event.ctrlKey || event.metaKey)) return;
+    const key = event.key.toLowerCase();
+    if (key === "b") {
+      event.preventDefault();
+      wrapSelection("**", "**", "bold text");
+    } else if (key === "i") {
+      event.preventDefault();
+      wrapSelection("*", "*", "italic text");
+    } else if (key === "s") {
+      event.preventDefault();
+      savePage(false);
+    }
   }
 
   function insertWikiLink(target: string) {
@@ -319,18 +396,35 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
           </div>
         )}
         {isEditing ? (
-          <div className="editor-split">
-            <textarea ref={textareaRef} value={content} onChange={(e) => setContent(e.target.value)} spellCheck={false} readOnly={!fieldsEditable} />
-            <article className={mode === "handout" ? "preview handout-preview" : "preview"}>
-              {mode === "handout" && (
-                <header className="handout-header">
-                  <p>Player Handout</p>
-                  <h1>{frontmatter.name}</h1>
-                  {frontmatter.summary && <span>{frontmatter.summary}</span>}
-                </header>
-              )}
-              <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
-            </article>
+          <div className="editor-workspace">
+            {fieldsEditable && (
+              <div className="format-toolbar" aria-label="Markdown formatting controls">
+                <button type="button" className="icon-button" title="Heading 1" onClick={() => heading(1)}><Heading1 size={18} /></button>
+                <button type="button" className="icon-button" title="Heading 2" onClick={() => heading(2)}><Heading2 size={18} /></button>
+                <button type="button" className="icon-button" title="Heading 3" onClick={() => heading(3)}><Heading3 size={18} /></button>
+                <button type="button" className="icon-button" title="Bold" onClick={() => wrapSelection("**", "**", "bold text")}><Bold size={18} /></button>
+                <button type="button" className="icon-button" title="Italic" onClick={() => wrapSelection("*", "*", "italic text")}><Italic size={18} /></button>
+                <button type="button" className="icon-button" title="Bulleted list" onClick={() => prefixSelectedLines("- ")}><List size={18} /></button>
+                <button type="button" className="icon-button" title="Numbered list" onClick={numberedList}><ListOrdered size={18} /></button>
+                <button type="button" className="icon-button" title="Quote" onClick={() => prefixSelectedLines("> ")}><Quote size={18} /></button>
+                <button type="button" className="icon-button" title="Inline code" onClick={() => wrapSelection("`", "`", "code")}><Code2 size={18} /></button>
+                <button type="button" className="icon-button" title="Code block" onClick={codeBlock}><Code2 size={18} /></button>
+                <button type="button" className="icon-button" title="Link" onClick={markdownLink}><Link2 size={18} /></button>
+              </div>
+            )}
+            <div className="editor-split">
+              <textarea ref={textareaRef} value={content} onChange={(e) => setContent(e.target.value)} onKeyDown={onEditorKeyDown} spellCheck={false} readOnly={!fieldsEditable} />
+              <article className={mode === "handout" ? "preview handout-preview" : "preview"}>
+                {mode === "handout" && (
+                  <header className="handout-header">
+                    <p>Player Handout</p>
+                    <h1>{frontmatter.name}</h1>
+                    {frontmatter.summary && <span>{frontmatter.summary}</span>}
+                  </header>
+                )}
+                <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
+              </article>
+            </div>
           </div>
         ) : (
           <article className={mode === "handout" ? "preview page-reader handout-preview" : "preview page-reader"}>
