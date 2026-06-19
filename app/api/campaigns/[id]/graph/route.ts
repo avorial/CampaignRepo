@@ -4,6 +4,8 @@ import { getCampaign } from "@/lib/db";
 import { getTextFile, listDirectory } from "@/lib/github";
 import { parsePage, stripGmBlocks } from "@/lib/markdown";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
+
+export const dynamic = "force-dynamic";
 import type { CampaignGraphEdge, CampaignGraphNode, CampaignTimelineItem, WikiPage } from "@/lib/types";
 
 function visibleForRole(page: WikiPage, role?: string) {

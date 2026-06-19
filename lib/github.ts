@@ -98,7 +98,10 @@ async function gh<T>(token: string, path: string, init: RequestInit = {}, resolv
   if (authToken) headers.Authorization = `Bearer ${authToken}`;
   const res = await fetch(`${apiBase}${path}`, {
     ...init,
-    headers
+    headers,
+    // Never let Next's Data Cache serve a stale repo read: in a production
+    // build a cached directory/file listing would hide a just-saved page.
+    cache: "no-store"
   });
   if (!res.ok) {
     const text = await res.text();

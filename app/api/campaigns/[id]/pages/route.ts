@@ -8,6 +8,8 @@ import { defaultFrontmatter, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
 import { rebuildSearchIndex } from "@/lib/search";
 
+export const dynamic = "force-dynamic";
+
 const schema = z.object({
   name: z.string().min(1),
   category: z.enum(["character", "npc", "location", "event", "game"]),

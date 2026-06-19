@@ -6,6 +6,8 @@ import { getTextFile, GitHubError, putFile } from "@/lib/github";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { rebuildSearchIndex } from "@/lib/search";
 
+export const dynamic = "force-dynamic";
+
 const schema = z.object({
   frontmatter: z.any(),
   content: z.string(),
