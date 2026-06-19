@@ -32,7 +32,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { id, slug } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const file = await getTextFile(user.githubToken, campaign, `wiki/pages/${slug}.md`);
+  let file: Awaited<ReturnType<typeof getTextFile>>;
+  try {
+    file = await getTextFile(user.githubToken, campaign, `wiki/pages/${slug}.md`);
+  } catch (error) {
+    if (error instanceof GitHubError && error.status === 404) {
+      return NextResponse.json({ error: "Page not found.", missing: true }, { status: 404 });
+    }
+    throw error;
+  }
   const page = parsePage(slug, file.text, file.sha);
   const mode = new URL(req.url).searchParams.get("mode");
   const playerSafeMode = campaign.role === "player" || mode === "player";

@@ -21,6 +21,7 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(canManage);
   const [conflictPage, setConflictPage] = useState<WikiPage | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [sourceJsonDraft, setSourceJsonDraft] = useState("");
   const [sourceDiff, setSourceDiff] = useState<any | null>(null);
 
@@ -34,8 +35,14 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
     return fetch(`/api/campaigns/${campaign.id}/pages/${slug}`)
       .then((res) => res.json())
       .then((data) => {
-        if (data.page) applyPage(data.page);
-      });
+        if (data.page) {
+          applyPage(data.page);
+          setNotFound(false);
+        } else {
+          setNotFound(true);
+        }
+      })
+      .catch(() => setNotFound(true));
   }, [applyPage, campaign.id, slug]);
 
   useEffect(() => {
@@ -264,6 +271,32 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
     }
   }
 
+  if (notFound) {
+    return (
+      <div className="panel">
+        <h2>Page not found</h2>
+        <p className="muted">No page named <code>{slug}</code> exists in this campaign repo yet.</p>
+        {canManage && (
+          <button
+            type="button"
+            onClick={async () => {
+              const res = await fetch(`/api/campaigns/${campaign.id}/pages`, {
+                method: "POST",
+                body: JSON.stringify({ name: slug.replace(/-/g, " "), category: "npc", visibility: "gm" })
+              });
+              const data = await res.json();
+              if (res.ok && data.slug) router.push(`/campaigns/${campaign.id}/pages/${data.slug}`);
+              else setMessage(data.error || "Could not create page.");
+            }}
+          >
+            Create this page
+          </button>
+        )}
+        <p className="muted"><a className="quiet-link" href={`/campaigns/${campaign.id}`}>← Back to campaign</a></p>
+        {message && <p className="toast">{message}</p>}
+      </div>
+    );
+  }
   if (!page) return <p className="muted">Loading page...</p>;
   const fieldsEditable = canManage && isEditing;
   const keyLinks = Array.isArray(frontmatter.keyLinks) ? frontmatter.keyLinks : [];
