@@ -28,6 +28,8 @@ export default function DashboardClient({
   const [message, setMessage] = useState("");
   const [repos, setRepos] = useState<Campaign[]>(campaigns);
   const [mode, setMode] = useState<"create" | "connect">("create");
+  const [buildError, setBuildError] = useState("");
+  const isGitHubApp = Boolean(user.githubToken?.startsWith("github-app:"));
   const [search, setSearch] = useState<any[]>([]);
   const [tokens, setTokens] = useState<ApiToken[]>([]);
   const [newToken, setNewToken] = useState("");
@@ -92,7 +94,7 @@ export default function DashboardClient({
     });
     const data = await res.json();
     if (res.ok) window.location.href = `/campaigns/${data.campaign.id}`;
-    else setMessage(data.error || "Could not build repo.");
+    else setBuildError(data.error || "Could not build repo.");
   }
 
   async function removeRepo(id: number, name: string) {
@@ -198,9 +200,15 @@ export default function DashboardClient({
         <div className="panel">
           <h2>Build Campaign Repo</h2>
           <div className="segmented">
-            <button type="button" className={mode === "create" ? "active" : ""} onClick={() => setMode("create")}>Create repo</button>
-            <button type="button" className={mode === "connect" ? "active" : ""} onClick={() => setMode("connect")}>Connect repo</button>
+            <button type="button" className={mode === "create" ? "active" : ""} onClick={() => { setMode("create"); setBuildError(""); }}>Create repo</button>
+            <button type="button" className={mode === "connect" ? "active" : ""} onClick={() => { setMode("connect"); setBuildError(""); }}>Connect repo</button>
           </div>
+          {isGitHubApp && mode === "create" && (
+            <div className="setup-callout">
+              <strong>GitHub App can&apos;t create repos.</strong>
+              <span>Create the repo on <a href="https://github.com/new" target="_blank" rel="noreferrer">github.com/new</a> then use <button type="button" className="linklike" onClick={() => { setMode("connect"); setBuildError(""); }}>Connect repo</button> — or add a manual token under Connection troubleshooting to enable in-app creation.</span>
+            </div>
+          )}
           <form onSubmit={buildRepo} className="stack">
             <label>Campaign name<input name="name" required placeholder="The Jardin File" /></label>
             {mode === "connect" && <label>Owner<input name="owner" placeholder="avorial (optional if pasting URL)" /></label>}
@@ -208,7 +216,8 @@ export default function DashboardClient({
             <label>Branch<input name="branch" defaultValue="main" /></label>
             <label>Game template pack<select name="gameType">{gameTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
             {mode === "create" && <label className="check"><input type="checkbox" name="private" defaultChecked /> Private repo</label>}
-            <button>{mode === "create" ? "Create and initialize" : "Connect and repair"}</button>
+            <button disabled={isGitHubApp && mode === "create"}>{mode === "create" ? "Create and initialize" : "Connect and repair"}</button>
+            {buildError && <p className="error">{buildError}</p>}
           </form>
         </div>
 

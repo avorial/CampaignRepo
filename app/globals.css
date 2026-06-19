@@ -171,6 +171,26 @@ button.danger {
   border-color: rgba(255, 138, 138, 0.32);
 }
 
+button:disabled,
+.button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button.linklike {
+  background: none;
+  border: 0;
+  padding: 0;
+  min-height: 0;
+  display: inline;
+  text-transform: none;
+  letter-spacing: 0;
+  font: inherit;
+  color: var(--gold);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 input,
 select,
 textarea {
