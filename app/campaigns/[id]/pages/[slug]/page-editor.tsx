@@ -4,7 +4,7 @@ import { FormEvent, KeyboardEvent, MouseEvent, useCallback, useEffect, useMemo, 
 import { useRouter } from "next/navigation";
 import { Bold, Code2, Heading1, Heading2, Heading3, Italic, Link2, List, ListOrdered, Quote } from "lucide-react";
 import type { Campaign, CampaignMedia, WikiPage } from "@/lib/types";
-import { renderMarkdown, type WikiLinkResolver } from "@/lib/markdown";
+import { renderMarkdown, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
 
 export default function PageEditor({ campaign, slug }: { campaign: Campaign; slug: string }) {
@@ -69,7 +69,12 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
     };
   }, [knownPages, campaign.id]);
 
-  const preview = useMemo(() => renderMarkdown(content, mode, resolveLink), [content, mode, resolveLink]);
+  const resolveMedia = useMemo<MediaPathResolver>(
+    () => (path: string) => `/api/campaigns/${campaign.id}/media/${path.split("/").map(encodeURIComponent).join("/")}`,
+    [campaign.id]
+  );
+
+  const preview = useMemo(() => renderMarkdown(content, mode, resolveLink, resolveMedia), [content, mode, resolveLink, resolveMedia]);
 
   const onPreviewClick = useCallback(
     async (event: MouseEvent<HTMLDivElement>) => {

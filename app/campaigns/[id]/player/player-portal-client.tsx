@@ -2,7 +2,7 @@
 
 import { MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { Campaign, WikiPage } from "@/lib/types";
-import { renderMarkdown, type WikiLinkResolver } from "@/lib/markdown";
+import { renderMarkdown, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
 
 export default function PlayerPortalClient({ campaign }: { campaign: Campaign }) {
@@ -50,7 +50,12 @@ export default function PlayerPortalClient({ campaign }: { campaign: Campaign })
     };
   }, [pages]);
 
-  const preview = useMemo(() => renderMarkdown(selectedPage?.content || "", "handout", resolveLink), [selectedPage, resolveLink]);
+  const resolveMedia = useMemo<MediaPathResolver>(
+    () => (path: string) => `/api/campaigns/${campaign.id}/media/${path.split("/").map(encodeURIComponent).join("/")}`,
+    [campaign.id]
+  );
+
+  const preview = useMemo(() => renderMarkdown(selectedPage?.content || "", "handout", resolveLink, resolveMedia), [selectedPage, resolveLink, resolveMedia]);
 
   const onPreviewClick = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {

@@ -101,6 +101,12 @@ describe("renderMarkdown", () => {
     expect(html).toContain('data-missing="true"');
   });
 
+  it("rewrites campaign media paths with the provided resolver", () => {
+    const html = renderMarkdown("![Portrait](/wiki/media/Cass-Pien.png)", "gm", undefined, (path) => `/api/campaigns/1/media/${path}`);
+    expect(html).toContain('src="/api/campaigns/1/media/Cass-Pien.png"');
+    expect(html).toContain('alt="Portrait"');
+  });
+
   it("sanitizes injected scripts and event handlers", () => {
     const html = renderMarkdown('Hi <script>alert(1)</script> <img src=x onerror="alert(2)">', "gm");
     expect(html).not.toContain("<script");

@@ -65,6 +65,7 @@ export type RenderMode = "gm" | "player" | "handout";
 
 /** Resolve a `[[target]]` to an href and whether the page is missing. */
 export type WikiLinkResolver = (target: string) => { href: string; missing: boolean };
+export type MediaPathResolver = (path: string) => string;
 
 const gmBlockSplitter = /:::gm\s*([\s\S]*?):::/g;
 
@@ -88,11 +89,15 @@ function renderWikiLink(target: string, label: string, resolve?: WikiLinkResolve
 }
 
 /** Convert wiki-link syntax, run through marked, but do not sanitize (caller wraps). */
-function renderInline(markdown: string, resolve?: WikiLinkResolver) {
+function renderInline(markdown: string, resolve?: WikiLinkResolver, resolveMedia?: MediaPathResolver) {
   const withLinks = markdown.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_match, target, label) =>
     renderWikiLink(String(target), label ? String(label) : "", resolve)
   );
-  return marked.parse(withLinks, { async: false }) as string;
+  const html = marked.parse(withLinks, { async: false }) as string;
+  if (!resolveMedia) return html;
+  return html.replace(/(src|href)="\/wiki\/media\/([^"]+)"/g, (_match, attr, path) => {
+    return `${attr}="${escapeHtml(resolveMedia(decodeURIComponent(String(path))))}"`;
+  });
 }
 
 /**
@@ -103,20 +108,20 @@ function renderInline(markdown: string, resolve?: WikiLinkResolver) {
  * Output is always passed through DOMPurify, so untrusted page bodies cannot
  * inject script or event-handler attributes.
  */
-export function renderMarkdown(content: string, mode: RenderMode, resolve?: WikiLinkResolver) {
+export function renderMarkdown(content: string, mode: RenderMode, resolve?: WikiLinkResolver, resolveMedia?: MediaPathResolver) {
   let html: string;
   if (mode !== "gm") {
-    html = renderInline(stripGmBlocks(content), resolve);
+    html = renderInline(stripGmBlocks(content), resolve, resolveMedia);
   } else {
     let out = "";
     let last = 0;
     for (const match of content.matchAll(gmBlockSplitter)) {
       const index = match.index ?? 0;
-      out += renderInline(content.slice(last, index), resolve);
-      out += `<section class="gm-block"><strong>GM</strong>${renderInline(match[1], resolve)}</section>`;
+      out += renderInline(content.slice(last, index), resolve, resolveMedia);
+      out += `<section class="gm-block"><strong>GM</strong>${renderInline(match[1], resolve, resolveMedia)}</section>`;
       last = index + match[0].length;
     }
-    out += renderInline(content.slice(last), resolve);
+    out += renderInline(content.slice(last), resolve, resolveMedia);
     html = out;
   }
   return DOMPurify.sanitize(html, { ADD_ATTR: ["data-missing", "data-target"] });
