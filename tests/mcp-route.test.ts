@@ -66,6 +66,9 @@ describe("MCP route", () => {
   });
 
   it("rejects data calls with no credentials", async () => {
-    await expect(call({ jsonrpc: "2.0", id: 3, method: "resources/list", params: {} })).rejects.toThrow();
+    const res = await call({ jsonrpc: "2.0", id: 3, method: "resources/list", params: {} });
+    const json = await res.json();
+    expect(res.status).toBe(401);
+    expect(json.error.message).toBe("Unauthorized");
   });
 });

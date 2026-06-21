@@ -20,6 +20,10 @@ function rpc(id: RpcRequest["id"], result: unknown) {
   return NextResponse.json({ jsonrpc: "2.0", id, result });
 }
 
+function rpcError(id: RpcRequest["id"], code: number, message: string, status = 400) {
+  return NextResponse.json({ jsonrpc: "2.0", id, error: { code, message } }, { status });
+}
+
 // tools/call results must be MCP content blocks, not raw data.
 function toolResult(id: RpcRequest["id"], data: unknown) {
   const text = typeof data === "string" ? data : JSON.stringify(data, null, 2);
@@ -174,7 +178,12 @@ async function listReviewPages(token: string, campaign: Campaign) {
 }
 
 export async function GET(req: Request) {
-  const user = await requireApiUser(req);
+  let user: Awaited<ReturnType<typeof requireApiUser>>;
+  try {
+    user = await requireApiUser(req);
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   return NextResponse.json({
     name: "CampaignRepo MCP",
     resources: [
@@ -222,7 +231,12 @@ export async function POST(req: Request) {
     return new NextResponse(null, { status: 202 });
   }
 
-  const user = await requireApiUser(req);
+  let user: Awaited<ReturnType<typeof requireApiUser>>;
+  try {
+    user = await requireApiUser(req);
+  } catch {
+    return rpcError(body.id, -32001, "Unauthorized", 401);
+  }
 
   if (body.method === "resources/list") {
     return rpc(body.id, {
