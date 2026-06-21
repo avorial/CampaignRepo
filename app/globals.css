@@ -533,6 +533,42 @@ code {
   padding-top: 10px;
 }
 
+.nav-filter {
+  margin-top: 12px;
+}
+
+.nav-group-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  min-height: 30px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.nav-group-header:hover {
+  color: var(--gold);
+  border: 0;
+}
+
+.nav-count {
+  color: var(--text-tertiary);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-pill);
+  padding: 1px 8px;
+  font-size: 11px;
+}
+
 .nav-group h3,
 .page-sidebar h3 {
   color: var(--text-tertiary);

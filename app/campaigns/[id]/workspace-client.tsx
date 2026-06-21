@@ -29,6 +29,8 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const [message, setMessage] = useState("");
   const [search, setSearch] = useState<any[]>([]);
   const [pageCategory, setPageCategory] = useState(categories[0]?.id || "character");
+  const [navFilter, setNavFilter] = useState("");
+  const [openCats, setOpenCats] = useState<Record<string, boolean>>({});
   const pendingReviews = pages.filter((page) => page.frontmatter.approvalStatus !== "approved").length;
   const pageTemplates = templates.filter((template) => template.category === pageCategory);
 
@@ -299,16 +301,26 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
             {row.title}
           </Link>
         ))}
-        {grouped.map((group) => (
-          <div key={group.id} className="nav-group">
-            <h3>{group.label}</h3>
-            {group.pages.map((page) => (
-              <Link className="nav-link" key={page.slug} href={`/campaigns/${campaign.id}/pages/${page.slug}`}>
-                {page.frontmatter.name}
-              </Link>
-            ))}
-          </div>
-        ))}
+        <input className="nav-filter" value={navFilter} onChange={(event) => setNavFilter(event.target.value)} placeholder="Filter pages" />
+        {grouped.map((group) => {
+          const f = navFilter.trim().toLowerCase();
+          const visible = f ? group.pages.filter((page) => page.frontmatter.name.toLowerCase().includes(f)) : group.pages;
+          if (f && visible.length === 0) return null;
+          const open = f ? true : (openCats[group.id] ?? group.pages.length <= 8);
+          return (
+            <div key={group.id} className="nav-group">
+              <button type="button" className="nav-group-header" aria-expanded={open} onClick={() => setOpenCats((state) => ({ ...state, [group.id]: !open }))}>
+                <span className="nav-group-title">{open ? "▾" : "▸"} {group.label}</span>
+                <span className="nav-count">{group.pages.length}</span>
+              </button>
+              {open && visible.map((page) => (
+                <Link className="nav-link" key={page.slug} href={`/campaigns/${campaign.id}/pages/${page.slug}`}>
+                  {page.frontmatter.name}
+                </Link>
+              ))}
+            </div>
+          );
+        })}
         {canManage && pendingReviews > 0 && (
           <Link href={`/campaigns/${campaign.id}/admin`} className="review-callout">
             {pendingReviews} review{pendingReviews === 1 ? "" : "s"} waiting
