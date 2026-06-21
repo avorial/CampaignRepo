@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { getCampaign } from "@/lib/db";
-import { getContent } from "@/lib/github";
+import { getRawFile, GitHubError } from "@/lib/github";
 
 function contentType(fileName: string) {
   const lower = fileName.toLowerCase();
@@ -30,14 +30,16 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
   const fileName = cleanParts[cleanParts.length - 1];
   const mediaPath = `wiki/media/${cleanParts.join("/")}`;
-  const file = await getContent(user.githubToken, campaign, mediaPath);
-  if (file.type !== "file") return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const bytes = Buffer.from(file.content.replace(/\n/g, ""), "base64");
-  return new NextResponse(bytes, {
-    headers: {
-      "Content-Type": contentType(fileName),
-      "Cache-Control": "private, max-age=300"
-    }
-  });
+  try {
+    const file = await getRawFile(user.githubToken, campaign, mediaPath);
+    return new NextResponse(file.bytes, {
+      headers: {
+        "Content-Type": file.contentType || contentType(fileName),
+        "Cache-Control": "private, max-age=300"
+      }
+    });
+  } catch (error) {
+    if (error instanceof GitHubError && error.status === 404) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    throw error;
+  }
 }

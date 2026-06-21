@@ -138,6 +138,28 @@ export async function getContent(token: string, campaign: Pick<Campaign, "owner"
   return gh<{ content: string; sha: string; type: string }>(token, `/repos/${campaign.owner}/${campaign.repo}/contents/${encoded}?ref=${campaign.branch}`);
 }
 
+export async function getRawFile(token: string, campaign: Pick<Campaign, "owner" | "repo" | "branch">, filePath: string) {
+  const encoded = filePath.split("/").map(encodeURIComponent).join("/");
+  const authToken = await appInstallationAccessToken(token);
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github.raw",
+    "X-GitHub-Api-Version": "2022-11-28"
+  };
+  if (authToken) headers.Authorization = `Bearer ${authToken}`;
+  const res = await fetch(`${apiBase}/repos/${campaign.owner}/${campaign.repo}/contents/${encoded}?ref=${campaign.branch}`, {
+    headers,
+    cache: "no-store"
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new GitHubError(text || res.statusText, res.status);
+  }
+  return {
+    bytes: await res.arrayBuffer(),
+    contentType: res.headers.get("content-type") || undefined
+  };
+}
+
 export async function getTextFile(token: string, campaign: Campaign, filePath: string) {
   const item = await getContent(token, campaign, filePath);
   return {
