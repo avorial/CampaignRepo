@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
-import { getCampaign } from "@/lib/db";
+import { getCampaign, getCampaignRepositoryToken } from "@/lib/db";
 import { getRawFile, GitHubError } from "@/lib/github";
 
 function contentType(fileName: string) {
@@ -21,7 +21,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const user = await requireUser();
   const { id, path } = await params;
   const campaign = getCampaign(user.id, Number(id));
-  if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const repoToken = getCampaignRepositoryToken(campaign.id);
+  if (!repoToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const cleanParts = path.filter(Boolean);
   if (!cleanParts.length || cleanParts.some((part) => part === "." || part === ".." || part.includes("/") || part.includes("\\"))) {
@@ -31,7 +33,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const fileName = cleanParts[cleanParts.length - 1];
   const mediaPath = `wiki/media/${cleanParts.join("/")}`;
   try {
-    const file = await getRawFile(user.githubToken, campaign, mediaPath);
+    const file = await getRawFile(repoToken, campaign, mediaPath);
     return new NextResponse(file.bytes, {
       headers: {
         "Content-Type": file.contentType || contentType(fileName),

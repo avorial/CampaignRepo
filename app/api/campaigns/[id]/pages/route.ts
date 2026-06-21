@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { canManageCampaign, getCampaign } from "@/lib/db";
+import { canManageCampaign, getCampaign, getCampaignRepositoryToken } from "@/lib/db";
 import { getTextFile, GitHubError, listDirectory, putFile } from "@/lib/github";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { defaultFrontmatter, starterBody } from "@/lib/templates";
@@ -33,14 +33,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const user = await requireUser();
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
-  if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const entries = await listDirectory(user.githubToken, campaign, "wiki/pages");
+  if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const repoToken = getCampaignRepositoryToken(campaign.id);
+  if (!repoToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const entries = await listDirectory(repoToken, campaign, "wiki/pages");
   const pages = await Promise.all(
     entries
       .filter((entry) => entry.type === "file" && entry.name.endsWith(".md"))
       .map(async (entry) => {
         const slug = entry.name.replace(/\.md$/, "");
-        const file = await getTextFile(user.githubToken!, campaign, entry.path);
+        const file = await getTextFile(repoToken, campaign, entry.path);
         return parsePage(slug, file.text, file.sha);
       })
   );

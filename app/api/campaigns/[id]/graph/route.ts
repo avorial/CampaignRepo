@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
-import { getCampaign } from "@/lib/db";
+import { getCampaign, getCampaignRepositoryToken } from "@/lib/db";
 import { getTextFile, listDirectory } from "@/lib/github";
 import { parsePage, stripGmBlocks } from "@/lib/markdown";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
@@ -17,15 +17,17 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const user = await requireUser();
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
-  if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const repoToken = getCampaignRepositoryToken(campaign.id);
+  if (!repoToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const entries = await listDirectory(user.githubToken, campaign, "wiki/pages");
+  const entries = await listDirectory(repoToken, campaign, "wiki/pages");
   const allPages = await Promise.all(
     entries
       .filter((entry) => entry.type === "file" && entry.name.endsWith(".md"))
       .map(async (entry) => {
         const slug = entry.name.replace(/\.md$/, "");
-        const file = await getTextFile(user.githubToken!, campaign, entry.path);
+        const file = await getTextFile(repoToken, campaign, entry.path);
         const text = campaign.role === "player" ? stripGmBlocks(file.text) : file.text;
         return parsePage(slug, text, file.sha);
       })

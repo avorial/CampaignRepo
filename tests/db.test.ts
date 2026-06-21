@@ -5,6 +5,7 @@ import {
   createManualUser,
   createCampaignInvite,
   getCampaignRole,
+  getCampaignRepositoryToken,
   getDb,
   listAllCampaignsForAdmin,
   listUsers,
@@ -112,6 +113,13 @@ describe("global admin user identity", () => {
     expect(player?.campaigns).toEqual([
       expect.objectContaining({ id: campaignId, name: "Test", role: "player" })
     ]);
+  });
+
+  it("finds the campaign owner's GitHub token for shared reads", () => {
+    const db = getDb();
+    db.prepare("UPDATE users SET githubToken = ? WHERE id = ?").run("owner-token", gmId);
+
+    expect(getCampaignRepositoryToken(campaignId)).toBe("owner-token");
   });
 
   it("lets global admin edit a user's campaign memberships", () => {

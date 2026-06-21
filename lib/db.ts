@@ -297,6 +297,18 @@ export function getCampaign(userId: number, campaignId: number): Campaign | null
   ) || null;
 }
 
+export function getCampaignRepositoryToken(campaignId: number) {
+  const row = db
+    .prepare(
+      `SELECT users.githubToken
+       FROM campaigns
+       JOIN users ON users.id = campaigns.userId
+       WHERE campaigns.id = ?`
+    )
+    .get(campaignId) as { githubToken?: string | null } | undefined;
+  return row?.githubToken || null;
+}
+
 export function listCampaigns(userId: number): Campaign[] {
   return db
     .prepare(
