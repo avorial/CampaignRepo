@@ -202,7 +202,7 @@ export function getUserByApiToken(token: string): User | null {
 }
 
 export function listUsers() {
-  return db
+  const users = db
     .prepare(
       `SELECT users.id, users.email, users.name, users.mustChangePassword, users.isAdmin, users.disabled, users.createdAt,
         COUNT(DISTINCT campaign_memberships.campaignId) AS campaignCount
@@ -212,6 +212,33 @@ export function listUsers() {
        ORDER BY users.createdAt DESC`
     )
     .all() as Array<User & { campaignCount: number }>;
+  const campaigns = db
+    .prepare(
+      `SELECT campaign_memberships.userId, campaign_memberships.role, campaigns.id, campaigns.name, campaigns.owner, campaigns.repo
+       FROM campaign_memberships
+       JOIN campaigns ON campaigns.id = campaign_memberships.campaignId
+       ORDER BY campaigns.name`
+    )
+    .all() as Array<{ userId: number; role: CampaignRole; id: number; name: string; owner: string; repo: string }>;
+  const byUser = new Map<number, Array<{ id: number; name: string; owner: string; repo: string; role: CampaignRole }>>();
+  for (const campaign of campaigns) {
+    const list = byUser.get(campaign.userId) || [];
+    list.push({ id: campaign.id, name: campaign.name, owner: campaign.owner, repo: campaign.repo, role: campaign.role });
+    byUser.set(campaign.userId, list);
+  }
+  return users.map((user) => ({ ...user, campaigns: byUser.get(user.id) || [] }));
+}
+
+export function createManualUser(email: string, name: string, passwordHash: string, isAdmin = false) {
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanName = name.trim();
+  if (!cleanEmail || !cleanName) throw new Error("Name and email are required.");
+  const existing = db.prepare("SELECT id FROM users WHERE lower(email) = ?").get(cleanEmail) as { id: number } | undefined;
+  if (existing) throw new Error("An account with that email already exists.");
+  const info = db
+    .prepare("INSERT INTO users (email, name, passwordHash, mustChangePassword, isAdmin, disabled) VALUES (?, ?, ?, 1, ?, 0)")
+    .run(cleanEmail, cleanName, passwordHash, isAdmin ? 1 : 0);
+  return Number(info.lastInsertRowid);
 }
 
 export function setUserDisabled(adminUserId: number, userId: number, disabled: boolean) {

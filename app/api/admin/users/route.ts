@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hashPassword, requireUser } from "@/lib/auth";
-import { listUsers, resetUserPassword, setUserAdmin, setUserDisabled, updateUserIdentity } from "@/lib/db";
+import { createManualUser, listUsers, resetUserPassword, setUserAdmin, setUserDisabled, updateUserIdentity } from "@/lib/db";
 
 const actionSchema = z.discriminatedUnion("action", [
   z.object({
@@ -27,6 +27,12 @@ const actionSchema = z.discriminatedUnion("action", [
   })
 ]);
 
+const createSchema = z.object({
+  email: z.string().email(),
+  name: z.string().trim().min(1),
+  isAdmin: z.boolean().optional()
+});
+
 function temporaryPassword() {
   return `cr-${crypto.randomBytes(9).toString("base64url")}`;
 }
@@ -35,6 +41,20 @@ export async function GET() {
   const user = await requireUser();
   if (!user.isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   return NextResponse.json({ users: listUsers() });
+}
+
+export async function POST(req: Request) {
+  const user = await requireUser();
+  if (!user.isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const input = createSchema.parse(await req.json());
+  const password = temporaryPassword();
+
+  try {
+    createManualUser(input.email, input.name, await hashPassword(password), Boolean(input.isAdmin));
+    return NextResponse.json({ users: listUsers(), temporaryPassword: password });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "User creation failed." }, { status: 400 });
+  }
 }
 
 export async function PATCH(req: Request) {

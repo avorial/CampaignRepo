@@ -2,9 +2,11 @@ import { describe, it, expect, beforeAll } from "vitest";
 import {
   acceptCampaignInvite,
   canManageCampaign,
+  createManualUser,
   createCampaignInvite,
   getCampaignRole,
   getDb,
+  listUsers,
   listCampaignInvites,
   removeCampaignMember,
   revokeCampaignInvite,
@@ -93,6 +95,23 @@ describe("campaign invites", () => {
 });
 
 describe("global admin user identity", () => {
+  it("creates manual users who must change password", () => {
+    const id = createManualUser("manual@test", "Manual User", "hash");
+    const user = getDb().prepare("SELECT email, name, mustChangePassword FROM users WHERE id = ?").get(id) as { email: string; name: string; mustChangePassword: number };
+
+    expect(user).toEqual({ email: "manual@test", name: "Manual User", mustChangePassword: 1 });
+  });
+
+  it("lists campaign memberships for global admin", () => {
+    const users = listUsers();
+    const player = users.find((user) => user.id === playerId);
+
+    expect(player?.campaignCount).toBe(1);
+    expect(player?.campaigns).toEqual([
+      expect.objectContaining({ id: campaignId, name: "Test", role: "player" })
+    ]);
+  });
+
   it("updates a user's login email and display name", () => {
     const db = getDb();
     const id = Number(db.prepare("INSERT INTO users (email, name, passwordHash) VALUES (?, ?, ?)").run("rename@test", "Rename", "x").lastInsertRowid);
