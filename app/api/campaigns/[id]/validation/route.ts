@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getContent, GitHubError, initializeRepo } from "@/lib/github";
+import { githubContentType } from "@/lib/validation";
 
 const expectedPaths = [
   { path: "README.md", type: "file", label: "Campaign README" },
@@ -21,12 +22,13 @@ async function validate(token: string, campaign: NonNullable<ReturnType<typeof g
       const path = item.path.replace("{gameType}", campaign.gameType);
       try {
         const content = await getContent(token, campaign, path);
-        const ok = content.type === item.type;
+        const actualType = githubContentType(content);
+        const ok = actualType === item.type;
         return {
           ...item,
           path,
           ok,
-          actualType: content.type,
+          actualType,
           status: ok ? "ok" : "wrong-type"
         };
       } catch (error) {
