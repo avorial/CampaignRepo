@@ -1,132 +1,151 @@
 # CampaignRepo
 
-CampaignRepo is a GitHub-backed RPG campaign wiki. One app manages many campaigns, and each campaign maps to one GitHub repo containing Markdown pages, media, templates, imports, search snapshots, and campaign configuration.
+CampaignRepo is a GitHub-backed campaign wiki for tabletop RPGs.
 
-## Current MVP
+It gives each campaign a normal GitHub repository for durable storage while providing a web app for GMs, players, imports, media, review queues, search, and AI/MCP-assisted editing.
 
-- Username/password app accounts.
-- Seeded `admin` account with forced first-login password change.
-- Global admin panel for user review, password resets, account disabling, and global admin assignment.
-- Private dashboard for creating or connecting campaign repos.
-- GitHub App installation connection for existing repo read/write access.
+## What It Does
+
+- Stores campaign pages as Markdown in GitHub.
+- Keeps campaign media, templates, import sources, search snapshots, and config in the same repo.
+- Gives GMs an editor, review queue, media manager, relationship map, timeline, and repo repair tools.
+- Gives players a clean portal that only shows approved, player-visible pages.
+- Supports wiki links like `[[Page]]`, aliases like `[[Page|Label]]`, backlinks, tags, key links, and GM-only Markdown blocks.
+- Imports Foundry Actor JSON and generic character JSON into campaign writeups.
+- Exposes an MCP-style JSON-RPC API for AI tools and external clients.
+
+## Current Features
+
+### Accounts And Permissions
+
+- Username/password CampaignRepo accounts.
+- Seeded local admin account with forced first-login password change.
+- Global admin dashboard for creating accounts, editing users, assigning campaign memberships, changing GM/player rights, resetting passwords, disabling accounts, and granting global admin access.
+- Per-campaign GM portal for adding existing accounts, manually creating new accounts, and managing invite links.
+- Player and GM campaign roles.
+
+### Campaign Repos
+
+- One CampaignRepo app can manage many campaign repositories.
+- GitHub App connection for normal repo read/write access.
 - Manual GitHub token fallback for local testing and repo creation.
-- Game template packs for Sword Chronicle, Dungeons & Dragons, World of Darkness, Traveller, and Custom.
-- Wiki categories for Characters, NPCs, Locations, Events, and Games.
-- Markdown pages with `[[Page]]` links, `[[Page|Label]]` aliases, key links, backlinks, tags, visibility, and approval status.
-- GM-only Markdown blocks with `:::gm`.
-- Editor insert controls for wiki links, alias links, media snippets, and GM-only blocks.
-- GitHub save conflict detection with a reload-latest path when files changed outside CampaignRepo.
-- Dedicated player portal showing only approved, player-visible pages with GM blocks stripped.
-- Campaign invite links for players and GMs.
-- Foundry Actor JSON and generic JSON character import with optional field mapping.
-- Import source JSON diffing for re-import review.
-- Media upload, rename, delete, captions, alt text, tags, and repo-persisted `/wiki/media/media.json`.
-- SQLite full-text search plus portable repo snapshots at `/wiki/search/index.json`.
+- Repo validation and repair for required campaign folders and starter files.
+- Portable repo structure, so campaign content remains readable without the app.
+
+### Wiki Editing
+
+- Markdown pages with YAML frontmatter.
+- Categories for characters, NPCs, locations, events, games, and custom content.
+- Safe Markdown rendering with sanitized HTML.
+- `[[wiki-links]]`, alias links, backlinks, tags, key links, and missing-page prompts for GMs.
+- GM-only blocks using `:::gm`.
+- Insert controls for wiki links, alias links, media snippets, and GM-only blocks.
+- Save conflict detection when a file changed on GitHub after it was opened.
+- GM preview, player preview, and handout views.
+
+### Player Portal
+
+- Dedicated player-facing campaign view.
+- Players only see pages that are both approved and visible to players.
+- GM-only blocks and source import metadata are stripped from player reads.
+- Player accounts do not need GitHub access.
+
+### Imports And Media
+
+- Foundry Actor JSON import.
+- Generic JSON character import with optional field mapping.
+- Import source diffing for re-import review.
+- Media upload, rename, delete, captions, alt text, tags, and repo-persisted metadata.
+- Character writeups can include portrait/media references from the campaign repo.
+
+### Search, Graph, And Timeline
+
+- SQLite full-text search.
+- Portable search snapshot stored at `/wiki/search/index.json`.
 - Manual per-campaign search rebuild.
-- Safe Markdown rendering (sanitized) with real `[[wiki-links]]` and GM create-page prompts for missing targets.
-- Relationship lists plus a visual relationship map.
-- Timeline view for Event pages.
-- Repo setup instructions plus visible repo validation and repair.
-- MCP-style JSON-RPC endpoint at `/api/mcp` for AI search, reads, page creation, unapproved updates, templates, media, graph, review queue, and setup instructions.
-- External MCP clients authenticate with a personal access token (`Authorization: Bearer`), minted from the dashboard; the in-app session also works.
-- Dashboard review queue aggregating unapproved AI/import changes across every campaign you manage.
+- Relationship lists and visual relationship map.
+- Timeline view for event pages.
 
-## Project Goals
+### MCP And AI Workflow
 
-CampaignRepo's goal is to become a practical, RPG-first, GitHub-backed campaign wiki rather than a general-purpose wiki clone. The current MVP is usable for early testing, but these are the remaining product goals in priority order.
+- MCP-style JSON-RPC endpoint at `/api/mcp`.
+- Personal access tokens can be minted from the dashboard and used with `Authorization: Bearer`.
+- In-app sessions can also call the MCP endpoint.
+- Tools include campaign search, page reads, page creation, unapproved updates, templates, media, graph data, review queue access, and setup instructions.
+- AI-created or AI-edited content is routed through approval before players can see it.
 
-### 1. GitHub Connection
+## Quick Start
 
-- Expand the GitHub App flow with richer installation status and repo picker UX.
-- Keep manual token support only as a local/dev fallback and for GitHub repo creation.
-- Improve GitHub API error handling for repo access, rate limits, and missing permissions.
-
-### 2. Editing Experience
-
-- Upgrade the Markdown textarea into a true rich Markdown editor while preserving frontmatter, `[[wiki-links]]`, media links, and `:::gm` blocks.
-- Add insert controls for templates and frontmatter snippets.
-- Improve keyboard shortcuts, split-view ergonomics, and source/preview scrolling.
-
-### 3. Character Import
-
-- Improve Foundry Actor import rendering for stats, items, biography, images, and system-specific fields.
-- Extend re-import from source diffing into an update workflow that can refresh Markdown and preserved source JSON safely.
-
-### 4. Player Experience
-
-- Expand the player portal with a richer handout library, player-safe timeline, and session-facing navigation.
-- Keep the current rule firm: players only see approved, player-visible content with GM blocks stripped.
-
-### 5. MCP And AI Workflow
-
-- Harden `/api/mcp` into a more complete MCP-compatible surface with stronger tool schemas, better resource reads, and prompt templates.
-- Add MCP prompts for NPCs, locations, factions, session summaries, rumors/news, handouts, and Traveller world metadata.
-- Keep AI-created or AI-edited content routed through the unapproved review queue.
-
-### 6. Admin And Permissions
-
-- Add owner transfer and safer owner demotion/removal flows.
-- Add invite expiration, invite email delivery, and invitation audit history.
-
-### 7. Media Manager
-
-- Add image/PDF/audio previews.
-- Include media metadata in SQLite and portable search snapshots.
-- Add media metadata editing after upload.
-
-### 8. Search, Graph, And Timeline
-
-- Improve search ranking, highlighting, filters, and reindex controls.
-- Add editable relationship labels/types.
-- Expand timeline controls beyond event-page sorting.
-
-### 9. Repo Operations
-
-- Add branch/workflow controls for testing, staging, and publishing.
-- Add broader conflict workflows, including side-by-side merge for page saves and media metadata.
-
-### 10. Deployment And Operations
-
-- Document production environment variables, HTTPS/session-cookie settings, and backup/restore for SQLite.
-- Add deployment examples beyond Docker Compose.
-- Add broader integration tests for repo initialization, player secrecy, MCP writes, imports, and review flows.
-
-## Development
+Install dependencies and run the development server:
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://127.0.0.1:3000`.
+Open:
 
-The local database seeds a first admin account:
+```text
+http://127.0.0.1:3000
+```
 
-- Username: `admin`
-- Password: `admin`
+The local database seeds this first admin account:
 
-CampaignRepo forces this password to be changed on first login before the dashboard or APIs can be used.
+```text
+Email: admin@example.local
+Password: admin
+```
+
+CampaignRepo forces the seeded admin password to be changed before the dashboard or APIs can be used.
+
+## Common Commands
+
+```bash
+npm run dev        # Start local development server
+npm run typecheck  # TypeScript check
+npm test           # Run Vitest tests
+npm run build      # Production build
+npm start          # Start built Next.js app
+```
 
 ## Docker
 
-Pull the repo and run it in a container (data persists in a named volume):
+Run with Docker Compose:
 
 ```bash
 docker compose up -d --build
 ```
 
-Open `http://127.0.0.1:3000`. The SQLite database (accounts, sessions, search
-index) is stored in the `campaignrepo-data` volume at `/app/data`.
+Open:
 
-- Serving behind HTTPS? Set `SECURE_COOKIES=true` (in `docker-compose.yml` or the
-  environment) so session cookies get the `Secure` flag.
-- Set `APP_URL` to the public HTTPS URL for the app, for example
-  `https://campaignrepo.example.com`. GitHub App setup uses this for callback URLs.
-- Without compose: `docker build -t campaignrepo . && docker run -p 3000:3000 -v campaignrepo-data:/app/data campaignrepo`.
+```text
+http://127.0.0.1:3000
+```
+
+The SQLite database is stored in the `campaignrepo-data` volume at `/app/data`.
+
+Useful environment variables:
+
+```bash
+APP_URL=https://campaignrepo.example.com
+SECURE_COOKIES=true
+GITHUB_APP_ID=123456
+GITHUB_APP_SLUG=your-github-app-slug
+GITHUB_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----"
+```
+
+Set `SECURE_COOKIES=true` when serving behind HTTPS so session cookies use the `Secure` flag.
+
+Without Compose:
+
+```bash
+docker build -t campaignrepo .
+docker run -p 3000:3000 -v campaignrepo-data:/app/data campaignrepo
+```
 
 ## Portainer Updates
 
-For a local Portainer install, use Portainer's GitOps/automatic update polling instead of a GitHub webhook. A 5-minute polling interval works well while testing.
+For a local Portainer install, GitOps polling is simpler than a webhook while testing.
 
 Recommended stack settings:
 
@@ -134,48 +153,41 @@ Recommended stack settings:
 - Reference: `refs/heads/main`
 - Compose path: `docker-compose.yml`
 - Update method: polling
+- Polling interval: 5 minutes
 
 ## GitHub App Setup
 
-For normal testing, use a GitHub App instead of storing a personal SSH key.
-
-The easiest path is from the dashboard:
+The easiest setup path is from the CampaignRepo dashboard:
 
 1. Sign in as a global admin.
-2. Click **Connect GitHub** in the GitHub connection panel.
-3. GitHub creates a CampaignRepo GitHub App from a manifest.
-4. Choose which repos the app can access.
-5. CampaignRepo stores the generated app id/private key in SQLite and uses short-lived installation tokens for repo read/write.
+2. Click **Connect GitHub**.
+3. Let GitHub create the CampaignRepo GitHub App from the manifest.
+4. Choose the campaign repositories the app can access.
+5. Return to CampaignRepo and connect or repair the campaign repo.
 
-If you prefer to create the GitHub App manually, create it at `https://github.com/settings/apps/new`:
+CampaignRepo stores the GitHub App configuration in SQLite and uses short-lived installation tokens for repo access.
+
+To create the GitHub App manually, create a new app at:
+
+```text
+https://github.com/settings/apps/new
+```
+
+Use these values:
 
 - Homepage URL: your CampaignRepo URL.
 - Callback URL: `https://YOUR-CAMPAIGNREPO-HOST/api/github/app/callback`.
 - Setup URL: `https://YOUR-CAMPAIGNREPO-HOST/api/github/app/callback`.
-- Request repository permissions:
+- Repository permissions:
   - Contents: read/write.
   - Metadata: read-only.
-- Enable installation on the campaign repos you want CampaignRepo to manage.
+- Installation access: only the repositories CampaignRepo should manage.
 
-Then set these environment variables in Docker/Portainer:
+After adding the `GITHUB_APP_*` environment variables and restarting the app, use **Install or update GitHub App access** from the dashboard.
 
-```bash
-GITHUB_APP_ID=123456
-GITHUB_APP_SLUG=your-github-app-slug
-GITHUB_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----"
-```
+## Campaign Repository Layout
 
-After restarting CampaignRepo, open the dashboard and use **Install or update GitHub App access**. GitHub App access can connect and repair existing repos. To create brand-new repos from inside CampaignRepo, connect a manual GitHub token fallback.
-
-## Verification
-
-```bash
-npm run typecheck
-npm test
-npm run build
-```
-
-## GitHub Repo Structure Created For Campaigns
+CampaignRepo creates and expects this structure inside each campaign repo:
 
 ```text
 /wiki
@@ -184,9 +196,38 @@ npm run build
     media.json
   /templates/<game-type>
   /imports/characters
-  /search/index.json
+  /search
+    index.json
   campaign.yaml
 README.md
 ```
 
-Manual edits are allowed if YAML frontmatter and CampaignRepo conventions are preserved.
+Manual edits are allowed as long as YAML frontmatter and CampaignRepo conventions are preserved.
+
+## Visibility Rules
+
+Player safety is based on page metadata and GM-only blocks:
+
+- `visibility: players` makes a page eligible for player view.
+- `approvalStatus: approved` is required before players can see it.
+- `:::gm` blocks are removed from player reads.
+- Source import metadata is hidden from player reads.
+- Players can read campaign content without GitHub credentials.
+
+## Roadmap
+
+Near-term priorities:
+
+- Richer Markdown editing while preserving source compatibility.
+- Better Foundry import rendering and safer re-import workflows.
+- Improved player handout library and session-facing navigation.
+- Stronger MCP schemas, resources, and prompt templates.
+- Invite expiration, email delivery, and audit history.
+- Media previews for images, PDFs, and audio.
+- Better search ranking, filters, highlights, graph labels, and timeline controls.
+- Branch and publishing workflows for staging campaign changes.
+- Production backup/restore documentation for SQLite and campaign repos.
+
+## License
+
+See [LICENSE](LICENSE).
