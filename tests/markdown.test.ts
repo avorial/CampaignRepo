@@ -102,8 +102,8 @@ describe("renderMarkdown", () => {
   });
 
   it("rewrites campaign media paths with the provided resolver", () => {
-    const html = renderMarkdown("![Portrait](/wiki/media/Cass-Pien.png)", "gm", undefined, (path) => `/api/campaigns/1/media/${path}`);
-    expect(html).toContain('src="/api/campaigns/1/media/Cass-Pien.png"');
+    const html = renderMarkdown("![Portrait](/wiki/media/Cass-Pien.png)", "gm", undefined, (path) => `/campaign-media/1/${path}`);
+    expect(html).toContain('src="/campaign-media/1/Cass-Pien.png"');
     expect(html).toContain('alt="Portrait"');
   });
 

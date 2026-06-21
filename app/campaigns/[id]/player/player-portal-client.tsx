@@ -51,7 +51,7 @@ export default function PlayerPortalClient({ campaign }: { campaign: Campaign })
   }, [pages]);
 
   const resolveMedia = useMemo<MediaPathResolver>(
-    () => (path: string) => `/api/campaigns/${campaign.id}/media/${path.split("/").map(encodeURIComponent).join("/")}`,
+    () => (path: string) => `/campaign-media/${campaign.id}/${path.split("/").map(encodeURIComponent).join("/")}`,
     [campaign.id]
   );
 
