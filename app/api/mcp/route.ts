@@ -20,6 +20,12 @@ function rpc(id: RpcRequest["id"], result: unknown) {
   return NextResponse.json({ jsonrpc: "2.0", id, result });
 }
 
+// tools/call results must be MCP content blocks, not raw data.
+function toolResult(id: RpcRequest["id"], data: unknown) {
+  const text = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+  return NextResponse.json({ jsonrpc: "2.0", id, result: { content: [{ type: "text", text }] } });
+}
+
 function requireManage(userId: number, campaign: Campaign) {
   if (!canManageCampaign(userId, campaign.id)) throw new Error("Forbidden");
 }
@@ -229,20 +235,22 @@ export async function POST(req: Request) {
   }
 
   if (body.method === "tools/list") {
+    const campaignId = { type: "number", description: "Numeric campaign id (the number in the campaign URL)." };
+    const obj = (properties: Record<string, unknown>, required: string[]) => ({ type: "object", properties, required });
     return rpc(body.id, {
       tools: [
-        { name: "search_campaign", description: "Search one campaign repo." },
-        { name: "search_all_repos", description: "Search all repos authorized for the user." },
-        { name: "get_page", description: "Read a wiki page." },
-        { name: "create_page", description: "Create an unapproved AI wiki page." },
-        { name: "propose_page_update", description: "Commit an unapproved AI update to a page." },
-        { name: "list_templates", description: "List campaign templates grouped by game type." },
-        { name: "create_template", description: "Create a campaign template in the repo." },
-        { name: "list_media", description: "List uploaded campaign media and Markdown links." },
-        { name: "get_campaign_graph", description: "Return relationship graph and timeline data." },
-        { name: "list_review_queue", description: "List unapproved or rejected pages awaiting GM review." },
-        { name: "review_page", description: "Approve or reject a page from the GM review queue." },
-        { name: "get_repo_setup_instructions", description: "Return instructions for building or repairing a campaign repo." }
+        { name: "search_campaign", description: "Search one campaign repo.", inputSchema: obj({ campaignId, query: { type: "string" } }, ["campaignId", "query"]) },
+        { name: "search_all_repos", description: "Search all repos authorized for the user.", inputSchema: obj({ query: { type: "string" } }, ["query"]) },
+        { name: "get_page", description: "Read a wiki page by slug.", inputSchema: obj({ campaignId, slug: { type: "string" } }, ["campaignId", "slug"]) },
+        { name: "create_page", description: "Create a wiki page (lands as unapproved for GM review).", inputSchema: obj({ campaignId, name: { type: "string" }, category: { type: "string", enum: ["character", "npc", "location", "event", "game"] }, content: { type: "string", description: "Markdown body. :::gm blocks are GM-only." } }, ["campaignId", "name"]) },
+        { name: "propose_page_update", description: "Update a page (lands as unapproved for GM review).", inputSchema: obj({ campaignId, slug: { type: "string" }, content: { type: "string" }, frontmatter: { type: "object", additionalProperties: true } }, ["campaignId", "slug"]) },
+        { name: "list_templates", description: "List campaign templates grouped by game type.", inputSchema: obj({ campaignId }, ["campaignId"]) },
+        { name: "create_template", description: "Create a campaign template in the repo.", inputSchema: obj({ campaignId, name: { type: "string" }, gameType: { type: "string" }, category: { type: "string", enum: ["character", "npc", "location", "event", "game"] }, summary: { type: "string" }, tags: { type: "array", items: { type: "string" } }, content: { type: "string" } }, ["campaignId", "name"]) },
+        { name: "list_media", description: "List uploaded campaign media and Markdown links.", inputSchema: obj({ campaignId }, ["campaignId"]) },
+        { name: "get_campaign_graph", description: "Return relationship graph and timeline data.", inputSchema: obj({ campaignId }, ["campaignId"]) },
+        { name: "list_review_queue", description: "List unapproved or rejected pages awaiting GM review.", inputSchema: obj({ campaignId }, ["campaignId"]) },
+        { name: "review_page", description: "Approve or reject a page from the GM review queue.", inputSchema: obj({ campaignId, slug: { type: "string" }, decision: { type: "string", enum: ["approved", "rejected"] } }, ["campaignId", "slug", "decision"]) },
+        { name: "get_repo_setup_instructions", description: "Return instructions for building or repairing a campaign repo.", inputSchema: obj({ campaignId }, ["campaignId"]) }
       ]
     });
   }
@@ -251,7 +259,7 @@ export async function POST(req: Request) {
     const name = params.name;
     const args = params.arguments || {};
     if (name === "search_campaign" || name === "search_all_repos") {
-      return rpc(body.id, { content: searchDocs(user.id, args.query || "", name === "search_campaign" ? Number(args.campaignId) : undefined, "gm") });
+      return toolResult(body.id, searchDocs(user.id, args.query || "", name === "search_campaign" ? Number(args.campaignId) : undefined, "gm"));
     }
     if (name === "get_page") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
@@ -261,7 +269,7 @@ export async function POST(req: Request) {
       if (campaign.role === "player" && (page.frontmatter.visibility !== "players" || page.frontmatter.approvalStatus !== "approved")) {
         throw new Error("Forbidden");
       }
-      return rpc(body.id, { content: campaign.role === "player" ? parsePage(args.slug, stripGmBlocks(file.text), file.sha) : page });
+      return toolResult(body.id, campaign.role === "player" ? parsePage(args.slug, stripGmBlocks(file.text), file.sha) : page);
     }
     if (name === "create_page") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
@@ -273,7 +281,7 @@ export async function POST(req: Request) {
       const content = args.content || starterBody(title, fm.category, campaign.gameType as any);
       await putFile(user.githubToken, campaign, `wiki/pages/${slug}.md`, serializePage(fm, content), `CampaignRepo MCP: create unapproved ${title}`);
       await rebuildSearchIndex(user.githubToken, campaign);
-      return rpc(body.id, { slug, approvalStatus: "unapproved" });
+      return toolResult(body.id, { slug, approvalStatus: "unapproved" });
     }
     if (name === "propose_page_update") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
@@ -284,13 +292,13 @@ export async function POST(req: Request) {
       const fm = { ...page.frontmatter, ...(args.frontmatter || {}), approvalStatus: "unapproved" as const, lastEditedBy: "AI via MCP" };
       await putFile(user.githubToken, campaign, `wiki/pages/${args.slug}.md`, serializePage(fm, args.content || page.content), `CampaignRepo MCP: propose update ${fm.name}`, current.sha);
       await rebuildSearchIndex(user.githubToken, campaign);
-      return rpc(body.id, { ok: true, approvalStatus: "unapproved" });
+      return toolResult(body.id, { ok: true, approvalStatus: "unapproved" });
     }
     if (name === "list_templates") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
       if (!campaign || !user.githubToken) throw new Error("Campaign not found");
       requireManage(user.id, campaign);
-      return rpc(body.id, { content: await listMcpTemplates(user.githubToken, campaign) });
+      return toolResult(body.id, await listMcpTemplates(user.githubToken, campaign));
     }
     if (name === "create_template") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
@@ -310,24 +318,24 @@ export async function POST(req: Request) {
       const content = String(args.content || starterBody(templateName, category, gameType));
       const path = `wiki/templates/${gameType}/${slug}.md`;
       await putFile(user.githubToken, campaign, path, serializePage(frontmatter, content), `CampaignRepo MCP: create template ${templateName}`);
-      return rpc(body.id, { template: { slug, path, gameType, category, name: templateName, summary: frontmatter.summary } });
+      return toolResult(body.id, { template: { slug, path, gameType, category, name: templateName, summary: frontmatter.summary } });
     }
     if (name === "list_media") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
       if (!campaign || !user.githubToken) throw new Error("Campaign not found");
       requireManage(user.id, campaign);
-      return rpc(body.id, { content: await listMcpMedia(user.githubToken, campaign) });
+      return toolResult(body.id, await listMcpMedia(user.githubToken, campaign));
     }
     if (name === "get_campaign_graph") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
       if (!campaign || !user.githubToken) throw new Error("Campaign not found");
-      return rpc(body.id, { content: await buildMcpGraph(user.githubToken, campaign) });
+      return toolResult(body.id, await buildMcpGraph(user.githubToken, campaign));
     }
     if (name === "list_review_queue") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
       if (!campaign || !user.githubToken) throw new Error("Campaign not found");
       requireManage(user.id, campaign);
-      return rpc(body.id, { content: await listReviewPages(user.githubToken, campaign) });
+      return toolResult(body.id, await listReviewPages(user.githubToken, campaign));
     }
     if (name === "review_page") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
@@ -343,14 +351,12 @@ export async function POST(req: Request) {
       };
       await putFile(user.githubToken, campaign, `wiki/pages/${args.slug}.md`, serializePage(frontmatter, page.content), `CampaignRepo MCP: ${decision} ${frontmatter.name}`, current.sha);
       await rebuildSearchIndex(user.githubToken, campaign);
-      return rpc(body.id, { ok: true, approvalStatus: decision });
+      return toolResult(body.id, { ok: true, approvalStatus: decision });
     }
     if (name === "get_repo_setup_instructions") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
       if (!campaign) throw new Error("Campaign not found");
-      return rpc(body.id, {
-        content: `Build or connect https://github.com/${campaign.owner}/${campaign.repo}. Required folders: /wiki/pages, /wiki/media, /wiki/templates/${campaign.gameType}, /wiki/imports/characters, /wiki/search/index.json, /wiki/campaign.yaml.`
-      });
+      return toolResult(body.id, `Build or connect https://github.com/${campaign.owner}/${campaign.repo}. Required folders: /wiki/pages, /wiki/media, /wiki/templates/${campaign.gameType}, /wiki/imports/characters, /wiki/search/index.json, /wiki/campaign.yaml.`);
     }
   }
 

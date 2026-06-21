@@ -51,8 +51,9 @@ describe("MCP route", () => {
       gmToken
     );
     const json = await res.json();
-    expect(json.result.approvalStatus).toBe("unapproved");
-    expect(json.result.slug).toBe("New-NPC");
+    const payload = JSON.parse(json.result.content[0].text);
+    expect(payload.approvalStatus).toBe("unapproved");
+    expect(payload.slug).toBe("New-NPC");
   });
 
   it("forbids players from creating pages", async () => {
