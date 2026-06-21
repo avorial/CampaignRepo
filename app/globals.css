@@ -1403,6 +1403,124 @@ code {
   text-transform: uppercase;
 }
 
+.preview > div {
+  --wiki-cyan: #66d9ef;
+  --wiki-cyan-soft: rgba(102, 217, 239, 0.18);
+  --wiki-panel: rgba(16, 10, 28, 0.72);
+}
+
+.preview > div::after {
+  clear: both;
+  content: "";
+  display: block;
+}
+
+.preview > div > h1 {
+  border-bottom: 1px solid var(--border-strong);
+  color: var(--text-primary);
+  font-size: clamp(34px, 5vw, 58px);
+  font-weight: 500;
+  line-height: 1;
+  margin: 0 0 12px;
+  padding-bottom: 12px;
+}
+
+.preview > div > h1 + p {
+  color: var(--gold-bright);
+  font-size: 20px;
+  margin: 0 0 8px;
+}
+
+.preview > div > h1 + p em {
+  font-style: normal;
+}
+
+.preview > div > h1 + p + p {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0;
+  margin: 0 0 22px;
+  text-transform: uppercase;
+}
+
+.preview > div > p:has(> img:only-child) {
+  background:
+    linear-gradient(180deg, rgba(102, 217, 239, 0.08), transparent 120px),
+    var(--wiki-panel);
+  border: 1px solid var(--wiki-cyan-soft);
+  box-shadow: 0 0 0 1px rgba(160, 117, 255, 0.08), 0 18px 50px rgba(0, 0, 0, 0.32);
+  float: right;
+  margin: 0 0 18px 28px;
+  padding: 0;
+  width: min(30%, 360px);
+}
+
+.preview > div > p:has(> img:only-child) img {
+  aspect-ratio: 4 / 5;
+  display: block;
+  height: auto;
+  max-height: 420px;
+  object-fit: cover;
+  object-position: center top;
+  width: 100%;
+}
+
+.preview > div > p:has(> img:only-child) + table {
+  background: var(--wiki-panel);
+  border: 1px solid var(--wiki-cyan-soft);
+  box-shadow: 0 0 0 1px rgba(160, 117, 255, 0.08), 0 18px 50px rgba(0, 0, 0, 0.28);
+  clear: right;
+  float: right;
+  margin: 0 0 24px 28px;
+  width: min(30%, 360px);
+}
+
+.preview > div > h2 {
+  border-top: 1px solid rgba(102, 217, 239, 0.16);
+  clear: none;
+  color: var(--text-primary);
+  font-size: 28px;
+  font-weight: 550;
+  line-height: 1.15;
+  margin: 24px 0 10px;
+  padding-top: 18px;
+}
+
+.preview > div > h2:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.preview > div table {
+  background: rgba(24, 16, 40, 0.54);
+  border: 1px solid var(--border-soft);
+  border-collapse: collapse;
+  margin: 10px 0 18px;
+  width: 100%;
+}
+
+.preview > div th,
+.preview > div td {
+  border-bottom: 1px solid rgba(155, 120, 220, 0.16);
+  padding: 9px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.preview > div th {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.preview > div td {
+  color: var(--text-primary);
+}
+
 .handout-preview {
   background: var(--bg-elevated);
 }
@@ -1773,6 +1891,18 @@ code {
   .preview .wiki-infobox img {
     max-height: 360px;
   }
+
+  .preview > div > p:has(> img:only-child),
+  .preview > div > p:has(> img:only-child) + table {
+    clear: none;
+    float: none;
+    margin: 16px 0;
+    width: 100%;
+  }
+
+  .preview > div > p:has(> img:only-child) img {
+    max-height: 360px;
+  }
 }
 
 @media (max-width: 680px) {
@@ -1814,5 +1944,13 @@ code {
     font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
+  }
+
+  .preview > div > h1 {
+    font-size: 36px;
+  }
+
+  .preview > div > h1 + p + p {
+    font-size: 11px;
   }
 }
