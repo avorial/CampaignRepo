@@ -302,8 +302,16 @@ export function getCampaignRepositoryToken(campaignId: number) {
     .prepare(
       `SELECT users.githubToken
        FROM campaigns
-       JOIN users ON users.id = campaigns.userId
-       WHERE campaigns.id = ?`
+       JOIN campaign_memberships ON campaign_memberships.campaignId = campaigns.id
+       JOIN users ON users.id = campaign_memberships.userId
+       WHERE campaigns.id = ?
+         AND users.githubToken IS NOT NULL
+         AND users.githubToken != ''
+         AND campaign_memberships.role IN ('owner', 'gm')
+       ORDER BY CASE WHEN users.id = campaigns.userId THEN 0 ELSE 1 END,
+         CASE campaign_memberships.role WHEN 'owner' THEN 0 ELSE 1 END,
+         users.id
+       LIMIT 1`
     )
     .get(campaignId) as { githubToken?: string | null } | undefined;
   return row?.githubToken || null;

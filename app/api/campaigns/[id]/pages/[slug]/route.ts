@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { canManageCampaign, getCampaign } from "@/lib/db";
+import { canManageCampaign, getCampaign, getCampaignRepositoryToken } from "@/lib/db";
 import { deleteFile, getTextFile, GitHubError, putFile } from "@/lib/github";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { rebuildSearchIndex } from "@/lib/search";
@@ -31,10 +31,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const user = await requireUser();
   const { id, slug } = await params;
   const campaign = getCampaign(user.id, Number(id));
-  if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const repoToken = getCampaignRepositoryToken(campaign.id);
+  if (!repoToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
   let file: Awaited<ReturnType<typeof getTextFile>>;
   try {
-    file = await getTextFile(user.githubToken, campaign, `wiki/pages/${slug}.md`);
+    file = await getTextFile(repoToken, campaign, `wiki/pages/${slug}.md`);
   } catch (error) {
     if (error instanceof GitHubError && error.status === 404) {
       return NextResponse.json({ error: "Page not found.", missing: true }, { status: 404 });

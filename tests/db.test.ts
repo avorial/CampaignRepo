@@ -122,6 +122,15 @@ describe("global admin user identity", () => {
     expect(getCampaignRepositoryToken(campaignId)).toBe("owner-token");
   });
 
+  it("falls back to a GM GitHub token for shared reads", () => {
+    const db = getDb();
+    const gmHelperId = Number(db.prepare("INSERT INTO users (email, name, passwordHash, githubToken) VALUES (?, ?, ?, ?)").run("token-gm@test", "Token GM", "x", "gm-token").lastInsertRowid);
+    db.prepare("UPDATE users SET githubToken = NULL WHERE id = ?").run(gmId);
+    db.prepare("INSERT INTO campaign_memberships (campaignId, userId, role) VALUES (?, ?, ?)").run(campaignId, gmHelperId, "gm");
+
+    expect(getCampaignRepositoryToken(campaignId)).toBe("gm-token");
+  });
+
   it("lets global admin edit a user's campaign memberships", () => {
     const db = getDb();
     const id = Number(db.prepare("INSERT INTO users (email, name, passwordHash) VALUES (?, ?, ?)").run("member-edit@test", "Member Edit", "x").lastInsertRowid);
