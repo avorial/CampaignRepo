@@ -124,5 +124,5 @@ export function renderMarkdown(content: string, mode: RenderMode, resolve?: Wiki
     out += renderInline(content.slice(last), resolve, resolveMedia);
     html = out;
   }
-  return DOMPurify.sanitize(html, { ADD_ATTR: ["data-missing", "data-target"] });
+  return DOMPurify.sanitize(html, { ADD_ATTR: ["data-label", "data-missing", "data-target"] });
 }
