@@ -22,15 +22,26 @@ export async function requireUser(options: { allowPasswordChange?: boolean } = {
 }
 
 /**
- * Authenticate an API/MCP request. Prefers an `Authorization: Bearer <token>`
- * personal access token (used by external MCP clients) and falls back to the
- * in-app session cookie. Throws "Unauthorized" when neither is valid.
+ * Authenticate an API/MCP request. Accepts a personal access token via an
+ * `Authorization: Bearer <token>` header OR a `?token=`/`?access_token=` query
+ * param (so MCP connectors that only take a URL, like the claude.ai custom
+ * connector, can authenticate). Falls back to the in-app session cookie.
+ * Throws "Unauthorized" when none is valid.
  */
 export async function requireApiUser(req: Request) {
   const header = req.headers.get("authorization") || "";
   const match = /^bearer\s+(.+)$/i.exec(header.trim());
-  if (match) {
-    const user = getUserByApiToken(match[1].trim());
+  let token = match?.[1]?.trim();
+  if (!token) {
+    try {
+      const params = new URL(req.url).searchParams;
+      token = params.get("token") || params.get("access_token") || undefined;
+    } catch {
+      /* ignore malformed URL */
+    }
+  }
+  if (token) {
+    const user = getUserByApiToken(token.trim());
     if (!user) throw new Error("Unauthorized");
     return user;
   }

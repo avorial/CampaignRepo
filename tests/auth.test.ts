@@ -31,6 +31,12 @@ describe("requireApiUser bearer auth", () => {
     await expect(requireApiUser(req)).rejects.toThrow("Unauthorized");
   });
 
+  it("authenticates a token via ?token= query param", async () => {
+    const req = new Request(`http://localhost/api/mcp?token=${token}`);
+    const user = await requireApiUser(req);
+    expect(user.id).toBe(userId);
+  });
+
   it("rejects bearer tokens for disabled users", async () => {
     getDb().prepare("UPDATE users SET disabled = 1 WHERE id = ?").run(userId);
     const req = new Request("http://localhost/api/mcp", { headers: { Authorization: `Bearer ${token}` } });
