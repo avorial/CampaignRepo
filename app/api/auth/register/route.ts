@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSession, hashPassword } from "@/lib/auth";
-import { acceptCampaignInvite, getDb } from "@/lib/db";
+import { acceptCampaignInvite, getCampaignInvite, getDb } from "@/lib/db";
 
 const schema = z.object({
   email: z.string().email(),
@@ -12,6 +12,13 @@ const schema = z.object({
 
 export async function POST(req: Request) {
   const input = schema.parse(await req.json());
+  if (input.inviteToken) {
+    const invite = getCampaignInvite(input.inviteToken);
+    if (!invite || invite.revokedAt || invite.acceptedAt) {
+      return NextResponse.json({ error: "Invite is no longer active." }, { status: 400 });
+    }
+  }
+
   const passwordHash = await hashPassword(input.password);
   try {
     const result = getDb()

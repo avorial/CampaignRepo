@@ -648,6 +648,18 @@ code {
   font-size: 12px;
 }
 
+.invite-url {
+  background: var(--field-bg);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  color: var(--gold-bright);
+  display: block;
+  font-size: 12px;
+  max-width: min(620px, 60vw);
+  overflow-wrap: anywhere;
+  padding: 6px 8px;
+}
+
 .member-actions {
   display: flex;
   gap: 8px;

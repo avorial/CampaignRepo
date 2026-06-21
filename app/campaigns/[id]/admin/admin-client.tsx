@@ -20,6 +20,7 @@ export default function AdminClient({ campaign }: { campaign: Campaign }) {
   const [invites, setInvites] = useState<CampaignInvite[]>([]);
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [message, setMessage] = useState("");
+  const [origin, setOrigin] = useState("");
 
   async function load() {
     const [membersRes, invitesRes, reviewsRes] = await Promise.all([
@@ -37,7 +38,12 @@ export default function AdminClient({ campaign }: { campaign: Campaign }) {
 
   useEffect(() => {
     load();
+    setOrigin(window.location.origin);
   }, []);
+
+  function inviteUrl(token: string) {
+    return `${origin || ""}/invite/${token}`;
+  }
 
   async function addMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -53,7 +59,9 @@ export default function AdminClient({ campaign }: { campaign: Campaign }) {
       event.currentTarget.reset();
       setMessage("Member added.");
     } else {
-      setMessage(data.error || "Could not add member.");
+      setMessage(data.error === "No CampaignRepo account exists for that email."
+        ? "That email has not registered yet. Create an invite link and send it to them instead."
+        : data.error || "Could not add member.");
     }
   }
 
@@ -90,7 +98,7 @@ export default function AdminClient({ campaign }: { campaign: Campaign }) {
   }
 
   async function copyInvite(token: string) {
-    await navigator.clipboard.writeText(`${window.location.origin}/invite/${token}`);
+    await navigator.clipboard.writeText(inviteUrl(token));
     setMessage("Invite link copied.");
   }
 
@@ -142,12 +150,12 @@ export default function AdminClient({ campaign }: { campaign: Campaign }) {
   return (
     <section className="admin-grid">
       <div className="panel">
-        <h2>Add user</h2>
-        <p className="muted">Users need to create a CampaignRepo account first. Add them by account email, then choose whether they are a GM or player.</p>
+        <h2>Add existing account</h2>
+        <p className="muted">Use this only after the person already has a CampaignRepo login. For a new test account, create an invite link instead.</p>
         <form onSubmit={addMember} className="stack">
           <label>Email<input name="email" type="email" required placeholder="player@example.com" /></label>
           <label>Role<select name="role"><option value="player">Player</option><option value="gm">GM</option></select></label>
-          <button>Add to campaign</button>
+          <button>Add existing account</button>
         </form>
       </div>
 
@@ -163,6 +171,9 @@ export default function AdminClient({ campaign }: { campaign: Campaign }) {
             <article key={invite.id} className="member-row">
               <div>
                 <strong>{invite.role}</strong>
+                {!invite.acceptedAt && !invite.revokedAt && origin && (
+                  <code className="invite-url">{inviteUrl(invite.token)}</code>
+                )}
                 <span>{invite.acceptedAt ? "accepted" : invite.revokedAt ? "revoked" : "active"} · {invite.createdAt}</span>
               </div>
               <div className="member-actions">
