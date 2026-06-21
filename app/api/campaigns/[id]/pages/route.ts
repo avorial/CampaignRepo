@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign, getCampaignRepositoryToken } from "@/lib/db";
 import { getTextFile, GitHubError, listDirectory, putFile } from "@/lib/github";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
-import { defaultFrontmatter, starterBody } from "@/lib/templates";
+import { categoryIds, defaultFrontmatter, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
 import { rebuildSearchIndex } from "@/lib/search";
 
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 const schema = z.object({
   name: z.string().min(1),
-  category: z.enum(["character", "npc", "location", "event", "game"]),
+  category: z.enum(categoryIds),
   visibility: z.enum(["gm", "players"]).default("gm"),
   templatePath: z.string().optional()
 });

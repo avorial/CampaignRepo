@@ -4,10 +4,16 @@ export const gameTypes: GameType[] = ["Sword Chronicle", "Dungeons & Dragons", "
 export const categories: { id: Category; label: string }[] = [
   { id: "character", label: "Characters" },
   { id: "npc", label: "NPCs" },
+  { id: "organization", label: "Organizations" },
+  { id: "species", label: "Species" },
   { id: "location", label: "Locations" },
+  { id: "item", label: "Items" },
   { id: "event", label: "Events" },
+  { id: "lore", label: "Lore" },
   { id: "game", label: "Games" }
 ];
+
+export const categoryIds = categories.map((category) => category.id) as [Category, ...Category[]];
 
 export function defaultFrontmatter(name: string, category: Category, visibility = "gm"): WikiPageFrontmatter {
   return {
@@ -34,11 +40,24 @@ export function starterBody(name: string, category: Category, gameType: GameType
   if (category === "npc" || category === "character") {
     return `${heading}\n\n## Public Face\n\n\n## Relationships\n\n\n## Secrets\n\n:::gm\nWhat they really want, know, or fear.\n:::\n`;
   }
+  if (category === "organization") {
+    return `${heading}\n\n## Overview\n\n\n## Leadership\n\n- [[NPC]]\n\n## Members & Holdings\n\n\n## Allies & Rivals\n\n\n:::gm\nSecret agenda, debts, and leverage.\n:::\n`;
+  }
+  if (category === "species") {
+    return `${heading}\n\n## Overview\n\n\n## Appearance & Biology\n\n\n## Culture & Society\n\n\n## Homeland\n\n- [[Location]]\n\n:::gm\nHidden truths about this species.\n:::\n`;
+  }
+  if (category === "item") {
+    return `${heading}\n\n## Description\n\n\n## Properties\n\n\n## History\n\n\n## Current Owner\n\n- [[NPC]]\n\n:::gm\nCurses, true power, or origin secrets.\n:::\n`;
+  }
+  if (category === "lore") {
+    return `${heading}\n\n## Summary\n\n\n## Details\n\n\n## Related\n\n- [[Page Name]]\n\n:::gm\nThe truth behind the myth.\n:::\n`;
+  }
   return `${heading}${common}`;
 }
 
 export function campaignYaml(name: string, gameType: GameType) {
-  return `name: ${JSON.stringify(name)}\ngameType: ${JSON.stringify(gameType)}\ncategories:\n  - Characters\n  - NPCs\n  - Locations\n  - Events\n  - Games\nvisibility:\n  default: gm\napprovals:\n  aiDefault: unapproved\n`;
+  const cats = categories.map((category) => `  - ${category.label}`).join("\n");
+  return `name: ${JSON.stringify(name)}\ngameType: ${JSON.stringify(gameType)}\ncategories:\n${cats}\nvisibility:\n  default: gm\napprovals:\n  aiDefault: unapproved\n`;
 }
 
 export function repoReadme(name: string) {

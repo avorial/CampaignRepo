@@ -3,7 +3,7 @@ import { requireApiUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign, listCampaigns, searchDocs } from "@/lib/db";
 import { getTextFile, GitHubError, listDirectory, putFile } from "@/lib/github";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
-import { defaultFrontmatter, gameTypes, starterBody } from "@/lib/templates";
+import { categoryIds, defaultFrontmatter, gameTypes, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import { rebuildSearchIndex } from "@/lib/search";
@@ -256,10 +256,10 @@ export async function POST(req: Request) {
         { name: "search_campaign", description: "Search one campaign repo.", inputSchema: obj({ campaignId, query: { type: "string" } }, ["campaignId", "query"]) },
         { name: "search_all_repos", description: "Search all repos authorized for the user.", inputSchema: obj({ query: { type: "string" } }, ["query"]) },
         { name: "get_page", description: "Read a wiki page by slug.", inputSchema: obj({ campaignId, slug: { type: "string" } }, ["campaignId", "slug"]) },
-        { name: "create_page", description: "Create a wiki page (lands as unapproved for GM review).", inputSchema: obj({ campaignId, name: { type: "string" }, category: { type: "string", enum: ["character", "npc", "location", "event", "game"] }, content: { type: "string", description: "Markdown body. :::gm blocks are GM-only." } }, ["campaignId", "name"]) },
+        { name: "create_page", description: "Create a wiki page (lands as unapproved for GM review).", inputSchema: obj({ campaignId, name: { type: "string" }, category: { type: "string", enum: [...categoryIds] }, content: { type: "string", description: "Markdown body. :::gm blocks are GM-only." } }, ["campaignId", "name"]) },
         { name: "propose_page_update", description: "Update a page (lands as unapproved for GM review).", inputSchema: obj({ campaignId, slug: { type: "string" }, content: { type: "string" }, frontmatter: { type: "object", additionalProperties: true } }, ["campaignId", "slug"]) },
         { name: "list_templates", description: "List campaign templates grouped by game type.", inputSchema: obj({ campaignId }, ["campaignId"]) },
-        { name: "create_template", description: "Create a campaign template in the repo.", inputSchema: obj({ campaignId, name: { type: "string" }, gameType: { type: "string" }, category: { type: "string", enum: ["character", "npc", "location", "event", "game"] }, summary: { type: "string" }, tags: { type: "array", items: { type: "string" } }, content: { type: "string" } }, ["campaignId", "name"]) },
+        { name: "create_template", description: "Create a campaign template in the repo.", inputSchema: obj({ campaignId, name: { type: "string" }, gameType: { type: "string" }, category: { type: "string", enum: [...categoryIds] }, summary: { type: "string" }, tags: { type: "array", items: { type: "string" } }, content: { type: "string" } }, ["campaignId", "name"]) },
         { name: "list_media", description: "List uploaded campaign media and Markdown links.", inputSchema: obj({ campaignId }, ["campaignId"]) },
         { name: "get_campaign_graph", description: "Return relationship graph and timeline data.", inputSchema: obj({ campaignId }, ["campaignId"]) },
         { name: "list_review_queue", description: "List unapproved or rejected pages awaiting GM review.", inputSchema: obj({ campaignId }, ["campaignId"]) },
@@ -320,7 +320,7 @@ export async function POST(req: Request) {
       requireManage(user.id, campaign);
       const templateName = String(args.name || "AI Template");
       const gameType = gameTypes.includes(args.gameType) ? (args.gameType as GameType) : (campaign.gameType as GameType);
-      const category = (["character", "npc", "location", "event", "game"].includes(args.category) ? args.category : "npc") as Category;
+      const category = ((categoryIds as readonly string[]).includes(args.category) ? args.category : "npc") as Category;
       const slug = slugify(templateName);
       const frontmatter = {
         ...defaultFrontmatter(templateName, category, "gm"),

@@ -1,5 +1,5 @@
 export type GameType = "Sword Chronicle" | "Dungeons & Dragons" | "World of Darkness" | "Traveller" | "Custom";
-export type Category = "character" | "npc" | "location" | "event" | "game";
+export type Category = "character" | "npc" | "location" | "event" | "game" | "organization" | "species" | "item" | "lore";
 export type Visibility = "gm" | "players";
 export type ApprovalStatus = "approved" | "unapproved" | "rejected";
 export type CampaignRole = "owner" | "gm" | "player";
