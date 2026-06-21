@@ -177,6 +177,27 @@ button:disabled,
   cursor: not-allowed;
 }
 
+.callout-warn {
+  border: 1px solid var(--gold);
+  background: var(--wash-gold);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.callout-warn strong {
+  color: var(--gold-bright);
+  display: inline-flex;
+  align-items: center;
+}
+
+.callout-warn span {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
 button.linklike {
   background: none;
   border: 0;

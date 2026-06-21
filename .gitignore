@@ -9,3 +9,6 @@ data
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Local Foundry VTT conversion assets (not part of the app)
+_foundry_conversion/

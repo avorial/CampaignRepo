@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
-import { Dice5 } from "lucide-react";
+import { Dice5, Lock } from "lucide-react";
 import type { ApiToken, Campaign, GameType, User } from "@/lib/types";
 
 // Third-party game-system marks shown on a light plate; Custom has no logo.
@@ -27,9 +27,9 @@ export default function DashboardClient({
 }) {
   const [message, setMessage] = useState("");
   const [repos, setRepos] = useState<Campaign[]>(campaigns);
-  const [mode, setMode] = useState<"create" | "connect">("create");
-  const [buildError, setBuildError] = useState("");
   const isGitHubApp = Boolean(user.githubToken?.startsWith("github-app:"));
+  const [mode, setMode] = useState<"create" | "connect">(isGitHubApp ? "connect" : "create");
+  const [buildError, setBuildError] = useState("");
   const [search, setSearch] = useState<any[]>([]);
   const [tokens, setTokens] = useState<ApiToken[]>([]);
   const [newToken, setNewToken] = useState("");
@@ -200,13 +200,21 @@ export default function DashboardClient({
         <div className="panel">
           <h2>Build Campaign Repo</h2>
           <div className="segmented">
-            <button type="button" className={mode === "create" ? "active" : ""} onClick={() => { setMode("create"); setBuildError(""); }}>Create repo</button>
+            <button
+              type="button"
+              className={mode === "create" ? "active" : ""}
+              disabled={isGitHubApp}
+              title={isGitHubApp ? "GitHub App access can't create repos — add a manual token to enable this" : undefined}
+              onClick={() => { setMode("create"); setBuildError(""); }}
+            >
+              {isGitHubApp && <Lock size={11} aria-hidden style={{ marginRight: 5 }} />}Create repo
+            </button>
             <button type="button" className={mode === "connect" ? "active" : ""} onClick={() => { setMode("connect"); setBuildError(""); }}>Connect repo</button>
           </div>
-          {isGitHubApp && mode === "create" && (
-            <div className="setup-callout">
-              <strong>GitHub App can&apos;t create repos.</strong>
-              <span>Create the repo on <a href="https://github.com/new" target="_blank" rel="noreferrer">github.com/new</a> then use <button type="button" className="linklike" onClick={() => { setMode("connect"); setBuildError(""); }}>Connect repo</button> — or add a manual token under Connection troubleshooting to enable in-app creation.</span>
+          {isGitHubApp && (
+            <div className="setup-callout callout-warn">
+              <strong><Lock size={13} aria-hidden style={{ marginRight: 6, verticalAlign: "-2px" }} />Creating repos is locked</strong>
+              <span>You&apos;re connected via the <strong>GitHub App</strong>, which can <strong>connect existing repos</strong> but can&apos;t create new ones. Make the repo at <a href="https://github.com/new" target="_blank" rel="noreferrer">github.com/new</a>, then use <button type="button" className="linklike" onClick={() => { setMode("connect"); setBuildError(""); }}>Connect repo</button> — or add a manual GitHub token under <em>Connection troubleshooting</em> to unlock creation.</span>
             </div>
           )}
           <form onSubmit={buildRepo} className="stack">
