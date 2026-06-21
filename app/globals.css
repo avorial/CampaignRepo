@@ -1089,6 +1089,11 @@ code {
   overflow: hidden;
 }
 
+.reader-shell {
+  margin: 0 auto;
+  max-width: 1200px;
+}
+
 .editor-toolbar {
   display: flex;
   gap: 8px;

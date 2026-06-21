@@ -19,7 +19,7 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
   const [mode, setMode] = useState<"gm" | "player" | "handout">(canManage ? "gm" : "player");
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [isEditing, setIsEditing] = useState(canManage);
+  const [isEditing, setIsEditing] = useState(false);
   const [conflictPage, setConflictPage] = useState<WikiPage | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [sourceJsonDraft, setSourceJsonDraft] = useState("");
@@ -47,6 +47,7 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
 
   useEffect(() => {
     loadPage();
+    setIsEditing(false);
     fetch(`/api/campaigns/${campaign.id}/pages`)
       .then((res) => res.json())
       .then((data) => setKnownPages(Array.isArray(data.pages) ? data.pages : []));
@@ -324,6 +325,33 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
   const tradeCodes = Array.isArray(frontmatter.tradeCodes) ? frontmatter.tradeCodes : [];
   const isTraveller = campaign.gameType === "Traveller";
   const isEvent = frontmatter.category === "event";
+
+  if (!isEditing) {
+    return (
+      <section className="reader-shell">
+        <div className="editor-panel">
+          <div className="editor-toolbar">
+            {canManage && <button type="button" className={mode === "gm" ? "active" : ""} onClick={() => setMode("gm")}>GM preview</button>}
+            <button type="button" className={mode === "player" ? "active" : ""} onClick={() => setMode("player")}>Player preview</button>
+            <button type="button" className={mode === "handout" ? "active" : ""} onClick={() => setMode("handout")}>Handout</button>
+            {canManage && <button type="button" onClick={() => setIsEditing(true)}>Edit page</button>}
+            {canManage && <button type="button" className="danger" disabled={isSaving} onClick={deletePage}>Delete page</button>}
+          </div>
+          {message && <p className="toast editor-toast">{message}</p>}
+          <article className={mode === "handout" ? "preview page-reader handout-preview" : "preview page-reader"}>
+            {mode === "handout" && (
+              <header className="handout-header">
+                <p>Player Handout</p>
+                <h1>{frontmatter.name}</h1>
+                {frontmatter.summary && <span>{frontmatter.summary}</span>}
+              </header>
+            )}
+            <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
+          </article>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <form onSubmit={save} className="page-grid">
