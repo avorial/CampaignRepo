@@ -752,6 +752,11 @@ code {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.user-edit-panel {
+  display: grid;
+  gap: 12px;
+}
+
 .identity-editor label {
   display: grid;
   gap: 6px;
@@ -775,6 +780,38 @@ code {
 
 .checkbox-row input {
   width: auto;
+}
+
+.campaign-editor {
+  border-top: 1px solid var(--border-soft);
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.campaign-editor > span {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.campaign-editor-row {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) 140px;
+}
+
+.campaign-editor-row .checkbox-row {
+  align-self: center;
+  min-height: 0;
+}
+
+.campaign-editor-row select {
+  height: 34px;
+  min-height: 34px;
+  padding: 0 9px;
 }
 
 .user-admin-row span,

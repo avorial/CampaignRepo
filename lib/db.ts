@@ -241,6 +241,22 @@ export function createManualUser(email: string, name: string, passwordHash: stri
   return Number(info.lastInsertRowid);
 }
 
+export function listAllCampaignsForAdmin() {
+  return db
+    .prepare("SELECT id, name, owner, repo, gameType, createdAt FROM campaigns ORDER BY name, owner, repo")
+    .all() as Array<Pick<Campaign, "id" | "name" | "owner" | "repo" | "gameType" | "createdAt">>;
+}
+
+export function setUserCampaignMembership(userId: number, campaignId: number, role: Exclude<CampaignRole, "owner"> | null) {
+  const existing = getCampaignRole(userId, campaignId);
+  if (existing === "owner") throw new Error("Campaign owners cannot be changed from global user editing.");
+  if (!role) {
+    db.prepare("DELETE FROM campaign_memberships WHERE userId = ? AND campaignId = ?").run(userId, campaignId);
+    return;
+  }
+  db.prepare("INSERT OR REPLACE INTO campaign_memberships (campaignId, userId, role) VALUES (?, ?, ?)").run(campaignId, userId, role);
+}
+
 export function setUserDisabled(adminUserId: number, userId: number, disabled: boolean) {
   if (adminUserId === userId && disabled) throw new Error("You cannot disable your own account.");
   db.prepare("UPDATE users SET disabled = ? WHERE id = ?").run(disabled ? 1 : 0, userId);

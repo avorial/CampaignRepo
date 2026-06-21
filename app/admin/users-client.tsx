@@ -8,8 +8,16 @@ type AdminUser = User & {
   campaigns: Array<{ id: number; name: string; owner: string; repo: string; role: string }>;
 };
 
+type AdminCampaign = {
+  id: number;
+  name: string;
+  owner: string;
+  repo: string;
+};
+
 export default function AdminUsersClient({ currentUserId }: { currentUserId: number }) {
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [campaigns, setCampaigns] = useState<AdminCampaign[]>([]);
   const [message, setMessage] = useState("");
   const [temporaryPassword, setTemporaryPassword] = useState("");
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
@@ -19,7 +27,10 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
   async function load() {
     const res = await fetch("/api/admin/users");
     const data = await res.json();
-    if (res.ok) setUsers(data.users || []);
+    if (res.ok) {
+      setUsers(data.users || []);
+      setCampaigns(data.campaigns || []);
+    }
     else setMessage(data.error || "Could not load users.");
   }
 
@@ -33,6 +44,7 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
     const data = await res.json();
     if (res.ok) {
       setUsers(data.users || []);
+      setCampaigns(data.campaigns || []);
       if (data.temporaryPassword) {
         setTemporaryPassword(data.temporaryPassword);
         setMessage("Temporary password created. Copy it now.");
@@ -57,6 +69,7 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
     const data = await res.json();
     if (res.ok) {
       setUsers(data.users || []);
+      setCampaigns(data.campaigns || []);
       setTemporaryPassword(data.temporaryPassword || "");
       setCreateDraft({ name: "", email: "", isAdmin: false });
       setMessage("Account created. Copy the temporary password now.");
@@ -80,6 +93,19 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
       email: identityDraft.email
     });
     if (saved) setEditingUserId(null);
+  }
+
+  function userCampaignRole(user: AdminUser, campaignId: number) {
+    return user.campaigns.find((campaign) => campaign.id === campaignId)?.role || "";
+  }
+
+  async function setCampaignMembership(userId: number, campaignId: number, role: "gm" | "player" | null) {
+    await updateUser({
+      action: "set-campaign-membership",
+      userId,
+      campaignId,
+      role
+    });
   }
 
   async function copyTemporaryPassword() {
@@ -149,22 +175,52 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
             <article key={user.id} className="user-admin-row">
               <div className="user-identity">
                 {editingUserId === user.id ? (
-                  <div className="identity-editor">
-                    <label>
-                      <span>Name</span>
-                      <input
-                        value={identityDraft.name}
-                        onChange={(event) => setIdentityDraft((draft) => ({ ...draft, name: event.target.value }))}
-                      />
-                    </label>
-                    <label>
-                      <span>Email login</span>
-                      <input
-                        type="email"
-                        value={identityDraft.email}
-                        onChange={(event) => setIdentityDraft((draft) => ({ ...draft, email: event.target.value }))}
-                      />
-                    </label>
+                  <div className="user-edit-panel">
+                    <div className="identity-editor">
+                      <label>
+                        <span>Name</span>
+                        <input
+                          value={identityDraft.name}
+                          onChange={(event) => setIdentityDraft((draft) => ({ ...draft, name: event.target.value }))}
+                        />
+                      </label>
+                      <label>
+                        <span>Email login</span>
+                        <input
+                          type="email"
+                          value={identityDraft.email}
+                          onChange={(event) => setIdentityDraft((draft) => ({ ...draft, email: event.target.value }))}
+                        />
+                      </label>
+                    </div>
+                    <div className="campaign-editor">
+                      <span>Campaign access</span>
+                      {campaigns.map((campaign) => {
+                        const role = userCampaignRole(user, campaign.id);
+                        const isOwner = role === "owner";
+                        return (
+                          <div key={campaign.id} className="campaign-editor-row">
+                            <label className="checkbox-row">
+                              <input
+                                type="checkbox"
+                                checked={Boolean(role)}
+                                disabled={isOwner}
+                                onChange={(event) => setCampaignMembership(user.id, campaign.id, event.target.checked ? "player" : null)}
+                              />
+                              <span>{campaign.name}</span>
+                            </label>
+                            <select
+                              value={role === "gm" ? "gm" : "player"}
+                              disabled={!role || isOwner}
+                              onChange={(event) => setCampaignMembership(user.id, campaign.id, event.target.value as "gm" | "player")}
+                            >
+                              <option value="player">Player</option>
+                              <option value="gm">GM</option>
+                            </select>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 ) : (
                   <>

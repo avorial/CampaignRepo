@@ -6,10 +6,12 @@ import {
   createCampaignInvite,
   getCampaignRole,
   getDb,
+  listAllCampaignsForAdmin,
   listUsers,
   listCampaignInvites,
   removeCampaignMember,
   revokeCampaignInvite,
+  setUserCampaignMembership,
   searchDocs,
   updateUserIdentity,
   updateCampaignMember,
@@ -110,6 +112,24 @@ describe("global admin user identity", () => {
     expect(player?.campaigns).toEqual([
       expect.objectContaining({ id: campaignId, name: "Test", role: "player" })
     ]);
+  });
+
+  it("lets global admin edit a user's campaign memberships", () => {
+    const db = getDb();
+    const id = Number(db.prepare("INSERT INTO users (email, name, passwordHash) VALUES (?, ?, ?)").run("member-edit@test", "Member Edit", "x").lastInsertRowid);
+
+    expect(listAllCampaignsForAdmin()).toEqual([
+      expect.objectContaining({ id: campaignId, name: "Test" })
+    ]);
+
+    setUserCampaignMembership(id, campaignId, "player");
+    expect(getCampaignRole(id, campaignId)).toBe("player");
+
+    setUserCampaignMembership(id, campaignId, "gm");
+    expect(getCampaignRole(id, campaignId)).toBe("gm");
+
+    setUserCampaignMembership(id, campaignId, null);
+    expect(getCampaignRole(id, campaignId)).toBeNull();
   });
 
   it("updates a user's login email and display name", () => {

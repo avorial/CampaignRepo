@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hashPassword, requireUser } from "@/lib/auth";
-import { createManualUser, listUsers, resetUserPassword, setUserAdmin, setUserDisabled, updateUserIdentity } from "@/lib/db";
+import { createManualUser, listAllCampaignsForAdmin, listUsers, resetUserPassword, setUserAdmin, setUserCampaignMembership, setUserDisabled, updateUserIdentity } from "@/lib/db";
 
 const actionSchema = z.discriminatedUnion("action", [
   z.object({
@@ -24,6 +24,12 @@ const actionSchema = z.discriminatedUnion("action", [
     userId: z.number().int().positive(),
     email: z.string().email(),
     name: z.string().trim().min(1)
+  }),
+  z.object({
+    action: z.literal("set-campaign-membership"),
+    userId: z.number().int().positive(),
+    campaignId: z.number().int().positive(),
+    role: z.enum(["gm", "player"]).nullable()
   })
 ]);
 
@@ -40,7 +46,7 @@ function temporaryPassword() {
 export async function GET() {
   const user = await requireUser();
   if (!user.isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  return NextResponse.json({ users: listUsers() });
+  return NextResponse.json({ users: listUsers(), campaigns: listAllCampaignsForAdmin() });
 }
 
 export async function POST(req: Request) {
@@ -51,7 +57,7 @@ export async function POST(req: Request) {
 
   try {
     createManualUser(input.email, input.name, await hashPassword(password), Boolean(input.isAdmin));
-    return NextResponse.json({ users: listUsers(), temporaryPassword: password });
+    return NextResponse.json({ users: listUsers(), campaigns: listAllCampaignsForAdmin(), temporaryPassword: password });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "User creation failed." }, { status: 400 });
   }
@@ -66,21 +72,26 @@ export async function PATCH(req: Request) {
     if (input.action === "reset-password") {
       const password = temporaryPassword();
       resetUserPassword(input.userId, await hashPassword(password));
-      return NextResponse.json({ users: listUsers(), temporaryPassword: password });
+      return NextResponse.json({ users: listUsers(), campaigns: listAllCampaignsForAdmin(), temporaryPassword: password });
     }
 
     if (input.action === "set-disabled") {
       setUserDisabled(user.id, input.userId, input.disabled);
-      return NextResponse.json({ users: listUsers() });
+      return NextResponse.json({ users: listUsers(), campaigns: listAllCampaignsForAdmin() });
     }
 
     if (input.action === "update-identity") {
       updateUserIdentity(input.userId, input.email, input.name);
-      return NextResponse.json({ users: listUsers() });
+      return NextResponse.json({ users: listUsers(), campaigns: listAllCampaignsForAdmin() });
+    }
+
+    if (input.action === "set-campaign-membership") {
+      setUserCampaignMembership(input.userId, input.campaignId, input.role);
+      return NextResponse.json({ users: listUsers(), campaigns: listAllCampaignsForAdmin() });
     }
 
     setUserAdmin(user.id, input.userId, input.isAdmin);
-    return NextResponse.json({ users: listUsers() });
+    return NextResponse.json({ users: listUsers(), campaigns: listAllCampaignsForAdmin() });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "User update failed." }, { status: 400 });
   }
