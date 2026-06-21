@@ -1,13 +1,16 @@
+import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireUser } from "@/lib/auth";
-import { addCampaignMember, getCampaign, listCampaignMembers, removeCampaignMember, updateCampaignMember } from "@/lib/db";
+import { hashPassword, requireUser } from "@/lib/auth";
+import { addCampaignMember, createManualUser, getCampaign, listCampaignMembers, removeCampaignMember, updateCampaignMember } from "@/lib/db";
 
 const roleSchema = z.enum(["gm", "player"]);
 
 const addSchema = z.object({
   email: z.string().email(),
-  role: roleSchema
+  role: roleSchema,
+  name: z.string().trim().min(1).optional(),
+  createAccount: z.boolean().optional()
 });
 
 const updateSchema = z.object({
@@ -18,6 +21,10 @@ const updateSchema = z.object({
 const deleteSchema = z.object({
   userId: z.number()
 });
+
+function temporaryPassword() {
+  return `cr-${crypto.randomBytes(9).toString("base64url")}`;
+}
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -36,10 +43,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (campaign.role !== "owner" && campaign.role !== "gm") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const input = addSchema.parse(await req.json());
   try {
+    let temporaryPasswordValue: string | undefined;
+    if (input.createAccount) {
+      if (!input.name) throw new Error("Name is required to create an account.");
+      temporaryPasswordValue = temporaryPassword();
+      createManualUser(input.email, input.name, await hashPassword(temporaryPasswordValue));
+    }
     addCampaignMember(user.id, campaign.id, input.email, input.role);
-    return NextResponse.json({ ok: true, members: listCampaignMembers(user.id, campaign.id) });
+    return NextResponse.json({ ok: true, members: listCampaignMembers(user.id, campaign.id), temporaryPassword: temporaryPasswordValue });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Could not add member." }, { status: 400 });
   }

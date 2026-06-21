@@ -21,6 +21,7 @@ export default function AdminClient({ campaign }: { campaign: Campaign }) {
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [message, setMessage] = useState("");
   const [origin, setOrigin] = useState("");
+  const [temporaryPassword, setTemporaryPassword] = useState("");
 
   async function load() {
     const [membersRes, invitesRes, reviewsRes] = await Promise.all([
@@ -48,6 +49,7 @@ export default function AdminClient({ campaign }: { campaign: Campaign }) {
   async function addMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
+    setTemporaryPassword("");
     const form = new FormData(event.currentTarget);
     const res = await fetch(`/api/campaigns/${campaign.id}/admin/members`, {
       method: "POST",
@@ -62,6 +64,31 @@ export default function AdminClient({ campaign }: { campaign: Campaign }) {
       setMessage(data.error === "No CampaignRepo account exists for that email."
         ? "That email has not registered yet. Create an invite link and send it to them instead."
         : data.error || "Could not add member.");
+    }
+  }
+
+  async function createAccount(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("");
+    setTemporaryPassword("");
+    const form = new FormData(event.currentTarget);
+    const res = await fetch(`/api/campaigns/${campaign.id}/admin/members`, {
+      method: "POST",
+      body: JSON.stringify({
+        createAccount: true,
+        name: form.get("name"),
+        email: form.get("email"),
+        role: form.get("role")
+      })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setMembers(data.members);
+      setTemporaryPassword(data.temporaryPassword || "");
+      event.currentTarget.reset();
+      setMessage("Account created and added to campaign. Copy the temporary password now.");
+    } else {
+      setMessage(data.error || "Could not create account.");
     }
   }
 
@@ -100,6 +127,11 @@ export default function AdminClient({ campaign }: { campaign: Campaign }) {
   async function copyInvite(token: string) {
     await navigator.clipboard.writeText(inviteUrl(token));
     setMessage("Invite link copied.");
+  }
+
+  async function copyTemporaryPassword() {
+    await navigator.clipboard.writeText(temporaryPassword);
+    setMessage("Temporary password copied.");
   }
 
   async function setRole(userId: number, role: "gm" | "player") {
@@ -149,6 +181,24 @@ export default function AdminClient({ campaign }: { campaign: Campaign }) {
 
   return (
     <section className="admin-grid">
+      <div className="panel">
+        <h2>Create account</h2>
+        <p className="muted">Create a CampaignRepo login, add it to this campaign, and choose GM or player access.</p>
+        <form onSubmit={createAccount} className="stack">
+          <label>Name<input name="name" required placeholder="Player name" /></label>
+          <label>Email<input name="email" type="email" required placeholder="player@example.com" /></label>
+          <label>Rights<select name="role"><option value="player">Player</option><option value="gm">GM</option></select></label>
+          <button>Create and add</button>
+        </form>
+        {temporaryPassword && (
+          <div className="admin-secret compact-secret">
+            <span>Temporary password</span>
+            <code>{temporaryPassword}</code>
+            <button type="button" className="secondary" onClick={copyTemporaryPassword}>Copy</button>
+          </div>
+        )}
+      </div>
+
       <div className="panel">
         <h2>Add existing account</h2>
         <p className="muted">Use this only after the person already has a CampaignRepo login. For a new test account, create an invite link instead.</p>

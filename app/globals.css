@@ -832,6 +832,17 @@ code {
   text-transform: uppercase;
 }
 
+.compact-secret {
+  align-items: stretch;
+  display: grid;
+  justify-content: stretch;
+  margin: 12px 0 0;
+}
+
+.compact-secret code {
+  overflow-wrap: anywhere;
+}
+
 .setup-callout {
   background: rgba(212, 169, 87, 0.1);
   border: 1px solid rgba(212, 169, 87, 0.28);
