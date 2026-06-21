@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
-import { getTextFile, GitHubError, putFile } from "@/lib/github";
+import { deleteFile, getTextFile, GitHubError, putFile } from "@/lib/github";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { rebuildSearchIndex } from "@/lib/search";
 
@@ -86,6 +86,27 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         : error instanceof Error
           ? error.message
           : "Save failed.";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string; slug: string }> }) {
+  const user = await requireUser();
+  const { id, slug } = await params;
+  const campaign = getCampaign(user.id, Number(id));
+  if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const path = `wiki/pages/${slug}.md`;
+  try {
+    const file = await getTextFile(user.githubToken, campaign, path);
+    await deleteFile(user.githubToken, campaign, path, `CampaignRepo: delete ${slug}`, file.sha);
+    await rebuildSearchIndex(user.githubToken, campaign);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    if (error instanceof GitHubError && error.status === 404) {
+      return NextResponse.json({ ok: true, alreadyMissing: true });
+    }
+    const message = error instanceof GitHubError ? `GitHub error${error.status ? ` ${error.status}` : ""}: ${error.message}` : error instanceof Error ? error.message : "Delete failed.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

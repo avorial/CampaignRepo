@@ -125,6 +125,26 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
     }
   }
 
+  async function deletePage() {
+    if (isSaving) return;
+    if (!confirm(`Delete "${frontmatter.name || slug}"? This removes the page from the repo. Other pages that link to it will show as missing.`)) return;
+    setIsSaving(true);
+    setMessage("Deleting page...");
+    try {
+      const res = await fetch(`/api/campaigns/${campaign.id}/pages/${slug}`, { method: "DELETE" });
+      if (res.ok) {
+        router.push(`/campaigns/${campaign.id}`);
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      setMessage(data.error || "Delete failed.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Delete failed.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await savePage(false);
@@ -400,6 +420,7 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
           {fieldsEditable && <button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Save"}</button>}
           {fieldsEditable && <button type="button" disabled={isSaving} onClick={() => savePage(true)}>{isSaving ? "Saving..." : "Save and finish"}</button>}
           {canManage && !isEditing && <button type="button" onClick={() => setIsEditing(true)}>Edit page</button>}
+          {canManage && <button type="button" className="danger" disabled={isSaving} onClick={deletePage}>Delete page</button>}
         </div>
         {message && <p className="toast editor-toast">{message}</p>}
         {fieldsEditable && (
