@@ -331,6 +331,40 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
   const isTraveller = campaign.gameType === "Traveller";
   const isEvent = frontmatter.category === "event";
 
+  // Ancestor chain (breadcrumbs) + cycle-safe parent options.
+  const pageBySlug = new Map(knownPages.map((p) => [p.slug, p]));
+  const breadcrumbs: { slug: string; name: string }[] = [];
+  {
+    let cursor = frontmatter.parent as string | undefined;
+    const seen = new Set<string>([slug]);
+    while (cursor && pageBySlug.has(cursor) && !seen.has(cursor)) {
+      seen.add(cursor);
+      const ancestor = pageBySlug.get(cursor)!;
+      breadcrumbs.unshift({ slug: ancestor.slug, name: ancestor.frontmatter.name });
+      cursor = ancestor.frontmatter.parent;
+    }
+  }
+  const childMap = new Map<string, string[]>();
+  for (const p of knownPages) {
+    const par = p.frontmatter.parent || "";
+    childMap.set(par, [...(childMap.get(par) || []), p.slug]);
+  }
+  const blocked = new Set<string>([slug]);
+  const stack = [slug];
+  while (stack.length) {
+    const cur = stack.pop()!;
+    for (const child of childMap.get(cur) || []) if (!blocked.has(child)) (blocked.add(child), stack.push(child));
+  }
+  const parentOptions = knownPages.filter((p) => !blocked.has(p.slug)).sort((a, b) => a.frontmatter.name.localeCompare(b.frontmatter.name));
+  const breadcrumbsEl = breadcrumbs.length > 0 && (
+    <nav className="breadcrumbs">
+      {breadcrumbs.map((b) => (
+        <a key={b.slug} href={`/campaigns/${campaign.id}/pages/${b.slug}`}>{b.name}</a>
+      ))}
+      <span>{frontmatter.name}</span>
+    </nav>
+  );
+
   if (!isEditing) {
     return (
       <section className="reader-shell">
@@ -343,6 +377,7 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
             {canManage && <button type="button" className="danger" disabled={isSaving} onClick={deletePage}>Delete page</button>}
           </div>
           {message && <p className="toast editor-toast">{message}</p>}
+          {mode !== "handout" && breadcrumbsEl}
           <article className={mode === "handout" ? "preview page-reader handout-preview" : "preview page-reader"}>
             {mode === "handout" && (
               <header className="handout-header">
@@ -361,6 +396,7 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
   return (
     <form onSubmit={save} className="page-grid">
       <aside className="page-sidebar">
+        {breadcrumbsEl}
         <h2>{frontmatter.name}</h2>
         <p>{frontmatter.summary || "No summary yet."}</p>
         <div className="badges">
@@ -377,6 +413,10 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
           <label>Status<input value={frontmatter.status || ""} onChange={(e) => updateField("status", e.target.value)} readOnly={!fieldsEditable} placeholder="alive, active, destroyed..." /></label>
           <label>Tags<input value={tags.join(", ")} onChange={(e) => updateField("tags", e.target.value.split(",").map((v) => v.trim()).filter(Boolean))} readOnly={!fieldsEditable} /></label>
           <label>Aliases<input value={(frontmatter.aliases || []).join(", ")} onChange={(e) => updateField("aliases", e.target.value.split(",").map((v) => v.trim()).filter(Boolean))} readOnly={!fieldsEditable} /></label>
+          <label>Parent page<select value={frontmatter.parent || ""} onChange={(e) => updateField("parent", e.target.value || undefined)} disabled={!fieldsEditable}>
+            <option value="">— none (top level) —</option>
+            {parentOptions.map((p) => <option key={p.slug} value={p.slug}>{p.frontmatter.name}</option>)}
+          </select></label>
         </div>
 
         <div className="field-group">

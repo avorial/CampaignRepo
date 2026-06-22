@@ -573,6 +573,74 @@ code {
   font-size: 11px;
 }
 
+.nav-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nav-tree-toggle {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  min-height: 0;
+  padding: 0;
+  width: 16px;
+  flex: none;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.nav-tree-toggle:hover {
+  color: var(--gold);
+  border: 0;
+}
+
+.nav-tree-spacer {
+  width: 16px;
+  flex: none;
+}
+
+.nav-tree-link {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.cat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.breadcrumbs a {
+  color: var(--text-secondary);
+}
+
+.breadcrumbs a:hover {
+  color: var(--gold);
+}
+
+.breadcrumbs a::after {
+  content: "›";
+  margin-left: 6px;
+  color: var(--text-tertiary);
+}
+
 .nav-group h3,
 .page-sidebar h3 {
   color: var(--text-tertiary);

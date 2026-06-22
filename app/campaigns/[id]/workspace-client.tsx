@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, type ReactNode, useEffect, useState } from "react";
 import type { Campaign, CampaignGraphEdge, CampaignGraphNode, CampaignMedia, CampaignTimelineItem, WikiPage, WikiTemplate } from "@/lib/types";
 import { gameTypes } from "@/lib/templates";
 
@@ -30,7 +30,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const [search, setSearch] = useState<any[]>([]);
   const [pageCategory, setPageCategory] = useState(categories[0]?.id || "character");
   const [navFilter, setNavFilter] = useState("");
-  const [openCats, setOpenCats] = useState<Record<string, boolean>>({});
+  const [openNodes, setOpenNodes] = useState<Record<string, boolean>>({});
   const pendingReviews = pages.filter((page) => page.frontmatter.approvalStatus !== "approved").length;
   const pageTemplates = templates.filter((template) => template.category === pageCategory);
 
@@ -261,8 +261,51 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     setSearch(data.results || []);
   }
 
-  const grouped = categories.map((cat) => ({ ...cat, pages: pages.filter((page) => page.frontmatter.category === cat.id) }));
   const canManage = campaign.role === "owner" || campaign.role === "gm";
+
+  // Sidebar hierarchy: build a parent->children tree from frontmatter.parent.
+  const navFilterLc = navFilter.trim().toLowerCase();
+  const knownSlugs = new Set(pages.map((page) => page.slug));
+  const childrenByParent = new Map<string, WikiPage[]>();
+  for (const page of [...pages].sort((a, b) => a.frontmatter.name.localeCompare(b.frontmatter.name))) {
+    const parent = page.frontmatter.parent && knownSlugs.has(page.frontmatter.parent) ? page.frontmatter.parent : "";
+    childrenByParent.set(parent, [...(childrenByParent.get(parent) || []), page]);
+  }
+  const navLink = (page: WikiPage, depth: number, hasKids: boolean) => {
+    const isOpen = openNodes[page.slug] ?? false;
+    return (
+      <div className="nav-tree-item" key={page.slug}>
+        <div className="nav-tree-row" style={{ paddingLeft: depth * 14 }}>
+          {hasKids ? (
+            <button type="button" className="nav-tree-toggle" aria-expanded={isOpen} onClick={() => setOpenNodes((s) => ({ ...s, [page.slug]: !isOpen }))}>{isOpen ? "▾" : "▸"}</button>
+          ) : (
+            <span className="nav-tree-spacer" />
+          )}
+          <Link className="nav-link nav-tree-link" href={`/campaigns/${campaign.id}/pages/${page.slug}`}>
+            <span className="cat-dot" style={{ background: `var(--cat-${page.frontmatter.category})` }} />
+            {page.frontmatter.name}
+          </Link>
+        </div>
+        {hasKids && isOpen && (childrenByParent.get(page.slug) || []).map((child) => navLink(child, depth + 1, (childrenByParent.get(child.slug) || []).length > 0))}
+      </div>
+    );
+  };
+  let navTree: ReactNode;
+  if (navFilterLc) {
+    const matches = pages.filter((page) => page.frontmatter.name.toLowerCase().includes(navFilterLc));
+    navTree = matches.length ? (
+      matches.map((page) => (
+        <Link className="nav-link nav-tree-link" key={page.slug} href={`/campaigns/${campaign.id}/pages/${page.slug}`}>
+          <span className="cat-dot" style={{ background: `var(--cat-${page.frontmatter.category})` }} />
+          {page.frontmatter.name}
+        </Link>
+      ))
+    ) : (
+      <p className="muted">No pages match.</p>
+    );
+  } else {
+    navTree = (childrenByParent.get("") || []).map((page) => navLink(page, 0, (childrenByParent.get(page.slug) || []).length > 0));
+  }
   const templatesByGame = gameTypes.map((gameType) => ({ gameType, templates: templates.filter((template) => template.gameType === gameType) }));
   const linkedNodes = graph.nodes
     .map((node) => ({
@@ -302,25 +345,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
           </Link>
         ))}
         <input className="nav-filter" value={navFilter} onChange={(event) => setNavFilter(event.target.value)} placeholder="Filter pages" />
-        {grouped.map((group) => {
-          const f = navFilter.trim().toLowerCase();
-          const visible = f ? group.pages.filter((page) => page.frontmatter.name.toLowerCase().includes(f)) : group.pages;
-          if (f && visible.length === 0) return null;
-          const open = f ? true : (openCats[group.id] ?? group.pages.length <= 8);
-          return (
-            <div key={group.id} className="nav-group">
-              <button type="button" className="nav-group-header" aria-expanded={open} onClick={() => setOpenCats((state) => ({ ...state, [group.id]: !open }))}>
-                <span className="nav-group-title">{open ? "▾" : "▸"} {group.label}</span>
-                <span className="nav-count">{group.pages.length}</span>
-              </button>
-              {open && visible.map((page) => (
-                <Link className="nav-link" key={page.slug} href={`/campaigns/${campaign.id}/pages/${page.slug}`}>
-                  {page.frontmatter.name}
-                </Link>
-              ))}
-            </div>
-          );
-        })}
+        {navTree}
         {canManage && pendingReviews > 0 && (
           <Link href={`/campaigns/${campaign.id}/admin`} className="review-callout">
             {pendingReviews} review{pendingReviews === 1 ? "" : "s"} waiting

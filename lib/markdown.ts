@@ -36,6 +36,8 @@ export function normalizeFrontmatter(raw: Record<string, unknown>, fallbackName:
     knownToPlayers: Boolean(raw.knownToPlayers ?? raw.visibility === "players"),
     keyLinks: Array.isArray(raw.keyLinks) ? raw.keyLinks.map(String) : [],
     aliases: Array.isArray(raw.aliases) ? raw.aliases.map(String) : [],
+    parent: raw.parent ? String(raw.parent) : undefined,
+    cover: raw.cover ? String(raw.cover) : undefined,
     tradeCodes: Array.isArray(raw.tradeCodes) ? raw.tradeCodes.map(String) : undefined
   };
 }

@@ -68,6 +68,8 @@ export type WikiPageFrontmatter = {
   knownToPlayers: boolean;
   keyLinks: string[];
   aliases: string[];
+  parent?: string;
+  cover?: string;
   foundryLink?: string;
   sourceImport?: string;
   status?: string;
