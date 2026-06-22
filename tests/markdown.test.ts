@@ -90,6 +90,13 @@ describe("renderMarkdown", () => {
     expect(html).toContain('href="/campaigns/1/pages/jardin#public-face"');
   });
 
+  it("renders :::gallery blocks into an image grid", () => {
+    const html = renderMarkdown(":::gallery\n![](/wiki/media/a.jpg)\n![](/wiki/media/b.jpg)\n:::", "gm", undefined, (p) => `/media/${p}`);
+    expect(html).toContain('class="gallery"');
+    expect(html).toContain("/media/a.jpg");
+    expect(html).toContain("/media/b.jpg");
+  });
+
   it("expands ![[Page]] embeds inline", () => {
     const includeResolve = (target: string) => (target.toLowerCase() === "jardin" ? "Embedded **lore** body." : null);
     const html = renderMarkdown("Intro.\n\n![[Jardin]]", "gm", resolve, undefined, includeResolve);

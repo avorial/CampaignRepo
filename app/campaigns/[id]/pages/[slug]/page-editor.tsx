@@ -378,6 +378,10 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
     </nav>
   );
 
+  const coverRaw = frontmatter.cover ? String(frontmatter.cover) : "";
+  const coverSrc = coverRaw ? (/^https?:\/\//i.test(coverRaw) ? coverRaw : resolveMedia(coverRaw.replace(/^\/?wiki\/media\//, ""))) : "";
+  const coverEl = coverSrc ? <img className="page-cover" src={coverSrc} alt="" /> : null;
+
   if (!isEditing) {
     return (
       <section className="reader-shell">
@@ -392,6 +396,7 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
           {message && <p className="toast editor-toast">{message}</p>}
           {mode !== "handout" && breadcrumbsEl}
           <article className={mode === "handout" ? "preview page-reader handout-preview" : "preview page-reader"}>
+            {coverEl}
             {mode === "handout" && (
               <header className="handout-header">
                 <p>Player Handout</p>
@@ -442,6 +447,7 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
         <div className="field-group">
           <h3>Links</h3>
           <label>Key links<input value={keyLinks.join(", ")} onChange={(e) => updateField("keyLinks", e.target.value.split(",").map((v) => v.trim()).filter(Boolean))} readOnly={!fieldsEditable} /></label>
+          <label>Cover image<input value={frontmatter.cover || ""} onChange={(e) => updateField("cover", e.target.value || undefined)} readOnly={!fieldsEditable} placeholder="filename.jpg (in /wiki/media) or URL" /></label>
           <label>Foundry link<input value={frontmatter.foundryLink || ""} onChange={(e) => updateField("foundryLink", e.target.value)} readOnly={!fieldsEditable} placeholder="Actor UUID or scene URL" /></label>
         </div>
 
@@ -568,6 +574,7 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
           </div>
         ) : (
           <article className={mode === "handout" ? "preview page-reader handout-preview" : "preview page-reader"}>
+            {coverEl}
             {mode === "handout" && (
               <header className="handout-header">
                 <p>Player Handout</p>

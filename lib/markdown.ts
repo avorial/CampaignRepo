@@ -128,6 +128,32 @@ function renderInline(markdown: string, resolve?: WikiLinkResolver, resolveMedia
   return html;
 }
 
+function mediaSrc(path: string, resolveMedia?: MediaPathResolver) {
+  const trimmed = path.trim();
+  if (/^https?:\/\//i.test(trimmed) || !resolveMedia) return trimmed;
+  const rel = trimmed.replace(/^\/?wiki\/media\//, "");
+  return resolveMedia(decodeURIComponent(rel));
+}
+
+/** Expand `:::gallery ... :::` blocks into an image grid. */
+function expandGalleries(content: string, resolveMedia?: MediaPathResolver) {
+  return content.replace(/:::gallery\s*([\s\S]*?):::/g, (_match, inner) => {
+    const md = [...String(inner).matchAll(/!\[([^\]]*)\]\(([^)]+)\)/g)].map((m) => ({ alt: m[1], path: m[2] }));
+    const items = md.length
+      ? md
+      : String(inner)
+          .split(/\n+/)
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .map((path) => ({ alt: "", path }));
+    if (!items.length) return "";
+    const imgs = items
+      .map((item) => `<a class="gallery-item" href="${escapeHtml(mediaSrc(item.path, resolveMedia))}" target="_blank" rel="noreferrer"><img src="${escapeHtml(mediaSrc(item.path, resolveMedia))}" alt="${escapeHtml(item.alt)}" loading="lazy" /></a>`)
+      .join("");
+    return `\n\n<div class="gallery">${imgs}</div>\n\n`;
+  });
+}
+
 /** Expand `![[Page]]` embeds inline (one level) using the include resolver. */
 function expandIncludes(content: string, resolve?: IncludeResolver) {
   if (!resolve) return content;
@@ -150,6 +176,7 @@ function expandIncludes(content: string, resolve?: IncludeResolver) {
  */
 export function renderMarkdown(content: string, mode: RenderMode, resolve?: WikiLinkResolver, resolveMedia?: MediaPathResolver, resolveInclude?: IncludeResolver) {
   content = expandIncludes(content, resolveInclude);
+  content = expandGalleries(content, resolveMedia);
   let html: string;
   if (mode !== "gm") {
     html = renderInline(stripGmBlocks(content), resolve, resolveMedia);
