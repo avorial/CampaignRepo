@@ -31,6 +31,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const [pageCategory, setPageCategory] = useState(categories[0]?.id || "character");
   const [navFilter, setNavFilter] = useState("");
   const [openNodes, setOpenNodes] = useState<Record<string, boolean>>({});
+  const [openCats, setOpenCats] = useState<Record<string, boolean>>({});
   const pendingReviews = pages.filter((page) => page.frontmatter.approvalStatus !== "approved").length;
   const pageTemplates = templates.filter((template) => template.category === pageCategory);
 
@@ -263,49 +264,59 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
 
   const canManage = campaign.role === "owner" || campaign.role === "gm";
 
-  // Sidebar hierarchy: build a parent->children tree from frontmatter.parent.
+  // Sidebar: category sections, each with the parent->child hierarchy nested inside.
   const navFilterLc = navFilter.trim().toLowerCase();
-  const knownSlugs = new Set(pages.map((page) => page.slug));
+  const pageBySlug = new Map(pages.map((page) => [page.slug, page]));
+  const sortedPages = [...pages].sort((a, b) => a.frontmatter.name.localeCompare(b.frontmatter.name));
+  // A child nests under its parent only when both share a category.
   const childrenByParent = new Map<string, WikiPage[]>();
-  for (const page of [...pages].sort((a, b) => a.frontmatter.name.localeCompare(b.frontmatter.name))) {
-    const parent = page.frontmatter.parent && knownSlugs.has(page.frontmatter.parent) ? page.frontmatter.parent : "";
-    childrenByParent.set(parent, [...(childrenByParent.get(parent) || []), page]);
+  for (const page of sortedPages) {
+    const parentPage = page.frontmatter.parent ? pageBySlug.get(page.frontmatter.parent) : undefined;
+    if (parentPage && parentPage.frontmatter.category === page.frontmatter.category) {
+      childrenByParent.set(page.frontmatter.parent!, [...(childrenByParent.get(page.frontmatter.parent!) || []), page]);
+    }
   }
-  const navLink = (page: WikiPage, depth: number, hasKids: boolean) => {
+  const catDot = (page: WikiPage) => <span className="cat-dot" style={{ background: `var(--cat-${page.frontmatter.category})` }} />;
+  const navLink = (page: WikiPage, depth: number): ReactNode => {
+    const kids = childrenByParent.get(page.slug) || [];
     const isOpen = openNodes[page.slug] ?? false;
     return (
       <div className="nav-tree-item" key={page.slug}>
         <div className="nav-tree-row" style={{ paddingLeft: depth * 14 }}>
-          {hasKids ? (
+          {kids.length ? (
             <button type="button" className="nav-tree-toggle" aria-expanded={isOpen} onClick={() => setOpenNodes((s) => ({ ...s, [page.slug]: !isOpen }))}>{isOpen ? "▾" : "▸"}</button>
           ) : (
             <span className="nav-tree-spacer" />
           )}
-          <Link className="nav-link nav-tree-link" href={`/campaigns/${campaign.id}/pages/${page.slug}`}>
-            <span className="cat-dot" style={{ background: `var(--cat-${page.frontmatter.category})` }} />
-            {page.frontmatter.name}
-          </Link>
+          <Link className="nav-link nav-tree-link" href={`/campaigns/${campaign.id}/pages/${page.slug}`}>{catDot(page)}{page.frontmatter.name}</Link>
         </div>
-        {hasKids && isOpen && (childrenByParent.get(page.slug) || []).map((child) => navLink(child, depth + 1, (childrenByParent.get(child.slug) || []).length > 0))}
+        {kids.length > 0 && isOpen && kids.map((child) => navLink(child, depth + 1))}
       </div>
     );
   };
-  let navTree: ReactNode;
-  if (navFilterLc) {
-    const matches = pages.filter((page) => page.frontmatter.name.toLowerCase().includes(navFilterLc));
-    navTree = matches.length ? (
-      matches.map((page) => (
-        <Link className="nav-link nav-tree-link" key={page.slug} href={`/campaigns/${campaign.id}/pages/${page.slug}`}>
-          <span className="cat-dot" style={{ background: `var(--cat-${page.frontmatter.category})` }} />
-          {page.frontmatter.name}
-        </Link>
-      ))
-    ) : (
-      <p className="muted">No pages match.</p>
+  const navTree: ReactNode = categories.map((cat) => {
+    const catPages = sortedPages.filter((page) => page.frontmatter.category === cat.id);
+    const visible = navFilterLc ? catPages.filter((page) => page.frontmatter.name.toLowerCase().includes(navFilterLc)) : catPages;
+    if (navFilterLc && visible.length === 0) return null;
+    const open = navFilterLc ? true : (openCats[cat.id] ?? catPages.length > 0);
+    const roots = catPages.filter((page) => {
+      const parentPage = page.frontmatter.parent ? pageBySlug.get(page.frontmatter.parent) : undefined;
+      return !(parentPage && parentPage.frontmatter.category === cat.id);
+    });
+    return (
+      <div className="nav-group" key={cat.id}>
+        <button type="button" className="nav-group-header" aria-expanded={open} onClick={() => setOpenCats((s) => ({ ...s, [cat.id]: !open }))}>
+          <span className="nav-group-title">{open ? "▾" : "▸"} {cat.label}</span>
+          <span className="nav-count">{catPages.length}</span>
+        </button>
+        {open && (navFilterLc
+          ? visible.map((page) => (
+              <Link className="nav-link nav-tree-link nav-tree-filtered" key={page.slug} href={`/campaigns/${campaign.id}/pages/${page.slug}`}>{catDot(page)}{page.frontmatter.name}</Link>
+            ))
+          : roots.map((page) => navLink(page, 0)))}
+      </div>
     );
-  } else {
-    navTree = (childrenByParent.get("") || []).map((page) => navLink(page, 0, (childrenByParent.get(page.slug) || []).length > 0));
-  }
+  });
   const templatesByGame = gameTypes.map((gameType) => ({ gameType, templates: templates.filter((template) => template.gameType === gameType) }));
   const linkedNodes = graph.nodes
     .map((node) => ({

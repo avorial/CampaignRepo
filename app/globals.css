@@ -609,6 +609,10 @@ code {
   min-width: 0;
 }
 
+.nav-tree-filtered {
+  padding-left: 16px;
+}
+
 .cat-dot {
   width: 8px;
   height: 8px;
