@@ -68,6 +68,8 @@ export type RenderMode = "gm" | "player" | "handout";
 /** Resolve a `[[target]]` to an href and whether the page is missing. */
 export type WikiLinkResolver = (target: string) => { href: string; missing: boolean };
 export type MediaPathResolver = (path: string) => string;
+/** Return the Markdown content of an embedded `![[Page]]`, or null if missing. */
+export type IncludeResolver = (target: string) => string | null;
 
 const gmBlockSplitter = /:::gm\s*([\s\S]*?):::/g;
 
@@ -80,25 +82,61 @@ function escapeHtml(value: string) {
     .replace(/'/g, "&#39;");
 }
 
+/** Heading-anchor slug for in-page section links. */
+function anchorize(text: string) {
+  return text.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
 function renderWikiLink(target: string, label: string, resolve?: WikiLinkResolver) {
-  const text = escapeHtml((label || target).trim());
+  const hashIndex = target.indexOf("#");
+  const pageTarget = (hashIndex >= 0 ? target.slice(0, hashIndex) : target).trim();
+  const section = hashIndex >= 0 ? target.slice(hashIndex + 1).trim() : "";
+  const defaultText = label || (section && pageTarget ? `${pageTarget} › ${section}` : section || pageTarget);
+  const text = escapeHtml(defaultText.trim());
+  // Same-page section link: [[#Section]]
+  if (!pageTarget) return `<a class="wiki-link" href="#${escapeHtml(anchorize(section))}">${text}</a>`;
   if (!resolve) return `<a class="wiki-link">${text}</a>`;
-  const { href, missing } = resolve(target.trim());
+  const { href, missing } = resolve(pageTarget);
+  const fullHref = section ? `${href}#${anchorize(section)}` : href;
   const attrs = missing
-    ? `class="wiki-link missing" href="${escapeHtml(href)}" data-missing="true" data-target="${escapeHtml(target.trim())}"`
-    : `class="wiki-link" href="${escapeHtml(href)}"`;
+    ? `class="wiki-link missing" href="${escapeHtml(fullHref)}" data-missing="true" data-target="${escapeHtml(pageTarget)}"`
+    : `class="wiki-link" href="${escapeHtml(fullHref)}"`;
   return `<a ${attrs}>${text}</a>`;
+}
+
+function addHeadingIds(html: string) {
+  return html.replace(/<(h[1-6])>([\s\S]*?)<\/\1>/g, (match, tag, inner) => {
+    const id = anchorize(inner.replace(/<[^>]+>/g, ""));
+    return id ? `<${tag} id="${id}">${inner}</${tag}>` : match;
+  });
 }
 
 /** Convert wiki-link syntax, run through marked, but do not sanitize (caller wraps). */
 function renderInline(markdown: string, resolve?: WikiLinkResolver, resolveMedia?: MediaPathResolver) {
-  const withLinks = markdown.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_match, target, label) =>
-    renderWikiLink(String(target), label ? String(label) : "", resolve)
-  );
-  const html = marked.parse(withLinks, { async: false }) as string;
-  if (!resolveMedia) return html;
-  return html.replace(/(src|href)="\/wiki\/media\/([^"]+)"/g, (_match, attr, path) => {
-    return `${attr}="${escapeHtml(resolveMedia(decodeURIComponent(String(path))))}"`;
+  // Any leftover (nested) include markers degrade to normal links.
+  const withLinks = markdown
+    .replace(/!\[\[/g, "[[")
+    .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_match, target, label) =>
+      renderWikiLink(String(target), label ? String(label) : "", resolve)
+    );
+  let html = addHeadingIds(marked.parse(withLinks, { async: false }) as string);
+  if (resolveMedia) {
+    html = html.replace(/(src|href)="\/wiki\/media\/([^"]+)"/g, (_match, attr, path) => {
+      return `${attr}="${escapeHtml(resolveMedia(decodeURIComponent(String(path))))}"`;
+    });
+  }
+  return html;
+}
+
+/** Expand `![[Page]]` embeds inline (one level) using the include resolver. */
+function expandIncludes(content: string, resolve?: IncludeResolver) {
+  if (!resolve) return content;
+  return content.replace(/!\[\[([^\]]+?)\]\]/g, (_match, inner) => {
+    const target = String(inner).split("#")[0].split("|")[0].trim();
+    const included = resolve(target);
+    if (included == null) return `*(missing embed: ${target})*`;
+    // Inline the embedded Markdown so it renders; a rule sets it off visually.
+    return `\n\n---\n\n${included}\n\n---\n\n`;
   });
 }
 
@@ -110,7 +148,8 @@ function renderInline(markdown: string, resolve?: WikiLinkResolver, resolveMedia
  * Output is always passed through DOMPurify, so untrusted page bodies cannot
  * inject script or event-handler attributes.
  */
-export function renderMarkdown(content: string, mode: RenderMode, resolve?: WikiLinkResolver, resolveMedia?: MediaPathResolver) {
+export function renderMarkdown(content: string, mode: RenderMode, resolve?: WikiLinkResolver, resolveMedia?: MediaPathResolver, resolveInclude?: IncludeResolver) {
+  content = expandIncludes(content, resolveInclude);
   let html: string;
   if (mode !== "gm") {
     html = renderInline(stripGmBlocks(content), resolve, resolveMedia);

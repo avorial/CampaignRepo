@@ -84,6 +84,19 @@ describe("renderMarkdown", () => {
     expect(html).toContain("<code>code</code>");
   });
 
+  it("adds heading ids and resolves section links", () => {
+    const html = renderMarkdown("## Public Face\n\n[[Jardin#Public Face]]", "gm", resolve);
+    expect(html).toContain('id="public-face"');
+    expect(html).toContain('href="/campaigns/1/pages/jardin#public-face"');
+  });
+
+  it("expands ![[Page]] embeds inline", () => {
+    const includeResolve = (target: string) => (target.toLowerCase() === "jardin" ? "Embedded **lore** body." : null);
+    const html = renderMarkdown("Intro.\n\n![[Jardin]]", "gm", resolve, undefined, includeResolve);
+    expect(html).toContain("Embedded");
+    expect(html).toContain("<strong>lore</strong>");
+  });
+
   it("strips gm secret blocks in player mode but keeps them in gm mode", () => {
     const src = "Open.\n\n:::gm\nThe assassination report was altered.\n:::";
     const player = renderMarkdown(src, "player");
