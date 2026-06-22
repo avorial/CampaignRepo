@@ -21,7 +21,8 @@ portal · invites/admin · MCP/AI upload.
 
 ---
 
-## Tier 1 — Signature features (high impact, fit the file model)
+## Tier 1 — Signature features  ✅ ALL SHIPPED
+*(Interactive maps, nested hierarchy, expanded types, transclusion, galleries/covers — all live on `main`.)*
 
 ### 1. Interactive maps with pins  ·  L  ·  *LegendKeeper's killer feature*
 Upload a map image to `/wiki/media`; drop **pins** that link to pages; click a
