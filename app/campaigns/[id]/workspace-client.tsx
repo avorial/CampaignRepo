@@ -32,6 +32,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const [navFilter, setNavFilter] = useState("");
   const [openNodes, setOpenNodes] = useState<Record<string, boolean>>({});
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({});
+  const [tab, setTab] = useState(campaign.role === "owner" || campaign.role === "gm" ? "pages" : "world");
   const pendingReviews = pages.filter((page) => page.frontmatter.approvalStatus !== "approved").length;
   const pageTemplates = templates.filter((template) => template.category === pageCategory);
 
@@ -263,6 +264,15 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   }
 
   const canManage = campaign.role === "owner" || campaign.role === "gm";
+  const tabs = canManage
+    ? [
+        { id: "pages", label: "Pages" },
+        { id: "world", label: "World" },
+        { id: "media", label: "Media" },
+        { id: "templates", label: "Templates" },
+        { id: "settings", label: "Settings" }
+      ]
+    : [{ id: "world", label: "World" }];
 
   // Sidebar: category sections, each with the parent->child hierarchy nested inside.
   const navFilterLc = navFilter.trim().toLowerCase();
@@ -365,7 +375,14 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
       </aside>
 
       <div className="workspace-main">
-        {canManage && (
+        {tabs.length > 1 && (
+          <nav className="tabs">
+            {tabs.map((t) => (
+              <button type="button" key={t.id} className={tab === t.id ? "tab active" : "tab"} onClick={() => setTab(t.id)}>{t.label}</button>
+            ))}
+          </nav>
+        )}
+        {canManage && tab === "pages" && (
           <section className="dashboard-grid">
             <div className="panel" id="media">
               <h2>Create page</h2>
@@ -399,6 +416,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
           </section>
         )}
 
+        {tab === "world" && (
         <section className="dashboard-grid lore-grid">
           <div className="panel relationship-map-panel">
             <h2>Relationship Map</h2>
@@ -464,8 +482,9 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
             </div>
           </div>
         </section>
+        )}
 
-        {canManage && (
+        {canManage && tab === "media" && (
           <section className="dashboard-grid media-grid">
             <div className="panel">
               <h2>Media Manager</h2>
@@ -511,7 +530,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
           </section>
         )}
 
-        {canManage && (
+        {canManage && tab === "templates" && (
           <section className="dashboard-grid">
             <div className="panel">
               <h2>Template Creator</h2>
@@ -545,7 +564,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
           </section>
         )}
 
-        {canManage && (
+        {canManage && tab === "settings" && (
           <section className="panel">
             <div className="section-heading">
               <div>
@@ -573,7 +592,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
           </section>
         )}
 
-        {canManage && (
+        {canManage && tab === "settings" && (
           <section className="panel">
             <h2>Setup instructions</h2>
             <textarea readOnly rows={10} value={setup} />
