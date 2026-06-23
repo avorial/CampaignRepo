@@ -32,19 +32,21 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const [navFilter, setNavFilter] = useState("");
   const [openNodes, setOpenNodes] = useState<Record<string, boolean>>({});
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({});
+  const [publicSite, setPublicSite] = useState<{ slug: string; enabled: boolean } | null>(null);
   const [tab, setTab] = useState(campaign.role === "owner" || campaign.role === "gm" ? "pages" : "world");
   const pendingReviews = pages.filter((page) => page.frontmatter.approvalStatus !== "approved").length;
   const pageTemplates = templates.filter((template) => template.category === pageCategory);
 
   async function load() {
     const canManage = campaign.role === "owner" || campaign.role === "gm";
-    const [pagesRes, graphRes, setupRes, templatesRes, mediaRes, validationRes] = await Promise.all([
+    const [pagesRes, graphRes, setupRes, templatesRes, mediaRes, validationRes, publicRes] = await Promise.all([
       fetch(`/api/campaigns/${campaign.id}/pages`),
       fetch(`/api/campaigns/${campaign.id}/graph`),
       fetch(`/api/campaigns/${campaign.id}/setup`),
       canManage ? fetch(`/api/campaigns/${campaign.id}/templates`) : Promise.resolve(null),
       canManage ? fetch(`/api/campaigns/${campaign.id}/media`) : Promise.resolve(null),
-      canManage ? fetch(`/api/campaigns/${campaign.id}/validation`) : Promise.resolve(null)
+      canManage ? fetch(`/api/campaigns/${campaign.id}/validation`) : Promise.resolve(null),
+      canManage ? fetch(`/api/campaigns/${campaign.id}/public`) : Promise.resolve(null)
     ]);
     const pagesData = await pagesRes.json();
     const graphData = graphRes.ok ? await graphRes.json() : { nodes: [], edges: [], timeline: [] };
@@ -52,12 +54,28 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     const templatesData = templatesRes && templatesRes.ok ? await templatesRes.json() : { templates: [] };
     const mediaData = mediaRes && mediaRes.ok ? await mediaRes.json() : { media: [] };
     const validationData = validationRes && validationRes.ok ? await validationRes.json() : null;
+    const publicData = publicRes && publicRes.ok ? await publicRes.json() : { site: null };
     setPages(pagesData.pages || []);
     setGraph({ nodes: graphData.nodes || [], edges: graphData.edges || [], timeline: graphData.timeline || [] });
     setSetup(setupData.markdown || "");
     setTemplates(templatesData.templates || []);
     setMedia(mediaData.media || []);
     setValidation(validationData);
+    setPublicSite(publicData.site || null);
+  }
+
+  async function setPublic(action: "publish" | "rotate" | "unpublish") {
+    const res = await fetch(`/api/campaigns/${campaign.id}/public`, {
+      method: action === "unpublish" ? "DELETE" : "POST",
+      body: action === "unpublish" ? undefined : JSON.stringify({ action })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setPublicSite(data.site || null);
+      setMessage(action === "unpublish" ? "Public site taken offline." : action === "rotate" ? "Public link rotated — the old link no longer works." : "Public site published.");
+    } else {
+      setMessage(data.error || "Could not update public site.");
+    }
   }
 
   useEffect(() => { load(); }, []);
@@ -587,6 +605,40 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
                 </div>
               ))}
             </div>
+          </section>
+        )}
+
+        {canManage && tab === "settings" && (
+          <section className="panel">
+            <div className="section-heading">
+              <div>
+                <h2>Public site</h2>
+                <p className="muted">Publish a read-only, no-login world of your player-visible, approved pages at a shareable link.</p>
+              </div>
+              <div className="member-actions">
+                {publicSite?.enabled ? (
+                  <>
+                    <a className="button secondary" href={`/site/${publicSite.slug}`} target="_blank" rel="noreferrer">Open public site</a>
+                    <button type="button" className="danger" onClick={() => setPublic("unpublish")}>Unpublish</button>
+                  </>
+                ) : (
+                  <button type="button" onClick={() => setPublic("publish")}>{publicSite ? "Re-publish" : "Publish public site"}</button>
+                )}
+              </div>
+            </div>
+            {publicSite?.enabled ? (
+              <div className="public-share">
+                <label>Shareable link</label>
+                <div className="public-share-row">
+                  <code>{`/site/${publicSite.slug}`}</code>
+                  <button type="button" className="secondary" onClick={() => copyText(`${window.location.origin}/site/${publicSite.slug}`)}>Copy link</button>
+                  <button type="button" className="secondary" onClick={() => { if (window.confirm("Rotate the link? The current public URL will stop working.")) setPublic("rotate"); }}>Rotate link</button>
+                </div>
+                <p className="muted">Anyone with this link can read player-visible pages — no account needed. GM-only blocks and unapproved pages are never exposed.</p>
+              </div>
+            ) : (
+              <p className="muted">{publicSite ? "This world is currently offline. Re-publish to bring it back at its existing link." : "Not published yet."}</p>
+            )}
           </section>
         )}
 

@@ -3,7 +3,8 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign, getCampaignRepositoryToken } from "@/lib/db";
 import { getTextFile, GitHubError, listDirectory, putFile } from "@/lib/github";
-import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
+import { parsePage, serializePage } from "@/lib/markdown";
+import { sanitizePlayerPage } from "@/lib/public-site";
 import { categoryIds, defaultFrontmatter, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
 import { rebuildSearchIndex } from "@/lib/search";
@@ -16,18 +17,6 @@ const schema = z.object({
   visibility: z.enum(["gm", "players"]).default("gm"),
   templatePath: z.string().optional()
 });
-
-function sanitizePlayerPage<T extends ReturnType<typeof parsePage>>(page: T): T {
-  return {
-    ...page,
-    content: stripGmBlocks(page.content),
-    raw: stripGmBlocks(page.raw),
-    frontmatter: {
-      ...page.frontmatter,
-      sourceImport: undefined
-    }
-  };
-}
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();

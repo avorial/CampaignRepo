@@ -7,13 +7,18 @@ import {
   getCampaignRole,
   getCampaignRepositoryToken,
   getDb,
+  getPublicSite,
+  getPublicSiteCampaign,
   listAllCampaignsForAdmin,
   listUsers,
   listCampaignInvites,
+  publishCampaign,
   removeCampaignMember,
   revokeCampaignInvite,
+  rotatePublicSlug,
   setUserCampaignMembership,
   searchDocs,
+  unpublishCampaign,
   updateUserIdentity,
   updateCampaignMember,
   upsertSearchDocuments
@@ -165,6 +170,38 @@ describe("global admin user identity", () => {
     db.prepare("INSERT INTO users (email, name, passwordHash) VALUES (?, ?, ?)").run("duplicate-target@test", "Target", "x");
 
     expect(() => updateUserIdentity(id, "duplicate-target@test", "Source")).toThrow("Another user already has that email.");
+  });
+});
+
+describe("public sites", () => {
+  it("publishes a campaign to a resolvable, enabled share slug", () => {
+    const site = publishCampaign(gmId, campaignId);
+    expect(site.slug).toMatch(/^pub_/);
+    expect(site.enabled).toBe(true);
+    const resolved = getPublicSiteCampaign(site.slug);
+    expect(resolved?.id).toBe(campaignId);
+  });
+
+  it("keeps the same slug across republish and stops resolving when offline", () => {
+    const first = publishCampaign(gmId, campaignId);
+    unpublishCampaign(gmId, campaignId);
+    expect(getPublicSite(campaignId)?.enabled).toBe(false);
+    expect(getPublicSiteCampaign(first.slug)).toBeNull();
+    const again = publishCampaign(gmId, campaignId);
+    expect(again.slug).toBe(first.slug);
+    expect(getPublicSiteCampaign(first.slug)?.id).toBe(campaignId);
+  });
+
+  it("rotates the slug and invalidates the previous link", () => {
+    const before = publishCampaign(gmId, campaignId);
+    const after = rotatePublicSlug(gmId, campaignId);
+    expect(after.slug).not.toBe(before.slug);
+    expect(getPublicSiteCampaign(before.slug)).toBeNull();
+    expect(getPublicSiteCampaign(after.slug)?.id).toBe(campaignId);
+  });
+
+  it("forbids players from publishing", () => {
+    expect(() => publishCampaign(playerId, campaignId)).toThrow("Forbidden");
   });
 });
 

@@ -91,6 +91,13 @@ CREATE TABLE IF NOT EXISTS app_settings (
   value TEXT NOT NULL,
   updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS public_sites (
+  campaignId INTEGER PRIMARY KEY,
+  slug TEXT NOT NULL UNIQUE,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (campaignId) REFERENCES campaigns(id)
+);
 CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(
   id UNINDEXED,
   campaignId UNINDEXED,
@@ -199,6 +206,58 @@ export function getUserByApiToken(token: string): User | null {
   if (!row) return null;
   db.prepare("UPDATE api_tokens SET lastUsedAt = CURRENT_TIMESTAMP WHERE tokenHash = ?").run(hash);
   return publicUser(row);
+}
+
+export type PublicSiteRow = { campaignId: number; slug: string; enabled: boolean; createdAt: string };
+
+/** The published-site record for a campaign, if one has ever been created. */
+export function getPublicSite(campaignId: number): PublicSiteRow | null {
+  const row = db.prepare("SELECT campaignId, slug, enabled, createdAt FROM public_sites WHERE campaignId = ?").get(campaignId) as
+    | { campaignId: number; slug: string; enabled: number; createdAt: string }
+    | undefined;
+  return row ? { ...row, enabled: Boolean(row.enabled) } : null;
+}
+
+/** Resolve a public share slug to its campaign — only when the site is enabled. */
+export function getPublicSiteCampaign(slug: string): Campaign | null {
+  return (
+    (db
+      .prepare(
+        `SELECT campaigns.* FROM public_sites
+         JOIN campaigns ON campaigns.id = public_sites.campaignId
+         WHERE public_sites.slug = ? AND public_sites.enabled = 1`
+      )
+      .get(slug) as Campaign | undefined) || null
+  );
+}
+
+/** Publish (or re-enable) a campaign's public site. Mints a stable random slug on first publish. */
+export function publishCampaign(userId: number, campaignId: number): PublicSiteRow {
+  if (!canManageCampaign(userId, campaignId)) throw new Error("Forbidden");
+  const existing = getPublicSite(campaignId);
+  if (existing) {
+    db.prepare("UPDATE public_sites SET enabled = 1 WHERE campaignId = ?").run(campaignId);
+    return { ...existing, enabled: true };
+  }
+  const slug = `pub_${crypto.randomBytes(9).toString("hex")}`;
+  db.prepare("INSERT INTO public_sites (campaignId, slug, enabled) VALUES (?, ?, 1)").run(campaignId, slug);
+  return getPublicSite(campaignId)!;
+}
+
+/** Take a campaign's public site offline without discarding its slug. */
+export function unpublishCampaign(userId: number, campaignId: number) {
+  if (!canManageCampaign(userId, campaignId)) throw new Error("Forbidden");
+  db.prepare("UPDATE public_sites SET enabled = 0 WHERE campaignId = ?").run(campaignId);
+}
+
+/** Rotate the share slug, invalidating any previously shared public URL. */
+export function rotatePublicSlug(userId: number, campaignId: number): PublicSiteRow {
+  if (!canManageCampaign(userId, campaignId)) throw new Error("Forbidden");
+  const slug = `pub_${crypto.randomBytes(9).toString("hex")}`;
+  const existing = getPublicSite(campaignId);
+  if (!existing) return publishCampaign(userId, campaignId);
+  db.prepare("UPDATE public_sites SET slug = ? WHERE campaignId = ?").run(slug, campaignId);
+  return getPublicSite(campaignId)!;
 }
 
 export function listUsers() {
@@ -347,6 +406,7 @@ export function removeCampaign(userId: number, campaignId: number) {
     db.prepare("DELETE FROM campaign_memberships WHERE campaignId = ?").run(campaignId);
     db.prepare("DELETE FROM imports WHERE campaignId = ?").run(campaignId);
     db.prepare("DELETE FROM campaign_invites WHERE campaignId = ?").run(campaignId);
+    db.prepare("DELETE FROM public_sites WHERE campaignId = ?").run(campaignId);
     db.prepare("DELETE FROM campaigns WHERE id = ?").run(campaignId);
   });
   tx();

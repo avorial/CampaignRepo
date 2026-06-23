@@ -64,10 +64,13 @@ Driven by `/wiki/timelines/*.yaml` + event frontmatter.
 A relationship type for parent/child/spouse, rendered as a tree (SVG). Reuses
 the graph engine but with genealogy layout. World Anvil + LK both have this.
 
-### 8. Published public site / shareable links  ·  M
-A read-only public presentation of player-visible, approved pages (per campaign)
-at a shareable URL — like World Anvil's public worlds. Builds on the player
-portal; add opt-in `public: true` and a clean reader theme.
+### 8. Published public site / shareable links  ·  M  ·  ✅ SHIPPED
+A read-only, no-login public presentation of player-visible, approved pages
+(per campaign) at a shareable `/site/<slug>` URL — like World Anvil's public
+worlds. GMs publish/unpublish/rotate the link from the campaign Settings tab;
+GM blocks and unapproved pages are never exposed. Clean reader theme with
+category nav, search, covers, galleries, and in-world wiki-link navigation.
+Public media is served via `/public-media/<slug>/...` gated on the enabled site.
 
 ### 9. Per-campaign theming  ·  S
 Let a campaign set accent colors / banner / font via `campaign.yaml`, applied
