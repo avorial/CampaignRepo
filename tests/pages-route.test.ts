@@ -10,7 +10,10 @@ const mocks = vi.hoisted(() => {
     GitHubError,
     getTextFile: vi.fn(),
     putFile: vi.fn(),
-    rebuildSearchIndex: vi.fn(async () => [])
+    rebuildSearchIndex: vi.fn(async () => []),
+    readPageCache: vi.fn(),
+    refreshPageCache: vi.fn(),
+    refreshPageCacheInBackground: vi.fn()
   };
 });
 
@@ -29,8 +32,13 @@ vi.mock("@/lib/github", () => ({
   listDirectory: vi.fn(async () => [])
 }));
 vi.mock("@/lib/search", () => ({ rebuildSearchIndex: mocks.rebuildSearchIndex }));
+vi.mock("@/lib/page-cache", () => ({
+  readPageCache: mocks.readPageCache,
+  refreshPageCache: mocks.refreshPageCache,
+  refreshPageCacheInBackground: mocks.refreshPageCacheInBackground
+}));
 
-import { POST } from "@/app/api/campaigns/[id]/pages/route";
+import { GET, POST } from "@/app/api/campaigns/[id]/pages/route";
 
 function createPage(name: string) {
   return POST(
@@ -48,6 +56,42 @@ describe("page creation", () => {
     mocks.putFile.mockReset();
     mocks.rebuildSearchIndex.mockClear();
     mocks.rebuildSearchIndex.mockResolvedValue([]);
+    mocks.readPageCache.mockReset();
+    mocks.refreshPageCache.mockReset();
+    mocks.refreshPageCacheInBackground.mockReset();
+  });
+
+  it("returns cached pages immediately and starts a background refresh", async () => {
+    const page = {
+      slug: "Cached-Page",
+      sha: "cached-sha",
+      frontmatter: { name: "Cached Page", visibility: "players", approvalStatus: "approved" },
+      content: "cached",
+      raw: "cached",
+      outgoingLinks: [],
+      backlinks: []
+    };
+    mocks.readPageCache.mockReturnValue({ pages: [page], refreshedAt: "2026-06-23 12:00:00", refreshError: null });
+
+    const response = await GET(new Request("http://localhost/api/campaigns/2/pages"), { params: Promise.resolve({ id: "2" }) });
+    const body = await response.json();
+
+    expect(body.pages).toEqual([page]);
+    expect(body.cache.cached).toBe(true);
+    expect(mocks.refreshPageCacheInBackground).toHaveBeenCalledOnce();
+    expect(mocks.refreshPageCache).not.toHaveBeenCalled();
+  });
+
+  it("waits for a refresh when the local cache is empty", async () => {
+    mocks.readPageCache.mockReturnValue({ pages: [], refreshedAt: null, refreshError: null });
+    mocks.refreshPageCache.mockResolvedValue({ pages: [], refreshedAt: "2026-06-23 12:01:00", refreshError: null });
+
+    const response = await GET(new Request("http://localhost/api/campaigns/2/pages"), { params: Promise.resolve({ id: "2" }) });
+    const body = await response.json();
+
+    expect(body.cache.cached).toBe(false);
+    expect(mocks.refreshPageCache).toHaveBeenCalledOnce();
+    expect(mocks.refreshPageCacheInBackground).not.toHaveBeenCalled();
   });
 
   it("creates a page when the generated slug is unused", async () => {

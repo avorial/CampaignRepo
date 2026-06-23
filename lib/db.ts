@@ -117,6 +117,21 @@ CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(
   keyLinks,
   tokenize='porter'
 );
+CREATE TABLE IF NOT EXISTS campaign_page_cache (
+  campaignId INTEGER NOT NULL,
+  slug TEXT NOT NULL,
+  sha TEXT NOT NULL,
+  pageJson TEXT NOT NULL,
+  updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (campaignId, slug),
+  FOREIGN KEY (campaignId) REFERENCES campaigns(id)
+);
+CREATE TABLE IF NOT EXISTS campaign_page_cache_state (
+  campaignId INTEGER PRIMARY KEY,
+  refreshedAt TEXT,
+  refreshError TEXT,
+  FOREIGN KEY (campaignId) REFERENCES campaigns(id)
+);
 `);
 
 const userColumns = db.prepare("PRAGMA table_info(users)").all() as Array<{ name: string }>;
@@ -402,6 +417,8 @@ export function canManageCampaign(userId: number, campaignId: number) {
 export function removeCampaign(userId: number, campaignId: number) {
   if (getCampaignRole(userId, campaignId) !== "owner") throw new Error("Only the campaign owner can remove it.");
   const tx = db.transaction(() => {
+    db.prepare("DELETE FROM campaign_page_cache WHERE campaignId = ?").run(campaignId);
+    db.prepare("DELETE FROM campaign_page_cache_state WHERE campaignId = ?").run(campaignId);
     db.prepare("DELETE FROM search_index WHERE campaignId = ?").run(campaignId);
     db.prepare("DELETE FROM campaign_memberships WHERE campaignId = ?").run(campaignId);
     db.prepare("DELETE FROM imports WHERE campaignId = ?").run(campaignId);

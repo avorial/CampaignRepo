@@ -70,6 +70,14 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     setValidation(validationData);
     setPublicSite(publicData.site || null);
     setTheme(themeData.theme || {});
+    if (pagesData.cache?.cached) {
+      void fetch(`/api/campaigns/${campaign.id}/pages?refresh=wait`)
+        .then((response) => response.ok ? response.json() : null)
+        .then((fresh) => {
+          if (fresh?.pages) setPages(fresh.pages);
+        })
+        .catch(() => undefined);
+    }
   }
 
   async function saveTheme(event: FormEvent<HTMLFormElement>) {

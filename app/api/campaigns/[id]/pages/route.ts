@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign, getCampaignRepositoryToken } from "@/lib/db";
-import { getTextFile, GitHubError, listDirectory, putFile } from "@/lib/github";
+import { getTextFile, GitHubError, putFile } from "@/lib/github";
 import { parsePage, serializePage } from "@/lib/markdown";
 import { sanitizePlayerPage } from "@/lib/public-site";
 import { categoryIds, defaultFrontmatter, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
 import { rebuildSearchIndex } from "@/lib/search";
+import { readPageCache, refreshPageCache, refreshPageCacheInBackground } from "@/lib/page-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -25,24 +26,27 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const repoToken = getCampaignRepositoryToken(campaign.id);
   if (!repoToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const entries = await listDirectory(repoToken, campaign, "wiki/pages");
-  const pages = await Promise.all(
-    entries
-      .filter((entry) => entry.type === "file" && entry.name.endsWith(".md"))
-      .map(async (entry) => {
-        const slug = entry.name.replace(/\.md$/, "");
-        const file = await getTextFile(repoToken, campaign, entry.path);
-        return parsePage(slug, file.text, file.sha);
-      })
-  );
-  const mode = new URL(req.url).searchParams.get("mode");
+  const url = new URL(req.url);
+  const cached = readPageCache(campaign.id);
+  const waitForRefresh = url.searchParams.get("refresh") === "wait" || cached.pages.length === 0;
+  const snapshot = waitForRefresh ? await refreshPageCache(repoToken, campaign) : cached;
+  if (!waitForRefresh) refreshPageCacheInBackground(repoToken, campaign);
+  const pages = snapshot.pages;
+  const mode = url.searchParams.get("mode");
   const visiblePages =
     campaign.role === "player" || mode === "player"
       ? pages
           .filter((page) => page.frontmatter.visibility === "players" && page.frontmatter.approvalStatus === "approved")
           .map(sanitizePlayerPage)
       : pages;
-  return NextResponse.json({ pages: visiblePages });
+  return NextResponse.json({
+    pages: visiblePages,
+    cache: {
+      cached: !waitForRefresh,
+      refreshedAt: snapshot.refreshedAt,
+      refreshError: snapshot.refreshError
+    }
+  });
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {

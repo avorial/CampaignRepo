@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { getCampaign, getCampaignRepositoryToken } from "@/lib/db";
-import { getTextFile, listDirectory } from "@/lib/github";
 import { parsePage, stripGmBlocks } from "@/lib/markdown";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
+import { readPageCache, refreshPageCache, refreshPageCacheInBackground } from "@/lib/page-cache";
 
 export const dynamic = "force-dynamic";
 import type { CampaignGraphEdge, CampaignGraphNode, CampaignTimelineItem, WikiPage } from "@/lib/types";
@@ -21,17 +21,13 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const repoToken = getCampaignRepositoryToken(campaign.id);
   if (!repoToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const entries = await listDirectory(repoToken, campaign, "wiki/pages");
-  const allPages = await Promise.all(
-    entries
-      .filter((entry) => entry.type === "file" && entry.name.endsWith(".md"))
-      .map(async (entry) => {
-        const slug = entry.name.replace(/\.md$/, "");
-        const file = await getTextFile(repoToken, campaign, entry.path);
-        const text = campaign.role === "player" ? stripGmBlocks(file.text) : file.text;
-        return parsePage(slug, text, file.sha);
-      })
-  );
+  const cached = readPageCache(campaign.id);
+  const snapshot = cached.pages.length ? cached : await refreshPageCache(repoToken, campaign);
+  if (cached.pages.length) refreshPageCacheInBackground(repoToken, campaign);
+  const allPages =
+    campaign.role === "player"
+      ? snapshot.pages.map((page) => parsePage(page.slug, stripGmBlocks(page.raw), page.sha))
+      : snapshot.pages;
 
   const pages = allPages.filter((page) => visibleForRole(page, campaign.role));
   const visibleSlugs = new Set(pages.map((page) => page.slug));
