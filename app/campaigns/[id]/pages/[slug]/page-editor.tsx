@@ -456,6 +456,8 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
             <h3>Timeline</h3>
             <label>Event date<input value={frontmatter.eventDate || ""} onChange={(e) => updateField("eventDate", e.target.value)} readOnly={!fieldsEditable} placeholder="1105-123 or 2026-06-17" /></label>
             <label>Timeline date<input value={frontmatter.timelineDate || ""} onChange={(e) => updateField("timelineDate", e.target.value)} readOnly={!fieldsEditable} /></label>
+            <label>Era<input value={frontmatter.era || ""} onChange={(e) => updateField("era", e.target.value || undefined)} readOnly={!fieldsEditable} placeholder="The Long Night, Third Age..." /></label>
+            <label>Track<input value={frontmatter.track || ""} onChange={(e) => updateField("track", e.target.value || undefined)} readOnly={!fieldsEditable} placeholder="political, personal, cosmic..." /></label>
           </div>
         )}
 

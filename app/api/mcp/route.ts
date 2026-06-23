@@ -147,6 +147,8 @@ async function buildMcpGraph(token: string, campaign: Campaign) {
       name: page.frontmatter.name,
       summary: page.frontmatter.summary,
       eventDate: page.frontmatter.eventDate || page.frontmatter.timelineDate,
+      era: page.frontmatter.era,
+      track: page.frontmatter.track,
       tags: page.frontmatter.tags,
       visibility: page.frontmatter.visibility,
       approvalStatus: page.frontmatter.approvalStatus

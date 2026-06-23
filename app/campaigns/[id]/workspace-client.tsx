@@ -328,6 +328,18 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     );
   });
   const templatesByGame = gameTypes.map((gameType) => ({ gameType, templates: templates.filter((template) => template.gameType === gameType) }));
+  // Timeline grouped into eras, eras ordered by their earliest event date.
+  const timelineEras = (() => {
+    const groups = new Map<string, CampaignTimelineItem[]>();
+    for (const item of graph.timeline) {
+      const key = item.era?.trim() || "Unsorted";
+      groups.set(key, [...(groups.get(key) || []), item]);
+    }
+    return [...groups.entries()]
+      .map(([name, items]) => ({ name, items, first: [...items.map((i) => i.eventDate || "9999")].sort()[0] }))
+      .sort((a, b) => a.first.localeCompare(b.first) || a.name.localeCompare(b.name))
+      .map(({ name, items }) => ({ name, items }));
+  })();
   const linkedNodes = graph.nodes
     .map((node) => ({
       ...node,
@@ -452,16 +464,30 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
 
           <div className="panel">
             <h2>Timeline</h2>
-            <div className="timeline-list">
-              {graph.timeline.map((item) => (
-                <Link key={item.slug} href={`/campaigns/${campaign.id}/pages/${item.slug}`} className="timeline-row">
-                  <span>{item.eventDate || "Undated"}</span>
-                  <strong>{item.name}</strong>
-                  <small>{item.summary || item.tags.join(", ") || item.visibility}</small>
-                </Link>
-              ))}
-              {!graph.timeline.length && <p className="muted">Create Event pages to build the campaign timeline.</p>}
-            </div>
+            {timelineEras.length ? (
+              <div className="timeline">
+                {timelineEras.map((era) => (
+                  <div className="timeline-era" key={era.name}>
+                    <h3 className="timeline-era-head">{era.name}</h3>
+                    <div className="timeline-track-line">
+                      {era.items.map((item) => (
+                        <Link key={item.slug} href={`/campaigns/${campaign.id}/pages/${item.slug}`} className="timeline-event">
+                          <span className="timeline-dot" />
+                          <span className="timeline-date">{item.eventDate || "—"}</span>
+                          <span className="timeline-body">
+                            <strong>{item.name}</strong>
+                            {item.track && <span className="timeline-track-badge">{item.track}</span>}
+                            {item.summary && <small>{item.summary}</small>}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="muted">Create Event pages (set an Event date and optional Era) to build the campaign timeline.</p>
+            )}
           </div>
 
           <div className="panel">

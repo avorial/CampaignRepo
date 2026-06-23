@@ -75,6 +75,8 @@ export type WikiPageFrontmatter = {
   status?: string;
   eventDate?: string;
   timelineDate?: string;
+  era?: string;
+  track?: string;
   uwp?: string;
   allegiance?: string;
   tradeCodes?: string[];
@@ -148,6 +150,8 @@ export type CampaignTimelineItem = {
   name: string;
   summary: string;
   eventDate?: string;
+  era?: string;
+  track?: string;
   tags: string[];
   visibility: Visibility;
   approvalStatus: ApprovalStatus;
