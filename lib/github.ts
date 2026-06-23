@@ -111,6 +111,16 @@ async function gh<T>(token: string, path: string, init: RequestInit = {}, resolv
   return (await res.json()) as T;
 }
 
+async function ghGraphql<T>(token: string, query: string, variables: Record<string, unknown>): Promise<T> {
+  const result = await gh<{ data?: T; errors?: Array<{ message: string }> }>(token, "/graphql", {
+    method: "POST",
+    body: JSON.stringify({ query, variables })
+  });
+  if (result.errors?.length) throw new GitHubError(result.errors.map((error) => error.message).join("; "), 400);
+  if (!result.data) throw new GitHubError("GitHub GraphQL returned no data.", 502);
+  return result.data;
+}
+
 export async function getViewer(token: string) {
   if (isGitHubAppConnection(token)) {
     const id = installationId(token);
@@ -205,6 +215,52 @@ export async function listDirectory(token: string, campaign: Campaign, dir: stri
     if (error instanceof GitHubError && error.status === 404) return [];
     throw error;
   }
+}
+
+/**
+ * Read every text file in one directory with a single GraphQL request.
+ * This avoids one REST request per wiki page when warming the local cache.
+ */
+export async function listDirectoryTextFiles(token: string, campaign: Campaign, dir: string, extension = ".md") {
+  type TreeResult = {
+    repository: {
+      object: {
+        entries: Array<{
+          name: string;
+          type: string;
+          oid: string;
+          object?: { text?: string | null } | null;
+        }>;
+      } | null;
+    } | null;
+  };
+  const data = await ghGraphql<TreeResult>(
+    token,
+    `query DirectoryTextFiles($owner: String!, $repo: String!, $expression: String!) {
+      repository(owner: $owner, name: $repo) {
+        object(expression: $expression) {
+          ... on Tree {
+            entries {
+              name
+              type
+              oid
+              object { ... on Blob { text } }
+            }
+          }
+        }
+      }
+    }`,
+    { owner: campaign.owner, repo: campaign.repo, expression: `${campaign.branch}:${dir}` }
+  );
+  const entries = data.repository?.object?.entries || [];
+  return entries
+    .filter((entry) => entry.type === "blob" && entry.name.endsWith(extension))
+    .map((entry) => ({
+      name: entry.name,
+      path: `${dir}/${entry.name}`,
+      sha: entry.oid,
+      text: entry.object?.text ?? null
+    }));
 }
 
 export async function ensureFile(token: string, campaign: Campaign, filePath: string, content: string, message: string) {

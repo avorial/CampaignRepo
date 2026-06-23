@@ -29,7 +29,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const url = new URL(req.url);
   const cached = readPageCache(campaign.id);
   const waitForRefresh = url.searchParams.get("refresh") === "wait" || cached.pages.length === 0;
-  const snapshot = waitForRefresh ? await refreshPageCache(repoToken, campaign) : cached;
+  let snapshot;
+  try {
+    snapshot = waitForRefresh ? await refreshPageCache(repoToken, campaign) : cached;
+  } catch (error) {
+    return NextResponse.json(
+      { pages: cached.pages, error: error instanceof Error ? error.message : "Could not refresh campaign pages." },
+      { status: cached.pages.length ? 200 : 503 }
+    );
+  }
   if (!waitForRefresh) refreshPageCacheInBackground(repoToken, campaign);
   const pages = snapshot.pages;
   const mode = url.searchParams.get("mode");

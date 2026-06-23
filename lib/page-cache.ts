@@ -1,6 +1,6 @@
 import type { Campaign, WikiPage } from "@/lib/types";
 import { getDb } from "@/lib/db";
-import { getTextFile, listDirectory } from "@/lib/github";
+import { getTextFile, listDirectoryTextFiles } from "@/lib/github";
 import { parsePage } from "@/lib/markdown";
 
 type CacheRow = {
@@ -42,9 +42,7 @@ export function readPageCache(campaignId: number): PageCacheSnapshot {
 async function refresh(token: string, campaign: Campaign): Promise<PageCacheSnapshot> {
   const db = getDb();
   try {
-    const entries = (await listDirectory(token, campaign, "wiki/pages")).filter(
-      (entry) => entry.type === "file" && entry.name.endsWith(".md")
-    );
+    const entries = await listDirectoryTextFiles(token, campaign, "wiki/pages");
     const cached = new Map(
       (db.prepare("SELECT slug, sha, pageJson FROM campaign_page_cache WHERE campaignId = ?").all(campaign.id) as CacheRow[]).map(
         (row) => [row.slug, row]
@@ -61,6 +59,9 @@ async function refresh(token: string, campaign: Campaign): Promise<PageCacheSnap
             // A corrupt local row is repaired by fetching the source file below.
           }
         }
+        if (entry.text !== null) return parsePage(slug, entry.text, entry.sha);
+        // GraphQL omits blob text above its text-size limit. Fall back only
+        // for that exceptional file instead of issuing a request per page.
         const file = await getTextFile(token, campaign, entry.path);
         return parsePage(slug, file.text, file.sha);
       })
