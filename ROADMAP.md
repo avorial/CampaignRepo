@@ -55,7 +55,7 @@ block for image grids with lightbox. Makes pages feel like WA/LK articles.
 
 ## Tier 2 — Depth & presentation
 
-### 6. Timeline 2.0  ·  M
+### 6. Timeline 2.0  ·  M  ·  ✅ SHIPPED
 Upgrade the current date-sorted list into **eras/ages**, multiple parallel
 tracks (political / personal / cosmic), and a visual horizontal timeline.
 Driven by `/wiki/timelines/*.yaml` + event frontmatter.
