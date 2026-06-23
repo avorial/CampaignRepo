@@ -6,6 +6,7 @@ import { Bold, Code2, Heading1, Heading2, Heading3, Italic, Link2, List, ListOrd
 import type { Campaign, CampaignMedia, WikiPage } from "@/lib/types";
 import { renderMarkdown, type IncludeResolver, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
+import { categories } from "@/lib/templates";
 
 export default function PageEditor({ campaign, slug }: { campaign: Campaign; slug: string }) {
   const router = useRouter();
@@ -453,6 +454,13 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
         <div className="field-group">
           <h3>Page</h3>
           <label>Name<input value={frontmatter.name || ""} onChange={(e) => updateField("name", e.target.value)} readOnly={!fieldsEditable} /></label>
+          <label>Category<select
+            value={frontmatter.category || "npc"}
+            onChange={(e) => setFrontmatter((current: any) => ({ ...current, category: e.target.value, type: e.target.value }))}
+            disabled={!fieldsEditable}
+          >
+            {categories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}
+          </select></label>
           <label>Summary<textarea value={frontmatter.summary || ""} onChange={(e) => updateField("summary", e.target.value)} readOnly={!fieldsEditable} /></label>
           <label>Status<input value={frontmatter.status || ""} onChange={(e) => updateField("status", e.target.value)} readOnly={!fieldsEditable} placeholder="alive, active, destroyed..." /></label>
           <label>Tags<input value={tags.join(", ")} onChange={(e) => updateField("tags", e.target.value.split(",").map((v) => v.trim()).filter(Boolean))} readOnly={!fieldsEditable} /></label>
