@@ -1,4 +1,35 @@
-export type GameType = "Sword Chronicle" | "Dungeons & Dragons" | "World of Darkness" | "Traveller" | "Custom";
+export type GameType =
+  | "Sword Chronicle"
+  | "Dungeons & Dragons"
+  | "World of Darkness"
+  | "Traveller"
+  | "Pathfinder"
+  | "Call of Cthulhu"
+  | "Cyberpunk RED"
+  | "Shadowdark RPG"
+  | "Warhammer Fantasy Roleplay"
+  | "Starfinder"
+  | "Alien RPG"
+  | "Delta Green"
+  | "Blades in the Dark"
+  | "Mörk Borg"
+  | "Dragonbane"
+  | "Warhammer 40,000 Roleplay"
+  | "Savage Worlds"
+  | "The One Ring"
+  | "Fabula Ultima"
+  | "Old-School Essentials"
+  | "Candela Obscura"
+  | "Mothership"
+  | "Coriolis"
+  | "2300AD"
+  | "Burning Wheel"
+  | "The King in Yellow RPG"
+  | "Fate Core"
+  | "Twilight: 2000"
+  | "Pendragon"
+  | "Reign"
+  | "Custom";
 export type Category = "character" | "npc" | "location" | "event" | "game" | "organization" | "species" | "item" | "lore";
 export type Visibility = "gm" | "players";
 export type ApprovalStatus = "approved" | "unapproved" | "rejected";

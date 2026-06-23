@@ -1,6 +1,38 @@
 import type { Category, GameType, WikiPageFrontmatter } from "@/lib/types";
 
-export const gameTypes: GameType[] = ["Sword Chronicle", "Dungeons & Dragons", "World of Darkness", "Traveller", "Custom"];
+export const gameTypes: GameType[] = [
+  "Sword Chronicle",
+  "Dungeons & Dragons",
+  "World of Darkness",
+  "Traveller",
+  "Pathfinder",
+  "Call of Cthulhu",
+  "Cyberpunk RED",
+  "Shadowdark RPG",
+  "Warhammer Fantasy Roleplay",
+  "Starfinder",
+  "Alien RPG",
+  "Delta Green",
+  "Blades in the Dark",
+  "Mörk Borg",
+  "Dragonbane",
+  "Warhammer 40,000 Roleplay",
+  "Savage Worlds",
+  "The One Ring",
+  "Fabula Ultima",
+  "Old-School Essentials",
+  "Candela Obscura",
+  "Mothership",
+  "Coriolis",
+  "2300AD",
+  "Burning Wheel",
+  "The King in Yellow RPG",
+  "Fate Core",
+  "Twilight: 2000",
+  "Pendragon",
+  "Reign",
+  "Custom"
+];
 export const categories: { id: Category; label: string }[] = [
   { id: "character", label: "Characters" },
   { id: "npc", label: "NPCs" },

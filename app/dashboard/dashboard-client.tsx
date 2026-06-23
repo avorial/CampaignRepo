@@ -2,15 +2,16 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
-import { Dice5, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import type { ApiToken, Campaign, GameType, User } from "@/lib/types";
 
-// Third-party game-system marks shown on a light plate; Custom has no logo.
+// Third-party game-system marks (cleaned, transparent) shown on a light plate;
+// Custom has no logo and falls back to its gold initial.
 const gameLogos: Record<string, string> = {
-  "Sword Chronicle": "/brand/sword-chronicle.avif",
-  "Dungeons & Dragons": "/brand/dungeons-and-dragons.webp",
-  "World of Darkness": "/brand/world-of-darkness.jpg",
-  Traveller: "/brand/traveller.jpg"
+  "Sword Chronicle": "/brand/sword-chronicle.png",
+  "Dungeons & Dragons": "/brand/dungeons-and-dragons.png",
+  "World of Darkness": "/brand/world-of-darkness.png",
+  Traveller: "/brand/traveller.png"
 };
 
 export default function DashboardClient({
@@ -132,7 +133,7 @@ export default function DashboardClient({
                       // eslint-disable-next-line @next/next/no-img-element
                       <span className="repo-logo-plate"><img src={logo} alt={campaign.gameType} /></span>
                     ) : (
-                      <Dice5 className="repo-icon" size={20} aria-hidden />
+                      <span className="repo-logo-plate repo-logo-initial" aria-hidden>{campaign.gameType.charAt(0).toUpperCase()}</span>
                     )}
                     <strong>{campaign.name}</strong>
                   </div>
