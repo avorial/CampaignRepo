@@ -8,8 +8,9 @@ import { listReviewPages } from "@/lib/reviews";
 import { rebuildSearchIndex } from "@/lib/search";
 
 const decisionSchema = z.object({
-  slug: z.string().min(1),
-  decision: z.enum(["approved", "rejected"])
+  slug: z.string().min(1).optional(),
+  decision: z.enum(["approved", "rejected"]),
+  all: z.boolean().optional()
 });
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -29,22 +30,46 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const input = decisionSchema.parse(await req.json());
-  const file = await getTextFile(user.githubToken, campaign, `wiki/pages/${input.slug}.md`);
-  const page = parsePage(input.slug, file.text, file.sha);
-  const frontmatter = {
-    ...page.frontmatter,
-    approvalStatus: input.decision,
-    lastEditedBy: `${user.name} via GM review`
-  };
+  const token = user.githubToken;
+  const verb = input.decision === "approved" ? "approve" : "reject";
 
-  await putFile(
-    user.githubToken,
-    campaign,
-    `wiki/pages/${input.slug}.md`,
-    serializePage(frontmatter, page.content),
-    `CampaignRepo: ${input.decision === "approved" ? "approve" : "reject"} ${frontmatter.name}`,
-    file.sha
-  );
-  await rebuildSearchIndex(user.githubToken, campaign);
-  return NextResponse.json({ ok: true, reviews: await listReviewPages(user.githubToken, campaign) });
+  async function applyDecision(slug: string) {
+    const file = await getTextFile(token, campaign!, `wiki/pages/${slug}.md`);
+    const page = parsePage(slug, file.text, file.sha);
+    const frontmatter = {
+      ...page.frontmatter,
+      approvalStatus: input.decision,
+      lastEditedBy: `${user.name} via GM review`
+    };
+    await putFile(
+      token,
+      campaign!,
+      `wiki/pages/${slug}.md`,
+      serializePage(frontmatter, page.content),
+      `CampaignRepo: ${verb} ${frontmatter.name}`,
+      file.sha
+    );
+  }
+
+  let updated = 0;
+  if (input.all) {
+    // Bulk: walk the whole review queue, applying the decision to each page.
+    const pending = await listReviewPages(token, campaign);
+    for (const review of pending) {
+      try {
+        await applyDecision(review.slug);
+        updated++;
+      } catch {
+        // Skip an individual page that fails so one bad file can't abort the batch.
+      }
+    }
+  } else if (input.slug) {
+    await applyDecision(input.slug);
+    updated = 1;
+  } else {
+    return NextResponse.json({ error: "Provide a slug or set all: true." }, { status: 400 });
+  }
+
+  await rebuildSearchIndex(token, campaign);
+  return NextResponse.json({ ok: true, updated, reviews: await listReviewPages(token, campaign) });
 }

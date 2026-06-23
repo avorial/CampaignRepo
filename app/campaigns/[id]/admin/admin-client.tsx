@@ -22,6 +22,7 @@ export default function AdminClient({ campaign }: { campaign: Campaign }) {
   const [message, setMessage] = useState("");
   const [origin, setOrigin] = useState("");
   const [temporaryPassword, setTemporaryPassword] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   async function load() {
     const [membersRes, invitesRes, reviewsRes] = await Promise.all([
@@ -179,6 +180,26 @@ export default function AdminClient({ campaign }: { campaign: Campaign }) {
     }
   }
 
+  async function decideAll(decision: "approved" | "rejected") {
+    if (!reviews.length || bulkBusy) return;
+    const verb = decision === "approved" ? "Approve" : "Reject";
+    if (!window.confirm(`${verb} all ${reviews.length} pending page(s)? This cannot be undone in bulk.`)) return;
+    setBulkBusy(true);
+    setMessage(`${verb}ing all ${reviews.length} page(s)…`);
+    const res = await fetch(`/api/campaigns/${campaign.id}/admin/reviews`, {
+      method: "PATCH",
+      body: JSON.stringify({ all: true, decision })
+    });
+    const data = await res.json();
+    setBulkBusy(false);
+    if (res.ok) {
+      setReviews(data.reviews);
+      setMessage(`${data.updated} page(s) ${decision}.`);
+    } else {
+      setMessage(data.error || "Could not update reviews.");
+    }
+  }
+
   return (
     <section className="admin-grid">
       <div className="panel">
@@ -269,8 +290,18 @@ export default function AdminClient({ campaign }: { campaign: Campaign }) {
       </div>
 
       <div className="panel admin-wide">
-        <h2>Review queue</h2>
-        <p className="muted">AI edits and imported material marked unapproved stay visible to GMs here, but remain hidden from players until approved.</p>
+        <div className="section-heading">
+          <div>
+            <h2>Review queue</h2>
+            <p className="muted">AI edits and imported material marked unapproved stay visible to GMs here, but remain hidden from players until approved.</p>
+          </div>
+          {reviews.length > 0 && (
+            <div className="member-actions">
+              <button type="button" onClick={() => decideAll("approved")} disabled={bulkBusy}>Approve all ({reviews.length})</button>
+              <button type="button" className="secondary danger" onClick={() => decideAll("rejected")} disabled={bulkBusy}>Reject all</button>
+            </div>
+          )}
+        </div>
         <div className="review-list">
           {reviews.map((review) => (
             <article key={review.slug} className="review-row">

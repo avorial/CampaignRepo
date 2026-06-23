@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign, listCampaigns, searchDocs } from "@/lib/db";
-import { getTextFile, GitHubError, listDirectory, putFile } from "@/lib/github";
+import { getTextFile, GitHubError, listDirectory, putBase64File, putFile } from "@/lib/github";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { categoryIds, defaultFrontmatter, gameTypes, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
@@ -55,6 +55,14 @@ async function readMediaMetadata(token: string, campaign: Campaign) {
     if (error instanceof GitHubError && error.status === 404) return {};
     throw error;
   }
+}
+
+// Keep the exact basename (only stripping directories and unsafe chars) so the
+// stored path matches the /wiki/media/<file> links already inside page bodies.
+function safeMediaName(fileName: string) {
+  const base = String(fileName).replace(/^.*[\\/]/, "").trim();
+  const cleaned = base.replace(/[^A-Za-z0-9._-]/g, "_").replace(/^\.+/, "");
+  return cleaned || "upload";
 }
 
 async function listMcpTemplates(token: string, campaign: Campaign): Promise<WikiTemplate[]> {
@@ -206,6 +214,7 @@ export async function GET(req: Request) {
       "list_templates",
       "create_template",
       "list_media",
+      "upload_media",
       "get_campaign_graph",
       "list_review_queue",
       "review_page",
@@ -263,6 +272,7 @@ export async function POST(req: Request) {
         { name: "list_templates", description: "List campaign templates grouped by game type.", inputSchema: obj({ campaignId }, ["campaignId"]) },
         { name: "create_template", description: "Create a campaign template in the repo.", inputSchema: obj({ campaignId, name: { type: "string" }, gameType: { type: "string" }, category: { type: "string", enum: [...categoryIds] }, summary: { type: "string" }, tags: { type: "array", items: { type: "string" } }, content: { type: "string" } }, ["campaignId", "name"]) },
         { name: "list_media", description: "List uploaded campaign media and Markdown links.", inputSchema: obj({ campaignId }, ["campaignId"]) },
+        { name: "upload_media", description: "Upload an image/file to the campaign's media folder so it renders in pages. Provide base64-encoded file bytes. The fileName is kept as-is so it matches /wiki/media/<fileName> links in page bodies.", inputSchema: obj({ campaignId, fileName: { type: "string", description: "File name to store, e.g. house_silverridge.png. Kept verbatim." }, base64: { type: "string", description: "Base64-encoded file contents (no data: prefix)." }, alt: { type: "string", description: "Optional alt text / caption stored in media.json." } }, ["campaignId", "fileName", "base64"]) },
         { name: "get_campaign_graph", description: "Return relationship graph and timeline data.", inputSchema: obj({ campaignId }, ["campaignId"]) },
         { name: "list_review_queue", description: "List unapproved or rejected pages awaiting GM review.", inputSchema: obj({ campaignId }, ["campaignId"]) },
         { name: "review_page", description: "Approve or reject a page from the GM review queue.", inputSchema: obj({ campaignId, slug: { type: "string" }, decision: { type: "string", enum: ["approved", "rejected"] } }, ["campaignId", "slug", "decision"]) },
@@ -341,6 +351,38 @@ export async function POST(req: Request) {
       if (!campaign || !user.githubToken) throw new Error("Campaign not found");
       requireManage(user.id, campaign);
       return toolResult(body.id, await listMcpMedia(user.githubToken, campaign));
+    }
+    if (name === "upload_media") {
+      const campaign = getCampaign(user.id, Number(args.campaignId));
+      if (!campaign || !user.githubToken) throw new Error("Campaign not found");
+      requireManage(user.id, campaign);
+      if (!args.base64) throw new Error("base64 file contents are required");
+      const fileName = safeMediaName(args.fileName || "upload");
+      const path = `wiki/media/${fileName}`;
+      const base64 = String(args.base64).replace(/^data:[^;]+;base64,/, "");
+      // Overwrite if it already exists (look up the current sha so re-uploads succeed).
+      let existingSha: string | undefined;
+      try {
+        const existing = await getTextFile(user.githubToken, campaign, path);
+        existingSha = existing.sha;
+      } catch (error) {
+        if (!(error instanceof GitHubError && error.status === 404)) throw error;
+      }
+      await putBase64File(user.githubToken, campaign, path, base64, `CampaignRepo MCP: upload media ${fileName}`, existingSha);
+      // Best-effort alt/caption metadata; never block the upload on it.
+      if (args.alt) {
+        try {
+          const meta = await getTextFile(user.githubToken, campaign, "wiki/media/media.json");
+          const parsed = JSON.parse(meta.text || "{}") as Record<string, { alt?: string; caption?: string; tags?: string[] }>;
+          parsed[path] = { ...parsed[path], alt: String(args.alt) };
+          await putFile(user.githubToken, campaign, "wiki/media/media.json", JSON.stringify(parsed, null, 2) + "\n", `CampaignRepo MCP: media metadata ${fileName}`, meta.sha);
+        } catch {
+          /* metadata is optional — the file still renders and lists without it */
+        }
+      }
+      const type = mediaType(fileName);
+      const markdown = type === "image" ? `![${args.alt || fileName}](/wiki/media/${fileName})` : `[${args.alt || fileName}](/wiki/media/${fileName})`;
+      return toolResult(body.id, { name: fileName, path, mediaType: type, markdown });
     }
     if (name === "get_campaign_graph") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
