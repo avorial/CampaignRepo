@@ -8,6 +8,11 @@ export const gameTypeGroups: { label: string; types: GameType[] }[] = [
     types: [
       "Blades in the Dark",
       "Burning Wheel",
+      "Dark Ages: Fae",
+      "Dark Ages: Inquisitor",
+      "Dark Ages: Mage",
+      "Dark Ages: Vampire",
+      "Dark Ages: Werewolf",
       "Dragonbane",
       "Dungeons & Dragons",
       "Fabula Ultima",
@@ -27,10 +32,17 @@ export const gameTypeGroups: { label: string; types: GameType[] }[] = [
     types: [
       "Call of Cthulhu",
       "Candela Obscura",
+      "Changeling: The Dreaming",
       "Delta Green",
+      "Demon: The Fallen",
+      "Hunter: The Reckoning",
+      "Mage: The Ascension",
+      "Mummy: The Resurrection",
       "The King in Yellow RPG",
       "Twilight: 2000",
-      "World of Darkness"
+      "Vampire: The Masquerade",
+      "Werewolf: The Apocalypse",
+      "Wraith: The Oblivion"
     ]
   },
   {
