@@ -1,7 +1,9 @@
+import YAML from "yaml";
 import type { Campaign, WikiPage } from "@/lib/types";
 import { getCampaignRepositoryToken } from "@/lib/db";
-import { getTextFile, listDirectory } from "@/lib/github";
+import { getTextFile, GitHubError, listDirectory, putFile } from "@/lib/github";
 import { parsePage, stripGmBlocks } from "@/lib/markdown";
+import { sanitizeTheme, type CampaignTheme } from "@/lib/theme";
 
 /** Strip GM-only content and internal import metadata from a page before it leaves the server. */
 export function sanitizePlayerPage(page: WikiPage): WikiPage {
@@ -35,4 +37,39 @@ export async function loadPublicPages(campaign: Campaign): Promise<WikiPage[]> {
     .filter((page) => page.frontmatter.visibility === "players" && page.frontmatter.approvalStatus === "approved")
     .map(sanitizePlayerPage)
     .sort((a, b) => a.frontmatter.name.localeCompare(b.frontmatter.name));
+}
+
+const campaignConfigPath = "wiki/campaign.yaml";
+
+/** Read the campaign's theme block from wiki/campaign.yaml. Returns {} on any problem. */
+export async function loadCampaignTheme(campaign: Campaign): Promise<CampaignTheme> {
+  const repoToken = getCampaignRepositoryToken(campaign.id);
+  if (!repoToken) return {};
+  try {
+    const file = await getTextFile(repoToken, campaign, campaignConfigPath);
+    const parsed = YAML.parse(file.text || "") as Record<string, unknown> | null;
+    return sanitizeTheme(parsed?.theme);
+  } catch {
+    return {};
+  }
+}
+
+/** Merge a sanitized theme into wiki/campaign.yaml, preserving other keys. */
+export async function saveCampaignTheme(campaign: Campaign, theme: CampaignTheme): Promise<CampaignTheme> {
+  const repoToken = getCampaignRepositoryToken(campaign.id);
+  if (!repoToken) throw new Error("This campaign has no GitHub access configured.");
+  let config: Record<string, unknown> = {};
+  let sha: string | undefined;
+  try {
+    const file = await getTextFile(repoToken, campaign, campaignConfigPath);
+    sha = file.sha;
+    const parsed = YAML.parse(file.text || "") as Record<string, unknown> | null;
+    if (parsed && typeof parsed === "object") config = parsed;
+  } catch (error) {
+    if (!(error instanceof GitHubError && error.status === 404)) throw error;
+  }
+  const clean = sanitizeTheme(theme);
+  config.theme = clean;
+  await putFile(repoToken, campaign, campaignConfigPath, YAML.stringify(config), "CampaignRepo: update theme", sha);
+  return clean;
 }

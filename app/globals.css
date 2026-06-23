@@ -2644,3 +2644,39 @@ code {
   .public-library { position: static; }
   .public-masthead h1 { font-size: 34px; }
 }
+
+/* ---- Per-campaign theming controls ---- */
+.public-masthead.has-banner {
+  background-position: center;
+  background-size: cover;
+}
+
+.theme-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.theme-fields {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.theme-fields label {
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  gap: 6px;
+}
+
+.theme-fields input[type="color"] {
+  background: var(--field-bg);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  height: 38px;
+  padding: 4px;
+  width: 100%;
+}

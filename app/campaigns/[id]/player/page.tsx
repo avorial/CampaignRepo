@@ -1,7 +1,10 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { getCampaign } from "@/lib/db";
+import { loadCampaignTheme } from "@/lib/public-site";
+import { themeToCssVars } from "@/lib/theme";
 import PlayerPortalClient from "./player-portal-client";
 
 export default async function PlayerPortalPage({ params }: { params: Promise<{ id: string }> }) {
@@ -11,9 +14,10 @@ export default async function PlayerPortalPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) redirect("/dashboard");
+  const themeVars = themeToCssVars(await loadCampaignTheme(campaign)) as CSSProperties;
 
   return (
-    <main className="app-shell">
+    <main className="app-shell" style={themeVars}>
       <header className="topbar">
         <div>
           <Link href={`/campaigns/${campaign.id}`} className="quiet-link">{campaign.name}</Link>

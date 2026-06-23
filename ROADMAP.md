@@ -72,9 +72,11 @@ GM blocks and unapproved pages are never exposed. Clean reader theme with
 category nav, search, covers, galleries, and in-world wiki-link navigation.
 Public media is served via `/public-media/<slug>/...` gated on the enabled site.
 
-### 9. Per-campaign theming  ·  S
-Let a campaign set accent colors / banner / font via `campaign.yaml`, applied
-as CSS variables. World Anvil's custom CSS, but safe and simple.
+### 9. Per-campaign theming  ·  S  ·  ✅ SHIPPED
+A campaign sets accent colors, a curated display font, and a banner image via a
+`theme:` block in `campaign.yaml`, applied as CSS variables to the workspace,
+player portal, and public site. Edited from the Settings tab; colors and font
+are validated/sanitized server-side (no arbitrary CSS).
 
 ### 10. Editor upgrades (toward block editing)  ·  M–L
 Slash-command menu, drag-to-reorder, table support, inline image paste-upload,

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPublicSiteCampaign } from "@/lib/db";
-import { loadPublicPages } from "@/lib/public-site";
+import { loadCampaignTheme, loadPublicPages } from "@/lib/public-site";
 import PublicSiteClient from "./public-site-client";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +20,6 @@ export default async function PublicSitePage({ params }: { params: Promise<{ slu
   const { slug } = await params;
   const campaign = getPublicSiteCampaign(slug);
   if (!campaign) notFound();
-  const pages = await loadPublicPages(campaign);
-  return <PublicSiteClient slug={slug} campaignName={campaign.name} gameType={campaign.gameType} pages={pages} />;
+  const [pages, theme] = await Promise.all([loadPublicPages(campaign), loadCampaignTheme(campaign)]);
+  return <PublicSiteClient slug={slug} campaignName={campaign.name} gameType={campaign.gameType} pages={pages} theme={theme} />;
 }

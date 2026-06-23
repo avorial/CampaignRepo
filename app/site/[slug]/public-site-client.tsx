@@ -1,20 +1,23 @@
 "use client";
 
-import { MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { CSSProperties, MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { WikiPage } from "@/lib/types";
 import { renderMarkdown, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
+import { themeToCssVars, type CampaignTheme } from "@/lib/theme";
 
 export default function PublicSiteClient({
   slug,
   campaignName,
   gameType,
-  pages
+  pages,
+  theme
 }: {
   slug: string;
   campaignName: string;
   gameType: string;
   pages: WikiPage[];
+  theme: CampaignTheme;
 }) {
   const [selectedSlug, setSelectedSlug] = useState(pages[0]?.slug || "");
   const [query, setQuery] = useState("");
@@ -94,10 +97,12 @@ export default function PublicSiteClient({
   );
 
   const cover = selectedPage?.frontmatter.cover ? resolveMedia(selectedPage.frontmatter.cover) : "";
+  const themeVars = useMemo(() => themeToCssVars(theme) as CSSProperties, [theme]);
+  const banner = theme.banner ? resolveMedia(theme.banner) : "";
 
   return (
-    <main className="public-site">
-      <header className="public-masthead">
+    <main className="public-site" style={themeVars}>
+      <header className={banner ? "public-masthead has-banner" : "public-masthead"} style={banner ? { backgroundImage: `linear-gradient(180deg, rgba(8,5,15,0.35), rgba(8,5,15,0.92)), url("${banner}")` } : undefined}>
         <div className="public-masthead-inner">
           <span className="public-kicker">{gameType}</span>
           <h1>{campaignName}</h1>

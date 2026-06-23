@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, type ReactNode, useEffect, useState } from "react";
 import type { Campaign, CampaignGraphEdge, CampaignGraphNode, CampaignMedia, CampaignTimelineItem, WikiPage, WikiTemplate } from "@/lib/types";
 import { gameTypes } from "@/lib/templates";
+import { defaultAccent, defaultAccent2, themeFontNames, type CampaignTheme } from "@/lib/theme";
 
 type RepoValidationCheck = {
   label: string;
@@ -33,20 +34,22 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const [openNodes, setOpenNodes] = useState<Record<string, boolean>>({});
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({});
   const [publicSite, setPublicSite] = useState<{ slug: string; enabled: boolean } | null>(null);
+  const [theme, setTheme] = useState<CampaignTheme>({});
   const [tab, setTab] = useState(campaign.role === "owner" || campaign.role === "gm" ? "pages" : "world");
   const pendingReviews = pages.filter((page) => page.frontmatter.approvalStatus !== "approved").length;
   const pageTemplates = templates.filter((template) => template.category === pageCategory);
 
   async function load() {
     const canManage = campaign.role === "owner" || campaign.role === "gm";
-    const [pagesRes, graphRes, setupRes, templatesRes, mediaRes, validationRes, publicRes] = await Promise.all([
+    const [pagesRes, graphRes, setupRes, templatesRes, mediaRes, validationRes, publicRes, themeRes] = await Promise.all([
       fetch(`/api/campaigns/${campaign.id}/pages`),
       fetch(`/api/campaigns/${campaign.id}/graph`),
       fetch(`/api/campaigns/${campaign.id}/setup`),
       canManage ? fetch(`/api/campaigns/${campaign.id}/templates`) : Promise.resolve(null),
       canManage ? fetch(`/api/campaigns/${campaign.id}/media`) : Promise.resolve(null),
       canManage ? fetch(`/api/campaigns/${campaign.id}/validation`) : Promise.resolve(null),
-      canManage ? fetch(`/api/campaigns/${campaign.id}/public`) : Promise.resolve(null)
+      canManage ? fetch(`/api/campaigns/${campaign.id}/public`) : Promise.resolve(null),
+      canManage ? fetch(`/api/campaigns/${campaign.id}/theme`) : Promise.resolve(null)
     ]);
     const pagesData = await pagesRes.json();
     const graphData = graphRes.ok ? await graphRes.json() : { nodes: [], edges: [], timeline: [] };
@@ -55,6 +58,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     const mediaData = mediaRes && mediaRes.ok ? await mediaRes.json() : { media: [] };
     const validationData = validationRes && validationRes.ok ? await validationRes.json() : null;
     const publicData = publicRes && publicRes.ok ? await publicRes.json() : { site: null };
+    const themeData = themeRes && themeRes.ok ? await themeRes.json() : { theme: {} };
     setPages(pagesData.pages || []);
     setGraph({ nodes: graphData.nodes || [], edges: graphData.edges || [], timeline: graphData.timeline || [] });
     setSetup(setupData.markdown || "");
@@ -62,6 +66,27 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     setMedia(mediaData.media || []);
     setValidation(validationData);
     setPublicSite(publicData.site || null);
+    setTheme(themeData.theme || {});
+  }
+
+  async function saveTheme(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const next: CampaignTheme = {
+      accent: String(form.get("accent") || ""),
+      accent2: String(form.get("accent2") || ""),
+      displayFont: String(form.get("displayFont") || "") || undefined,
+      banner: String(form.get("banner") || "") || undefined
+    };
+    setMessage("Saving theme...");
+    const res = await fetch(`/api/campaigns/${campaign.id}/theme`, { method: "PUT", body: JSON.stringify({ theme: next }) });
+    const data = await res.json();
+    if (res.ok) {
+      setTheme(data.theme || {});
+      setMessage("Theme saved to campaign.yaml. Reload to see it everywhere.");
+    } else {
+      setMessage(data.error || "Could not save theme.");
+    }
   }
 
   async function setPublic(action: "publish" | "rotate" | "unpublish") {
@@ -639,6 +664,34 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
             ) : (
               <p className="muted">{publicSite ? "This world is currently offline. Re-publish to bring it back at its existing link." : "Not published yet."}</p>
             )}
+          </section>
+        )}
+
+        {canManage && tab === "settings" && (
+          <section className="panel">
+            <div className="section-heading">
+              <div>
+                <h2>Theme</h2>
+                <p className="muted">Accent colors, display font, and banner — stored in campaign.yaml and applied to the workspace, player portal, and public site.</p>
+              </div>
+            </div>
+            <form onSubmit={saveTheme} className="theme-form">
+              <div className="theme-fields">
+                <label>Accent (gold)<input type="color" name="accent" defaultValue={theme.accent || defaultAccent} key={`a-${theme.accent || ""}`} /></label>
+                <label>Secondary (purple)<input type="color" name="accent2" defaultValue={theme.accent2 || defaultAccent2} key={`a2-${theme.accent2 || ""}`} /></label>
+                <label>Display font<select name="displayFont" defaultValue={theme.displayFont || "Fraunces"} key={`f-${theme.displayFont || ""}`}>{themeFontNames.map((font) => <option key={font} value={font}>{font}</option>)}</select></label>
+                <label>Banner image<select name="banner" defaultValue={theme.banner || ""} key={`b-${theme.banner || ""}`}>
+                  <option value="">None</option>
+                  {media.filter((item) => item.mediaType === "image").map((item) => {
+                    const rel = item.path.replace(/^wiki\/media\//, "");
+                    return <option key={item.path} value={rel}>{item.name}</option>;
+                  })}
+                </select></label>
+              </div>
+              <div className="member-actions">
+                <button type="submit">Save theme</button>
+              </div>
+            </form>
           </section>
         )}
 

@@ -1,8 +1,11 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { getCampaign } from "@/lib/db";
+import { loadCampaignTheme } from "@/lib/public-site";
 import { categories } from "@/lib/templates";
+import { themeToCssVars } from "@/lib/theme";
 import CampaignClient from "./workspace-client";
 
 export default async function CampaignPage({ params }: { params: Promise<{ id: string }> }) {
@@ -12,8 +15,9 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) redirect("/dashboard");
+  const themeVars = themeToCssVars(await loadCampaignTheme(campaign)) as CSSProperties;
   return (
-    <main className="app-shell">
+    <main className="app-shell" style={themeVars}>
       <header className="topbar">
         <div>
           <Link href="/dashboard" className="quiet-link">Dashboard</Link>
