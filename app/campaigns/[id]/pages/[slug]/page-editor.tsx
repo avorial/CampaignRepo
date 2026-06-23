@@ -24,6 +24,9 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
   const [notFound, setNotFound] = useState(false);
   const [sourceJsonDraft, setSourceJsonDraft] = useState("");
   const [sourceDiff, setSourceDiff] = useState<any | null>(null);
+  const [parentFilter, setParentFilter] = useState("");
+  const [linkFilter, setLinkFilter] = useState("");
+  const [mediaFilter, setMediaFilter] = useState("");
 
   const applyPage = useCallback((nextPage: WikiPage) => {
     setPage(nextPage);
@@ -47,7 +50,7 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
 
   useEffect(() => {
     loadPage();
-    setIsEditing(false);
+    setIsEditing(canManage && new URLSearchParams(window.location.search).get("edit") === "1");
     fetch(`/api/campaigns/${campaign.id}/pages`)
       .then((res) => res.json())
       .then((data) => setKnownPages(Array.isArray(data.pages) ? data.pages : []));
@@ -108,7 +111,10 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
         body: JSON.stringify({ name: target, category: "npc", visibility: "gm" })
       });
       const data = await res.json();
-      if (res.ok && data.slug) router.push(`/campaigns/${campaign.id}/pages/${data.slug}`);
+      if ((res.ok || res.status === 409) && data.slug) {
+        const editQuery = res.status === 409 ? "?edit=1" : "";
+        router.push(`/campaigns/${campaign.id}/pages/${data.slug}${editQuery}`);
+      }
       else setMessage(data.error || "Could not create page.");
     },
     [campaign.id, canManage, router]
@@ -324,7 +330,10 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
                 body: JSON.stringify({ name: slug.replace(/-/g, " "), category: "npc", visibility: "gm" })
               });
               const data = await res.json();
-              if (res.ok && data.slug) router.push(`/campaigns/${campaign.id}/pages/${data.slug}`);
+              if ((res.ok || res.status === 409) && data.slug) {
+                const editQuery = res.status === 409 ? "?edit=1" : "";
+                router.push(`/campaigns/${campaign.id}/pages/${data.slug}${editQuery}`);
+              }
               else setMessage(data.error || "Could not create page.");
             }}
           >
@@ -369,6 +378,23 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
     for (const child of childMap.get(cur) || []) if (!blocked.has(child)) (blocked.add(child), stack.push(child));
   }
   const parentOptions = knownPages.filter((p) => !blocked.has(p.slug)).sort((a, b) => a.frontmatter.name.localeCompare(b.frontmatter.name));
+  const pageMatches = (candidate: WikiPage, filter: string) => {
+    const query = filter.trim().toLowerCase();
+    if (!query) return true;
+    return [candidate.frontmatter.name, candidate.slug, candidate.frontmatter.category, ...(candidate.frontmatter.tags || [])]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(query);
+  };
+  const filteredParentOptions = parentOptions.filter((candidate) => candidate.slug === frontmatter.parent || pageMatches(candidate, parentFilter));
+  const filteredLinkPages = knownPages
+    .filter((candidate) => pageMatches(candidate, linkFilter))
+    .sort((a, b) => a.frontmatter.name.localeCompare(b.frontmatter.name));
+  const filteredInsertMedia = media.filter((item) => {
+    const query = mediaFilter.trim().toLowerCase();
+    return !query || [item.name, item.path, item.caption, item.alt, ...(item.tags || [])].filter(Boolean).join(" ").toLowerCase().includes(query);
+  });
   const breadcrumbsEl = breadcrumbs.length > 0 && (
     <nav className="breadcrumbs">
       {breadcrumbs.map((b) => (
@@ -431,9 +457,11 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
           <label>Status<input value={frontmatter.status || ""} onChange={(e) => updateField("status", e.target.value)} readOnly={!fieldsEditable} placeholder="alive, active, destroyed..." /></label>
           <label>Tags<input value={tags.join(", ")} onChange={(e) => updateField("tags", e.target.value.split(",").map((v) => v.trim()).filter(Boolean))} readOnly={!fieldsEditable} /></label>
           <label>Aliases<input value={(frontmatter.aliases || []).join(", ")} onChange={(e) => updateField("aliases", e.target.value.split(",").map((v) => v.trim()).filter(Boolean))} readOnly={!fieldsEditable} /></label>
-          <label>Parent page<select value={frontmatter.parent || ""} onChange={(e) => updateField("parent", e.target.value || undefined)} disabled={!fieldsEditable}>
+          <label>Parent page
+            {fieldsEditable && <input type="search" value={parentFilter} onChange={(event) => setParentFilter(event.target.value)} placeholder="Filter pages" />}
+            <select value={frontmatter.parent || ""} onChange={(e) => updateField("parent", e.target.value || undefined)} disabled={!fieldsEditable}>
             <option value="">— none (top level) —</option>
-            {parentOptions.map((p) => <option key={p.slug} value={p.slug}>{p.frontmatter.name}</option>)}
+            {filteredParentOptions.map((p) => <option key={p.slug} value={p.slug}>{p.frontmatter.name} · {p.frontmatter.category}</option>)}
           </select></label>
         </div>
 
@@ -521,16 +549,18 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
           <div className="insert-toolbar">
             <label>
               Wiki link
+              <input type="search" value={linkFilter} onChange={(event) => setLinkFilter(event.target.value)} placeholder="Filter pages" />
               <select defaultValue="" onChange={(event) => { insertWikiLink(event.target.value); event.target.value = ""; }}>
                 <option value="">Insert page link</option>
-                {knownPages.map((knownPage) => <option key={knownPage.slug} value={knownPage.frontmatter.name}>{knownPage.frontmatter.name}</option>)}
+                {filteredLinkPages.map((knownPage) => <option key={knownPage.slug} value={knownPage.frontmatter.name}>{knownPage.frontmatter.name} · {knownPage.frontmatter.category}</option>)}
               </select>
             </label>
             <label>
               Media
+              <input type="search" value={mediaFilter} onChange={(event) => setMediaFilter(event.target.value)} placeholder="Filter media" />
               <select defaultValue="" onChange={(event) => { insertMedia(event.target.value); event.target.value = ""; }}>
                 <option value="">Insert media</option>
-                {media.map((item) => <option key={item.path} value={item.path}>{item.name}</option>)}
+                {filteredInsertMedia.map((item) => <option key={item.path} value={item.path}>{item.name}</option>)}
               </select>
             </label>
             <button type="button" className="secondary" onClick={() => insertSnippet(":::gm\n{{selection}}\n:::")}>GM Block</button>

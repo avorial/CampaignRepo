@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, type ReactNode, useEffect, useState } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import type { Campaign, CampaignGraphEdge, CampaignGraphNode, CampaignMedia, CampaignTimelineItem, WikiPage, WikiTemplate } from "@/lib/types";
 import { gameTypes } from "@/lib/templates";
 import { defaultAccent, defaultAccent2, themeFontNames, type CampaignTheme } from "@/lib/theme";
@@ -31,6 +32,8 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const [search, setSearch] = useState<any[]>([]);
   const [pageCategory, setPageCategory] = useState(categories[0]?.id || "character");
   const [navFilter, setNavFilter] = useState("");
+  const [mediaFilter, setMediaFilter] = useState("");
+  const [templateFilter, setTemplateFilter] = useState("");
   const [openNodes, setOpenNodes] = useState<Record<string, boolean>>({});
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({});
   const [publicSite, setPublicSite] = useState<{ slug: string; enabled: boolean } | null>(null);
@@ -114,7 +117,10 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
       body: JSON.stringify({ name: form.get("name"), category: form.get("category"), visibility: form.get("visibility"), templatePath: form.get("templatePath") || undefined })
     });
     const data = await res.json();
-    if (res.ok) window.location.href = `/campaigns/${campaign.id}/pages/${data.slug}`;
+    if ((res.ok || res.status === 409) && data.slug) {
+      const editQuery = res.status === 409 ? "?edit=1" : "";
+      window.location.href = `/campaigns/${campaign.id}/pages/${data.slug}${editQuery}`;
+    }
     else setMessage(data.error || "Could not create page.");
   }
 
@@ -337,11 +343,24 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
       <div className="nav-tree-item" key={page.slug}>
         <div className="nav-tree-row" style={{ paddingLeft: depth * 14 }}>
           {kids.length ? (
-            <button type="button" className="nav-tree-toggle" aria-expanded={isOpen} onClick={() => setOpenNodes((s) => ({ ...s, [page.slug]: !isOpen }))}>{isOpen ? "▾" : "▸"}</button>
+            <button
+              type="button"
+              className="nav-tree-toggle"
+              aria-expanded={isOpen}
+              aria-label={`${isOpen ? "Collapse" : "Expand"} ${kids.length} child page${kids.length === 1 ? "" : "s"} under ${page.frontmatter.name}`}
+              title={`${isOpen ? "Collapse" : "Expand"} ${kids.length} child page${kids.length === 1 ? "" : "s"}`}
+              onClick={() => setOpenNodes((s) => ({ ...s, [page.slug]: !isOpen }))}
+            >
+              {isOpen ? <ChevronDown aria-hidden="true" size={18} /> : <ChevronRight aria-hidden="true" size={18} />}
+            </button>
           ) : (
             <span className="nav-tree-spacer" />
           )}
-          <Link className="nav-link nav-tree-link" href={`/campaigns/${campaign.id}/pages/${page.slug}`}>{catDot(page)}{page.frontmatter.name}</Link>
+          <Link className="nav-link nav-tree-link" href={`/campaigns/${campaign.id}/pages/${page.slug}`}>
+            {catDot(page)}
+            <span className="nav-tree-name">{page.frontmatter.name}</span>
+            {kids.length > 0 && <span className="nav-tree-child-count" title={`${kids.length} direct child page${kids.length === 1 ? "" : "s"}`}>{kids.length}</span>}
+          </Link>
         </div>
         {kids.length > 0 && isOpen && kids.map((child) => navLink(child, depth + 1))}
       </div>
@@ -370,7 +389,19 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
       </div>
     );
   });
-  const templatesByGame = gameTypes.map((gameType) => ({ gameType, templates: templates.filter((template) => template.gameType === gameType) }));
+  const mediaFilterLc = mediaFilter.trim().toLowerCase();
+  const filteredMedia = media.filter((item) =>
+    !mediaFilterLc || [item.name, item.path, item.mediaType, item.alt, item.caption, ...(item.tags || [])].filter(Boolean).join(" ").toLowerCase().includes(mediaFilterLc)
+  );
+  const templateFilterLc = templateFilter.trim().toLowerCase();
+  const templatesByGame = gameTypes.map((gameType) => ({
+    gameType,
+    templates: templates.filter((template) =>
+      template.gameType === gameType &&
+      (!templateFilterLc || [template.name, template.category, template.summary, template.path].filter(Boolean).join(" ").toLowerCase().includes(templateFilterLc))
+    )
+  }));
+  const visibleTemplateGroups = templateFilterLc ? templatesByGame.filter((group) => group.templates.length > 0) : templatesByGame;
   // Timeline grouped into eras, eras ordered by their earliest event date.
   const timelineEras = (() => {
     const groups = new Map<string, CampaignTimelineItem[]>();
@@ -568,8 +599,9 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
 
             <div className="panel media-library">
               <h2>Media Library</h2>
+              <input type="search" className="library-filter" value={mediaFilter} onChange={(event) => setMediaFilter(event.target.value)} placeholder="Filter media by name, type, caption, or tag" />
               <div className="media-list">
-                {media.map((item) => (
+                {filteredMedia.map((item) => (
                   <article key={item.path} className="media-row">
                     <div className={`media-preview media-preview-${item.mediaType}`}>
                       {item.downloadUrl && item.mediaType === "image" && <img src={item.downloadUrl} alt={item.alt || item.name} />}
@@ -594,6 +626,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
                   </article>
                 ))}
                 {!media.length && <p className="muted">No media uploaded yet.</p>}
+                {media.length > 0 && !filteredMedia.length && <p className="muted">No media matches this filter.</p>}
               </div>
             </div>
           </section>
@@ -616,7 +649,8 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
 
             <div className="panel template-library">
               <h2>Template Library</h2>
-              {templatesByGame.map((group) => (
+              <input type="search" className="library-filter" value={templateFilter} onChange={(event) => setTemplateFilter(event.target.value)} placeholder="Filter templates by name, category, or summary" />
+              {visibleTemplateGroups.map((group) => (
                 <div key={group.gameType} className="template-group">
                   <h3>{group.gameType}</h3>
                   {group.templates.map((template) => (
@@ -629,6 +663,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
                   {!group.templates.length && <p className="muted">No templates yet.</p>}
                 </div>
               ))}
+              {templateFilterLc && !visibleTemplateGroups.length && <p className="muted">No templates match this filter.</p>}
             </div>
           </section>
         )}

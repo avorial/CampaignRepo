@@ -104,8 +104,9 @@ export async function rebuildSearchIndex(token: string, campaign: Campaign) {
   try {
     const existing = await getTextFile(token, campaign, "wiki/search/index.json");
     sha = existing.sha;
-  } catch {
-    sha = undefined;
+  } catch (error) {
+    if (error instanceof GitHubError && error.status === 404) sha = undefined;
+    else throw error;
   }
   await putFile(token, campaign, "wiki/search/index.json", JSON.stringify(docs, null, 2) + "\n", "CampaignRepo: update search snapshot", sha);
   return docs;
