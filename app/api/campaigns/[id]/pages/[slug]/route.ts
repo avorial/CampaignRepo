@@ -5,6 +5,7 @@ import { canManageCampaign, getCampaign, getCampaignRepositoryToken } from "@/li
 import { deleteFile, getTextFile, GitHubError, putFile } from "@/lib/github";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { rebuildSearchIndex } from "@/lib/search";
+import { readPageCache, refreshPageCache } from "@/lib/page-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -34,16 +35,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const repoToken = getCampaignRepositoryToken(campaign.id);
   if (!repoToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  let file: Awaited<ReturnType<typeof getTextFile>>;
-  try {
-    file = await getTextFile(repoToken, campaign, `wiki/pages/${slug}.md`);
-  } catch (error) {
-    if (error instanceof GitHubError && error.status === 404) {
-      return NextResponse.json({ error: "Page not found.", missing: true }, { status: 404 });
+  let page = readPageCache(campaign.id).pages.find((candidate) => candidate.slug === slug);
+  if (!page) {
+    try {
+      page = (await refreshPageCache(repoToken, campaign)).pages.find((candidate) => candidate.slug === slug);
+    } catch (error) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Could not refresh campaign pages." },
+        { status: 503 }
+      );
     }
-    throw error;
   }
-  const page = parsePage(slug, file.text, file.sha);
+  if (!page) return NextResponse.json({ error: "Page not found.", missing: true }, { status: 404 });
   const mode = new URL(req.url).searchParams.get("mode");
   const playerSafeMode = campaign.role === "player" || mode === "player";
   if (playerSafeMode && (page.frontmatter.visibility !== "players" || page.frontmatter.approvalStatus !== "approved")) {
