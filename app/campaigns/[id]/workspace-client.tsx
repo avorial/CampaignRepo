@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FormEvent, type ReactNode, useEffect, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { Campaign, CampaignGraphEdge, CampaignGraphNode, CampaignMedia, CampaignTimelineItem, WikiPage, WikiTemplate } from "@/lib/types";
-import { gameTypes } from "@/lib/templates";
+import { gameTypeGroups, gameTypes } from "@/lib/templates";
 import { defaultAccent, defaultAccent2, themeFontNames, type CampaignTheme } from "@/lib/theme";
 
 type RepoValidationCheck = {
@@ -638,7 +638,9 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
               <h2>Template Creator</h2>
               <form onSubmit={createTemplate} className="stack">
                 <label>Template name<input name="templateName" required placeholder="Solomani Patron" /></label>
-                <label>Game type<select name="gameType" defaultValue={campaign.gameType}>{gameTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
+                <label>Game type<select name="gameType" defaultValue={campaign.gameType}>{gameTypeGroups.map((group) => (
+                  <optgroup key={group.label} label={group.label}>{group.types.map((type) => <option key={type}>{type}</option>)}</optgroup>
+                ))}</select></label>
                 <label>Content type<select name="templateCategory">{categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.label}</option>)}</select></label>
                 <label>Summary<input name="summary" placeholder="Reusable structure for..." /></label>
                 <label>Tags<input name="tags" placeholder="traveller, patron, navy" /></label>

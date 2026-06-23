@@ -1,38 +1,59 @@
 import type { Category, GameType, WikiPageFrontmatter } from "@/lib/types";
 
-export const gameTypes: GameType[] = [
-  "Sword Chronicle",
-  "Dungeons & Dragons",
-  "World of Darkness",
-  "Traveller",
-  "Pathfinder",
-  "Call of Cthulhu",
-  "Cyberpunk RED",
-  "Shadowdark RPG",
-  "Warhammer Fantasy Roleplay",
-  "Starfinder",
-  "Alien RPG",
-  "Delta Green",
-  "Blades in the Dark",
-  "Mörk Borg",
-  "Dragonbane",
-  "Warhammer 40,000 Roleplay",
-  "Savage Worlds",
-  "The One Ring",
-  "Fabula Ultima",
-  "Old-School Essentials",
-  "Candela Obscura",
-  "Mothership",
-  "Coriolis",
-  "2300AD",
-  "Burning Wheel",
-  "The King in Yellow RPG",
-  "Fate Core",
-  "Twilight: 2000",
-  "Pendragon",
-  "Reign",
-  "Custom"
+// Game template packs grouped by genre (Fantasy, Modern, Sci-Fi, Generic),
+// alphabetical within each group; Custom is the generic catch-all and stays last.
+export const gameTypeGroups: { label: string; types: GameType[] }[] = [
+  {
+    label: "Fantasy",
+    types: [
+      "Blades in the Dark",
+      "Burning Wheel",
+      "Dragonbane",
+      "Dungeons & Dragons",
+      "Fabula Ultima",
+      "Mörk Borg",
+      "Old-School Essentials",
+      "Pathfinder",
+      "Pendragon",
+      "Reign",
+      "Shadowdark RPG",
+      "Sword Chronicle",
+      "The One Ring",
+      "Warhammer Fantasy Roleplay"
+    ]
+  },
+  {
+    label: "Modern",
+    types: [
+      "Call of Cthulhu",
+      "Candela Obscura",
+      "Delta Green",
+      "The King in Yellow RPG",
+      "Twilight: 2000",
+      "World of Darkness"
+    ]
+  },
+  {
+    label: "Sci-Fi",
+    types: [
+      "2300AD",
+      "Alien RPG",
+      "Coriolis",
+      "Cyberpunk RED",
+      "Mothership",
+      "Starfinder",
+      "Traveller",
+      "Warhammer 40,000 Roleplay"
+    ]
+  },
+  {
+    label: "Generic",
+    types: ["Fate Core", "Savage Worlds", "Custom"]
+  }
 ];
+
+// Flat list (genre order) — drives the zod validator and any non-grouped consumers.
+export const gameTypes: GameType[] = gameTypeGroups.flatMap((group) => group.types);
 export const categories: { id: Category; label: string }[] = [
   { id: "character", label: "Characters" },
   { id: "npc", label: "NPCs" },

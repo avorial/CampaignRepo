@@ -4,7 +4,7 @@ import Logo from "@/app/components/logo";
 import { currentUser } from "@/lib/auth";
 import { listCampaigns } from "@/lib/db";
 import { isGitHubAppConfigured } from "@/lib/github";
-import { categories, gameTypes } from "@/lib/templates";
+import { categories } from "@/lib/templates";
 import DashboardClient from "./dashboard-client";
 
 export default async function DashboardPage() {
@@ -29,7 +29,7 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <DashboardClient user={user} campaigns={campaigns} gameTypes={gameTypes} categories={categories} githubAppConfigured={isGitHubAppConfigured()} />
+      <DashboardClient user={user} campaigns={campaigns} categories={categories} githubAppConfigured={isGitHubAppConfigured()} />
     </main>
   );
 }

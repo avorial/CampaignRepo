@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { Lock } from "lucide-react";
-import type { ApiToken, Campaign, GameType, User } from "@/lib/types";
+import type { ApiToken, Campaign, User } from "@/lib/types";
+import { gameTypeGroups } from "@/lib/templates";
 
 // Third-party game-system marks (cleaned, transparent) shown on a light plate;
 // Custom has no logo and falls back to its gold initial.
@@ -17,12 +18,10 @@ const gameLogos: Record<string, string> = {
 export default function DashboardClient({
   user,
   campaigns,
-  gameTypes,
   githubAppConfigured
 }: {
   user: User;
   campaigns: Campaign[];
-  gameTypes: GameType[];
   categories: { id: string; label: string }[];
   githubAppConfigured: boolean;
 }) {
@@ -223,7 +222,9 @@ export default function DashboardClient({
             {mode === "connect" && <label>Owner<input name="owner" placeholder="avorial (optional if pasting URL)" /></label>}
             <label>{mode === "connect" ? "Repo name or URL" : "Repo name"}<input name="repo" required placeholder={mode === "connect" ? "kdwiki or https://github.com/avorial/kdwiki" : "jardin-campaign"} /></label>
             <label>Branch<input name="branch" defaultValue="main" /></label>
-            <label>Game template pack<select name="gameType">{gameTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
+            <label>Game template pack<select name="gameType">{gameTypeGroups.map((group) => (
+              <optgroup key={group.label} label={group.label}>{group.types.map((type) => <option key={type}>{type}</option>)}</optgroup>
+            ))}</select></label>
             {mode === "create" && <label className="check"><input type="checkbox" name="private" defaultChecked /> Private repo</label>}
             <button disabled={isGitHubApp && mode === "create"}>{mode === "create" ? "Create and initialize" : "Connect and repair"}</button>
             {buildError && <p className="error">{buildError}</p>}
