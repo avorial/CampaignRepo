@@ -516,6 +516,7 @@ code {
 .workspace {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
+  align-items: start;
   gap: 18px;
 }
 
