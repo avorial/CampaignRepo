@@ -166,12 +166,18 @@ what, compare revisions, restore an earlier page or media metadata file, and
 surface recent activity by campaign. Add a compact dashboard feed for new pages,
 approvals, imports, comments, invites, and publishing changes.
 
-### 20. Campaign health & repair center  ·  S-M
+### 20. Campaign health & repair center  ·  S-M  ·  ✅ SHIPPED
 Expand repo validation into an actionable health dashboard: broken links,
 orphaned pages, duplicate aliases, invalid parents, missing media, empty required
 fields, stale imports, unapproved content, oversized files, and search-index
 drift. Each finding should link to the affected item and offer safe bulk repair
 where possible.
+
+Shipped: `/campaigns/[id]/health` scans every page for broken wiki links,
+invalid parents, parent category mismatch (won't nest), missing media, duplicate
+aliases, empty names, and unapproved content — grouped with severity badges,
+each linking to the page (and to the review queue / Organize for repair).
+Follow-ups: orphaned pages, oversized files, search-index drift, inline repair.
 
 ### 21. Bulk organization tools  ·  M  ·  🚧 PAGES SHIPPED
 Add a table view for pages and media with filtering, sorting, multi-select, and

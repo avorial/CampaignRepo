@@ -3016,3 +3016,34 @@ code {
   padding: 1px 5px;
   margin-right: 3px;
 }
+
+/* ---- Campaign health center ---- */
+.health { display: grid; gap: 8px; }
+
+.health-summary {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.health-clean {
+  color: var(--gold-bright);
+  font-weight: 600;
+  margin: 0;
+}
+
+.health-badge {
+  align-self: center;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.04em;
+  padding: 2px 9px;
+  text-transform: uppercase;
+}
+
+.health-badge.sev-error { background: rgba(255, 138, 138, 0.14); color: var(--danger); border: 1px solid rgba(255, 138, 138, 0.32); }
+.health-badge.sev-warn { background: var(--wash-gold); color: var(--gold-bright); border: 1px solid rgba(212, 169, 87, 0.32); }
+.health-badge.sev-info { background: var(--wash-purple); color: var(--purple); border: 1px solid var(--border-soft); }
