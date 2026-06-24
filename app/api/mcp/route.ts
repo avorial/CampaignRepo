@@ -202,6 +202,7 @@ export async function GET(req: Request) {
       "create_page",
       "create_pages",
       "propose_page_update",
+      "update_pages",
       "list_templates",
       "create_template",
       "list_media",
@@ -261,6 +262,7 @@ export async function POST(req: Request) {
         { name: "create_page", description: "Create a wiki page (lands as unapproved for GM review).", inputSchema: obj({ campaignId, name: { type: "string" }, category: { type: "string", enum: [...categoryIds] }, content: { type: "string", description: "Markdown body. :::gm blocks are GM-only." } }, ["campaignId", "name"]) },
         { name: "create_pages", description: "Create MANY wiki pages in a SINGLE commit (lands unapproved for GM review). Use this for bulk imports/conversions instead of calling create_page in a loop — it avoids GitHub secondary rate limits.", inputSchema: obj({ campaignId, pages: { type: "array", description: "Pages to create.", items: { type: "object", properties: { name: { type: "string" }, category: { type: "string", enum: [...categoryIds] }, content: { type: "string", description: "Markdown body. :::gm blocks are GM-only." } }, required: ["name"] } } }, ["campaignId", "pages"]) },
         { name: "propose_page_update", description: "Update a page (lands as unapproved for GM review).", inputSchema: obj({ campaignId, slug: { type: "string" }, content: { type: "string" }, frontmatter: { type: "object", additionalProperties: true } }, ["campaignId", "slug"]) },
+        { name: "update_pages", description: "Update frontmatter on MANY existing pages in a SINGLE commit (e.g. bulk re-categorize). Preserves each page's approval status. Use this instead of propose_page_update in a loop to avoid GitHub secondary rate limits.", inputSchema: obj({ campaignId, updates: { type: "array", description: "Pages to update by slug.", items: { type: "object", properties: { slug: { type: "string" }, category: { type: "string", enum: [...categoryIds], description: "New category (also sets type)." }, frontmatter: { type: "object", additionalProperties: true, description: "Other frontmatter fields to merge." } }, required: ["slug"] } } }, ["campaignId", "updates"]) },
         { name: "list_templates", description: "List campaign templates grouped by game type.", inputSchema: obj({ campaignId }, ["campaignId"]) },
         { name: "create_template", description: "Create a campaign template in the repo.", inputSchema: obj({ campaignId, name: { type: "string" }, gameType: { type: "string" }, category: { type: "string", enum: [...categoryIds] }, summary: { type: "string" }, tags: { type: "array", items: { type: "string" } }, content: { type: "string" } }, ["campaignId", "name"]) },
         { name: "list_media", description: "List uploaded campaign media and Markdown links.", inputSchema: obj({ campaignId }, ["campaignId"]) },
@@ -319,6 +321,32 @@ export async function POST(req: Request) {
       const result = await commitFiles(user.githubToken, campaign, files, `CampaignRepo MCP: create ${files.length} unapproved pages`);
       scheduleSearchIndexRebuild(user.githubToken, campaign);
       return toolResult(body.id, { created: files.length, slugs, commit: result?.commit, approvalStatus: "unapproved" });
+    }
+    if (name === "update_pages") {
+      const campaign = getCampaign(user.id, Number(args.campaignId));
+      if (!campaign || !user.githubToken) throw new Error("Campaign not found");
+      if (!canManageCampaign(user.id, campaign.id)) throw new Error("Forbidden");
+      const updates = Array.isArray(args.updates) ? args.updates : [];
+      if (!updates.length) throw new Error("updates must be a non-empty array");
+      // One GraphQL read of every page, then one commit for all the edits.
+      const existing = await listDirectoryTextFiles(user.githubToken, campaign, "wiki/pages");
+      const bySlug = new Map(existing.map((file) => [file.name.replace(/\.md$/, ""), file]));
+      const files: { path: string; content: string }[] = [];
+      const missing: string[] = [];
+      for (const update of updates) {
+        const slug = String(update?.slug || "");
+        const file = bySlug.get(slug);
+        if (!file) { missing.push(slug); continue; }
+        const page = parsePage(slug, file.text ?? "", file.sha);
+        const patch: Record<string, unknown> = { ...(update?.frontmatter || {}) };
+        if (update?.category) { patch.category = update.category; patch.type = update.category; }
+        // Preserve approvalStatus — a GM-initiated bulk edit shouldn't unpublish.
+        const fm = { ...page.frontmatter, ...patch, lastEditedBy: "AI via MCP" };
+        files.push({ path: `wiki/pages/${slug}.md`, content: serializePage(fm, page.content) });
+      }
+      const result = files.length ? await commitFiles(user.githubToken, campaign, files, `CampaignRepo MCP: update ${files.length} pages`) : null;
+      scheduleSearchIndexRebuild(user.githubToken, campaign);
+      return toolResult(body.id, { updated: files.length, missing, commit: result?.commit });
     }
     if (name === "propose_page_update") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
