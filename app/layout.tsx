@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import CommandPalette from "./components/command-palette";
 
 export const metadata: Metadata = {
   title: "CampaignRepo",
@@ -17,7 +18,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <CommandPalette />
+      </body>
     </html>
   );
 }

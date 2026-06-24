@@ -132,11 +132,17 @@ Tier 1 made CampaignRepo a real worldbuilding tool. This tier makes it a product
 that a GM can rely on every week: fast to navigate, useful during a session,
 safe to maintain, and comfortable with thousands of pages and media files.
 
-### 16. Global command palette & unified finder  ·  S-M
+### 16. Global command palette & unified finder  ·  S-M  ·  ✅ SHIPPED
 Add `Ctrl/Cmd+K` from every authenticated screen. Search pages, media, maps,
 templates, campaigns, and common actions in one keyboard-first surface. Results
 show category, campaign, visibility, and parent path. Include quick actions such
 as create page, upload media, open map, rebuild search, and invite player.
+
+Shipped: a global `Cmd/Ctrl+K` palette (mounted in the root layout, active only
+when signed in) with keyboard nav. Searches pages full-text via `/api/search`,
+lists campaigns, and offers context-aware navigation (workspace, organize, maps,
+admin, player portal). Follow-ups: media/template results, parent path in the
+hint, and one-shot mutating actions (rebuild search, upload media, invite).
 
 ### 17. Session workspace  ·  M
 Create a focused GM session view with agenda, scenes, encounters, handouts,

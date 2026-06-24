@@ -2893,3 +2893,126 @@ code {
 }
 
 .organize-table input[type="checkbox"] { width: auto; }
+
+/* ---- Command palette (Cmd/Ctrl+K) ---- */
+.cmdk-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 12vh 16px 16px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(6px);
+}
+
+.cmdk {
+  width: min(620px, 100%);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
+}
+
+.cmdk-input {
+  border: 0;
+  border-bottom: 1px solid var(--border-soft);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: var(--text-lg)/1.4 var(--font-body);
+  padding: 16px 18px;
+}
+
+.cmdk-input:focus {
+  outline: none;
+  border-color: var(--border-soft);
+  box-shadow: none;
+}
+
+.cmdk-list {
+  overflow: auto;
+  padding: 6px;
+  display: grid;
+  gap: 2px;
+}
+
+.cmdk-empty {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  padding: 18px;
+  text-align: center;
+}
+
+.cmdk-item {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: 0;
+  padding: 9px 12px;
+  text-align: left;
+  text-transform: none;
+}
+
+.cmdk-item.active {
+  background: var(--wash-purple);
+}
+
+.cmdk-item .cmdk-group {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cmdk-item .cmdk-label {
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cmdk-item .cmdk-hint {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  justify-self: end;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 240px;
+}
+
+.cmdk-footer {
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-tertiary);
+  display: flex;
+  gap: 16px;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  padding: 8px 14px;
+}
+
+.cmdk-footer kbd {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+  margin-right: 3px;
+}
