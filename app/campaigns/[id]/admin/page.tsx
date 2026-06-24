@@ -23,7 +23,7 @@ export default async function AdminPage({ params }: { params: Promise<{ id: stri
         </div>
         <a className="button secondary" href={`https://github.com/${campaign.owner}/${campaign.repo}`}>Open GitHub</a>
       </header>
-      <AdminClient campaign={campaign} />
+      <AdminClient campaign={campaign} isGlobalAdmin={user.isAdmin} />
     </main>
   );
 }

@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hashPassword, requireUser } from "@/lib/auth";
-import { addCampaignMember, createManualUser, getCampaign, listCampaignMembers, removeCampaignMember, updateCampaignMember } from "@/lib/db";
+import { addCampaignMember, createManualUser, getCampaign, listCampaignMembers, removeCampaignMember, transferCampaignOwnership, updateCampaignMember } from "@/lib/db";
 
 const roleSchema = z.enum(["gm", "player"]);
 
@@ -15,7 +15,8 @@ const addSchema = z.object({
 
 const updateSchema = z.object({
   userId: z.number(),
-  role: roleSchema
+  // "owner" is allowed here but is an ownership transfer, gated separately below.
+  role: z.enum(["gm", "player", "owner"])
 });
 
 const deleteSchema = z.object({
@@ -66,7 +67,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const input = updateSchema.parse(await req.json());
   try {
-    updateCampaignMember(user.id, campaign.id, input.userId, input.role);
+    if (input.role === "owner") {
+      // Ownership transfer is restricted to the current owner or a global admin —
+      // a GM (who can otherwise manage members) must not be able to seize it.
+      if (!user.isAdmin && campaign.role !== "owner") {
+        return NextResponse.json({ error: "Only the current owner or a global admin can transfer ownership." }, { status: 403 });
+      }
+      transferCampaignOwnership(campaign.id, input.userId);
+    } else {
+      updateCampaignMember(user.id, campaign.id, input.userId, input.role);
+    }
     return NextResponse.json({ ok: true, members: listCampaignMembers(user.id, campaign.id) });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Could not update member." }, { status: 400 });

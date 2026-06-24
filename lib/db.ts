@@ -463,6 +463,24 @@ export function removeCampaignMember(adminUserId: number, campaignId: number, me
   db.prepare("DELETE FROM campaign_memberships WHERE campaignId = ? AND userId = ?").run(campaignId, memberUserId);
 }
 
+/**
+ * Single-owner transfer: make `newOwnerUserId` the campaign owner and demote any
+ * current owner to GM. Authorization (current owner OR global admin) is enforced
+ * by the caller — never expose this to a plain GM. The new owner must already be
+ * a member of the campaign.
+ */
+export function transferCampaignOwnership(campaignId: number, newOwnerUserId: number) {
+  if (!getCampaignRole(newOwnerUserId, campaignId)) {
+    throw new Error("The new owner must already be a member of the campaign.");
+  }
+  const run = db.transaction(() => {
+    db.prepare("UPDATE campaign_memberships SET role = 'gm' WHERE campaignId = ? AND role = 'owner'").run(campaignId);
+    db.prepare("UPDATE campaign_memberships SET role = 'owner' WHERE campaignId = ? AND userId = ?").run(campaignId, newOwnerUserId);
+    db.prepare("UPDATE campaigns SET userId = ? WHERE id = ?").run(newOwnerUserId, campaignId);
+  });
+  run();
+}
+
 export function createCampaignInvite(adminUserId: number, campaignId: number, role: Exclude<CampaignRole, "owner">) {
   if (!canManageCampaign(adminUserId, campaignId)) throw new Error("Forbidden");
   const token = `invite_${crypto.randomBytes(24).toString("hex")}`;

@@ -15,7 +15,8 @@ type ReviewItem = {
   excerpt: string;
 };
 
-export default function AdminClient({ campaign }: { campaign: Campaign }) {
+export default function AdminClient({ campaign, isGlobalAdmin = false }: { campaign: Campaign; isGlobalAdmin?: boolean }) {
+  const canTransferOwnership = campaign.role === "owner" || isGlobalAdmin;
   const [members, setMembers] = useState<CampaignMembership[]>([]);
   const [invites, setInvites] = useState<CampaignInvite[]>([]);
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
@@ -150,6 +151,22 @@ export default function AdminClient({ campaign }: { campaign: Campaign }) {
     }
   }
 
+  async function makeOwner(userId: number, name: string) {
+    if (!window.confirm(`Make ${name} the owner of this campaign? The current owner becomes a GM, and only ${name} will be able to remove the campaign.`)) return;
+    setMessage("");
+    const res = await fetch(`/api/campaigns/${campaign.id}/admin/members`, {
+      method: "PATCH",
+      body: JSON.stringify({ userId, role: "owner" })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setMembers(data.members);
+      setMessage(`${name} is now the owner. Reload to refresh your own access.`);
+    } else {
+      setMessage(data.error || "Could not transfer ownership.");
+    }
+  }
+
   async function removeMember(userId: number) {
     setMessage("");
     const res = await fetch(`/api/campaigns/${campaign.id}/admin/members`, {
@@ -274,6 +291,11 @@ export default function AdminClient({ campaign }: { campaign: Campaign }) {
                 <span className="role-badge">{member.role}</span>
                 {member.role !== "owner" && (
                   <>
+                    {canTransferOwnership && (
+                      <button type="button" className="secondary" onClick={() => makeOwner(member.userId, member.name)}>
+                        Make Owner
+                      </button>
+                    )}
                     <button type="button" className="secondary" onClick={() => setRole(member.userId, member.role === "gm" ? "player" : "gm")}>
                       Make {member.role === "gm" ? "Player" : "GM"}
                     </button>
