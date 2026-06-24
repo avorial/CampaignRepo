@@ -247,12 +247,19 @@ choices, links, dates, or safe formulas such as `maxHP = level * endurance`.
 Components should support system-specific display templates while remaining
 plain YAML/JSON data that can render in pages, statblocks, and VTT exports.
 
-### 30. Configurable campaign dashboards  ·  M
+### 30. Configurable campaign dashboards  ·  M  ·  ✅ SHIPPED
 Let each campaign define role-aware dashboard layouts from widgets: recent pages,
 active quests, next session, current date, pinned maps, review queue, timeline,
 random tables, campaign health, and watched changes. GMs can arrange the shared
 layout while players receive a spoiler-safe version. Store widget configuration
 in `campaign.yaml` so the dashboard travels with the repository.
+
+Shipped: `/campaigns/[id]/overview` renders widgets (page counts, timeline, quick
+links, review queue, campaign health) from a layout stored in `campaign.yaml`
+(`dashboard.widgets`). GMs enable/disable + reorder via an editor; players get the
+spoiler-safe view (GM-only widgets — review, health — are never rendered for them).
+Follow-ups: quests/next-session/calendar/pinned-maps/random-tables widgets as
+those systems land; drag-reorder.
 
 ### 31. Maps 2.0: layers, routes & discovery  ·  M-L
 Build on shipped map pins with nested maps, visibility-controlled pin layers,

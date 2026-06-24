@@ -3047,3 +3047,55 @@ code {
 .health-badge.sev-error { background: rgba(255, 138, 138, 0.14); color: var(--danger); border: 1px solid rgba(255, 138, 138, 0.32); }
 .health-badge.sev-warn { background: var(--wash-gold); color: var(--gold-bright); border: 1px solid rgba(212, 169, 87, 0.32); }
 .health-badge.sev-info { background: var(--wash-purple); color: var(--purple); border: 1px solid var(--border-soft); }
+
+/* ---- Configurable campaign overview (dashboard widgets) ---- */
+.overview { display: grid; gap: 14px; }
+
+.overview-controls {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.overview-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  align-items: start;
+}
+
+.overview-widget h2 {
+  font-size: var(--text-h3);
+  margin: 0 0 10px;
+}
+
+.overview-stats {
+  display: grid;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.overview-stats strong { color: var(--gold-bright); margin-right: 4px; }
+
+.widget-config { display: grid; gap: 6px; }
+
+.widget-config-row {
+  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  padding: 8px 12px;
+}
+
+.widget-config-row .member-actions button {
+  min-height: 28px;
+  padding: 0 9px;
+}

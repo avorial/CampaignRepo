@@ -25,6 +25,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
           <p className="muted">{campaign.owner}/{campaign.repo} · {campaign.gameType}</p>
         </div>
         <div className="topbar-actions">
+          <Link className="button secondary" href={`/campaigns/${campaign.id}/overview`}>Overview</Link>
           <Link className="button secondary" href={`/campaigns/${campaign.id}/player`}>Player Portal</Link>
           {(campaign.role === "owner" || campaign.role === "gm") && <Link className="button secondary" href={`/campaigns/${campaign.id}/maps`}>Maps</Link>}
           {(campaign.role === "owner" || campaign.role === "gm") && <Link className="button secondary" href={`/campaigns/${campaign.id}/organize`}>Organize</Link>}
