@@ -2790,3 +2790,106 @@ code {
   padding: 4px;
   width: 100%;
 }
+
+/* ---- Bulk organize: pages table + bulk-edit bar ---- */
+.organize {
+  display: grid;
+  gap: 14px;
+}
+
+.organize-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.organize-toolbar input { width: min(320px, 100%); }
+.organize-toolbar select { width: auto; min-width: 180px; }
+
+.organize-count {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bulk-bar {
+  align-items: end;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 14px;
+  position: sticky;
+  top: 8px;
+  z-index: 2;
+}
+
+.bulk-bar > strong {
+  align-self: center;
+  color: var(--gold-bright);
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.bulk-bar label {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.bulk-bar select { min-width: 150px; }
+
+.organize-table-wrap {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  overflow: auto;
+}
+
+.organize-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.organize-table th,
+.organize-table td {
+  border-bottom: 1px solid var(--border-faint);
+  padding: 9px 12px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.organize-table th {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.04em;
+  position: sticky;
+  top: 0;
+  text-transform: uppercase;
+}
+
+.organize-table td {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.organize-table td a {
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+.organize-table tr.row-selected td {
+  background: var(--wash-gold);
+}
+
+.organize-table input[type="checkbox"] { width: auto; }

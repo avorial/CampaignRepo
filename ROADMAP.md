@@ -167,12 +167,17 @@ fields, stale imports, unapproved content, oversized files, and search-index
 drift. Each finding should link to the affected item and offer safe bulk repair
 where possible.
 
-### 21. Bulk organization tools  ·  M
+### 21. Bulk organization tools  ·  M  ·  🚧 PAGES SHIPPED
 Add a table view for pages and media with filtering, sorting, multi-select, and
 bulk actions. Support changing category, parent, visibility, approval, tags, and
 archive state across many pages. For media, support bulk tags, captions, moves,
 and unused-file cleanup. Every operation should summarize its planned commits
 before writing.
+
+Shipped: `/campaigns/[id]/organize` — a pages table with name/category filter,
+multi-select, and one-commit bulk change of category / visibility / approval
+(via `commitFiles`). Follow-ups: bulk parent + tags in the UI (backend already
+takes `parent`), sorting, and the media table.
 
 ### 22. Import/export & VTT bridges  ·  M-L
 Turn one-off JSON import into repeatable connectors. Add guided Foundry Actor and
