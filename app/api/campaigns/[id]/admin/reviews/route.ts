@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
-import { getTextFile, putFile } from "@/lib/github";
+import { commitFiles, getTextFile, listDirectoryTextFiles, putFile } from "@/lib/github";
 import { parsePage, serializePage } from "@/lib/markdown";
 import { listReviewPages } from "@/lib/reviews";
-import { rebuildSearchIndex } from "@/lib/search";
+import { scheduleSearchIndexRebuild } from "@/lib/search";
 
 const decisionSchema = z.object({
   slug: z.string().min(1).optional(),
@@ -53,16 +53,23 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   let updated = 0;
   if (input.all) {
-    // Bulk: walk the whole review queue, applying the decision to each page.
-    const pending = await listReviewPages(token, campaign);
-    for (const review of pending) {
-      try {
-        await applyDecision(review.slug);
-        updated++;
-      } catch {
-        // Skip an individual page that fails so one bad file can't abort the batch.
-      }
+    // Bulk: read the whole queue in one GraphQL request and write every
+    // decision in a SINGLE commit, instead of one commit per page.
+    const files = await listDirectoryTextFiles(token, campaign, "wiki/pages");
+    const updates = files
+      .map((file) => parsePage(file.name.replace(/\.md$/, ""), file.text ?? "", file.sha))
+      .filter((page) => page.frontmatter.approvalStatus !== "approved")
+      .map((page) => ({
+        path: `wiki/pages/${page.slug}.md`,
+        content: serializePage(
+          { ...page.frontmatter, approvalStatus: input.decision, lastEditedBy: `${user.name} via GM review` },
+          page.content
+        )
+      }));
+    if (updates.length) {
+      await commitFiles(token, campaign, updates, `CampaignRepo: ${verb} ${updates.length} pages (bulk)`);
     }
+    updated = updates.length;
   } else if (input.slug) {
     await applyDecision(input.slug);
     updated = 1;
@@ -70,6 +77,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: "Provide a slug or set all: true." }, { status: 400 });
   }
 
-  await rebuildSearchIndex(token, campaign);
+  scheduleSearchIndexRebuild(token, campaign);
   return NextResponse.json({ ok: true, updated, reviews: await listReviewPages(token, campaign) });
 }

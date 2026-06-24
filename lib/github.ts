@@ -88,6 +88,8 @@ async function appInstallationAccessToken(token: string) {
   return response.token;
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function gh<T>(token: string, path: string, init: RequestInit = {}, resolveAppToken = true): Promise<T> {
   const authToken = resolveAppToken ? await appInstallationAccessToken(token) : token;
   const headers: Record<string, string> = {
@@ -96,19 +98,38 @@ async function gh<T>(token: string, path: string, init: RequestInit = {}, resolv
     ...((init.headers as Record<string, string> | undefined) || {})
   };
   if (authToken) headers.Authorization = `Bearer ${authToken}`;
-  const res = await fetch(`${apiBase}${path}`, {
-    ...init,
-    headers,
-    // Never let Next's Data Cache serve a stale repo read: in a production
-    // build a cached directory/file listing would hide a just-saved page.
-    cache: "no-store"
-  });
-  if (!res.ok) {
+
+  // GitHub's secondary rate limit is burst/concurrency based and comes back as
+  // 429 (or 403 with a "secondary rate limit" body). Honor Retry-After when
+  // present, otherwise back off exponentially with jitter. Each wait is capped
+  // so a request never hangs for long; the real fix for bulk work is batching.
+  const maxRetries = 4;
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(`${apiBase}${path}`, {
+      ...init,
+      headers,
+      // Never let Next's Data Cache serve a stale repo read: in a production
+      // build a cached directory/file listing would hide a just-saved page.
+      cache: "no-store"
+    });
+    if (res.ok) {
+      if (res.status === 204) return undefined as T;
+      return (await res.json()) as T;
+    }
     const text = await res.text();
+    const retryAfter = Number(res.headers.get("retry-after"));
+    const remaining = res.headers.get("x-ratelimit-remaining");
+    const rateLimited =
+      res.status === 429 ||
+      (res.status === 403 && (retryAfter > 0 || remaining === "0" || /secondary rate limit|rate limit/i.test(text)));
+    if (rateLimited && attempt < maxRetries) {
+      const backoff = Math.min(30_000, 1000 * 2 ** attempt);
+      const waitMs = (retryAfter > 0 ? Math.min(retryAfter * 1000, 30_000) : backoff) + Math.floor(Math.random() * 1000);
+      await sleep(waitMs);
+      continue;
+    }
     throw new GitHubError(text || res.statusText, res.status);
   }
-  if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
 }
 
 async function ghGraphql<T>(token: string, query: string, variables: Record<string, unknown>): Promise<T> {
@@ -261,6 +282,66 @@ export async function listDirectoryTextFiles(token: string, campaign: Campaign, 
       sha: entry.oid,
       text: entry.object?.text ?? null
     }));
+}
+
+/** Run an async map with a bounded number of in-flight tasks (keeps bursts of
+ *  concurrent GitHub reads/writes from tripping the secondary rate limit). */
+export async function mapWithConcurrency<T, R>(items: readonly T[], limit: number, fn: (item: T, index: number) => Promise<R>): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < items.length) {
+      const index = cursor++;
+      results[index] = await fn(items[index], index);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(limit, items.length || 1)) }, worker));
+  return results;
+}
+
+export type CommitFile = { path: string; content: string; encoding?: "utf-8" | "base64" };
+
+/**
+ * Write many files in a SINGLE commit via the Git Data API
+ * (blobs → tree → commit → ref). This replaces one Contents-API commit per
+ * file — the pattern that trips GitHub's secondary rate limit on bulk imports.
+ * Blob creation is concurrency-limited; everything else is a handful of calls.
+ */
+export async function commitFiles(
+  token: string,
+  campaign: Pick<Campaign, "owner" | "repo" | "branch">,
+  files: CommitFile[],
+  message: string
+) {
+  if (!files.length) return null;
+  const repoBase = `/repos/${campaign.owner}/${campaign.repo}`;
+  const branch = encodeURIComponent(campaign.branch);
+
+  const ref = await gh<{ object: { sha: string } }>(token, `${repoBase}/git/ref/heads/${branch}`);
+  const baseCommitSha = ref.object.sha;
+  const baseCommit = await gh<{ tree: { sha: string } }>(token, `${repoBase}/git/commits/${baseCommitSha}`);
+
+  const tree = await mapWithConcurrency(files, 5, async (file) => {
+    const blob = await gh<{ sha: string }>(token, `${repoBase}/git/blobs`, {
+      method: "POST",
+      body: JSON.stringify({ content: file.content, encoding: file.encoding === "base64" ? "base64" : "utf-8" })
+    });
+    return { path: file.path, mode: "100644" as const, type: "blob" as const, sha: blob.sha };
+  });
+
+  const newTree = await gh<{ sha: string }>(token, `${repoBase}/git/trees`, {
+    method: "POST",
+    body: JSON.stringify({ base_tree: baseCommit.tree.sha, tree })
+  });
+  const commit = await gh<{ sha: string }>(token, `${repoBase}/git/commits`, {
+    method: "POST",
+    body: JSON.stringify({ message, tree: newTree.sha, parents: [baseCommitSha] })
+  });
+  await gh(token, `${repoBase}/git/refs/heads/${branch}`, {
+    method: "PATCH",
+    body: JSON.stringify({ sha: commit.sha })
+  });
+  return { commit: commit.sha, files: files.length };
 }
 
 export async function ensureFile(token: string, campaign: Campaign, filePath: string, content: string, message: string) {

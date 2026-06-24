@@ -20,7 +20,7 @@ vi.mock("@/lib/github", () => ({
     constructor(message: string, public status?: number) { super(message); }
   }
 }));
-vi.mock("@/lib/search", () => ({ rebuildSearchIndex: vi.fn() }));
+vi.mock("@/lib/search", () => ({ scheduleSearchIndexRebuild: vi.fn() }));
 vi.mock("@/lib/page-cache", () => ({
   readPageCache: mocks.readPageCache,
   refreshPageCache: mocks.refreshPageCache

@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign, getCampaignRepositoryToken } from "@/lib/db";
 import { deleteFile, getTextFile, GitHubError, putFile } from "@/lib/github";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
-import { rebuildSearchIndex } from "@/lib/search";
+import { scheduleSearchIndexRebuild } from "@/lib/search";
 import { readPageCache, refreshPageCache } from "@/lib/page-cache";
 
 export const dynamic = "force-dynamic";
@@ -71,7 +71,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const current = input.sha ? { sha: input.sha } : await getTextFile(user.githubToken, campaign, `wiki/pages/${slug}.md`);
   try {
     const saved = (await putFile(user.githubToken, campaign, `wiki/pages/${slug}.md`, raw, `CampaignRepo: update ${frontmatter.name || slug}`, current.sha)) as { content?: { sha?: string } };
-    await rebuildSearchIndex(user.githubToken, campaign);
+    scheduleSearchIndexRebuild(user.githubToken, campaign);
     return NextResponse.json({ ok: true, sha: saved.content?.sha });
   } catch (error) {
     if (error instanceof GitHubError && error.status === 409) {
@@ -105,7 +105,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   try {
     const file = await getTextFile(user.githubToken, campaign, path);
     await deleteFile(user.githubToken, campaign, path, `CampaignRepo: delete ${slug}`, file.sha);
-    await rebuildSearchIndex(user.githubToken, campaign);
+    scheduleSearchIndexRebuild(user.githubToken, campaign);
     return NextResponse.json({ ok: true });
   } catch (error) {
     if (error instanceof GitHubError && error.status === 404) {

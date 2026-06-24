@@ -7,7 +7,7 @@ vi.mock("@/lib/github", () => ({
   putFile: vi.fn(async () => {}),
   listDirectory: vi.fn(async () => [])
 }));
-vi.mock("@/lib/search", () => ({ rebuildSearchIndex: vi.fn(async () => []) }));
+vi.mock("@/lib/search", () => ({ scheduleSearchIndexRebuild: vi.fn() }));
 
 import { POST } from "@/app/api/mcp/route";
 import { getDb, createApiToken } from "@/lib/db";

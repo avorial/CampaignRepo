@@ -7,7 +7,7 @@ import { parsePage, serializePage } from "@/lib/markdown";
 import { sanitizePlayerPage } from "@/lib/public-site";
 import { categoryIds, defaultFrontmatter, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
-import { rebuildSearchIndex } from "@/lib/search";
+import { scheduleSearchIndexRebuild } from "@/lib/search";
 import { readPageCache, refreshPageCache, refreshPageCacheInBackground } from "@/lib/page-cache";
 
 export const dynamic = "force-dynamic";
@@ -95,13 +95,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       content = parsedTemplate.content.replace(/^# .*/m, `# ${input.name}`);
     }
     await putFile(user.githubToken, campaign, pagePath, serializePage(frontmatter, content), `CampaignRepo: create ${input.name}`);
-    try {
-      await rebuildSearchIndex(user.githubToken, campaign);
-      return NextResponse.json({ slug });
-    } catch (error) {
-      console.error(`Page ${pagePath} was created, but the search index could not be rebuilt.`, error);
-      return NextResponse.json({ slug, warning: "Entry created, but the search index could not be refreshed." });
-    }
+    scheduleSearchIndexRebuild(user.githubToken, campaign);
+    return NextResponse.json({ slug });
   } catch (error) {
     if (error instanceof GitHubError && /sha[\s\S]*supplied/i.test(error.message)) {
       return NextResponse.json(

@@ -1,8 +1,9 @@
 import { getTextFile, GitHubError, listDirectory, putFile } from "@/lib/github";
-import { parsePage, stripGmBlocks } from "@/lib/markdown";
+import { stripGmBlocks } from "@/lib/markdown";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import type { Campaign, SearchDocument, WikiPage } from "@/lib/types";
 import { upsertSearchDocuments } from "@/lib/db";
+import { refreshPageCache } from "@/lib/page-cache";
 
 type MediaMetadata = {
   alt?: string;
@@ -65,16 +66,10 @@ async function buildMediaSearchDocuments(token: string, campaign: Campaign): Pro
 }
 
 export async function buildSearchDocuments(token: string, campaign: Campaign): Promise<SearchDocument[]> {
-  const entries = await listDirectory(token, campaign, "wiki/pages");
-  const pages = await Promise.all(
-    entries
-      .filter((entry) => entry.type === "file" && entry.name.endsWith(".md"))
-      .map(async (entry) => {
-        const slug = entry.name.replace(/\.md$/, "");
-        const file = await getTextFile(token, campaign, entry.path);
-        return parsePage(slug, file.text, file.sha);
-      })
-  );
+  // One GraphQL tree read refreshes the local page cache. The old implementation
+  // made one REST request per page, which quickly triggered GitHub's secondary
+  // rate limit on large campaigns.
+  const pages = (await refreshPageCache(token, campaign)).pages;
   const pageDocs = withBacklinks(pages).map((page) => ({
     id: `${campaign.id}:${page.slug}`,
     campaignId: campaign.id,
@@ -110,4 +105,19 @@ export async function rebuildSearchIndex(token: string, campaign: Campaign) {
   }
   await putFile(token, campaign, "wiki/search/index.json", JSON.stringify(docs, null, 2) + "\n", "CampaignRepo: update search snapshot", sha);
   return docs;
+}
+
+const scheduledRebuilds = new Map<number, ReturnType<typeof setTimeout>>();
+
+/** Coalesce mutation-triggered rebuilds and keep GitHub indexing off the write response path. */
+export function scheduleSearchIndexRebuild(token: string, campaign: Campaign, delayMs = 15_000) {
+  const existing = scheduledRebuilds.get(campaign.id);
+  if (existing) clearTimeout(existing);
+  const timer = setTimeout(() => {
+    scheduledRebuilds.delete(campaign.id);
+    void rebuildSearchIndex(token, campaign).catch((error) => {
+      console.error(`Background search rebuild failed for campaign ${campaign.id}.`, error);
+    });
+  }, delayMs);
+  timer.unref?.();
 }

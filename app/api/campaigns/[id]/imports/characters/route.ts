@@ -6,7 +6,7 @@ import { putFile } from "@/lib/github";
 import { defaultFrontmatter } from "@/lib/templates";
 import { serializePage } from "@/lib/markdown";
 import { slugify } from "@/lib/slug";
-import { rebuildSearchIndex } from "@/lib/search";
+import { scheduleSearchIndexRebuild } from "@/lib/search";
 
 const schema = z.object({
   source: z.enum(["foundry", "generic"]),
@@ -99,6 +99,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   await putFile(user.githubToken, campaign, sourcePath, JSON.stringify(input.sourceJson, null, 2) + "\n", `CampaignRepo: import source JSON for ${name}`);
   await putFile(user.githubToken, campaign, `wiki/pages/${slug}.md`, serializePage(frontmatter, importBody(input.sourceJson, name, input.mapping)), `CampaignRepo: import character ${name}`);
   getDb().prepare("INSERT INTO imports (campaignId, source, sourceId, pageSlug) VALUES (?, ?, ?, ?)").run(campaign.id, input.source, sourceId, slug);
-  await rebuildSearchIndex(user.githubToken, campaign);
+  scheduleSearchIndexRebuild(user.githubToken, campaign);
   return NextResponse.json({ slug });
 }

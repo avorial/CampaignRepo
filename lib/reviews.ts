@@ -1,4 +1,4 @@
-import { getTextFile, listDirectory } from "@/lib/github";
+import { listDirectoryTextFiles } from "@/lib/github";
 import { parsePage, stripGmBlocks } from "@/lib/markdown";
 import type { ApprovalStatus, Campaign, Category, Visibility } from "@/lib/types";
 
@@ -17,16 +17,9 @@ export interface ReviewItem {
 
 /** List the unapproved/rejected pages in a campaign repo for GM review. */
 export async function listReviewPages(token: string, campaign: Campaign): Promise<ReviewItem[]> {
-  const entries = await listDirectory(token, campaign, "wiki/pages");
-  const pages = await Promise.all(
-    entries
-      .filter((entry) => entry.type === "file" && entry.name.endsWith(".md"))
-      .map(async (entry) => {
-        const slug = entry.name.replace(/\.md$/, "");
-        const file = await getTextFile(token, campaign, entry.path);
-        return parsePage(slug, file.text, file.sha);
-      })
-  );
+  // One GraphQL tree read instead of one REST request per page.
+  const files = await listDirectoryTextFiles(token, campaign, "wiki/pages");
+  const pages = files.map((file) => parsePage(file.name.replace(/\.md$/, ""), file.text ?? "", file.sha));
 
   return pages
     .filter((page) => page.frontmatter.approvalStatus !== "approved")

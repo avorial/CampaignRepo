@@ -5,7 +5,7 @@ import { canManageCampaign, getCampaign } from "@/lib/db";
 import { deleteFile, getContent, getTextFile, GitHubError, listDirectory, putBase64File, putFile } from "@/lib/github";
 import { slugify } from "@/lib/slug";
 import type { Campaign, CampaignMedia } from "@/lib/types";
-import { rebuildSearchIndex } from "@/lib/search";
+import { scheduleSearchIndexRebuild } from "@/lib/search";
 
 type MediaMetadata = {
   alt?: string;
@@ -127,7 +127,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
   };
   await writeMetadata(user.githubToken, campaign, metadata, metadataFile.sha);
-  await rebuildSearchIndex(user.githubToken, campaign);
+  scheduleSearchIndexRebuild(user.githubToken, campaign);
   return NextResponse.json({
     media: {
       name,
@@ -170,7 +170,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }
     };
     await writeMetadata(user.githubToken, campaign, nextMetadata, metadataFile.sha);
-    await rebuildSearchIndex(user.githubToken, campaign);
+    scheduleSearchIndexRebuild(user.githubToken, campaign);
     return NextResponse.json({ media: toMedia({ name, path: input.path, sha: current.sha }, nextMetadata[input.path]) });
   }
 
@@ -198,7 +198,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   nextMetadata[nextPath] = nextMetadata[input.path] || { alt: name, tags: [] };
   delete nextMetadata[input.path];
   await writeMetadata(user.githubToken, campaign, nextMetadata, metadataFile.sha);
-  await rebuildSearchIndex(user.githubToken, campaign);
+  scheduleSearchIndexRebuild(user.githubToken, campaign);
   const renamed = await getContent(user.githubToken, campaign, nextPath);
   return NextResponse.json({ media: toMedia({ name, path: nextPath, sha: renamed.sha }, nextMetadata[nextPath]) });
 }
@@ -223,6 +223,6 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   const metadata = { ...metadataFile.metadata };
   delete metadata[input.path];
   await writeMetadata(user.githubToken, campaign, metadata, metadataFile.sha);
-  await rebuildSearchIndex(user.githubToken, campaign);
+  scheduleSearchIndexRebuild(user.githubToken, campaign);
   return NextResponse.json({ ok: true });
 }

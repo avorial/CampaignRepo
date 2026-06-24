@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => {
     GitHubError,
     getTextFile: vi.fn(),
     putFile: vi.fn(),
-    rebuildSearchIndex: vi.fn(async () => []),
+    scheduleSearchIndexRebuild: vi.fn(),
     readPageCache: vi.fn(),
     refreshPageCache: vi.fn(),
     refreshPageCacheInBackground: vi.fn()
@@ -31,7 +31,7 @@ vi.mock("@/lib/github", () => ({
   putFile: mocks.putFile,
   listDirectory: vi.fn(async () => [])
 }));
-vi.mock("@/lib/search", () => ({ rebuildSearchIndex: mocks.rebuildSearchIndex }));
+vi.mock("@/lib/search", () => ({ scheduleSearchIndexRebuild: mocks.scheduleSearchIndexRebuild }));
 vi.mock("@/lib/page-cache", () => ({
   readPageCache: mocks.readPageCache,
   refreshPageCache: mocks.refreshPageCache,
@@ -54,8 +54,7 @@ describe("page creation", () => {
   beforeEach(() => {
     mocks.getTextFile.mockReset();
     mocks.putFile.mockReset();
-    mocks.rebuildSearchIndex.mockClear();
-    mocks.rebuildSearchIndex.mockResolvedValue([]);
+    mocks.scheduleSearchIndexRebuild.mockClear();
     mocks.readPageCache.mockReset();
     mocks.refreshPageCache.mockReset();
     mocks.refreshPageCacheInBackground.mockReset();
@@ -109,6 +108,7 @@ describe("page creation", () => {
       expect.any(String),
       "CampaignRepo: create New Contact"
     );
+    expect(mocks.scheduleSearchIndexRebuild).toHaveBeenCalledOnce();
   });
 
   it("returns a clear conflict instead of GitHub's missing-sha error", async () => {
@@ -134,16 +134,4 @@ describe("page creation", () => {
     expect(body.error).toContain("created before this request completed");
   });
 
-  it("returns the created slug when only the secondary search refresh fails", async () => {
-    mocks.getTextFile.mockRejectedValueOnce(new mocks.GitHubError("Not Found", 404));
-    mocks.putFile.mockResolvedValueOnce({});
-    mocks.rebuildSearchIndex.mockRejectedValueOnce(new mocks.GitHubError("Invalid request. 'sha' wasn't supplied.", 422));
-
-    const response = await createPage("Created Despite Search");
-    const body = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(body.slug).toBe("Created-Despite-Search");
-    expect(body.warning).toContain("search index");
-  });
 });

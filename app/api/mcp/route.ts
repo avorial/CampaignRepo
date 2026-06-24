@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign, listCampaigns, searchDocs } from "@/lib/db";
-import { getTextFile, GitHubError, listDirectory, putBase64File, putFile } from "@/lib/github";
+import { commitFiles, getTextFile, GitHubError, listDirectory, listDirectoryTextFiles, putBase64File, putFile } from "@/lib/github";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { categoryIds, defaultFrontmatter, gameTypes, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
-import { rebuildSearchIndex } from "@/lib/search";
+import { scheduleSearchIndexRebuild } from "@/lib/search";
 import type { Campaign, CampaignGraphEdge, CampaignGraphNode, CampaignMedia, CampaignTimelineItem, Category, GameType, WikiPage, WikiTemplate } from "@/lib/types";
 
 type RpcRequest = {
@@ -112,17 +112,14 @@ async function listMcpMedia(token: string, campaign: Campaign): Promise<Campaign
 }
 
 async function buildMcpGraph(token: string, campaign: Campaign) {
-  const entries = await listDirectory(token, campaign, "wiki/pages");
-  const allPages = await Promise.all(
-    entries
-      .filter((entry) => entry.type === "file" && entry.name.endsWith(".md"))
-      .map(async (entry) => {
-        const slug = entry.name.replace(/\.md$/, "");
-        const file = await getTextFile(token, campaign, entry.path);
-        const text = campaign.role === "player" ? stripGmBlocks(file.text) : file.text;
-        return parsePage(slug, text, file.sha);
-      })
-  );
+  // One GraphQL tree read instead of one REST request per page.
+  const files = await listDirectoryTextFiles(token, campaign, "wiki/pages");
+  const allPages = files.map((file) => {
+    const slug = file.name.replace(/\.md$/, "");
+    const raw = file.text ?? "";
+    const text = campaign.role === "player" ? stripGmBlocks(raw) : raw;
+    return parsePage(slug, text, file.sha);
+  });
   const pages = allPages.filter((page) => visibleForRole(page, campaign.role));
   const aliases = aliasMapFromPages(pages);
   const visibleSlugs = new Set(pages.map((page) => page.slug));
@@ -166,16 +163,9 @@ async function buildMcpGraph(token: string, campaign: Campaign) {
 }
 
 async function listReviewPages(token: string, campaign: Campaign) {
-  const entries = await listDirectory(token, campaign, "wiki/pages");
-  const pages = await Promise.all(
-    entries
-      .filter((entry) => entry.type === "file" && entry.name.endsWith(".md"))
-      .map(async (entry) => {
-        const slug = entry.name.replace(/\.md$/, "");
-        const file = await getTextFile(token, campaign, entry.path);
-        return parsePage(slug, file.text, file.sha);
-      })
-  );
+  // One GraphQL tree read instead of one REST request per page.
+  const files = await listDirectoryTextFiles(token, campaign, "wiki/pages");
+  const pages = files.map((file) => parsePage(file.name.replace(/\.md$/, ""), file.text ?? "", file.sha));
   return pages.filter((page) => page.frontmatter.approvalStatus !== "approved").map((page) => ({
     slug: page.slug,
     name: page.frontmatter.name,
@@ -210,6 +200,7 @@ export async function GET(req: Request) {
       "search_all_repos",
       "get_page",
       "create_page",
+      "create_pages",
       "propose_page_update",
       "list_templates",
       "create_template",
@@ -268,6 +259,7 @@ export async function POST(req: Request) {
         { name: "search_all_repos", description: "Search all repos authorized for the user.", inputSchema: obj({ query: { type: "string" } }, ["query"]) },
         { name: "get_page", description: "Read a wiki page by slug.", inputSchema: obj({ campaignId, slug: { type: "string" } }, ["campaignId", "slug"]) },
         { name: "create_page", description: "Create a wiki page (lands as unapproved for GM review).", inputSchema: obj({ campaignId, name: { type: "string" }, category: { type: "string", enum: [...categoryIds] }, content: { type: "string", description: "Markdown body. :::gm blocks are GM-only." } }, ["campaignId", "name"]) },
+        { name: "create_pages", description: "Create MANY wiki pages in a SINGLE commit (lands unapproved for GM review). Use this for bulk imports/conversions instead of calling create_page in a loop — it avoids GitHub secondary rate limits.", inputSchema: obj({ campaignId, pages: { type: "array", description: "Pages to create.", items: { type: "object", properties: { name: { type: "string" }, category: { type: "string", enum: [...categoryIds] }, content: { type: "string", description: "Markdown body. :::gm blocks are GM-only." } }, required: ["name"] } } }, ["campaignId", "pages"]) },
         { name: "propose_page_update", description: "Update a page (lands as unapproved for GM review).", inputSchema: obj({ campaignId, slug: { type: "string" }, content: { type: "string" }, frontmatter: { type: "object", additionalProperties: true } }, ["campaignId", "slug"]) },
         { name: "list_templates", description: "List campaign templates grouped by game type.", inputSchema: obj({ campaignId }, ["campaignId"]) },
         { name: "create_template", description: "Create a campaign template in the repo.", inputSchema: obj({ campaignId, name: { type: "string" }, gameType: { type: "string" }, category: { type: "string", enum: [...categoryIds] }, summary: { type: "string" }, tags: { type: "array", items: { type: "string" } }, content: { type: "string" } }, ["campaignId", "name"]) },
@@ -306,8 +298,27 @@ export async function POST(req: Request) {
       const fm = { ...defaultFrontmatter(title, args.category || "npc", "gm"), approvalStatus: "unapproved" as const, lastEditedBy: "AI via MCP" };
       const content = args.content || starterBody(title, fm.category, campaign.gameType as any);
       await putFile(user.githubToken, campaign, `wiki/pages/${slug}.md`, serializePage(fm, content), `CampaignRepo MCP: create unapproved ${title}`);
-      await rebuildSearchIndex(user.githubToken, campaign);
+      scheduleSearchIndexRebuild(user.githubToken, campaign);
       return toolResult(body.id, { slug, approvalStatus: "unapproved" });
+    }
+    if (name === "create_pages") {
+      const campaign = getCampaign(user.id, Number(args.campaignId));
+      if (!campaign || !user.githubToken) throw new Error("Campaign not found");
+      if (!canManageCampaign(user.id, campaign.id)) throw new Error("Forbidden");
+      const input = Array.isArray(args.pages) ? args.pages : [];
+      if (!input.length) throw new Error("pages must be a non-empty array");
+      const slugs: string[] = [];
+      const files = input.map((p: any) => {
+        const title = String(p?.name || "AI Draft");
+        const slug = slugify(title);
+        slugs.push(slug);
+        const fm = { ...defaultFrontmatter(title, p?.category || "npc", "gm"), approvalStatus: "unapproved" as const, lastEditedBy: "AI via MCP" };
+        const content = p?.content || starterBody(title, fm.category, campaign.gameType as any);
+        return { path: `wiki/pages/${slug}.md`, content: serializePage(fm, content) };
+      });
+      const result = await commitFiles(user.githubToken, campaign, files, `CampaignRepo MCP: create ${files.length} unapproved pages`);
+      scheduleSearchIndexRebuild(user.githubToken, campaign);
+      return toolResult(body.id, { created: files.length, slugs, commit: result?.commit, approvalStatus: "unapproved" });
     }
     if (name === "propose_page_update") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
@@ -317,7 +328,7 @@ export async function POST(req: Request) {
       const page = parsePage(args.slug, current.text, current.sha);
       const fm = { ...page.frontmatter, ...(args.frontmatter || {}), approvalStatus: "unapproved" as const, lastEditedBy: "AI via MCP" };
       await putFile(user.githubToken, campaign, `wiki/pages/${args.slug}.md`, serializePage(fm, args.content || page.content), `CampaignRepo MCP: propose update ${fm.name}`, current.sha);
-      await rebuildSearchIndex(user.githubToken, campaign);
+      scheduleSearchIndexRebuild(user.githubToken, campaign);
       return toolResult(body.id, { ok: true, approvalStatus: "unapproved" });
     }
     if (name === "list_templates") {
@@ -408,7 +419,7 @@ export async function POST(req: Request) {
         lastEditedBy: "GM review via MCP"
       };
       await putFile(user.githubToken, campaign, `wiki/pages/${args.slug}.md`, serializePage(frontmatter, page.content), `CampaignRepo MCP: ${decision} ${frontmatter.name}`, current.sha);
-      await rebuildSearchIndex(user.githubToken, campaign);
+      scheduleSearchIndexRebuild(user.githubToken, campaign);
       return toolResult(body.id, { ok: true, approvalStatus: decision });
     }
     if (name === "get_repo_setup_instructions") {
