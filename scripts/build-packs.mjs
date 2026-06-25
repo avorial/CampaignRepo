@@ -97,7 +97,7 @@ function travellerCharacterSheet() {
 *Career - Rank - Homeworld*
 
 **Player:**
-**Species:** Imperial Human
+**Species:** Racial Solomani
 **Homeworld:** [[World]]
 **UWP:**
 **Age:**
@@ -132,10 +132,42 @@ Rivals, secrets, obligations, and hooks.
     summary: "Traveller character sheet with editable UPP, skills, credits, and equipment.",
     sheet: {
       system: "traveller",
-      characteristics: { STR: 7, DEX: 7, END: 7, INT: 7, EDU: 7, SOC: 7 },
-      skills: [],
-      species: "Imperial Human",
-      equipment: []
+      characteristics: { STR: 12, DEX: 9, END: 10, INT: 11, EDU: 10, SOC: 12 },
+      skills: [
+        { name: "Admin", level: 1 },
+        { name: "Advocate", level: 0 },
+        { name: "Art", speciality: "Performer", level: 1 },
+        { name: "Athletics", speciality: "Dexterity", level: 1 },
+        { name: "Broker", level: 1 },
+        { name: "Deception", level: 2 },
+        { name: "Diplomat", level: 2 },
+        { name: "Electronics", speciality: "Remote Ops", level: 1 },
+        { name: "Gun Combat", level: 0 },
+        { name: "Leadership", level: 0 },
+        { name: "Mechanic", level: 0 },
+        { name: "Medic", level: 1 },
+        { name: "Melee", level: 0 },
+        { name: "Persuade", level: 1 },
+        { name: "Pilot", speciality: "Small Craft", level: 1 },
+        { name: "Recon", level: 0 },
+        { name: "Science", speciality: "History", level: 1 },
+        { name: "Science", speciality: "Robotics", level: 1 },
+        { name: "Stealth", level: 1 },
+        { name: "Streetwise", level: 2 }
+      ],
+      species: "Racial Solomani",
+      age: 34,
+      rank: "F",
+      dossier: "Travel",
+      status: "Unwounded",
+      speciesTraits: ["Racial Solomani", "Party Patronage", "Solomani Heritage", "Solomani Cause"],
+      armour: [],
+      weapons: [],
+      equipment: [],
+      holdings: [],
+      contacts: [],
+      psionics: [],
+      notes: "Chargen complete - Mongoose Traveller 2.0 layout"
     }
   });
 }

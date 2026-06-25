@@ -143,8 +143,20 @@ export type TravellerSheet = {
   species?: string;
   homeworld?: string;
   uwp?: string;
+  career?: string;
+  rank?: string;
+  dossier?: string;
+  status?: string;
+  conditions?: string[];
+  speciesTraits?: string[];
   credits?: number;
+  armour?: { name: string; protection?: string; notes?: string }[];
+  weapons?: { name: string; damage?: string; range?: string; notes?: string }[];
   equipment?: { name: string; quantity?: number; notes?: string }[];
+  holdings?: { name: string; notes?: string }[];
+  contacts?: { name: string; notes?: string }[];
+  psionics?: { name: string; level?: number; notes?: string }[];
+  notes?: string;
 };
 
 export type WikiPage = {
