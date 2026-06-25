@@ -174,6 +174,13 @@ describe("global admin user identity", () => {
 });
 
 describe("public sites", () => {
+  function createOwnedCampaign(name: string) {
+    const db = getDb();
+    const id = Number(db.prepare("INSERT INTO campaigns (userId, name, owner, repo, gameType) VALUES (?, ?, ?, ?, ?)").run(gmId, name, "o", `repo-${name}`, "Sword Chronicle").lastInsertRowid);
+    db.prepare("INSERT INTO campaign_memberships (campaignId, userId, role) VALUES (?, ?, ?)").run(id, gmId, "owner");
+    return id;
+  }
+
   it("publishes a campaign to a resolvable, enabled share slug", () => {
     const site = publishCampaign(gmId, campaignId);
     expect(site.slug).toMatch(/^pub_/);
@@ -198,6 +205,35 @@ describe("public sites", () => {
     expect(after.slug).not.toBe(before.slug);
     expect(getPublicSiteCampaign(before.slug)).toBeNull();
     expect(getPublicSiteCampaign(after.slug)?.id).toBe(campaignId);
+  });
+
+  it("publishes with a custom URL-safe link name", () => {
+    const id = createOwnedCampaign("Custom Public");
+
+    const site = publishCampaign(gmId, id, "Sparks of the Past!");
+
+    expect(site.slug).toBe("sparks-of-the-past");
+    expect(getPublicSiteCampaign("sparks-of-the-past")?.id).toBe(id);
+  });
+
+  it("can rename an existing public link while republishing", () => {
+    const id = createOwnedCampaign("Rename Public");
+    const first = publishCampaign(gmId, id, "old-link");
+
+    const renamed = publishCampaign(gmId, id, "new-link");
+
+    expect(first.slug).toBe("old-link");
+    expect(renamed.slug).toBe("new-link");
+    expect(getPublicSiteCampaign("old-link")).toBeNull();
+    expect(getPublicSiteCampaign("new-link")?.id).toBe(id);
+  });
+
+  it("rejects custom public link names already owned by another campaign", () => {
+    const first = createOwnedCampaign("First Public");
+    const second = createOwnedCampaign("Second Public");
+    publishCampaign(gmId, first, "shared-link");
+
+    expect(() => publishCampaign(gmId, second, "shared-link")).toThrow("That public link name is already taken.");
   });
 
   it("forbids players from publishing", () => {

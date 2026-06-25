@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { slugify } from "@/lib/slug";
 import type { ApiToken, Campaign, CampaignInvite, CampaignMembership, CampaignRole, SearchDocument, User } from "@/lib/types";
 
 const dataDir = path.join(process.cwd(), "data");
@@ -230,6 +231,25 @@ export function getUserByApiToken(token: string): User | null {
 
 export type PublicSiteRow = { campaignId: number; slug: string; enabled: boolean; createdAt: string };
 
+function normalizePublicSlug(value?: string | null) {
+  const clean = slugify(value || "").toLowerCase();
+  if (!clean || clean === "untitled") return "";
+  if (clean.length < 3) throw new Error("Public link name must be at least 3 characters.");
+  if (clean === "site" || clean === "api" || clean === "dashboard" || clean === "campaigns") {
+    throw new Error("That public link name is reserved.");
+  }
+  return clean;
+}
+
+function randomPublicSlug() {
+  return `pub_${crypto.randomBytes(9).toString("hex")}`;
+}
+
+function assertPublicSlugAvailable(slug: string, campaignId: number) {
+  const owner = db.prepare("SELECT campaignId FROM public_sites WHERE lower(slug) = lower(?)").get(slug) as { campaignId: number } | undefined;
+  if (owner && owner.campaignId !== campaignId) throw new Error("That public link name is already taken.");
+}
+
 /** The published-site record for a campaign, if one has ever been created. */
 export function getPublicSite(campaignId: number): PublicSiteRow | null {
   const row = db.prepare("SELECT campaignId, slug, enabled, createdAt FROM public_sites WHERE campaignId = ?").get(campaignId) as
@@ -270,16 +290,17 @@ export function incrementCloneCount(campaignId: number) {
   db.prepare("UPDATE public_sites SET clones = clones + 1 WHERE campaignId = ?").run(campaignId);
 }
 
-/** Publish (or re-enable) a campaign's public site. Mints a stable random slug on first publish. */
-export function publishCampaign(userId: number, campaignId: number): PublicSiteRow {
+/** Publish (or re-enable) a campaign's public site. Mints a stable random slug on first publish unless a custom slug is requested. */
+export function publishCampaign(userId: number, campaignId: number, requestedSlug?: string | null): PublicSiteRow {
   if (!canManageCampaign(userId, campaignId)) throw new Error("Forbidden");
   const existing = getPublicSite(campaignId);
+  const slug = normalizePublicSlug(requestedSlug);
+  if (slug) assertPublicSlugAvailable(slug, campaignId);
   if (existing) {
-    db.prepare("UPDATE public_sites SET enabled = 1 WHERE campaignId = ?").run(campaignId);
-    return { ...existing, enabled: true };
+    db.prepare("UPDATE public_sites SET slug = ?, enabled = 1 WHERE campaignId = ?").run(slug || existing.slug, campaignId);
+    return getPublicSite(campaignId)!;
   }
-  const slug = `pub_${crypto.randomBytes(9).toString("hex")}`;
-  db.prepare("INSERT INTO public_sites (campaignId, slug, enabled) VALUES (?, ?, 1)").run(campaignId, slug);
+  db.prepare("INSERT INTO public_sites (campaignId, slug, enabled) VALUES (?, ?, 1)").run(campaignId, slug || randomPublicSlug());
   return getPublicSite(campaignId)!;
 }
 
@@ -290,11 +311,12 @@ export function unpublishCampaign(userId: number, campaignId: number) {
 }
 
 /** Rotate the share slug, invalidating any previously shared public URL. */
-export function rotatePublicSlug(userId: number, campaignId: number): PublicSiteRow {
+export function rotatePublicSlug(userId: number, campaignId: number, requestedSlug?: string | null): PublicSiteRow {
   if (!canManageCampaign(userId, campaignId)) throw new Error("Forbidden");
-  const slug = `pub_${crypto.randomBytes(9).toString("hex")}`;
+  const slug = normalizePublicSlug(requestedSlug) || randomPublicSlug();
+  assertPublicSlugAvailable(slug, campaignId);
   const existing = getPublicSite(campaignId);
-  if (!existing) return publishCampaign(userId, campaignId);
+  if (!existing) return publishCampaign(userId, campaignId, slug);
   db.prepare("UPDATE public_sites SET slug = ? WHERE campaignId = ?").run(slug, campaignId);
   return getPublicSite(campaignId)!;
 }

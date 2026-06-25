@@ -2856,6 +2856,36 @@ code {
 }
 
 /* Public-site controls in the campaign Settings tab */
+.public-link-form {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+}
+.public-link-form > label {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.public-link-editor {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.public-link-editor span {
+  background: var(--wash-gold);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  color: var(--gold-bright);
+  font-family: var(--font-mono);
+  padding: 8px 10px;
+}
+.public-link-editor input {
+  flex: 1;
+  min-width: 220px;
+}
 .public-share { display: flex; flex-direction: column; gap: 8px; }
 .public-share > label {
   color: var(--text-tertiary);

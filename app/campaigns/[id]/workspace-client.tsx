@@ -22,6 +22,16 @@ type RepoValidation = {
   checks: RepoValidationCheck[];
 };
 
+function publicLinkInput(value: string) {
+  return value
+    .trim()
+    .replace(/['"]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 90)
+    .toLowerCase();
+}
+
 export default function CampaignClient({ campaign, categories }: { campaign: Campaign; categories: { id: string; label: string }[] }) {
   const [pages, setPages] = useState<WikiPage[]>([]);
   const [templates, setTemplates] = useState<WikiTemplate[]>([]);
@@ -38,6 +48,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const [openNodes, setOpenNodes] = useState<Record<string, boolean>>({});
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({});
   const [publicSite, setPublicSite] = useState<{ slug: string; enabled: boolean } | null>(null);
+  const [publicLinkName, setPublicLinkName] = useState(publicLinkInput(campaign.name));
   const [theme, setTheme] = useState<CampaignTheme>({});
   const [tab, setTab] = useState(campaign.role === "owner" || campaign.role === "gm" ? "pages" : "world");
   const pendingReviews = pages.filter((page) => page.frontmatter.approvalStatus !== "approved").length;
@@ -70,6 +81,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     setMedia(mediaData.media || []);
     setValidation(validationData);
     setPublicSite(publicData.site || null);
+    setPublicLinkName(publicData.site?.slug || publicLinkInput(campaign.name));
     setTheme(themeData.theme || {});
     if (pagesData.cache?.cached) {
       void fetch(`/api/campaigns/${campaign.id}/pages?refresh=wait`)
@@ -102,18 +114,24 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     }
   }
 
-  async function setPublic(action: "publish" | "rotate" | "unpublish") {
+  async function setPublic(action: "publish" | "rotate" | "unpublish", slug?: string) {
     const res = await fetch(`/api/campaigns/${campaign.id}/public`, {
       method: action === "unpublish" ? "DELETE" : "POST",
-      body: action === "unpublish" ? undefined : JSON.stringify({ action })
+      body: action === "unpublish" ? undefined : JSON.stringify({ action, slug })
     });
     const data = await res.json();
     if (res.ok) {
       setPublicSite(data.site || null);
-      setMessage(action === "unpublish" ? "Public site taken offline." : action === "rotate" ? "Public link rotated — the old link no longer works." : "Public site published.");
+      if (data.site?.slug) setPublicLinkName(data.site.slug);
+      setMessage(action === "unpublish" ? "Public site taken offline." : action === "rotate" ? "Public link rotated - the old link no longer works." : "Public site published.");
     } else {
       setMessage(data.error || "Could not update public site.");
     }
+  }
+
+  async function savePublicLink(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await setPublic("publish", publicLinkName);
   }
 
   useEffect(() => { load(); }, []);
@@ -694,10 +712,25 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
                     <button type="button" className="danger" onClick={() => setPublic("unpublish")}>Unpublish</button>
                   </>
                 ) : (
-                  <button type="button" onClick={() => setPublic("publish")}>{publicSite ? "Re-publish" : "Publish public site"}</button>
+                  <button type="button" onClick={() => setPublic("publish", publicLinkName)}>{publicSite ? "Re-publish" : "Publish public site"}</button>
                 )}
               </div>
             </div>
+            <form onSubmit={savePublicLink} className="public-link-form">
+              <label htmlFor="public-link-name">Public link name</label>
+              <div className="public-link-editor">
+                <span>/site/</span>
+                <input
+                  id="public-link-name"
+                  value={publicLinkName}
+                  onChange={(event) => setPublicLinkName(publicLinkInput(event.target.value))}
+                  placeholder="sparks-of-the-past"
+                  autoComplete="off"
+                />
+                <button type="submit">{publicSite ? "Save link name" : "Publish public site"}</button>
+              </div>
+              <p className="muted">Use letters, numbers, and hyphens. Changing this updates the public URL.</p>
+            </form>
             {publicSite?.enabled ? (
               <div className="public-share">
                 <label>Shareable link</label>

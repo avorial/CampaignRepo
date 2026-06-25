@@ -19,8 +19,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
   try {
-    const action = (await req.json().catch(() => ({}))).action || "publish";
-    const site = action === "rotate" ? rotatePublicSlug(user.id, campaign.id) : publishCampaign(user.id, campaign.id);
+    const body = await req.json().catch(() => ({}));
+    const action = body.action || "publish";
+    const slug = typeof body.slug === "string" ? body.slug : undefined;
+    const site = action === "rotate" ? rotatePublicSlug(user.id, campaign.id, slug) : publishCampaign(user.id, campaign.id, slug);
     return NextResponse.json({ site });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Could not publish." }, { status: 403 });
