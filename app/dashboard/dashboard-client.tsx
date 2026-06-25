@@ -26,10 +26,19 @@ export default function DashboardClient({
   const [tokens, setTokens] = useState<ApiToken[]>([]);
   const [newToken, setNewToken] = useState("");
   const [reviewGroups, setReviewGroups] = useState<any[]>([]);
+  const [expandedPanels, setExpandedPanels] = useState({
+    github: !Boolean(user.githubToken),
+    build: !Boolean(user.githubToken),
+    mcp: !Boolean(user.githubToken)
+  });
   const mcpUrl = typeof window !== "undefined" ? `${window.location.origin}/api/mcp` : "/api/mcp";
   const githubConnection = user.githubToken?.startsWith("github-app:") ? "GitHub App" : user.githubToken ? "Manual token" : "Not connected";
   const githubConnected = Boolean(user.githubToken);
   const githubUser = user.githubToken?.startsWith("github-app:") ? "Avorial" : user.githubToken ? "GitHub token user" : "";
+
+  const setPanelOpen = (panel: keyof typeof expandedPanels, open: boolean) => {
+    setExpandedPanels((current) => ({ ...current, [panel]: open }));
+  };
 
   useEffect(() => {
     fetch("/api/tokens")
@@ -90,7 +99,7 @@ export default function DashboardClient({
   }
 
   async function removeRepo(id: number, name: string) {
-    if (!confirm(`Remove "${name}" from CampaignRepo? This disconnects the repo here — the GitHub repository is not deleted.`)) return;
+    if (!confirm(`Remove "${name}" from CampaignRepo? This disconnects the repo here - the GitHub repository is not deleted.`)) return;
     const res = await fetch("/api/campaigns", { method: "DELETE", body: JSON.stringify({ id }) });
     const data = await res.json();
     if (res.ok) {
@@ -111,6 +120,22 @@ export default function DashboardClient({
 
   return (
     <>
+      <section className="dashboard-search-bar" aria-label="Search all campaign repositories">
+        <form onSubmit={runSearch} className="dashboard-search-form">
+          <input name="q" placeholder="Search all repos: Jardin, SolSec, rumor..." />
+          <button>Search</button>
+        </form>
+        {search.length > 0 && (
+          <div className="dashboard-search-results">
+            {search.map((row) => (
+              <a key={row.id} href={row.category === "media" ? `/campaigns/${row.campaignId}#media` : `/campaigns/${row.campaignId}/pages/${row.slug}`}>
+                <strong>{row.title}</strong><span>{row.campaignName} - {row.category}</span>
+              </a>
+            ))}
+          </div>
+        )}
+      </section>
+
       <section className="band repos-band">
         <h2>Connected repos</h2>
         <div className="repo-grid">
@@ -130,7 +155,7 @@ export default function DashboardClient({
                     <strong>{campaign.name}</strong>
                   </div>
                   <span>{campaign.owner}/{campaign.repo}</span>
-                  <small>{campaign.gameType} · {campaign.branch} · {campaign.role}</small>
+                  <small>{campaign.gameType} - {campaign.branch} - {campaign.role}</small>
                 </Link>
                 {campaign.role === "owner" && (
                   <button type="button" className="repo-remove danger" onClick={() => removeRepo(campaign.id, campaign.name)}>
@@ -145,119 +170,115 @@ export default function DashboardClient({
       </section>
 
       <section className="dashboard-grid">
-        <div className="panel">
-          <h2>GitHub connection</h2>
-          {githubConnected ? (
-            <div className="connection-status">
-              <strong>Currently connected</strong>
-              <span>User {githubUser}</span>
-              <small>{githubConnection} access active for {user.email}</small>
-            </div>
-          ) : (
-            <p className="muted">Signed in as {user.email}. GitHub is not connected yet.</p>
-          )}
-          {!githubConnected && (
-            githubAppConfigured ? (
-              <div className="stack">
-                <p className="muted">Install the GitHub App on the repos CampaignRepo can manage. This avoids storing a personal SSH key or broad personal token.</p>
-                <a className="button" href="/api/github/app/start">Install GitHub App access</a>
+        <details className="panel dashboard-toggle-panel" open={expandedPanels.github} onToggle={(event) => setPanelOpen("github", event.currentTarget.open)}>
+          <summary>
+            <span>GitHub connection</span>
+            <small>{githubConnected ? `${githubConnection} connected` : "Connect access"}</small>
+          </summary>
+          <div className="dashboard-toggle-body">
+            {githubConnected ? (
+              <div className="connection-status">
+                <strong>Currently connected</strong>
+                <span>User {githubUser}</span>
+                <small>{githubConnection} access active for {user.email}</small>
               </div>
             ) : (
-              <div className="setup-callout">
-                <strong>Connect GitHub with a GitHub App.</strong>
-                <span>This creates a CampaignRepo GitHub App, stores its generated credentials in this server, then lets you choose the repos it can access.</span>
-                <a className="button" href="/api/github/app/manifest/start">
-                  Connect GitHub
-                </a>
-              </div>
-            )
-          )}
-          <details className="troubleshooting">
-            <summary>Connection troubleshooting</summary>
-            {githubAppConfigured ? (
-              <a className="button secondary" href="/api/github/app/start">Install or update GitHub App access</a>
-            ) : (
-              <a className="button secondary" href="/api/github/app/manifest/start">Rebuild GitHub App connection</a>
+              <p className="muted">Signed in as {user.email}. GitHub is not connected yet.</p>
             )}
-            <form onSubmit={connectGithub} className="stack">
-              <label>Manual GitHub token fallback<input name="token" type="password" placeholder="github_pat_..." /></label>
-              <button>Connect token</button>
-            </form>
-            <p className="muted">Token needs repository contents read/write access. Use this only for testing, repo creation, or repairing the GitHub App connection.</p>
-            <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">
-              Create token instead
-            </a>
-          </details>
-        </div>
-
-        <div className="panel">
-          <h2>Build Campaign Repo</h2>
-          <div className="segmented">
-            <button
-              type="button"
-              className={mode === "create" ? "active" : ""}
-              disabled={isGitHubApp}
-              title={isGitHubApp ? "GitHub App access can't create repos — add a manual token to enable this" : undefined}
-              onClick={() => { setMode("create"); setBuildError(""); }}
-            >
-              {isGitHubApp && <Lock size={11} aria-hidden style={{ marginRight: 5 }} />}Create repo
-            </button>
-            <button type="button" className={mode === "connect" ? "active" : ""} onClick={() => { setMode("connect"); setBuildError(""); }}>Connect repo</button>
+            {!githubConnected && (
+              githubAppConfigured ? (
+                <div className="stack">
+                  <p className="muted">Install the GitHub App on the repos CampaignRepo can manage. This avoids storing a personal SSH key or broad personal token.</p>
+                  <a className="button" href="/api/github/app/start">Install GitHub App access</a>
+                </div>
+              ) : (
+                <div className="setup-callout">
+                  <strong>Connect GitHub with a GitHub App.</strong>
+                  <span>This creates a CampaignRepo GitHub App, stores its generated credentials in this server, then lets you choose the repos it can access.</span>
+                  <a className="button" href="/api/github/app/manifest/start">Connect GitHub</a>
+                </div>
+              )
+            )}
+            <details className="troubleshooting">
+              <summary>Connection troubleshooting</summary>
+              {githubAppConfigured ? (
+                <a className="button secondary" href="/api/github/app/start">Install or update GitHub App access</a>
+              ) : (
+                <a className="button secondary" href="/api/github/app/manifest/start">Rebuild GitHub App connection</a>
+              )}
+              <form onSubmit={connectGithub} className="stack">
+                <label>Manual GitHub token fallback<input name="token" type="password" placeholder="github_pat_..." /></label>
+                <button>Connect token</button>
+              </form>
+              <p className="muted">Token needs repository contents read/write access. Use this only for testing, repo creation, or repairing the GitHub App connection.</p>
+              <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">Create token instead</a>
+            </details>
           </div>
-          {isGitHubApp && (
-            <div className="setup-callout callout-warn">
-              <strong><Lock size={13} aria-hidden style={{ marginRight: 6, verticalAlign: "-2px" }} />Creating repos is locked</strong>
-              <span>You&apos;re connected via the <strong>GitHub App</strong>, which can <strong>connect existing repos</strong> but can&apos;t create new ones. Make the repo at <a href="https://github.com/new" target="_blank" rel="noreferrer">github.com/new</a>, then use <button type="button" className="linklike" onClick={() => { setMode("connect"); setBuildError(""); }}>Connect repo</button> — or add a manual GitHub token under <em>Connection troubleshooting</em> to unlock creation.</span>
+        </details>
+
+        <details className="panel dashboard-toggle-panel" open={expandedPanels.build} onToggle={(event) => setPanelOpen("build", event.currentTarget.open)}>
+          <summary>
+            <span>Build Campaign Repo</span>
+            <small>{mode === "create" ? "Create repo" : "Connect repo"}</small>
+          </summary>
+          <div className="dashboard-toggle-body">
+            <div className="segmented">
+              <button
+                type="button"
+                className={mode === "create" ? "active" : ""}
+                disabled={isGitHubApp}
+                title={isGitHubApp ? "GitHub App access can't create repos - add a manual token to enable this" : undefined}
+                onClick={() => { setMode("create"); setBuildError(""); }}
+              >
+                {isGitHubApp && <Lock size={11} aria-hidden style={{ marginRight: 5 }} />}Create repo
+              </button>
+              <button type="button" className={mode === "connect" ? "active" : ""} onClick={() => { setMode("connect"); setBuildError(""); }}>Connect repo</button>
             </div>
-          )}
-          <form onSubmit={buildRepo} className="stack">
-            <label>Campaign name<input name="name" required placeholder="The Jardin File" /></label>
-            {mode === "connect" && <label>Owner<input name="owner" placeholder="avorial (optional if pasting URL)" /></label>}
-            <label>{mode === "connect" ? "Repo name or URL" : "Repo name"}<input name="repo" required placeholder={mode === "connect" ? "kdwiki or https://github.com/avorial/kdwiki" : "jardin-campaign"} /></label>
-            <label>Branch<input name="branch" defaultValue="main" /></label>
-            <label>Game template pack<select name="gameType">{gameTypeGroups.map((group) => (
-              <optgroup key={group.label} label={group.label}>{group.types.map((type) => <option key={type}>{type}</option>)}</optgroup>
-            ))}</select></label>
-            {mode === "create" && <label className="check"><input type="checkbox" name="private" defaultChecked /> Private repo</label>}
-            <button disabled={isGitHubApp && mode === "create"}>{mode === "create" ? "Create and initialize" : "Connect and repair"}</button>
-            {buildError && <p className="error">{buildError}</p>}
-          </form>
-        </div>
-
-        <div className="panel">
-          <h2>MCP access tokens</h2>
-          <p className="muted">Connect an external AI/MCP client to <code>{mcpUrl}</code> with an <code>Authorization: Bearer</code> token.</p>
-          <form onSubmit={mintToken} className="inline-form">
-            <input name="tokenName" placeholder="Claude Desktop" />
-            <button>Mint token</button>
-          </form>
-          {newToken && (
-            <p className="muted">Copy now (shown once): <code>{newToken}</code></p>
-          )}
-          <div className="results">
-            {tokens.map((token) => (
-              <div key={token.id} className="token-row">
-                <span><strong>{token.name}</strong> · last used {token.lastUsedAt || "never"}</span>
-                <button type="button" onClick={() => revokeToken(token.id)}>Revoke</button>
+            {isGitHubApp && (
+              <div className="setup-callout callout-warn">
+                <strong><Lock size={13} aria-hidden style={{ marginRight: 6, verticalAlign: "-2px" }} />Creating repos is locked</strong>
+                <span>You&apos;re connected via the <strong>GitHub App</strong>, which can <strong>connect existing repos</strong> but can&apos;t create new ones. Make the repo at <a href="https://github.com/new" target="_blank" rel="noreferrer">github.com/new</a>, then use <button type="button" className="linklike" onClick={() => { setMode("connect"); setBuildError(""); }}>Connect repo</button> - or add a manual GitHub token under <em>Connection troubleshooting</em> to unlock creation.</span>
               </div>
-            ))}
+            )}
+            <form onSubmit={buildRepo} className="stack">
+              <label>Campaign name<input name="name" required placeholder="The Jardin File" /></label>
+              {mode === "connect" && <label>Owner<input name="owner" placeholder="avorial (optional if pasting URL)" /></label>}
+              <label>{mode === "connect" ? "Repo name or URL" : "Repo name"}<input name="repo" required placeholder={mode === "connect" ? "kdwiki or https://github.com/avorial/kdwiki" : "jardin-campaign"} /></label>
+              <label>Branch<input name="branch" defaultValue="main" /></label>
+              <label>Game template pack<select name="gameType">{gameTypeGroups.map((group) => (
+                <optgroup key={group.label} label={group.label}>{group.types.map((type) => <option key={type}>{type}</option>)}</optgroup>
+              ))}</select></label>
+              {mode === "create" && <label className="check"><input type="checkbox" name="private" defaultChecked /> Private repo</label>}
+              <button disabled={isGitHubApp && mode === "create"}>{mode === "create" ? "Create and initialize" : "Connect and repair"}</button>
+              {buildError && <p className="error">{buildError}</p>}
+            </form>
           </div>
-        </div>
+        </details>
 
-        <div className="panel">
-          <h2>Search all repos</h2>
-          <form onSubmit={runSearch} className="inline-form">
-            <input name="q" placeholder="Jardin, SolSec, rumor..." />
-            <button>Search</button>
-          </form>
-          <div className="results">
-            {search.map((row) => (
-              <a key={row.id} href={row.category === "media" ? `/campaigns/${row.campaignId}#media` : `/campaigns/${row.campaignId}/pages/${row.slug}`}>
-                <strong>{row.title}</strong><span>{row.campaignName} · {row.category}</span>
-              </a>
-            ))}
+        <details className="panel dashboard-toggle-panel" open={expandedPanels.mcp} onToggle={(event) => setPanelOpen("mcp", event.currentTarget.open)}>
+          <summary>
+            <span>MCP access tokens</span>
+            <small>{tokens.length} token{tokens.length === 1 ? "" : "s"}</small>
+          </summary>
+          <div className="dashboard-toggle-body">
+            <p className="muted">Connect an external AI/MCP client to <code>{mcpUrl}</code> with an <code>Authorization: Bearer</code> token.</p>
+            <form onSubmit={mintToken} className="inline-form">
+              <input name="tokenName" placeholder="Claude Desktop" />
+              <button>Mint token</button>
+            </form>
+            {newToken && (
+              <p className="muted">Copy now (shown once): <code>{newToken}</code></p>
+            )}
+            <div className="results">
+              {tokens.map((token) => (
+                <div key={token.id} className="token-row">
+                  <span><strong>{token.name}</strong> - last used {token.lastUsedAt || "never"}</span>
+                  <button type="button" onClick={() => revokeToken(token.id)}>Revoke</button>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </details>
       </section>
 
       {reviewGroups.length > 0 && (
@@ -271,7 +292,7 @@ export default function DashboardClient({
                 {group.reviews.map((review: any) => (
                   <a key={review.slug} href={`/campaigns/${group.campaignId}/pages/${review.slug}`}>
                     <strong>{review.name}</strong>
-                    <span>{review.category} · {review.approvalStatus}{review.sourceImport ? ` · ${review.sourceImport}` : ""}</span>
+                    <span>{review.category} - {review.approvalStatus}{review.sourceImport ? ` - ${review.sourceImport}` : ""}</span>
                   </a>
                 ))}
               </div>

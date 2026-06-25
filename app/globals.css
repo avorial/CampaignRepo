@@ -425,6 +425,111 @@ code {
   gap: 16px;
 }
 
+.dashboard-search-bar {
+  margin: 8px 0 10px;
+  width: min(760px, 100%);
+}
+
+.dashboard-search-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.dashboard-search-results {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.dashboard-search-results a {
+  align-items: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  display: grid;
+  gap: 4px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 9px 12px;
+}
+
+.dashboard-search-results a:hover {
+  background: var(--wash-purple);
+  border-color: var(--border-strong);
+}
+
+.dashboard-search-results strong,
+.dashboard-search-results span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-search-results span {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+}
+
+.dashboard-toggle-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.dashboard-toggle-panel > summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  list-style: none;
+  min-height: 62px;
+  padding: 0 16px;
+}
+
+.dashboard-toggle-panel > summary::-webkit-details-marker {
+  display: none;
+}
+
+.dashboard-toggle-panel > summary::after {
+  color: var(--gold);
+  content: "+";
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  line-height: 1;
+}
+
+.dashboard-toggle-panel[open] > summary {
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.dashboard-toggle-panel[open] > summary::after {
+  content: "-";
+}
+
+.dashboard-toggle-panel > summary span {
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: var(--text-h3);
+  font-weight: 500;
+}
+
+.dashboard-toggle-panel > summary small {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.04em;
+  margin-left: auto;
+  text-transform: uppercase;
+}
+
+.dashboard-toggle-body {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
 .admin-grid {
   display: grid;
   grid-template-columns: 360px minmax(0, 1fr);
