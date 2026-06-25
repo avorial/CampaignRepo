@@ -24,9 +24,8 @@ const fmtMod = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
 const isFilled = (value: unknown) => value !== undefined && value !== null && value !== "";
 
 function splitColumns<T>(items: T[], count: number) {
-  const columns: T[][] = Array.from({ length: count }, () => []);
-  items.forEach((item, index) => columns[index % count].push(item));
-  return columns;
+  const size = Math.ceil(items.length / count);
+  return Array.from({ length: count }, (_, index) => items.slice(index * size, (index + 1) * size));
 }
 
 function detail(parts: unknown[]) {
@@ -36,8 +35,8 @@ function detail(parts: unknown[]) {
 export default function TravellerSheet({ sheet, name }: { sheet: Sheet; name?: string }) {
   const skills = [...(sheet.skills || [])].sort((a, b) => a.name.localeCompare(b.name) || (a.speciality || "").localeCompare(b.speciality || ""));
   const skillColumns = splitColumns(skills, 3);
-  const dossier = sheet.dossier || detail([sheet.career, sheet.rank]) || "Travel";
-  const status = sheet.status || "Unwounded";
+  const dossier = sheet.dossier || detail([sheet.career, sheet.rank]) || "-";
+  const status = sheet.status || "-";
   const weapons = sheet.weapons || [];
   const armour = sheet.armour || [];
   const equipment = sheet.equipment || [];
@@ -55,7 +54,7 @@ export default function TravellerSheet({ sheet, name }: { sheet: Sheet; name?: s
 
       <div className="tsheet-dossier">
         <div className="tsheet-upload">
-          <strong>{String((sheet.rank || sheet.career || "F").charAt(0)).toUpperCase()}</strong>
+          <strong>{sheet.rank || sheet.career ? String((sheet.rank || sheet.career || "").charAt(0)).toUpperCase() : "-"}</strong>
           <span>Upload</span>
         </div>
         <div className="tsheet-identity">
@@ -74,13 +73,13 @@ export default function TravellerSheet({ sheet, name }: { sheet: Sheet; name?: s
           <h4>Characteristics <span>Click a value to roll 2D6 + that DM</span></h4>
           <div className="tsheet-chars">
             {CHARS.map(({ key, label }) => {
-              const value = sheet.characteristics?.[key] ?? 0;
+              const value = sheet.characteristics?.[key];
               return (
                 <div className="tsheet-char" key={key}>
                   <span className="tsheet-char-key">{key}</span>
                   <span className="tsheet-char-label">{label}</span>
-                  <span className="tsheet-char-val">{value}</span>
-                  <span className="tsheet-char-mod">Mod {fmtMod(travellerDM(value))}</span>
+                  <span className="tsheet-char-val">{value ?? "-"}</span>
+                  <span className="tsheet-char-mod">{value == null ? "Mod -" : `Mod ${fmtMod(travellerDM(value))}`}</span>
                 </div>
               );
             })}
@@ -109,9 +108,9 @@ export default function TravellerSheet({ sheet, name }: { sheet: Sheet; name?: s
       </section>
 
       <section className="tsheet-panel tsheet-band">
-        <h4>Species <span>{sheet.species || "Traveller"}</span></h4>
+        <h4>Species <span>{sheet.species || "-"}</span></h4>
         <div className="badges">
-          {(sheet.speciesTraits?.length ? sheet.speciesTraits : [sheet.species || "Traveller"]).map((trait) => <span key={trait}>{trait}</span>)}
+          {(sheet.speciesTraits?.length ? sheet.speciesTraits : (sheet.species ? [sheet.species] : [])).map((trait) => <span key={trait}>{trait}</span>)}
         </div>
       </section>
 

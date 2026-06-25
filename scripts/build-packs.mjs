@@ -90,22 +90,22 @@ Secrets, flags, hooks, and pressure points.
 }
 
 const travellerSkillRows = [
-  { name: "Admin", level: 1 }, { name: "Advocate", level: 0 }, { name: "Animals" }, { name: "Animals", speciality: "Handling" }, { name: "Animals", speciality: "Riding" }, { name: "Animals", speciality: "Veterinary" }, { name: "Animals", speciality: "Training" },
-  { name: "Art", level: 0 }, { name: "Art", speciality: "Performer", level: 1 }, { name: "Art", speciality: "Holography" }, { name: "Art", speciality: "Instrument" }, { name: "Art", speciality: "Visual Media" }, { name: "Art", speciality: "Write" },
-  { name: "Astrogation", level: 0 }, { name: "Athletics", level: 0 }, { name: "Athletics", speciality: "Dexterity", level: 1 }, { name: "Athletics", speciality: "Endurance" }, { name: "Athletics", speciality: "Strength" }, { name: "Broker", level: 1 }, { name: "Carouse" },
-  { name: "Deception", level: 2 }, { name: "Diplomat", level: 2 }, { name: "Drive", level: 0 }, { name: "Drive", speciality: "Hovercraft" }, { name: "Drive", speciality: "Mole" }, { name: "Drive", speciality: "Track" }, { name: "Drive", speciality: "Walker", level: 0 }, { name: "Drive", speciality: "Wheel" },
-  { name: "Electronics", level: 0 }, { name: "Electronics", speciality: "Comms", level: 0 }, { name: "Electronics", speciality: "Computers", level: 0 }, { name: "Electronics", speciality: "Remote Ops", level: 1 }, { name: "Electronics", speciality: "Sensors" },
+  { name: "Admin" }, { name: "Advocate" }, { name: "Animals" }, { name: "Animals", speciality: "Handling" }, { name: "Animals", speciality: "Riding" }, { name: "Animals", speciality: "Veterinary" }, { name: "Animals", speciality: "Training" },
+  { name: "Art" }, { name: "Art", speciality: "Performer" }, { name: "Art", speciality: "Holography" }, { name: "Art", speciality: "Instrument" }, { name: "Art", speciality: "Visual Media" }, { name: "Art", speciality: "Write" },
+  { name: "Astrogation" }, { name: "Athletics" }, { name: "Athletics", speciality: "Dexterity" }, { name: "Athletics", speciality: "Endurance" }, { name: "Athletics", speciality: "Strength" }, { name: "Broker" }, { name: "Carouse" },
+  { name: "Deception" }, { name: "Diplomat" }, { name: "Drive" }, { name: "Drive", speciality: "Hovercraft" }, { name: "Drive", speciality: "Mole" }, { name: "Drive", speciality: "Track" }, { name: "Drive", speciality: "Walker" }, { name: "Drive", speciality: "Wheel" },
+  { name: "Electronics" }, { name: "Electronics", speciality: "Comms" }, { name: "Electronics", speciality: "Computers" }, { name: "Electronics", speciality: "Remote Ops" }, { name: "Electronics", speciality: "Sensors" },
   { name: "Engineer" }, { name: "Engineer", speciality: "M-drive" }, { name: "Engineer", speciality: "J-drive" }, { name: "Engineer", speciality: "Life Support" }, { name: "Engineer", speciality: "Power" }, { name: "Explosives" },
-  { name: "Flyer", level: 0 }, { name: "Flyer", speciality: "Airship" }, { name: "Flyer", speciality: "Grav" }, { name: "Flyer", speciality: "Ornithopter" }, { name: "Flyer", speciality: "Rotor" }, { name: "Flyer", speciality: "Wing" },
-  { name: "Gambler" }, { name: "Gun Combat", level: 0 }, { name: "Gun Combat", speciality: "Archaic" }, { name: "Gun Combat", speciality: "Energy" }, { name: "Gun Combat", speciality: "Slug" },
+  { name: "Flyer" }, { name: "Flyer", speciality: "Airship" }, { name: "Flyer", speciality: "Grav" }, { name: "Flyer", speciality: "Ornithopter" }, { name: "Flyer", speciality: "Rotor" }, { name: "Flyer", speciality: "Wing" },
+  { name: "Gambler" }, { name: "Gun Combat" }, { name: "Gun Combat", speciality: "Archaic" }, { name: "Gun Combat", speciality: "Energy" }, { name: "Gun Combat", speciality: "Slug" },
   { name: "Gunner" }, { name: "Gunner", speciality: "Turret" }, { name: "Gunner", speciality: "Ortillery" }, { name: "Gunner", speciality: "Screen" }, { name: "Gunner", speciality: "Capital" },
   { name: "Heavy Weapons" }, { name: "Heavy Weapons", speciality: "Artillery" }, { name: "Heavy Weapons", speciality: "Man Portable" }, { name: "Heavy Weapons", speciality: "Vehicle" }, { name: "Investigate" }, { name: "Jack-of-All-Trades" },
   { name: "Language" }, { name: "Language", speciality: "Anglic" }, { name: "Language", speciality: "Vilani" }, { name: "Language", speciality: "Zdetl" }, { name: "Language", speciality: "Oynprith" },
-  { name: "Leadership", level: 0 }, { name: "Mechanic", level: 0 }, { name: "Medic", level: 1 }, { name: "Melee", level: 0 }, { name: "Melee", speciality: "Unarmed" }, { name: "Melee", speciality: "Blade" }, { name: "Melee", speciality: "Bludgeon" }, { name: "Melee", speciality: "Natural" }, { name: "Melee", speciality: "Infighting" },
-  { name: "Navigation" }, { name: "Persuade", level: 1 }, { name: "Pilot", level: 0 }, { name: "Pilot", speciality: "Small Craft", level: 1 }, { name: "Pilot", speciality: "Spacecraft", level: 0 }, { name: "Pilot", speciality: "Capital Ships" },
+  { name: "Leadership" }, { name: "Mechanic" }, { name: "Medic" }, { name: "Melee" }, { name: "Melee", speciality: "Unarmed" }, { name: "Melee", speciality: "Blade" }, { name: "Melee", speciality: "Bludgeon" }, { name: "Melee", speciality: "Natural" }, { name: "Melee", speciality: "Infighting" },
+  { name: "Navigation" }, { name: "Persuade" }, { name: "Pilot" }, { name: "Pilot", speciality: "Small Craft" }, { name: "Pilot", speciality: "Spacecraft" }, { name: "Pilot", speciality: "Capital Ships" },
   { name: "Profession" }, { name: "Profession", speciality: "Belter" }, { name: "Profession", speciality: "Biologicals" }, { name: "Profession", speciality: "Civil Engineering" }, { name: "Profession", speciality: "Construction" }, { name: "Profession", speciality: "Hydroponics" }, { name: "Profession", speciality: "K'kree Ritual" }, { name: "Profession", speciality: "Miner" }, { name: "Profession", speciality: "Polymers" }, { name: "Profession", speciality: "Religion" },
-  { name: "Recon", level: 0 }, { name: "Science", level: 0 }, { name: "Science", speciality: "Archaeology" }, { name: "Science", speciality: "Astronomy" }, { name: "Science", speciality: "Belief" }, { name: "Science", speciality: "Biology" }, { name: "Science", speciality: "Chemistry" }, { name: "Science", speciality: "Cosmology" }, { name: "Science", speciality: "Cybernetics" }, { name: "Science", speciality: "Economics" }, { name: "Science", speciality: "Genetics" }, { name: "Science", speciality: "History", level: 1 }, { name: "Science", speciality: "Linguistics" }, { name: "Science", speciality: "Philosophy" }, { name: "Science", speciality: "Physics" }, { name: "Science", speciality: "Planetology" }, { name: "Science", speciality: "Psionicology" }, { name: "Science", speciality: "Psychology" }, { name: "Science", speciality: "Robotics", level: 1 }, { name: "Science", speciality: "Sophontology" }, { name: "Science", speciality: "Xenology" },
-  { name: "Seafarer" }, { name: "Seafarer", speciality: "Ocean Ships" }, { name: "Seafarer", speciality: "Personal" }, { name: "Seafarer", speciality: "Sail" }, { name: "Seafarer", speciality: "Submarine" }, { name: "Stealth", level: 1 }, { name: "Steward" }, { name: "Streetwise", level: 2 }, { name: "Survival" }, { name: "Tactics" }, { name: "Tactics", speciality: "Military" }, { name: "Tactics", speciality: "Naval" }, { name: "Vacc Suit" }
+  { name: "Recon" }, { name: "Science" }, { name: "Science", speciality: "Archaeology" }, { name: "Science", speciality: "Astronomy" }, { name: "Science", speciality: "Belief" }, { name: "Science", speciality: "Biology" }, { name: "Science", speciality: "Chemistry" }, { name: "Science", speciality: "Cosmology" }, { name: "Science", speciality: "Cybernetics" }, { name: "Science", speciality: "Economics" }, { name: "Science", speciality: "Genetics" }, { name: "Science", speciality: "History" }, { name: "Science", speciality: "Linguistics" }, { name: "Science", speciality: "Philosophy" }, { name: "Science", speciality: "Physics" }, { name: "Science", speciality: "Planetology" }, { name: "Science", speciality: "Psionicology" }, { name: "Science", speciality: "Psychology" }, { name: "Science", speciality: "Robotics" }, { name: "Science", speciality: "Sophontology" }, { name: "Science", speciality: "Xenology" },
+  { name: "Seafarer" }, { name: "Seafarer", speciality: "Ocean Ships" }, { name: "Seafarer", speciality: "Personal" }, { name: "Seafarer", speciality: "Sail" }, { name: "Seafarer", speciality: "Submarine" }, { name: "Stealth" }, { name: "Steward" }, { name: "Streetwise" }, { name: "Survival" }, { name: "Tactics" }, { name: "Tactics", speciality: "Military" }, { name: "Tactics", speciality: "Naval" }, { name: "Vacc Suit" }
 ];
 
 function travellerSkillYamlRows() {
@@ -126,34 +126,36 @@ function travellerCharacterSheet() {
 
 \`\`\`traveller-sheet
 name: Unnamed Traveller
-species: Racial Solomani
-age: 34
+species:
+age:
 homeworld:
 career:
-rank: F
-dossier: Travel
-status: Unwounded
-speciesTraits:
-  - Racial Solomani
-  - Party Patronage
-  - Solomani Heritage
-  - Solomani Cause
+rank:
+dossier:
+status:
+speciesTraits: []
 characteristics:
-  STR: 12
-  DEX: 9
-  END: 10
-  INT: 11
-  EDU: 10
-  SOC: 12
+  STR:
+  DEX:
+  END:
+  INT:
+  EDU:
+  SOC:
 skills:
 ${travellerSkillYamlRows()}
 weapons: []
+# - { name: "", damage: "", range: "", notes: "" }
 armour: []
-equipment: []
+# - { name: "", protection: "", notes: "" }
+gear: []
+# - { name: "", quantity: 1, notes: "" }
 holdings: []
+# - { name: "", notes: "" }
 contacts: []
+# - { name: "", notes: "" }
 psionics: []
-notes: Chargen complete - Mongoose Traveller 2.0 layout
+# - { name: "", level: 0, notes: "" }
+notes:
 \`\`\`
 
 ## Career & Terms

@@ -87,6 +87,10 @@ function asNumber(value: unknown, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function asOptionalNumber(value: unknown) {
+  return value == null || value === "" ? undefined : asNumber(value);
+}
+
 function asStringArray(value: unknown) {
   if (Array.isArray(value)) return value.map(String).filter(Boolean);
   if (typeof value === "string") return value.split(",").map((item) => item.trim()).filter(Boolean);
@@ -98,24 +102,24 @@ function asRecordArray(value: unknown) {
 }
 
 const standardTravellerSkills: TravellerSheet["skills"] = [
-  { name: "Admin", level: 1 }, { name: "Advocate", level: 0 }, { name: "Animals" }, { name: "Animals", speciality: "Handling" }, { name: "Animals", speciality: "Riding" }, { name: "Animals", speciality: "Veterinary" }, { name: "Animals", speciality: "Training" },
-  { name: "Art", level: 0 }, { name: "Art", speciality: "Performer", level: 1 }, { name: "Art", speciality: "Holography" }, { name: "Art", speciality: "Instrument" }, { name: "Art", speciality: "Visual Media" }, { name: "Art", speciality: "Write" },
-  { name: "Astrogation", level: 0 }, { name: "Athletics", level: 0 }, { name: "Athletics", speciality: "Dexterity", level: 1 }, { name: "Athletics", speciality: "Endurance" }, { name: "Athletics", speciality: "Strength" },
-  { name: "Broker", level: 1 }, { name: "Carouse" }, { name: "Deception", level: 2 }, { name: "Diplomat", level: 2 },
-  { name: "Drive", level: 0 }, { name: "Drive", speciality: "Hovercraft" }, { name: "Drive", speciality: "Mole" }, { name: "Drive", speciality: "Track" }, { name: "Drive", speciality: "Walker", level: 0 }, { name: "Drive", speciality: "Wheel" },
-  { name: "Electronics", level: 0 }, { name: "Electronics", speciality: "Comms", level: 0 }, { name: "Electronics", speciality: "Computers", level: 0 }, { name: "Electronics", speciality: "Remote Ops", level: 1 }, { name: "Electronics", speciality: "Sensors" },
+  { name: "Admin" }, { name: "Advocate" }, { name: "Animals" }, { name: "Animals", speciality: "Handling" }, { name: "Animals", speciality: "Riding" }, { name: "Animals", speciality: "Veterinary" }, { name: "Animals", speciality: "Training" },
+  { name: "Art" }, { name: "Art", speciality: "Performer" }, { name: "Art", speciality: "Holography" }, { name: "Art", speciality: "Instrument" }, { name: "Art", speciality: "Visual Media" }, { name: "Art", speciality: "Write" },
+  { name: "Astrogation" }, { name: "Athletics" }, { name: "Athletics", speciality: "Dexterity" }, { name: "Athletics", speciality: "Endurance" }, { name: "Athletics", speciality: "Strength" },
+  { name: "Broker" }, { name: "Carouse" }, { name: "Deception" }, { name: "Diplomat" },
+  { name: "Drive" }, { name: "Drive", speciality: "Hovercraft" }, { name: "Drive", speciality: "Mole" }, { name: "Drive", speciality: "Track" }, { name: "Drive", speciality: "Walker" }, { name: "Drive", speciality: "Wheel" },
+  { name: "Electronics" }, { name: "Electronics", speciality: "Comms" }, { name: "Electronics", speciality: "Computers" }, { name: "Electronics", speciality: "Remote Ops" }, { name: "Electronics", speciality: "Sensors" },
   { name: "Engineer" }, { name: "Engineer", speciality: "M-drive" }, { name: "Engineer", speciality: "J-drive" }, { name: "Engineer", speciality: "Life Support" }, { name: "Engineer", speciality: "Power" },
-  { name: "Explosives" }, { name: "Flyer", level: 0 }, { name: "Flyer", speciality: "Airship" }, { name: "Flyer", speciality: "Grav" }, { name: "Flyer", speciality: "Ornithopter" }, { name: "Flyer", speciality: "Rotor" }, { name: "Flyer", speciality: "Wing" },
-  { name: "Gambler" }, { name: "Gun Combat", level: 0 }, { name: "Gun Combat", speciality: "Archaic" }, { name: "Gun Combat", speciality: "Energy" }, { name: "Gun Combat", speciality: "Slug" },
+  { name: "Explosives" }, { name: "Flyer" }, { name: "Flyer", speciality: "Airship" }, { name: "Flyer", speciality: "Grav" }, { name: "Flyer", speciality: "Ornithopter" }, { name: "Flyer", speciality: "Rotor" }, { name: "Flyer", speciality: "Wing" },
+  { name: "Gambler" }, { name: "Gun Combat" }, { name: "Gun Combat", speciality: "Archaic" }, { name: "Gun Combat", speciality: "Energy" }, { name: "Gun Combat", speciality: "Slug" },
   { name: "Gunner" }, { name: "Gunner", speciality: "Turret" }, { name: "Gunner", speciality: "Ortillery" }, { name: "Gunner", speciality: "Screen" }, { name: "Gunner", speciality: "Capital" },
   { name: "Heavy Weapons" }, { name: "Heavy Weapons", speciality: "Artillery" }, { name: "Heavy Weapons", speciality: "Man Portable" }, { name: "Heavy Weapons", speciality: "Vehicle" },
   { name: "Investigate" }, { name: "Jack-of-All-Trades" }, { name: "Language" }, { name: "Language", speciality: "Anglic" }, { name: "Language", speciality: "Vilani" }, { name: "Language", speciality: "Zdetl" }, { name: "Language", speciality: "Oynprith" },
-  { name: "Leadership", level: 0 }, { name: "Mechanic", level: 0 }, { name: "Medic", level: 1 }, { name: "Melee", level: 0 }, { name: "Melee", speciality: "Unarmed" }, { name: "Melee", speciality: "Blade" }, { name: "Melee", speciality: "Bludgeon" }, { name: "Melee", speciality: "Natural" }, { name: "Melee", speciality: "Infighting" },
-  { name: "Navigation" }, { name: "Persuade", level: 1 }, { name: "Pilot", level: 0 }, { name: "Pilot", speciality: "Small Craft", level: 1 }, { name: "Pilot", speciality: "Spacecraft", level: 0 }, { name: "Pilot", speciality: "Capital Ships" },
+  { name: "Leadership" }, { name: "Mechanic" }, { name: "Medic" }, { name: "Melee" }, { name: "Melee", speciality: "Unarmed" }, { name: "Melee", speciality: "Blade" }, { name: "Melee", speciality: "Bludgeon" }, { name: "Melee", speciality: "Natural" }, { name: "Melee", speciality: "Infighting" },
+  { name: "Navigation" }, { name: "Persuade" }, { name: "Pilot" }, { name: "Pilot", speciality: "Small Craft" }, { name: "Pilot", speciality: "Spacecraft" }, { name: "Pilot", speciality: "Capital Ships" },
   { name: "Profession" }, { name: "Profession", speciality: "Belter" }, { name: "Profession", speciality: "Biologicals" }, { name: "Profession", speciality: "Civil Engineering" }, { name: "Profession", speciality: "Construction" }, { name: "Profession", speciality: "Hydroponics" }, { name: "Profession", speciality: "K'kree Ritual" }, { name: "Profession", speciality: "Miner" }, { name: "Profession", speciality: "Polymers" }, { name: "Profession", speciality: "Religion" },
-  { name: "Recon", level: 0 }, { name: "Science", level: 0 }, { name: "Science", speciality: "Archaeology" }, { name: "Science", speciality: "Astronomy" }, { name: "Science", speciality: "Belief" }, { name: "Science", speciality: "Biology" }, { name: "Science", speciality: "Chemistry" }, { name: "Science", speciality: "Cosmology" }, { name: "Science", speciality: "Cybernetics" }, { name: "Science", speciality: "Economics" }, { name: "Science", speciality: "Genetics" }, { name: "Science", speciality: "History", level: 1 }, { name: "Science", speciality: "Linguistics" }, { name: "Science", speciality: "Philosophy" }, { name: "Science", speciality: "Physics" }, { name: "Science", speciality: "Planetology" }, { name: "Science", speciality: "Psionicology" }, { name: "Science", speciality: "Psychology" }, { name: "Science", speciality: "Robotics", level: 1 }, { name: "Science", speciality: "Sophontology" }, { name: "Science", speciality: "Xenology" },
+  { name: "Recon" }, { name: "Science" }, { name: "Science", speciality: "Archaeology" }, { name: "Science", speciality: "Astronomy" }, { name: "Science", speciality: "Belief" }, { name: "Science", speciality: "Biology" }, { name: "Science", speciality: "Chemistry" }, { name: "Science", speciality: "Cosmology" }, { name: "Science", speciality: "Cybernetics" }, { name: "Science", speciality: "Economics" }, { name: "Science", speciality: "Genetics" }, { name: "Science", speciality: "History" }, { name: "Science", speciality: "Linguistics" }, { name: "Science", speciality: "Philosophy" }, { name: "Science", speciality: "Physics" }, { name: "Science", speciality: "Planetology" }, { name: "Science", speciality: "Psionicology" }, { name: "Science", speciality: "Psychology" }, { name: "Science", speciality: "Robotics" }, { name: "Science", speciality: "Sophontology" }, { name: "Science", speciality: "Xenology" },
   { name: "Seafarer" }, { name: "Seafarer", speciality: "Ocean Ships" }, { name: "Seafarer", speciality: "Personal" }, { name: "Seafarer", speciality: "Sail" }, { name: "Seafarer", speciality: "Submarine" },
-  { name: "Stealth", level: 1 }, { name: "Steward" }, { name: "Streetwise", level: 2 }, { name: "Survival" }, { name: "Tactics" }, { name: "Tactics", speciality: "Military" }, { name: "Tactics", speciality: "Naval" }, { name: "Vacc Suit" }
+  { name: "Stealth" }, { name: "Steward" }, { name: "Streetwise" }, { name: "Survival" }, { name: "Tactics" }, { name: "Tactics", speciality: "Military" }, { name: "Tactics", speciality: "Naval" }, { name: "Vacc Suit" }
 ];
 
 function travellerSkillKey(skill: { name: string; speciality?: string }) {
@@ -136,6 +140,11 @@ function mergeTravellerSkills(skills: TravellerSheet["skills"]) {
   return [...merged, ...byKey.values()];
 }
 
+function splitColumns<T>(items: T[], count: number) {
+  const size = Math.ceil(items.length / count);
+  return Array.from({ length: count }, (_, index) => items.slice(index * size, (index + 1) * size));
+}
+
 function normalizeTravellerSheet(input: unknown): TravellerSheet & { name?: string } {
   const raw = input && typeof input === "object" && !Array.isArray(input) ? input as Record<string, unknown> : {};
   const characteristics = raw.characteristics && typeof raw.characteristics === "object" && !Array.isArray(raw.characteristics)
@@ -146,16 +155,17 @@ function normalizeTravellerSheet(input: unknown): TravellerSheet & { name?: stri
     speciality: skill.speciality ? String(skill.speciality) : undefined,
     level: skill.level == null || skill.level === "" ? undefined : asNumber(skill.level)
   })).filter((skill) => skill.name);
+  const equipmentInput = raw.equipment || raw.gear || raw.items;
   return {
     system: "traveller",
     name: raw.name ? String(raw.name) : undefined,
     characteristics: {
-      STR: asNumber(characteristics.STR, 7),
-      DEX: asNumber(characteristics.DEX, 7),
-      END: asNumber(characteristics.END, 7),
-      INT: asNumber(characteristics.INT, 7),
-      EDU: asNumber(characteristics.EDU, 7),
-      SOC: asNumber(characteristics.SOC, 7)
+      STR: asOptionalNumber(characteristics.STR),
+      DEX: asOptionalNumber(characteristics.DEX),
+      END: asOptionalNumber(characteristics.END),
+      INT: asOptionalNumber(characteristics.INT),
+      EDU: asOptionalNumber(characteristics.EDU),
+      SOC: asOptionalNumber(characteristics.SOC)
     },
     skills: mergeTravellerSkills(skills),
     age: raw.age == null || raw.age === "" ? undefined : asNumber(raw.age),
@@ -171,7 +181,7 @@ function normalizeTravellerSheet(input: unknown): TravellerSheet & { name?: stri
     credits: raw.credits == null || raw.credits === "" ? undefined : asNumber(raw.credits),
     armour: asRecordArray(raw.armour).map((item) => ({ name: String(item.name || ""), protection: item.protection ? String(item.protection) : undefined, notes: item.notes ? String(item.notes) : undefined })).filter((item) => item.name),
     weapons: asRecordArray(raw.weapons).map((item) => ({ name: String(item.name || ""), damage: item.damage ? String(item.damage) : undefined, range: item.range ? String(item.range) : undefined, notes: item.notes ? String(item.notes) : undefined })).filter((item) => item.name),
-    equipment: asRecordArray(raw.equipment).map((item) => ({ name: String(item.name || ""), quantity: item.quantity == null ? undefined : asNumber(item.quantity), notes: item.notes ? String(item.notes) : undefined })).filter((item) => item.name),
+    equipment: asRecordArray(equipmentInput).map((item) => ({ name: String(item.name || item.item || ""), quantity: item.quantity == null || item.quantity === "" ? undefined : asNumber(item.quantity), notes: item.notes ? String(item.notes) : undefined })).filter((item) => item.name),
     holdings: asRecordArray(raw.holdings).map((item) => ({ name: String(item.name || ""), notes: item.notes ? String(item.notes) : undefined })).filter((item) => item.name),
     contacts: asRecordArray(raw.contacts).map((item) => ({ name: String(item.name || ""), notes: item.notes ? String(item.notes) : undefined })).filter((item) => item.name),
     psionics: asRecordArray(raw.psionics).map((item) => ({ name: String(item.name || ""), level: item.level == null ? undefined : asNumber(item.level), notes: item.notes ? String(item.notes) : undefined })).filter((item) => item.name),
@@ -202,9 +212,9 @@ function renderTravellerSheetHtml(rawInput: string) {
   const sheet = normalizeTravellerSheet(parsed);
   const chars: Array<[keyof TravellerSheet["characteristics"], string]> = [["STR", "Strength"], ["DEX", "Dexterity"], ["END", "Endurance"], ["INT", "Intellect"], ["EDU", "Education"], ["SOC", "Social Standing"]];
   const skills = [...sheet.skills].sort((a, b) => a.name.localeCompare(b.name) || (a.speciality || "").localeCompare(b.speciality || ""));
-  const columns = [skills.filter((_, index) => index % 3 === 0), skills.filter((_, index) => index % 3 === 1), skills.filter((_, index) => index % 3 === 2)];
-  const dossier = sheet.dossier || detail([sheet.career, sheet.rank]) || "Travel";
-  const traits = sheet.speciesTraits?.length ? sheet.speciesTraits : [sheet.species || "Traveller"];
+  const columns = splitColumns(skills, 3);
+  const dossier = sheet.dossier || detail([sheet.career, sheet.rank]) || "-";
+  const traits = sheet.speciesTraits?.length ? sheet.speciesTraits : (sheet.species ? [sheet.species] : []);
   const weapons = sheet.weapons || [];
   const armour = sheet.armour || [];
   const equipment = sheet.equipment || [];
@@ -216,7 +226,7 @@ function renderTravellerSheetHtml(rawInput: string) {
 <section class="tsheet">
   <header class="tsheet-registry"><span>Solomani Confederation</span><span>Genetic Record</span><span>Form Sol-GR1 - Racial Registry</span></header>
   <div class="tsheet-dossier">
-    <div class="tsheet-upload"><strong>${escapeHtml(String((sheet.rank || sheet.career || "F").charAt(0)).toUpperCase())}</strong><span>Upload</span></div>
+    <div class="tsheet-upload"><strong>${escapeHtml(sheet.rank || sheet.career ? String((sheet.rank || sheet.career || "").charAt(0)).toUpperCase() : "-")}</strong><span>Upload</span></div>
     <div class="tsheet-identity">
       <strong class="tsheet-name">${escapeHtml(sheet.name || "Unnamed Traveller")}</strong>
       <div class="tsheet-facts">
@@ -230,14 +240,14 @@ function renderTravellerSheetHtml(rawInput: string) {
   <div class="tsheet-topgrid">
     <section class="tsheet-panel"><h4>Characteristics <span>Click a value to roll 2D6 + that DM</span></h4><div class="tsheet-chars">
       ${chars.map(([key, label]) => {
-        const value = sheet.characteristics[key] ?? 0;
-        return `<div class="tsheet-char"><span class="tsheet-char-key">${key}</span><span class="tsheet-char-label">${escapeHtml(label)}</span><span class="tsheet-char-val">${value}</span><span class="tsheet-char-mod">Mod ${fmtMod(travellerDM(value))}</span></div>`;
+        const value = sheet.characteristics[key];
+        return `<div class="tsheet-char"><span class="tsheet-char-key">${key}</span><span class="tsheet-char-label">${escapeHtml(label)}</span><span class="tsheet-char-val">${value ?? "-"}</span><span class="tsheet-char-mod">${value == null ? "Mod -" : `Mod ${fmtMod(travellerDM(value))}`}</span></div>`;
       }).join("")}
     </div></section>
     <section class="tsheet-panel"><h4>Wielded <span>Add weapons in the sheet block</span></h4>${weapons.length ? list(weapons.map((weapon) => `<li><span>${escapeHtml(weapon.name)}</span><span>${escapeHtml(detail([weapon.damage, weapon.range, weapon.notes]))}</span></li>`)) : `<p class="tsheet-empty">No weapons.</p>`}</section>
   </div>
-  <section class="tsheet-panel tsheet-band"><h4>Status &amp; Conditions <span>Wound status + active conditions</span></h4><strong class="tsheet-status">${escapeHtml(sheet.status || "Unwounded")}</strong><span>${escapeHtml(sheet.conditions?.length ? sheet.conditions.join(", ") : "No active conditions")}</span></section>
-  <section class="tsheet-panel tsheet-band"><h4>Species <span>${escapeHtml(sheet.species || "Traveller")}</span></h4><div class="badges">${traits.map((trait) => `<span>${escapeHtml(trait)}</span>`).join("")}</div></section>
+  <section class="tsheet-panel tsheet-band"><h4>Status &amp; Conditions <span>Wound status + active conditions</span></h4><strong class="tsheet-status">${escapeHtml(sheet.status || "-")}</strong><span>${escapeHtml(sheet.conditions?.length ? sheet.conditions.join(", ") : "No active conditions")}</span></section>
+  <section class="tsheet-panel tsheet-band"><h4>Species <span>${escapeHtml(sheet.species || "-")}</span></h4><div class="badges">${traits.map((trait) => `<span>${escapeHtml(trait)}</span>`).join("")}</div></section>
   <section class="tsheet-panel"><h4>Skills <span>Total levels: ${skills.reduce((sum, skill) => sum + (skill.level ?? 0), 0)}</span></h4>${skills.length ? `<div class="tsheet-skill-cols">${columns.map((column) => list(column.map((skill) => `<li><span>${escapeHtml(skill.name)}${skill.speciality ? ` (${escapeHtml(skill.speciality)})` : ""}</span><span class="tsheet-skill-lvl">${skill.level ?? "−"}</span></li>`))).join("")}</div>` : `<p class="tsheet-empty">No skills recorded.</p>`}</section>
   <section class="tsheet-panel"><div class="tsheet-tabs"><span>Combat</span><span>Gear</span><span>Holdings</span><span>People</span><span>Psionics</span><span>Notes</span></div><div class="tsheet-cols">
     <div><h4>Armour</h4>${armour.length ? list(armour.map((item) => `<li><span>${escapeHtml(item.name)}</span><span>${escapeHtml(detail([item.protection, item.notes]))}</span></li>`)) : `<p class="tsheet-empty">No armour recorded.</p>`}<h4>Weapons</h4>${weapons.length ? list(weapons.map((item) => `<li><span>${escapeHtml(item.name)}</span><span>${escapeHtml(detail([item.damage, item.range, item.notes]))}</span></li>`)) : `<p class="tsheet-empty">No weapons recorded yet.</p>`}</div>

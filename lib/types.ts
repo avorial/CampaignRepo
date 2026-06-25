@@ -135,9 +135,10 @@ export type WikiPageFrontmatter = {
 };
 
 export type TravellerSkill = { name: string; level?: number; speciality?: string };
+export type TravellerCharacteristics = { STR?: number; DEX?: number; END?: number; INT?: number; EDU?: number; SOC?: number };
 export type TravellerSheet = {
   system: "traveller";
-  characteristics: { STR: number; DEX: number; END: number; INT: number; EDU: number; SOC: number };
+  characteristics: TravellerCharacteristics;
   skills: TravellerSkill[];
   age?: number;
   species?: string;

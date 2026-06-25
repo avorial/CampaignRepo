@@ -128,7 +128,7 @@ describe("renderMarkdown", () => {
   });
 
   it("renders traveller-sheet fenced blocks as designed sheet HTML", () => {
-    const html = renderMarkdown("Before\n\n```traveller-sheet\nname: Victor Mendes\nspecies: Racial Solomani\ncharacteristics:\n  STR: 12\n  DEX: 9\n  END: 10\n  INT: 11\n  EDU: 10\n  SOC: 12\nskills:\n  - name: Diplomat\n    level: 2\n```\n\nAfter", "gm");
+    const html = renderMarkdown("Before\n\n```traveller-sheet\nname: Victor Mendes\nspecies: Racial Solomani\ncharacteristics:\n  STR: 12\nskills:\n  - name: Advocate\n    level: 0\n  - name: Diplomat\n    level: 2\ngear:\n  - name: Vacc suit patches\n    quantity: 3\n    notes: Field kit\n```\n\nAfter", "gm");
 
     expect(html).toContain('class="tsheet"');
     expect(html).toContain("Victor Mendes");
@@ -136,9 +136,16 @@ describe("renderMarkdown", () => {
     expect(html).toContain("Diplomat");
     expect(html).toContain("Vacc Suit");
     expect(html).toContain("Admin");
-    expect(html).toContain("Total levels: 17");
+    expect(html).toContain("Total levels: 2");
     expect(html).toContain('<span>Advocate</span><span class="tsheet-skill-lvl">0</span>');
     expect(html).toContain('<span>Vacc Suit</span><span class="tsheet-skill-lvl">−</span>');
+    expect(html).toContain("Vacc suit patches - Field kit");
+    expect(html).toContain('class="tsheet-skill-lvl">x3</span>');
+    const firstSkillColumn = html.slice(html.indexOf('<div class="tsheet-skill-cols">'), html.indexOf("</ul>", html.indexOf('<div class="tsheet-skill-cols">')));
+    expect(firstSkillColumn).toContain("Admin");
+    expect(firstSkillColumn).toContain("Flyer (Grav)");
+    expect(firstSkillColumn).not.toContain("Flyer (Ornithopter)");
+    expect(firstSkillColumn).not.toContain("Vacc Suit");
     expect(html).not.toContain("<code");
   });
 
