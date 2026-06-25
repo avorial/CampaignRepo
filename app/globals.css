@@ -3343,3 +3343,70 @@ code {
   .tsheet-chars { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .tsheet-cols { grid-template-columns: 1fr; }
 }
+
+/* ---- Public worlds gallery (discovery) ---- */
+.gallery-shell {
+  flex: 1;
+  margin: 0 auto;
+  max-width: 1080px;
+  padding: 28px 24px 40px;
+  width: 100%;
+}
+
+.gallery-search {
+  background: var(--field-bg);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  padding: 11px 14px;
+  width: 100%;
+}
+
+.gallery-count {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  letter-spacing: 0.04em;
+  margin: 10px 2px 16px;
+  text-transform: uppercase;
+}
+
+.gallery-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+
+.gallery-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+  color: var(--text-primary);
+  display: grid;
+  gap: 6px;
+  padding: 18px;
+  text-decoration: none;
+  transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+
+.gallery-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+}
+
+.gallery-card strong {
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: var(--text-h3);
+}
+
+.gallery-card span {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+}
+
+.gallery-card-cta {
+  color: var(--gold) !important;
+  margin-top: 6px;
+}

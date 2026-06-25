@@ -246,6 +246,19 @@ export function getPublicSiteCampaign(slug: string): Campaign | null {
   );
 }
 
+/** Every enabled public campaign, for the public discovery gallery (no auth). */
+export function listPublicSites(): { slug: string; name: string; gameType: string }[] {
+  return db
+    .prepare(
+      `SELECT public_sites.slug AS slug, campaigns.name AS name, campaigns.gameType AS gameType
+       FROM public_sites
+       JOIN campaigns ON campaigns.id = public_sites.campaignId
+       WHERE public_sites.enabled = 1
+       ORDER BY campaigns.name COLLATE NOCASE`
+    )
+    .all() as { slug: string; name: string; gameType: string }[];
+}
+
 /** Publish (or re-enable) a campaign's public site. Mints a stable random slug on first publish. */
 export function publishCampaign(userId: number, campaignId: number): PublicSiteRow {
   if (!canManageCampaign(userId, campaignId)) throw new Error("Forbidden");

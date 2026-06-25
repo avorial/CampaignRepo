@@ -44,6 +44,7 @@ function LoginForm() {
         </form>
         <p className="muted">No account yet? <Link href="/register">Create one</Link>.</p>
         <p className="muted">New here? <Link href="/getting-started">Read the getting-started guide</Link>.</p>
+        <p className="muted">Just browsing? <Link href="/site">Explore public worlds</Link> — no account needed.</p>
       </section>
     </main>
   );

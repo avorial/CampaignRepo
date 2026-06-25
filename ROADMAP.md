@@ -404,13 +404,16 @@ People aren't switching software — they're migrating years of lore. Importers 
 **Obsidian, Notion, OneNote, World Anvil, LegendKeeper, Foundry Journals, and
 Google Docs**. Treat migration tooling as higher priority than net-new features.
 
-### 37. Publishing ecosystem — public view, top-campaign list, clone & fork  ·  L  ·  ★ TOP PRIORITY  ·  builds on #8
+### 37. Publishing ecosystem — public view, top-campaign list, clone & fork  ·  L  ·  ★ TOP PRIORITY  ·  🚧 GALLERY SHIPPED  ·  builds on #8
 External links and public view are the highest-priority adoption lever. Evolve
 public sharing into "GitHub for RPG campaigns":
 - **Share** a single page or a whole campaign via a public link (extends the
   shipped public site, #8).
 - **Top-campaign list** — a public, browsable gallery of published campaigns.
   Anyone can open and read one; without edit approval it is **view-only**.
+  *Shipped: `/site` — a no-login gallery of every published world with a
+  name/system search, linking to each read-only public site (which already has
+  per-world page search). Linked from the login page. Follow-ups below.*
 - **Clone for your own game** — one click copies a published campaign into the
   viewer's own editable campaign/repo as a starting point.
 - **Fork & pull requests** — fork another GM's world; submit fixes/templates back
