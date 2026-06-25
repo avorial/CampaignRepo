@@ -5,11 +5,12 @@ import type { Campaign } from "@/lib/types";
 
 // Client-safe widget metadata (mirrors lib/dashboard.WIDGETS without its
 // server-only imports). gmOnly widgets never render in the player view.
-type WidgetId = "counts" | "timeline" | "quicklinks" | "review" | "health";
+type WidgetId = "counts" | "timeline" | "quicklinks" | "quests" | "review" | "health";
 const WIDGETS: { id: WidgetId; label: string; gmOnly: boolean }[] = [
   { id: "counts", label: "Page counts", gmOnly: false },
   { id: "timeline", label: "Timeline", gmOnly: false },
   { id: "quicklinks", label: "Quick links", gmOnly: false },
+  { id: "quests", label: "Active quests", gmOnly: true },
   { id: "review", label: "Review queue", gmOnly: true },
   { id: "health", label: "Campaign health", gmOnly: true }
 ];
@@ -36,6 +37,7 @@ export default function OverviewClient({ campaign, canManage }: { campaign: Camp
     if (canManage) {
       reqs.reviews = fetch(`${base}/admin/reviews`).then((r) => (r.ok ? r.json() : { reviews: [] }));
       reqs.health = fetch(`${base}/health`).then((r) => (r.ok ? r.json() : { findings: [], counts: {} }));
+      reqs.quests = fetch(`${base}/quests`).then((r) => (r.ok ? r.json() : { quests: [] }));
     }
     const entries = await Promise.all(Object.entries(reqs).map(async ([k, p]) => [k, await p.catch(() => null)] as const));
     setData(Object.fromEntries(entries));
@@ -140,6 +142,7 @@ function Widget({ id, base, data, canManage }: { id: WidgetId; base: string; dat
       {id === "counts" && <Counts pages={data.pages?.pages || []} />}
       {id === "timeline" && <Timeline items={data.graph?.timeline || []} base={base} />}
       {id === "quicklinks" && <QuickLinks base={base} canManage={canManage} />}
+      {id === "quests" && <Quests quests={data.quests?.quests || []} base={base} />}
       {id === "review" && <Reviews reviews={data.reviews?.reviews || []} base={base} />}
       {id === "health" && <HealthSummary health={data.health} base={base} />}
     </div>
@@ -187,6 +190,24 @@ function QuickLinks({ base, canManage }: { base: string; canManage: boolean }) {
       ) : (
         <a className="button secondary" href={`${base}/player`}>Player portal</a>
       )}
+    </div>
+  );
+}
+
+function Quests({ quests, base }: { quests: any[]; base: string }) {
+  const active = quests.filter((q) => q.frontmatter.status === "active");
+  if (!active.length) return <p className="muted">No active quests. <a href={`${base}/quests`}>Open quests</a></p>;
+  return (
+    <div className="results">
+      {active.slice(0, 6).map((q) => {
+        const done = q.frontmatter.objectives.filter((o: any) => o.done).length;
+        return (
+          <a key={q.slug} href={`${base}/quests/${q.slug}`}>
+            <strong>{q.frontmatter.title}</strong>
+            <span>{[q.frontmatter.arc, q.frontmatter.objectives.length ? `${done}/${q.frontmatter.objectives.length}` : null].filter(Boolean).join(" · ") || "active"}</span>
+          </a>
+        );
+      })}
     </div>
   );
 }

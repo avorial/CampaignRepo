@@ -248,12 +248,19 @@ images, groups, connectors, and relationship edges on a zoomable canvas. A board
 can promote a note into a wiki page or bind an existing card to one. Save board
 documents as repo JSON with stable node IDs so diagrams remain exportable.
 
-### 28. Quests, story arcs & campaign-state tracking  ·  M
+### 28. Quests, story arcs & campaign-state tracking  ·  M  ·  ✅ SHIPPED
 Add structured quests and arcs with status, objectives, participants, locations,
 rewards, prerequisites, secrets, clues, and completion outcomes. Let objectives
 link to sessions and timeline events. Include GM and player views, reusable quest
 templates, and a compact active-threads panel for play. Extend the same model to
 rumors, mysteries, downtime projects, and faction clocks without building a VTT.
+
+Shipped: `/campaigns/[id]/quests` (GM/owner) — quests stored as
+`wiki/quests/<slug>.md` (YAML + Markdown). Each quest has status (hook/active/
+completed/failed), arc, reward, visibility, an objectives checklist, and
+participant/location links to pages; the list is grouped by status, and an
+"Active quests" widget feeds the Overview dashboard. Follow-ups: objective→
+session/timeline links, player quest view, templates, faction clocks.
 
 ### 29. Reusable properties, inventories & abilities  ·  M-L
 Allow any page to attach reusable components: inventory items, abilities, traits,

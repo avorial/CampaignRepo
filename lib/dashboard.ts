@@ -3,13 +3,14 @@ import { getCampaignRepositoryToken } from "@/lib/db";
 import { getTextFile, GitHubError, putFile } from "@/lib/github";
 import type { Campaign } from "@/lib/types";
 
-export type WidgetId = "counts" | "timeline" | "quicklinks" | "review" | "health";
+export type WidgetId = "counts" | "timeline" | "quicklinks" | "quests" | "review" | "health";
 
 // gmOnly widgets are never rendered for players (the spoiler-safe view).
 export const WIDGETS: { id: WidgetId; label: string; gmOnly: boolean }[] = [
   { id: "counts", label: "Page counts", gmOnly: false },
   { id: "timeline", label: "Timeline", gmOnly: false },
   { id: "quicklinks", label: "Quick links", gmOnly: false },
+  { id: "quests", label: "Active quests", gmOnly: true },
   { id: "review", label: "Review queue", gmOnly: true },
   { id: "health", label: "Campaign health", gmOnly: true }
 ];
