@@ -6,6 +6,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import type { Campaign, CampaignGraphEdge, CampaignGraphNode, CampaignMedia, CampaignTimelineItem, WikiPage, WikiTemplate } from "@/lib/types";
 import { gameTypeGroups, gameTypes } from "@/lib/templates";
 import { defaultAccent, defaultAccent2, themeFontNames, type CampaignTheme } from "@/lib/theme";
+import { themePresetForGame, themePresetLabels, themePresetNames } from "@/lib/game-pack-branding";
 
 type RepoValidationCheck = {
   label: string;
@@ -84,6 +85,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const next: CampaignTheme = {
+      preset: String(form.get("preset") || "") as CampaignTheme["preset"],
       accent: String(form.get("accent") || ""),
       accent2: String(form.get("accent2") || ""),
       displayFont: String(form.get("displayFont") || "") || undefined,
@@ -722,6 +724,9 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
             </div>
             <form onSubmit={saveTheme} className="theme-form">
               <div className="theme-fields">
+                <label>Theme preset<select name="preset" defaultValue={theme.preset || themePresetForGame(campaign.gameType)} key={`p-${theme.preset || ""}`}>
+                  {themePresetNames.map((preset) => <option key={preset || "base"} value={preset}>{themePresetLabels[preset]}</option>)}
+                </select></label>
                 <label>Accent (gold)<input type="color" name="accent" defaultValue={theme.accent || defaultAccent} key={`a-${theme.accent || ""}`} /></label>
                 <label>Secondary (purple)<input type="color" name="accent2" defaultValue={theme.accent2 || defaultAccent2} key={`a2-${theme.accent2 || ""}`} /></label>
                 <label>Display font<select name="displayFont" defaultValue={theme.displayFont || "Fraunces"} key={`f-${theme.displayFont || ""}`}>{themeFontNames.map((font) => <option key={font} value={font}>{font}</option>)}</select></label>

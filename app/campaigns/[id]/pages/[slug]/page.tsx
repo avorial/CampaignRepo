@@ -1,7 +1,10 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { getCampaign } from "@/lib/db";
+import { loadCampaignTheme } from "@/lib/public-site";
+import { themeToCssVars } from "@/lib/theme";
 import PageEditor from "./page-editor";
 
 export default async function WikiPage({ params }: { params: Promise<{ id: string; slug: string }> }) {
@@ -11,8 +14,10 @@ export default async function WikiPage({ params }: { params: Promise<{ id: strin
   const { id, slug } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) redirect("/dashboard");
+  const theme = await loadCampaignTheme(campaign);
+  const themeVars = themeToCssVars(theme) as CSSProperties;
   return (
-    <main className="app-shell">
+    <main className="app-shell" data-theme={theme.preset || undefined} style={themeVars}>
       <header className="topbar">
         <div>
           <Link href={`/campaigns/${campaign.id}`} className="quiet-link">{campaign.name}</Link>

@@ -101,7 +101,7 @@ export default function PublicSiteClient({
   const banner = theme.banner ? resolveMedia(theme.banner) : "";
 
   return (
-    <main className="public-site" style={themeVars}>
+    <main className="public-site" data-theme={theme.preset || undefined} style={themeVars}>
       <header className={banner ? "public-masthead has-banner" : "public-masthead"} style={banner ? { backgroundImage: `linear-gradient(180deg, rgba(8,5,15,0.35), rgba(8,5,15,0.92)), url("${banner}")` } : undefined}>
         <div className="public-masthead-inner">
           <span className="public-kicker">{gameType}</span>

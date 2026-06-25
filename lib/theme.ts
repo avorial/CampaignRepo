@@ -1,7 +1,10 @@
+import { themePresetNames, type ThemePreset } from "@/lib/game-pack-branding";
+
 // Pure, client-safe campaign theming helpers. No db/github imports here so this
 // module can be bundled into client components for live theme previews.
 
 export type CampaignTheme = {
+  preset?: ThemePreset;
   accent?: string;
   accent2?: string;
   displayFont?: string;
@@ -56,6 +59,7 @@ export function sanitizeTheme(input: unknown): CampaignTheme {
   const theme: CampaignTheme = {};
   if (!input || typeof input !== "object") return theme;
   const raw = input as Record<string, unknown>;
+  if (typeof raw.preset === "string" && themePresetNames.includes(raw.preset as ThemePreset)) theme.preset = raw.preset as ThemePreset;
   if (isValidHex(raw.accent)) theme.accent = raw.accent.trim();
   if (isValidHex(raw.accent2)) theme.accent2 = raw.accent2.trim();
   if (typeof raw.displayFont === "string" && themeFonts[raw.displayFont]) theme.displayFont = raw.displayFont;
@@ -66,18 +70,21 @@ export function sanitizeTheme(input: unknown): CampaignTheme {
 /** Map a theme to CSS custom properties suitable for a React style object. */
 export function themeToCssVars(theme: CampaignTheme): Record<string, string> {
   const vars: Record<string, string> = {};
-  if (theme.accent) {
+  const shouldApplyAccent = !theme.preset || theme.accent !== defaultAccent;
+  const shouldApplyAccent2 = !theme.preset || theme.accent2 !== defaultAccent2;
+  const shouldApplyDisplayFont = !theme.preset || theme.displayFont !== "Fraunces";
+  if (theme.accent && shouldApplyAccent) {
     vars["--gold"] = theme.accent;
     vars["--gold-bright"] = lighten(theme.accent, 0.18);
     vars["--gold-glow"] = hexToRgba(theme.accent, 0.25);
     vars["--accent"] = theme.accent;
   }
-  if (theme.accent2) {
+  if (theme.accent2 && shouldApplyAccent2) {
     vars["--purple"] = theme.accent2;
     vars["--purple-glow"] = hexToRgba(theme.accent2, 0.35);
     vars["--accent-2"] = theme.accent2;
   }
-  if (theme.displayFont && themeFonts[theme.displayFont]) {
+  if (theme.displayFont && themeFonts[theme.displayFont] && shouldApplyDisplayFont) {
     vars["--font-display"] = themeFonts[theme.displayFont];
   }
   return vars;

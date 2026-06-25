@@ -3,12 +3,12 @@ import { sanitizeTheme, themeToCssVars, hexToRgba, lighten, isValidHex } from "@
 
 describe("theme sanitization", () => {
   it("keeps valid hex colors and known fonts, drops the rest", () => {
-    const theme = sanitizeTheme({ accent: "#ff8800", accent2: "#abc", displayFont: "Cinzel", banner: "banner.png", junk: 1 });
-    expect(theme).toEqual({ accent: "#ff8800", accent2: "#abc", displayFont: "Cinzel", banner: "banner.png" });
+    const theme = sanitizeTheme({ preset: "traveller", accent: "#ff8800", accent2: "#abc", displayFont: "Cinzel", banner: "banner.png", junk: 1 });
+    expect(theme).toEqual({ preset: "traveller", accent: "#ff8800", accent2: "#abc", displayFont: "Cinzel", banner: "banner.png" });
   });
 
   it("rejects bad colors, unknown fonts, and traversal banners", () => {
-    const theme = sanitizeTheme({ accent: "red", accent2: "#12345", displayFont: "Comic Sans", banner: "../secret.png" });
+    const theme = sanitizeTheme({ preset: "rainbow", accent: "red", accent2: "#12345", displayFont: "Comic Sans", banner: "../secret.png" });
     expect(theme).toEqual({});
   });
 
@@ -32,6 +32,10 @@ describe("theme to css vars", () => {
 
   it("returns no vars for an empty theme", () => {
     expect(themeToCssVars({})).toEqual({});
+  });
+
+  it("lets preset tokens win over unchanged default custom fields", () => {
+    expect(themeToCssVars({ preset: "traveller", accent: "#d4a957", accent2: "#a075ff", displayFont: "Fraunces" })).toEqual({});
   });
 });
 

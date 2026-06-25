@@ -5,15 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Lock } from "lucide-react";
 import type { ApiToken, Campaign, User } from "@/lib/types";
 import { gameTypeGroups } from "@/lib/templates";
-
-// Third-party game-system marks (cleaned, transparent) shown on a light plate;
-// Custom has no logo and falls back to its gold initial.
-const gameLogos: Record<string, string> = {
-  "Sword Chronicle": "/brand/sword-chronicle.png",
-  "Dungeons & Dragons": "/brand/dungeons-and-dragons.png",
-  "World of Darkness": "/brand/world-of-darkness.png",
-  Traveller: "/brand/traveller.png"
-};
+import { darkPlatePacks, gamePackLogos } from "@/lib/game-pack-branding";
 
 export default function DashboardClient({
   user,
@@ -123,14 +115,15 @@ export default function DashboardClient({
         <h2>Connected repos</h2>
         <div className="repo-grid">
           {repos.map((campaign) => {
-            const logo = gameLogos[campaign.gameType];
+            const logo = gamePackLogos[campaign.gameType];
+            const plateClass = darkPlatePacks.has(campaign.gameType) ? " repo-logo-plate-dark" : "";
             return (
               <div className="repo-card" key={campaign.id}>
                 <Link className="repo-card-link" href={`/campaigns/${campaign.id}`}>
                   <div className="repo-head">
                     {logo ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <span className="repo-logo-plate"><img src={logo} alt={campaign.gameType} /></span>
+                      <span className={`repo-logo-plate${plateClass}`}><img src={logo} alt={campaign.gameType} /></span>
                     ) : (
                       <span className="repo-logo-plate repo-logo-initial" aria-hidden>{campaign.gameType.charAt(0).toUpperCase()}</span>
                     )}

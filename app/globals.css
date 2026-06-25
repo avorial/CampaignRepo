@@ -349,6 +349,20 @@ code {
   color: var(--text-primary);
 }
 
+.app-shell[data-theme] {
+  position: relative;
+  isolation: isolate;
+}
+
+.app-shell[data-theme]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--backdrop);
+  background-size: var(--backdrop-size);
+}
+
 .topbar {
   display: flex;
   align-items: center;
@@ -510,6 +524,11 @@ code {
   flex: none;
   overflow: hidden;
   padding: 8px 12px;
+}
+
+.repo-logo-plate-dark {
+  background: var(--bg-base);
+  border: 1px solid var(--border-soft);
 }
 
 .repo-logo-plate img {

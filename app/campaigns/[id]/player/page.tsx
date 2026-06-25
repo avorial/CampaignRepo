@@ -14,10 +14,11 @@ export default async function PlayerPortalPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) redirect("/dashboard");
-  const themeVars = themeToCssVars(await loadCampaignTheme(campaign)) as CSSProperties;
+  const theme = await loadCampaignTheme(campaign);
+  const themeVars = themeToCssVars(theme) as CSSProperties;
 
   return (
-    <main className="app-shell" style={themeVars}>
+    <main className="app-shell" data-theme={theme.preset || undefined} style={themeVars}>
       <header className="topbar">
         <div>
           <Link href={`/campaigns/${campaign.id}`} className="quiet-link">{campaign.name}</Link>

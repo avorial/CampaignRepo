@@ -1,0 +1,396 @@
+/* CampaignRepo genre themes.
+   Each campaign's game system belongs to a genre, and the genre fully reskins
+   the product: surfaces, the gold/purple accent pair, text, fonts, radii,
+   density, and the page backdrop. Components reference the SAME token names
+   (--gold, --purple, --text-primary, --font-display, --radius-*, --backdrop …),
+   so overriding those values under a [data-theme] scope re-skins everything.
+
+   The default (no data-theme) is the core CampaignRepo dark-violet identity.
+   Genre keys: fantasy (Fantasy) · horror (Modern/occult) · scifi (Sci-Fi) ·
+   generic (system-agnostic). Apply with <html data-theme="scifi"> etc. */
+
+/* ============================ FANTASY ============================ */
+/* Parchment-light, engraved Roman caps, bronze + oxblood. Epic & literary. */
+[data-theme="fantasy"] {
+  --bg-base: #e8dbbd;
+  --bg-surface: #f6efdc;
+  --bg-elevated: #e2d4b2;
+  --bg-glass: rgba(246, 239, 220, 0.62);
+  --field-bg: #fcf7e9;
+
+  --border-faint: rgba(92, 62, 22, 0.10);
+  --border-soft: rgba(92, 62, 22, 0.22);
+  --border-strong: rgba(92, 62, 22, 0.40);
+
+  --gold: #9a6b1f;
+  --gold-bright: #bd8628;
+  --gold-glow: rgba(154, 107, 31, 0.28);
+  --purple: #7c2b2b;        /* repurposed: oxblood secondary */
+  --purple-deep: #581c1c;
+  --purple-glow: rgba(124, 43, 43, 0.30);
+
+  --text-primary: #2e2414;
+  --text-secondary: #6a583a;
+  --text-tertiary: #927c58;
+  --text-muted: #b6a47a;
+  --danger: #9d2b2b;
+
+  --font-display: "Cinzel", Georgia, serif;
+  --font-body: "EB Garamond", Georgia, serif;
+  --font-mono: "Cinzel", Georgia, serif;
+  --tracking-eyebrow: 0.18em;
+  --tracking-label: 0.10em;
+  --tracking-tight: 0;
+
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 7px;
+  --radius-xl: 9px;
+  --radius-2xl: 12px;
+  --radius-pill: 999px;
+  --control-h: 42px;
+
+  --shadow-panel: 0 18px 44px rgba(60, 40, 15, 0.22);
+  --shadow-pop: 0 10px 24px rgba(60, 40, 15, 0.18);
+  --ring-gold: 0 0 0 3px rgba(154, 107, 31, 0.28);
+  --ring-purple: 0 0 0 3px rgba(124, 43, 43, 0.28);
+  --wash-gold: rgba(154, 107, 31, 0.14);
+  --wash-purple: rgba(124, 43, 43, 0.10);
+
+  --backdrop:
+    radial-gradient(1100px 600px at 50% -12%, rgba(154, 107, 31, 0.16), transparent 60%),
+    linear-gradient(0deg, rgba(92, 62, 22, 0.035) 1px, transparent 1px),
+    #e6d8b8; /* @kind other */
+  --backdrop-size: auto, 7px 7px, auto;
+}
+
+/* ============================ HORROR ============================= */
+/* Modern occult — near-black, bone text, blood accent, gothic serif. */
+[data-theme="horror"] {
+  --bg-base: #0b0b0d;
+  --bg-surface: #141417;
+  --bg-elevated: #1d1d22;
+  --bg-glass: rgba(20, 20, 23, 0.58);
+  --field-bg: #0a0a0c;
+
+  --border-faint: rgba(200, 200, 210, 0.07);
+  --border-soft: rgba(200, 200, 210, 0.14);
+  --border-strong: rgba(206, 64, 64, 0.32);
+
+  --gold: #b3122a;          /* blood primary */
+  --gold-bright: #e23a45;
+  --gold-glow: rgba(179, 18, 42, 0.32);
+  --purple: #9aa0a8;        /* cold steel secondary */
+  --purple-deep: #5a606a;
+  --purple-glow: rgba(154, 160, 168, 0.26);
+
+  --text-primary: #e8e4db;
+  --text-secondary: #9a958c;
+  --text-tertiary: #6c685f;
+  --text-muted: #48453e;
+  --danger: #e23a45;
+
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-body: "Lora", Georgia, serif;
+  --font-mono: "Oswald", system-ui, sans-serif;
+  --tracking-eyebrow: 0.16em;
+  --tracking-label: 0.10em;
+  --tracking-tight: 0.005em;
+
+  --radius-sm: 1px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --radius-xl: 3px;
+  --radius-2xl: 4px;
+  --radius-pill: 999px;
+  --control-h: 38px;
+
+  --shadow-panel: 0 24px 60px rgba(0, 0, 0, 0.7);
+  --shadow-pop: 0 12px 30px rgba(0, 0, 0, 0.55);
+  --ring-gold: 0 0 0 3px rgba(179, 18, 42, 0.30);
+  --ring-purple: 0 0 0 3px rgba(154, 160, 168, 0.22);
+  --wash-gold: rgba(179, 18, 42, 0.12);
+  --wash-purple: rgba(154, 160, 168, 0.08);
+
+  --backdrop:
+    radial-gradient(1000px 620px at 50% -10%, rgba(179, 18, 42, 0.12), transparent 55%),
+    #0b0b0d; /* @kind other */
+  --backdrop-size: auto, auto;
+}
+
+/* ============================= SCI-FI ============================ */
+/* Cool neon — deep blue-black, cyan + magenta, techy geometric type. */
+[data-theme="scifi"] {
+  --bg-base: #05080f;
+  --bg-surface: #0a1019;
+  --bg-elevated: #101a28;
+  --bg-glass: rgba(10, 18, 28, 0.55);
+  --field-bg: #060c16;
+
+  --border-faint: rgba(80, 200, 230, 0.08);
+  --border-soft: rgba(80, 200, 230, 0.16);
+  --border-strong: rgba(80, 220, 230, 0.34);
+
+  --gold: #2fe0d8;          /* cyan primary */
+  --gold-bright: #5cf2ec;
+  --gold-glow: rgba(47, 224, 216, 0.30);
+  --purple: #ff3da6;        /* neon magenta secondary */
+  --purple-deep: #c01e74;
+  --purple-glow: rgba(255, 61, 166, 0.32);
+
+  --text-primary: #d9e8f5;
+  --text-secondary: #8aa2bb;
+  --text-tertiary: #5b7088;
+  --text-muted: #3a4a5c;
+  --danger: #ff5a6a;
+
+  --font-display: "Orbitron", system-ui, sans-serif;
+  --font-body: "Exo 2", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --tracking-eyebrow: 0.22em;
+  --tracking-label: 0.13em;
+  --tracking-tight: 0.01em;
+
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 5px;
+  --radius-2xl: 6px;
+  --radius-pill: 4px;       /* clipped, techy chips */
+  --control-h: 40px;
+
+  --shadow-panel: 0 20px 50px rgba(0, 0, 0, 0.6);
+  --shadow-pop: 0 10px 26px rgba(0, 0, 0, 0.5);
+  --ring-gold: 0 0 0 3px rgba(47, 224, 216, 0.30);
+  --ring-purple: 0 0 0 3px rgba(255, 61, 166, 0.30);
+  --wash-gold: rgba(47, 224, 216, 0.12);
+  --wash-purple: rgba(255, 61, 166, 0.10);
+
+  --backdrop:
+    radial-gradient(1100px 600px at 50% -10%, rgba(47, 224, 216, 0.10), transparent 60%),
+    linear-gradient(180deg, rgba(80, 200, 230, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(80, 200, 230, 0.045) 1px, transparent 1px),
+    #05080f; /* @kind other */
+  --backdrop-size: auto, 60px 60px, 60px 60px, auto;
+}
+
+/* ============================ GENERIC ============================ */
+/* System-agnostic — clean light neutral, confident blue, grotesk + plex. */
+[data-theme="generic"] {
+  --bg-base: #eef1f5;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f3f5f8;
+  --bg-glass: rgba(255, 255, 255, 0.72);
+  --field-bg: #ffffff;
+
+  --border-faint: rgba(20, 30, 50, 0.06);
+  --border-soft: rgba(20, 30, 50, 0.12);
+  --border-strong: rgba(20, 30, 50, 0.22);
+
+  --gold: #2f6fed;          /* clean blue primary */
+  --gold-bright: #4d86ff;
+  --gold-glow: rgba(47, 111, 237, 0.20);
+  --purple: #6b54d6;        /* indigo secondary */
+  --purple-deep: #4a39a8;
+  --purple-glow: rgba(107, 84, 214, 0.22);
+
+  --text-primary: #1b2230;
+  --text-secondary: #5a6573;
+  --text-tertiary: #8a93a1;
+  --text-muted: #b4bcc7;
+  --danger: #e0483c;
+
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --tracking-eyebrow: 0.10em;
+  --tracking-label: 0.05em;
+  --tracking-tight: -0.01em;
+
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 14px;
+  --radius-pill: 999px;
+  --control-h: 40px;
+
+  --shadow-panel: 0 16px 40px rgba(20, 30, 50, 0.12);
+  --shadow-pop: 0 8px 20px rgba(20, 30, 50, 0.10);
+  --ring-gold: 0 0 0 3px rgba(47, 111, 237, 0.22);
+  --ring-purple: 0 0 0 3px rgba(107, 84, 214, 0.22);
+  --wash-gold: rgba(47, 111, 237, 0.10);
+  --wash-purple: rgba(107, 84, 214, 0.10);
+
+  --backdrop:
+    radial-gradient(1000px 520px at 50% -10%, rgba(47, 111, 237, 0.06), transparent 60%),
+    #eef1f5; /* @kind other */
+  --backdrop-size: auto, auto;
+}
+
+/* ===================== FLAGSHIP: TRAVELLER ====================== */
+/* Sci-Fi flagship — amber CRT starship terminal, scanlines, blocky mono. */
+[data-theme="traveller"] {
+  --bg-base: #080604;
+  --bg-surface: #0f0c07;
+  --bg-elevated: #18120a;
+  --bg-glass: rgba(20, 15, 6, 0.55);
+  --field-bg: #0a0703;
+
+  --border-faint: rgba(240, 170, 60, 0.08);
+  --border-soft: rgba(240, 170, 60, 0.16);
+  --border-strong: rgba(240, 175, 70, 0.34);
+
+  --gold: #f0a830;          /* amber primary */
+  --gold-bright: #ffc24d;
+  --gold-glow: rgba(240, 168, 48, 0.32);
+  --purple: #3aa0c0;        /* phosphor cyan secondary */
+  --purple-deep: #1f6c86;
+  --purple-glow: rgba(58, 160, 192, 0.28);
+
+  --text-primary: #f3d9a8;
+  --text-secondary: #b89a64;
+  --text-tertiary: #7a6640;
+  --text-muted: #4e4228;
+  --danger: #ff7a5a;
+
+  --font-display: "JetBrains Mono", ui-monospace, monospace;
+  --font-body: "Exo 2", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --tracking-eyebrow: 0.20em;
+  --tracking-label: 0.12em;
+  --tracking-tight: 0.01em;
+
+  --radius-sm: 1px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --radius-xl: 3px;
+  --radius-2xl: 4px;
+  --radius-pill: 2px;
+  --control-h: 38px;
+
+  --shadow-panel: 0 20px 50px rgba(0, 0, 0, 0.65);
+  --shadow-pop: 0 10px 26px rgba(0, 0, 0, 0.5);
+  --ring-gold: 0 0 0 3px rgba(240, 168, 48, 0.32);
+  --ring-purple: 0 0 0 3px rgba(58, 160, 192, 0.26);
+  --wash-gold: rgba(240, 168, 48, 0.12);
+  --wash-purple: rgba(58, 160, 192, 0.10);
+
+  --backdrop:
+    repeating-linear-gradient(0deg, rgba(240, 168, 48, 0.045) 0 1px, transparent 1px 3px),
+    radial-gradient(1000px 600px at 50% -10%, rgba(240, 168, 48, 0.10), transparent 60%),
+    #080604; /* @kind other */
+  --backdrop-size: auto, auto, auto;
+}
+
+/* ====================== FLAGSHIP: VAMPIRE ======================= */
+/* Modern/occult flagship — Victorian wine-black, crimson + antique gold. */
+[data-theme="vampire"] {
+  --bg-base: #0c0507;
+  --bg-surface: #160a0e;
+  --bg-elevated: #1f0f15;
+  --bg-glass: rgba(22, 10, 14, 0.6);
+  --field-bg: #0a0407;
+
+  --border-faint: rgba(200, 80, 90, 0.08);
+  --border-soft: rgba(200, 90, 100, 0.16);
+  --border-strong: rgba(190, 40, 60, 0.34);
+
+  --gold: #b01030;          /* crimson primary */
+  --gold-bright: #e0344f;
+  --gold-glow: rgba(176, 16, 48, 0.34);
+  --purple: #c9a24a;        /* antique gold secondary */
+  --purple-deep: #8a6e2c;
+  --purple-glow: rgba(201, 162, 74, 0.28);
+
+  --text-primary: #ecdfe0;
+  --text-secondary: #b39aa0;
+  --text-tertiary: #7d666c;
+  --text-muted: #4f4045;
+  --danger: #e0344f;
+
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-body: "EB Garamond", Georgia, serif;
+  --font-mono: "Cormorant Garamond", Georgia, serif;
+  --tracking-eyebrow: 0.18em;
+  --tracking-label: 0.12em;
+  --tracking-tight: 0.005em;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 9px;
+  --radius-2xl: 10px;
+  --radius-pill: 999px;
+  --control-h: 40px;
+
+  --shadow-panel: 0 24px 60px rgba(0, 0, 0, 0.7);
+  --shadow-pop: 0 12px 30px rgba(0, 0, 0, 0.55);
+  --ring-gold: 0 0 0 3px rgba(176, 16, 48, 0.32);
+  --ring-purple: 0 0 0 3px rgba(201, 162, 74, 0.26);
+  --wash-gold: rgba(176, 16, 48, 0.12);
+  --wash-purple: rgba(201, 162, 74, 0.10);
+
+  --backdrop:
+    radial-gradient(900px 600px at 50% -8%, rgba(176, 16, 48, 0.16), transparent 55%),
+    radial-gradient(1200px 800px at 50% 120%, rgba(0, 0, 0, 0.5), transparent 60%),
+    #0c0507; /* @kind other */
+  --backdrop-size: auto, auto, auto;
+}
+
+/* ======================= FLAGSHIP: MAGE ========================= */
+/* Modern/occult flagship — Hermetic indigo, luminous violet + teal ley-lines. */
+[data-theme="mage"] {
+  --bg-base: #070612;
+  --bg-surface: #0e0c20;
+  --bg-elevated: #161232;
+  --bg-glass: rgba(14, 12, 32, 0.58);
+  --field-bg: #08071a;
+
+  --border-faint: rgba(150, 120, 255, 0.08);
+  --border-soft: rgba(150, 120, 255, 0.18);
+  --border-strong: rgba(170, 140, 255, 0.36);
+
+  --gold: #9d5cff;          /* arcane violet primary */
+  --gold-bright: #b886ff;
+  --gold-glow: rgba(157, 92, 255, 0.36);
+  --purple: #3ad6c0;        /* mystic teal secondary */
+  --purple-deep: #1f9685;
+  --purple-glow: rgba(58, 214, 192, 0.30);
+
+  --text-primary: #e6e0f7;
+  --text-secondary: #a99fc8;
+  --text-tertiary: #6f6592;
+  --text-muted: #463f63;
+  --danger: #ff7ab0;
+
+  --font-display: "Cinzel", Georgia, serif;
+  --font-body: "EB Garamond", Georgia, serif;
+  --font-mono: "Cinzel", Georgia, serif;
+  --tracking-eyebrow: 0.20em;
+  --tracking-label: 0.11em;
+  --tracking-tight: 0;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 9px;
+  --radius-2xl: 11px;
+  --radius-pill: 999px;
+  --control-h: 40px;
+
+  --shadow-panel: 0 22px 56px rgba(0, 0, 0, 0.6);
+  --shadow-pop: 0 12px 28px rgba(0, 0, 0, 0.5);
+  --ring-gold: 0 0 0 3px rgba(157, 92, 255, 0.34);
+  --ring-purple: 0 0 0 3px rgba(58, 214, 192, 0.28);
+  --wash-gold: rgba(157, 92, 255, 0.12);
+  --wash-purple: rgba(58, 214, 192, 0.10);
+
+  --backdrop:
+    radial-gradient(900px 500px at 50% -10%, rgba(157, 92, 255, 0.15), transparent 60%),
+    radial-gradient(700px 500px at 85% 115%, rgba(58, 214, 192, 0.10), transparent 60%),
+    linear-gradient(180deg, rgba(150, 120, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(150, 120, 255, 0.035) 1px, transparent 1px),
+    #070612; /* @kind other */
+  --backdrop-size: auto, auto, 70px 70px, 70px 70px, auto;
+}
