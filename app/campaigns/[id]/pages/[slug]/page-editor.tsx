@@ -3,21 +3,13 @@
 import { FormEvent, KeyboardEvent, MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bold, Code2, Heading1, Heading2, Heading3, Italic, Link2, List, ListOrdered, Quote } from "lucide-react";
-import type { Campaign, CampaignMedia, TravellerSheet as TravellerSheetData, WikiPage } from "@/lib/types";
+import type { Campaign, CampaignMedia, WikiPage } from "@/lib/types";
 import { renderMarkdown, type IncludeResolver, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
 import { categories } from "@/lib/templates";
-import TravellerSheet from "@/app/components/traveller-sheet";
-import TravellerSheetEditor from "@/app/components/traveller-sheet-editor";
 
-function defaultTravellerSheet(): TravellerSheetData {
-  return {
-    system: "traveller",
-    characteristics: { STR: 7, DEX: 7, END: 7, INT: 7, EDU: 7, SOC: 7 },
-    skills: [],
-    status: "Unwounded",
-    speciesTraits: []
-  };
+function travellerSheetSnippet(name: string) {
+  return `\n\n\`\`\`traveller-sheet\nname: ${JSON.stringify(name || "Unnamed Traveller")}\nspecies: \nage: \nhomeworld: \ncareer: \nrank: \ndossier: Travel\nstatus: Unwounded\nspeciesTraits: []\ncharacteristics:\n  STR: 7\n  DEX: 7\n  END: 7\n  INT: 7\n  EDU: 7\n  SOC: 7\nskills:\n  - name: Admin\n    level: 0\nweapons: []\narmour: []\nequipment: []\nnotes: \n\`\`\`\n\n`;
 }
 
 export default function PageEditor({ campaign, slug }: { campaign: Campaign; slug: string }) {
@@ -199,17 +191,11 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
     setFrontmatter((current: any) => ({ ...current, [field]: value }));
   }
 
-  function openTravellerSheet() {
-    let added = false;
-    setFrontmatter((current: any) => {
-      if (current.sheet?.system === "traveller") return current;
-      added = true;
-      return { ...current, sheet: defaultTravellerSheet() };
-    });
+  function insertTravellerSheetBlock() {
     setMode("gm");
     setIsEditing(true);
-    setMessage(added ? "Character sheet added. Save to keep it in the repo." : "Character sheet controls are open in the sidebar.");
-    requestAnimationFrame(() => document.getElementById("traveller-character-sheet")?.scrollIntoView({ block: "start", behavior: "smooth" }));
+    insertSnippet(travellerSheetSnippet(frontmatter.name));
+    setMessage("Character sheet block inserted in the markdown. Edit the values there, then save.");
   }
 
   function insertSnippet(snippet: string) {
@@ -443,7 +429,6 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
             {canManage && <button type="button" className={mode === "gm" ? "active" : ""} onClick={() => setMode("gm")}>GM preview</button>}
             <button type="button" className={mode === "player" ? "active" : ""} onClick={() => setMode("player")}>Player preview</button>
             <button type="button" className={mode === "handout" ? "active" : ""} onClick={() => setMode("handout")}>Handout</button>
-            {canManage && canUseTravellerSheet && <button type="button" onClick={openTravellerSheet}>{frontmatter.sheet ? "Character sheet" : "Add character sheet"}</button>}
             {canManage && <button type="button" onClick={() => setIsEditing(true)}>Edit page</button>}
             {canManage && <button type="button" className="danger" disabled={isSaving} onClick={deletePage}>Delete page</button>}
           </div>
@@ -457,9 +442,6 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
                 <h1>{frontmatter.name}</h1>
                 {frontmatter.summary && <span>{frontmatter.summary}</span>}
               </header>
-            )}
-            {isTraveller && frontmatter.sheet?.system === "traveller" && mode !== "handout" && (
-              <TravellerSheet sheet={frontmatter.sheet} name={frontmatter.name} />
             )}
             <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
           </article>
@@ -502,16 +484,6 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
             {filteredParentOptions.map((p) => <option key={p.slug} value={p.slug}>{p.frontmatter.name} · {p.frontmatter.category}</option>)}
           </select></label>
         </div>
-
-        {canUseTravellerSheet && fieldsEditable && (
-          <div className="field-group" id="traveller-character-sheet">
-            <h3>Traveller character sheet</h3>
-            <TravellerSheetEditor
-              sheet={frontmatter.sheet}
-              onChange={(s) => setFrontmatter((current: any) => ({ ...current, sheet: s }))}
-            />
-          </div>
-        )}
 
         <div className="field-group">
           <h3>Visibility</h3>
@@ -587,7 +559,7 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
           {canManage && <button type="button" className={mode === "gm" ? "active" : ""} onClick={() => setMode("gm")}>GM preview</button>}
           <button type="button" className={mode === "player" ? "active" : ""} onClick={() => setMode("player")}>Player preview</button>
           <button type="button" className={mode === "handout" ? "active" : ""} onClick={() => setMode("handout")}>Handout</button>
-          {fieldsEditable && canUseTravellerSheet && <button type="button" onClick={openTravellerSheet}>{frontmatter.sheet ? "Character sheet" : "Add character sheet"}</button>}
+          {fieldsEditable && canUseTravellerSheet && <button type="button" onClick={insertTravellerSheetBlock}>Insert character sheet</button>}
           {fieldsEditable && <button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Save"}</button>}
           {fieldsEditable && <button type="button" disabled={isSaving} onClick={() => savePage(true)}>{isSaving ? "Saving..." : "Save and finish"}</button>}
           {canManage && !isEditing && <button type="button" onClick={() => setIsEditing(true)}>Edit page</button>}
@@ -649,9 +621,6 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
                     {frontmatter.summary && <span>{frontmatter.summary}</span>}
                   </header>
                 )}
-                {isTraveller && frontmatter.sheet?.system === "traveller" && mode !== "handout" && (
-                  <TravellerSheet sheet={frontmatter.sheet} name={frontmatter.name} />
-                )}
                 <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
               </article>
             </div>
@@ -665,9 +634,6 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
                 <h1>{frontmatter.name}</h1>
                 {frontmatter.summary && <span>{frontmatter.summary}</span>}
               </header>
-            )}
-            {isTraveller && frontmatter.sheet?.system === "traveller" && mode !== "handout" && (
-              <TravellerSheet sheet={frontmatter.sheet} name={frontmatter.name} />
             )}
             <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
           </article>

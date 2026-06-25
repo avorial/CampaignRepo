@@ -127,6 +127,16 @@ describe("renderMarkdown", () => {
     expect(html).toContain('alt="Portrait"');
   });
 
+  it("renders traveller-sheet fenced blocks as designed sheet HTML", () => {
+    const html = renderMarkdown("Before\n\n```traveller-sheet\nname: Victor Mendes\nspecies: Racial Solomani\ncharacteristics:\n  STR: 12\n  DEX: 9\n  END: 10\n  INT: 11\n  EDU: 10\n  SOC: 12\nskills:\n  - name: Diplomat\n    level: 2\n```\n\nAfter", "gm");
+
+    expect(html).toContain('class="tsheet"');
+    expect(html).toContain("Victor Mendes");
+    expect(html).toContain("Racial Solomani");
+    expect(html).toContain("Diplomat");
+    expect(html).not.toContain("<code");
+  });
+
   it("sanitizes injected scripts and event handlers", () => {
     const html = renderMarkdown('Hi <script>alert(1)</script> <img src=x onerror="alert(2)">', "gm");
     expect(html).not.toContain("<script");

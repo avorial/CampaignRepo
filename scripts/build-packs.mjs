@@ -96,12 +96,45 @@ function travellerCharacterSheet() {
 ![portrait](/wiki/media/REPLACE.jpg)
 *Career - Rank - Homeworld*
 
-**Player:**
-**Species:** Racial Solomani
-**Homeworld:** [[World]]
-**UWP:**
-**Age:**
-**Credits:**
+\`\`\`traveller-sheet
+name: Unnamed Traveller
+species: Racial Solomani
+age: 34
+homeworld:
+career:
+rank: F
+dossier: Travel
+status: Unwounded
+speciesTraits:
+  - Racial Solomani
+  - Party Patronage
+  - Solomani Heritage
+  - Solomani Cause
+characteristics:
+  STR: 12
+  DEX: 9
+  END: 10
+  INT: 11
+  EDU: 10
+  SOC: 12
+skills:
+  - name: Admin
+    level: 1
+  - name: Diplomat
+    level: 2
+  - name: Science
+    speciality: History
+    level: 1
+  - name: Science
+    speciality: Robotics
+    level: 1
+  - name: Streetwise
+    level: 2
+weapons: []
+armour: []
+equipment: []
+notes: Chargen complete - Mongoose Traveller 2.0 layout
+\`\`\`
 
 ## Career & Terms
 
@@ -129,46 +162,7 @@ Personality, ambitions, debts, and trouble following this traveller.
 Rivals, secrets, obligations, and hooks.
 :::
 `, {
-    summary: "Traveller character sheet with editable UPP, skills, credits, and equipment.",
-    sheet: {
-      system: "traveller",
-      characteristics: { STR: 12, DEX: 9, END: 10, INT: 11, EDU: 10, SOC: 12 },
-      skills: [
-        { name: "Admin", level: 1 },
-        { name: "Advocate", level: 0 },
-        { name: "Art", speciality: "Performer", level: 1 },
-        { name: "Athletics", speciality: "Dexterity", level: 1 },
-        { name: "Broker", level: 1 },
-        { name: "Deception", level: 2 },
-        { name: "Diplomat", level: 2 },
-        { name: "Electronics", speciality: "Remote Ops", level: 1 },
-        { name: "Gun Combat", level: 0 },
-        { name: "Leadership", level: 0 },
-        { name: "Mechanic", level: 0 },
-        { name: "Medic", level: 1 },
-        { name: "Melee", level: 0 },
-        { name: "Persuade", level: 1 },
-        { name: "Pilot", speciality: "Small Craft", level: 1 },
-        { name: "Recon", level: 0 },
-        { name: "Science", speciality: "History", level: 1 },
-        { name: "Science", speciality: "Robotics", level: 1 },
-        { name: "Stealth", level: 1 },
-        { name: "Streetwise", level: 2 }
-      ],
-      species: "Racial Solomani",
-      age: 34,
-      rank: "F",
-      dossier: "Travel",
-      status: "Unwounded",
-      speciesTraits: ["Racial Solomani", "Party Patronage", "Solomani Heritage", "Solomani Cause"],
-      armour: [],
-      weapons: [],
-      equipment: [],
-      holdings: [],
-      contacts: [],
-      psionics: [],
-      notes: "Chargen complete - Mongoose Traveller 2.0 layout"
-    }
+    summary: "Traveller character sheet block rendered from editable markdown."
   });
 }
 
