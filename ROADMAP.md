@@ -120,9 +120,17 @@ preview with provenance before writing, and create generated pages as unapproved
 Keep deterministic random-table and lexicon generators available as a fast,
 offline, no-model fallback.
 
-### 15. Character sheets / statblocks per system  ·  M
+### 15. Character sheets / statblocks per system  ·  M  ·  🚧 TRAVELLER SHIPPED
 System-aware structured sheets (Traveller UPP/UWP already partly there; D&D
 statblocks; WoD sheets) rendered from frontmatter, plus Foundry sync hooks.
+
+Shipped: a Traveller (Mongoose 2e) character sheet stored in page frontmatter
+(`sheet`), matching the data model of the MG-traveller-character-generator
+(characteristics, skills, identity, equipment, credits). It renders in the page
+reader on Traveller campaigns — characteristic cards with computed DM, skills,
+gear — and is edited inline in the page editor (character/npc pages). Follow-ups:
+click-to-roll, themes/print, combat/gear tabs, importing the generator's JSON,
+and D&D / WoD sheets.
 
 ---
 

@@ -131,6 +131,20 @@ export type WikiPageFrontmatter = {
   patron?: string;
   techLevel?: string;
   lastEditedBy?: string;
+  sheet?: TravellerSheet;
+};
+
+export type TravellerSkill = { name: string; level: number; speciality?: string };
+export type TravellerSheet = {
+  system: "traveller";
+  characteristics: { STR: number; DEX: number; END: number; INT: number; EDU: number; SOC: number };
+  skills: TravellerSkill[];
+  age?: number;
+  species?: string;
+  homeworld?: string;
+  uwp?: string;
+  credits?: number;
+  equipment?: { name: string; quantity?: number; notes?: string }[];
 };
 
 export type WikiPage = {

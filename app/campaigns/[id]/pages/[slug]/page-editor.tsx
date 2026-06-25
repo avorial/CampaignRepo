@@ -7,6 +7,8 @@ import type { Campaign, CampaignMedia, WikiPage } from "@/lib/types";
 import { renderMarkdown, type IncludeResolver, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
 import { categories } from "@/lib/templates";
+import TravellerSheet from "@/app/components/traveller-sheet";
+import TravellerSheetEditor from "@/app/components/traveller-sheet-editor";
 
 export default function PageEditor({ campaign, slug }: { campaign: Campaign; slug: string }) {
   const router = useRouter();
@@ -431,6 +433,9 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
                 {frontmatter.summary && <span>{frontmatter.summary}</span>}
               </header>
             )}
+            {isTraveller && frontmatter.sheet?.system === "traveller" && mode !== "handout" && (
+              <TravellerSheet sheet={frontmatter.sheet} name={frontmatter.name} />
+            )}
             <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
           </article>
         </div>
@@ -472,6 +477,16 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
             {filteredParentOptions.map((p) => <option key={p.slug} value={p.slug}>{p.frontmatter.name} · {p.frontmatter.category}</option>)}
           </select></label>
         </div>
+
+        {isTraveller && (frontmatter.category === "character" || frontmatter.category === "npc") && fieldsEditable && (
+          <div className="field-group">
+            <h3>Traveller character sheet</h3>
+            <TravellerSheetEditor
+              sheet={frontmatter.sheet}
+              onChange={(s) => setFrontmatter((current: any) => ({ ...current, sheet: s }))}
+            />
+          </div>
+        )}
 
         <div className="field-group">
           <h3>Visibility</h3>
@@ -621,6 +636,9 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
                 <h1>{frontmatter.name}</h1>
                 {frontmatter.summary && <span>{frontmatter.summary}</span>}
               </header>
+            )}
+            {isTraveller && frontmatter.sheet?.system === "traveller" && mode !== "handout" && (
+              <TravellerSheet sheet={frontmatter.sheet} name={frontmatter.name} />
             )}
             <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
           </article>
