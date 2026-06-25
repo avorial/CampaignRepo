@@ -369,6 +369,10 @@ Captured from external feedback. The recurring theme: the technology is solid;
 the real work is **adoption**. Lead with the identity below and lower the barrier
 to entry before adding more content systems.
 
+**Top priority: external links & public view (the publishing/clone ecosystem, #37).**
+It's what turns CampaignRepo from "another wiki" into "GitHub for RPG campaigns,"
+and it's the single strongest adoption lever.
+
 **Positioning.** Reframe from "a wiki for GMs" to **"a Git-based campaign platform
 for Game Masters"** — the *Foundry VTT of campaign management*: open, self-hosted,
 your-data-is-yours. The wiki is one part; the story is ownership + version history
@@ -400,14 +404,21 @@ People aren't switching software — they're migrating years of lore. Importers 
 **Obsidian, Notion, OneNote, World Anvil, LegendKeeper, Foundry Journals, and
 Google Docs**. Treat migration tooling as higher priority than net-new features.
 
-### 37. Publishing ecosystem — clone, fork, discover  ·  L  ·  builds on #8
-Evolve public links into "GitHub for RPG campaigns": share a page, share a whole
-campaign, **clone** a published campaign as a starting point, **fork** another
-GM's world, and submit **pull requests** for fixes/templates. Add a discovery page
-(by system, most-cloned, recently updated, highest rated) and a community library
-of campaigns + templates (a Traveller sector, a Pendragon county, a Vampire city,
-a Blades district, an Alien colony). World Anvil's public-content volume is a key
-draw — this is the path to matching it.
+### 37. Publishing ecosystem — public view, top-campaign list, clone & fork  ·  L  ·  ★ TOP PRIORITY  ·  builds on #8
+External links and public view are the highest-priority adoption lever. Evolve
+public sharing into "GitHub for RPG campaigns":
+- **Share** a single page or a whole campaign via a public link (extends the
+  shipped public site, #8).
+- **Top-campaign list** — a public, browsable gallery of published campaigns.
+  Anyone can open and read one; without edit approval it is **view-only**.
+- **Clone for your own game** — one click copies a published campaign into the
+  viewer's own editable campaign/repo as a starting point.
+- **Fork & pull requests** — fork another GM's world; submit fixes/templates back
+  to the source.
+- **Discovery** — browse by system, most-cloned, recently updated, highest rated;
+  a community library of campaigns + templates (a Traveller sector, a Pendragon
+  county, a Vampire city, a Blades district, an Alien colony). World Anvil's
+  public-content volume is the bar — this is the path to matching it.
 
 ### 38. AI campaign Q&A over Markdown  ·  M  ·  extends #14
 Because everything is Markdown, an LLM can read the entire campaign. Natural-
