@@ -110,10 +110,8 @@ const travellerSkillRows = [
 
 function travellerSkillYamlRows() {
   return travellerSkillRows.map((skill) => {
-    const parts = [`name: ${JSON.stringify(skill.name)}`];
-    if (skill.speciality) parts.push(`speciality: ${JSON.stringify(skill.speciality)}`);
-    if (skill.level !== undefined) parts.push(`level: ${skill.level}`);
-    return `  - { ${parts.join(", ")} }`;
+    const label = skill.speciality ? `${skill.name} (${skill.speciality})` : skill.name;
+    return `  ${JSON.stringify(label)}:`;
   }).join("\n");
 }
 
@@ -125,6 +123,11 @@ function travellerCharacterSheet() {
 *Career - Rank - Homeworld*
 
 \`\`\`traveller-sheet
+header:
+  left:
+  center:
+  right:
+portrait:
 name: Unnamed Traveller
 species:
 age:
@@ -143,18 +146,18 @@ characteristics:
   SOC:
 skills:
 ${travellerSkillYamlRows()}
-weapons: []
-# - { name: "", damage: "", range: "", notes: "" }
-armour: []
-# - { name: "", protection: "", notes: "" }
-gear: []
-# - { name: "", quantity: 1, notes: "" }
-holdings: []
-# - { name: "", notes: "" }
-contacts: []
-# - { name: "", notes: "" }
-psionics: []
-# - { name: "", level: 0, notes: "" }
+weapons:
+# Laser Pistol: 3D, Medium, notes
+armour:
+# Cloth: 8, notes
+gear:
+# Medkit: 1, notes
+holdings:
+# Ship Share: notes
+people:
+# Contact Name: notes
+psionics:
+# Telepathy: 1, notes
 notes:
 \`\`\`
 

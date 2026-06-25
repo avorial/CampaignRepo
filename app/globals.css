@@ -3321,6 +3321,13 @@ code {
   font-size: 9px;
 }
 
+.tsheet-upload img {
+  border-radius: 3px;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
 .tsheet-identity {
   border-bottom: 1px solid rgba(201, 126, 25, 0.45);
   flex: 1;
@@ -3476,25 +3483,6 @@ code {
   min-width: 22px;
   padding: 0 6px;
   text-align: center;
-}
-
-.tsheet-tabs {
-  border-bottom: 1px solid rgba(201, 126, 25, 0.55);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: -2px -2px 8px;
-}
-
-.tsheet-tabs span {
-  color: #9b7948;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  padding: 0 0 7px;
-}
-
-.tsheet-tabs span:first-child {
-  color: #ffb331;
 }
 
 .tsheet-empty {

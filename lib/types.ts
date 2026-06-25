@@ -140,6 +140,8 @@ export type TravellerSheet = {
   system: "traveller";
   characteristics: TravellerCharacteristics;
   skills: TravellerSkill[];
+  header?: [string, string, string];
+  portrait?: string;
   age?: number;
   species?: string;
   homeworld?: string;

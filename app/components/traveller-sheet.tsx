@@ -43,19 +43,25 @@ export default function TravellerSheet({ sheet, name }: { sheet: Sheet; name?: s
   const holdings = sheet.holdings || [];
   const contacts = sheet.contacts || [];
   const psionics = sheet.psionics || [];
+  const header = sheet.header || ["", "", ""];
+  const portrait = sheet.portrait
+    ? (/^https?:\/\//i.test(sheet.portrait) || sheet.portrait.startsWith("/") ? sheet.portrait : `/wiki/media/${sheet.portrait}`)
+    : "";
 
   return (
     <section className="tsheet">
       <header className="tsheet-registry">
-        <span>Solomani Confederation</span>
-        <span>Genetic Record</span>
-        <span>Form Sol-GR1 - Racial Registry</span>
+        {header.map((part, index) => <span key={index}>{part}</span>)}
       </header>
 
       <div className="tsheet-dossier">
         <div className="tsheet-upload">
-          <strong>{sheet.rank || sheet.career ? String((sheet.rank || sheet.career || "").charAt(0)).toUpperCase() : "-"}</strong>
-          <span>Upload</span>
+          {portrait ? <img src={portrait} alt={name || "Traveller portrait"} loading="lazy" /> : (
+            <>
+              <strong>{sheet.rank || sheet.career ? String((sheet.rank || sheet.career || "").charAt(0)).toUpperCase() : "-"}</strong>
+              <span>Upload</span>
+            </>
+          )}
         </div>
         <div className="tsheet-identity">
           <strong className="tsheet-name">{name || "Unnamed Traveller"}</strong>
@@ -135,14 +141,6 @@ export default function TravellerSheet({ sheet, name }: { sheet: Sheet; name?: s
       </section>
 
       <section className="tsheet-panel">
-        <div className="tsheet-tabs">
-          <span>Combat</span>
-          <span>Gear</span>
-          <span>Holdings</span>
-          <span>People</span>
-          <span>Psionics</span>
-          <span>Notes</span>
-        </div>
         <div className="tsheet-cols">
           <div>
             <h4>Armour</h4>

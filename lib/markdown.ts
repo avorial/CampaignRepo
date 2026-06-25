@@ -101,6 +101,48 @@ function asRecordArray(value: unknown) {
   return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item)) : [];
 }
 
+function asSkillNameParts(label: string) {
+  const match = label.trim().match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+  if (!match) return { name: label.trim() };
+  return { name: match[1].trim(), speciality: match[2].trim() };
+}
+
+function normalizeTravellerSkills(value: unknown): TravellerSheet["skills"] {
+  if (Array.isArray(value)) {
+    return value.map((skill) => {
+      if (typeof skill === "string") return { ...asSkillNameParts(skill) };
+      if (!skill || typeof skill !== "object" || Array.isArray(skill)) return null;
+      const raw = skill as Record<string, unknown>;
+      return {
+        name: String(raw.name || ""),
+        speciality: raw.speciality ? String(raw.speciality) : undefined,
+        level: asOptionalNumber(raw.level)
+      };
+    }).filter((skill): skill is TravellerSheet["skills"][number] => Boolean(skill?.name));
+  }
+  if (value && typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>).map(([label, level]) => ({
+      ...asSkillNameParts(label),
+      level: asOptionalNumber(level)
+    })).filter((skill) => skill.name);
+  }
+  return [];
+}
+
+function compactParts(value: unknown) {
+  if (value == null || value === "") return [];
+  if (Array.isArray(value)) return value.map(String).map((item) => item.trim()).filter(Boolean);
+  const text = String(value);
+  return text.split(text.includes("|") ? "|" : ",").map((item) => item.trim()).filter(Boolean);
+}
+
+function compactRecords<T>(value: unknown, mapper: (name: string, parts: string[]) => T): T[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  return Object.entries(value as Record<string, unknown>)
+    .map(([name, detailValue]) => mapper(name.trim(), compactParts(detailValue)))
+    .filter((item) => Boolean((item as { name?: string }).name));
+}
+
 const standardTravellerSkills: TravellerSheet["skills"] = [
   { name: "Admin" }, { name: "Advocate" }, { name: "Animals" }, { name: "Animals", speciality: "Handling" }, { name: "Animals", speciality: "Riding" }, { name: "Animals", speciality: "Veterinary" }, { name: "Animals", speciality: "Training" },
   { name: "Art" }, { name: "Art", speciality: "Performer" }, { name: "Art", speciality: "Holography" }, { name: "Art", speciality: "Instrument" }, { name: "Art", speciality: "Visual Media" }, { name: "Art", speciality: "Write" },
@@ -145,20 +187,64 @@ function splitColumns<T>(items: T[], count: number) {
   return Array.from({ length: count }, (_, index) => items.slice(index * size, (index + 1) * size));
 }
 
+function normalizeTravellerHeader(raw: Record<string, unknown>): [string, string, string] {
+  const fallback: [string, string, string] = ["", "", ""];
+  if (Array.isArray(raw.header)) {
+    const header = raw.header;
+    return [0, 1, 2].map((index) => String(header[index] ?? "")) as [string, string, string];
+  }
+  if (raw.header && typeof raw.header === "object") {
+    const header = raw.header as Record<string | number, unknown>;
+    return [
+      String(header.left ?? header[0] ?? ""),
+      String(header.center ?? header.middle ?? header[1] ?? ""),
+      String(header.right ?? header[2] ?? "")
+    ];
+  }
+  return [
+    String(raw.headerLeft || fallback[0]),
+    String(raw.headerCenter || raw.headerMiddle || fallback[1]),
+    String(raw.headerRight || fallback[2])
+  ];
+}
+
 function normalizeTravellerSheet(input: unknown): TravellerSheet & { name?: string } {
   const raw = input && typeof input === "object" && !Array.isArray(input) ? input as Record<string, unknown> : {};
   const characteristics = raw.characteristics && typeof raw.characteristics === "object" && !Array.isArray(raw.characteristics)
     ? raw.characteristics as Record<string, unknown>
     : {};
-  const skills = asRecordArray(raw.skills).map((skill) => ({
-    name: String(skill.name || ""),
-    speciality: skill.speciality ? String(skill.speciality) : undefined,
-    level: skill.level == null || skill.level === "" ? undefined : asNumber(skill.level)
-  })).filter((skill) => skill.name);
+  const skills = normalizeTravellerSkills(raw.skills);
   const equipmentInput = raw.equipment || raw.gear || raw.items;
+  const peopleInput = raw.contacts || raw.people;
+  const armour = [
+    ...asRecordArray(raw.armour).map((item) => ({ name: String(item.name || ""), protection: item.protection ? String(item.protection) : undefined, notes: item.notes ? String(item.notes) : undefined })),
+    ...compactRecords(raw.armour, (name, parts) => ({ name, protection: parts[0], notes: parts.slice(1).join(" - ") || undefined }))
+  ].filter((item) => item.name);
+  const weapons = [
+    ...asRecordArray(raw.weapons).map((item) => ({ name: String(item.name || ""), damage: item.damage ? String(item.damage) : undefined, range: item.range ? String(item.range) : undefined, notes: item.notes ? String(item.notes) : undefined })),
+    ...compactRecords(raw.weapons, (name, parts) => ({ name, damage: parts[0], range: parts[1], notes: parts.slice(2).join(" - ") || undefined }))
+  ].filter((item) => item.name);
+  const equipment = [
+    ...asRecordArray(equipmentInput).map((item) => ({ name: String(item.name || item.item || ""), quantity: item.quantity == null || item.quantity === "" ? undefined : asNumber(item.quantity), notes: item.notes ? String(item.notes) : undefined })),
+    ...compactRecords(equipmentInput, (name, parts) => ({ name, quantity: parts[0] && Number.isFinite(Number.parseInt(parts[0], 10)) ? asNumber(parts[0]) : undefined, notes: (parts[0] && Number.isFinite(Number.parseInt(parts[0], 10)) ? parts.slice(1) : parts).join(" - ") || undefined }))
+  ].filter((item) => item.name);
+  const holdings = [
+    ...asRecordArray(raw.holdings).map((item) => ({ name: String(item.name || ""), notes: item.notes ? String(item.notes) : undefined })),
+    ...compactRecords(raw.holdings, (name, parts) => ({ name, notes: parts.join(" - ") || undefined }))
+  ].filter((item) => item.name);
+  const contacts = [
+    ...asRecordArray(peopleInput).map((item) => ({ name: String(item.name || ""), notes: item.notes ? String(item.notes) : undefined })),
+    ...compactRecords(peopleInput, (name, parts) => ({ name, notes: parts.join(" - ") || undefined }))
+  ].filter((item) => item.name);
+  const psionics = [
+    ...asRecordArray(raw.psionics).map((item) => ({ name: String(item.name || ""), level: item.level == null ? undefined : asNumber(item.level), notes: item.notes ? String(item.notes) : undefined })),
+    ...compactRecords(raw.psionics, (name, parts) => ({ name, level: asOptionalNumber(parts[0]), notes: parts.slice(parts[0] && Number.isFinite(Number.parseInt(parts[0], 10)) ? 1 : 0).join(" - ") || undefined }))
+  ].filter((item) => item.name);
   return {
     system: "traveller",
     name: raw.name ? String(raw.name) : undefined,
+    header: normalizeTravellerHeader(raw),
+    portrait: raw.portrait || raw.image ? String(raw.portrait || raw.image) : undefined,
     characteristics: {
       STR: asOptionalNumber(characteristics.STR),
       DEX: asOptionalNumber(characteristics.DEX),
@@ -179,12 +265,12 @@ function normalizeTravellerSheet(input: unknown): TravellerSheet & { name?: stri
     conditions: asStringArray(raw.conditions),
     speciesTraits: asStringArray(raw.speciesTraits || raw.traits),
     credits: raw.credits == null || raw.credits === "" ? undefined : asNumber(raw.credits),
-    armour: asRecordArray(raw.armour).map((item) => ({ name: String(item.name || ""), protection: item.protection ? String(item.protection) : undefined, notes: item.notes ? String(item.notes) : undefined })).filter((item) => item.name),
-    weapons: asRecordArray(raw.weapons).map((item) => ({ name: String(item.name || ""), damage: item.damage ? String(item.damage) : undefined, range: item.range ? String(item.range) : undefined, notes: item.notes ? String(item.notes) : undefined })).filter((item) => item.name),
-    equipment: asRecordArray(equipmentInput).map((item) => ({ name: String(item.name || item.item || ""), quantity: item.quantity == null || item.quantity === "" ? undefined : asNumber(item.quantity), notes: item.notes ? String(item.notes) : undefined })).filter((item) => item.name),
-    holdings: asRecordArray(raw.holdings).map((item) => ({ name: String(item.name || ""), notes: item.notes ? String(item.notes) : undefined })).filter((item) => item.name),
-    contacts: asRecordArray(raw.contacts).map((item) => ({ name: String(item.name || ""), notes: item.notes ? String(item.notes) : undefined })).filter((item) => item.name),
-    psionics: asRecordArray(raw.psionics).map((item) => ({ name: String(item.name || ""), level: item.level == null ? undefined : asNumber(item.level), notes: item.notes ? String(item.notes) : undefined })).filter((item) => item.name),
+    armour,
+    weapons,
+    equipment,
+    holdings,
+    contacts,
+    psionics,
     notes: raw.notes ? String(raw.notes) : undefined
   };
 }
@@ -201,6 +287,7 @@ function travellerDM(value: number): number {
 
 const fmtMod = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
 const detail = (parts: unknown[]) => parts.filter((part) => part !== undefined && part !== null && part !== "").map(String).join(" - ");
+const mediaPath = (path: string) => /^https?:\/\//i.test(path) || path.startsWith("/") ? path : `/wiki/media/${path}`;
 
 function renderTravellerSheetHtml(rawInput: string) {
   let parsed: unknown;
@@ -221,12 +308,16 @@ function renderTravellerSheetHtml(rawInput: string) {
   const holdings = sheet.holdings || [];
   const contacts = sheet.contacts || [];
   const psionics = sheet.psionics || [];
+  const header = sheet.header || ["", "", ""];
   const list = (items: string[]) => `<ul class="tsheet-skills">${items.join("")}</ul>`;
+  const upload = sheet.portrait
+    ? `<img src="${escapeHtml(mediaPath(sheet.portrait))}" alt="${escapeHtml(sheet.name || "Traveller portrait")}" loading="lazy" />`
+    : `<strong>${escapeHtml(sheet.rank || sheet.career ? String((sheet.rank || sheet.career || "").charAt(0)).toUpperCase() : "-")}</strong><span>Upload</span>`;
   return `
 <section class="tsheet">
-  <header class="tsheet-registry"><span>Solomani Confederation</span><span>Genetic Record</span><span>Form Sol-GR1 - Racial Registry</span></header>
+  <header class="tsheet-registry">${header.map((part) => `<span>${escapeHtml(part)}</span>`).join("")}</header>
   <div class="tsheet-dossier">
-    <div class="tsheet-upload"><strong>${escapeHtml(sheet.rank || sheet.career ? String((sheet.rank || sheet.career || "").charAt(0)).toUpperCase() : "-")}</strong><span>Upload</span></div>
+    <div class="tsheet-upload">${upload}</div>
     <div class="tsheet-identity">
       <strong class="tsheet-name">${escapeHtml(sheet.name || "Unnamed Traveller")}</strong>
       <div class="tsheet-facts">
@@ -249,7 +340,7 @@ function renderTravellerSheetHtml(rawInput: string) {
   <section class="tsheet-panel tsheet-band"><h4>Status &amp; Conditions <span>Wound status + active conditions</span></h4><strong class="tsheet-status">${escapeHtml(sheet.status || "-")}</strong><span>${escapeHtml(sheet.conditions?.length ? sheet.conditions.join(", ") : "No active conditions")}</span></section>
   <section class="tsheet-panel tsheet-band"><h4>Species <span>${escapeHtml(sheet.species || "-")}</span></h4><div class="badges">${traits.map((trait) => `<span>${escapeHtml(trait)}</span>`).join("")}</div></section>
   <section class="tsheet-panel"><h4>Skills <span>Total levels: ${skills.reduce((sum, skill) => sum + (skill.level ?? 0), 0)}</span></h4>${skills.length ? `<div class="tsheet-skill-cols">${columns.map((column) => list(column.map((skill) => `<li><span>${escapeHtml(skill.name)}${skill.speciality ? ` (${escapeHtml(skill.speciality)})` : ""}</span><span class="tsheet-skill-lvl">${skill.level ?? "−"}</span></li>`))).join("")}</div>` : `<p class="tsheet-empty">No skills recorded.</p>`}</section>
-  <section class="tsheet-panel"><div class="tsheet-tabs"><span>Combat</span><span>Gear</span><span>Holdings</span><span>People</span><span>Psionics</span><span>Notes</span></div><div class="tsheet-cols">
+  <section class="tsheet-panel"><div class="tsheet-cols">
     <div><h4>Armour</h4>${armour.length ? list(armour.map((item) => `<li><span>${escapeHtml(item.name)}</span><span>${escapeHtml(detail([item.protection, item.notes]))}</span></li>`)) : `<p class="tsheet-empty">No armour recorded.</p>`}<h4>Weapons</h4>${weapons.length ? list(weapons.map((item) => `<li><span>${escapeHtml(item.name)}</span><span>${escapeHtml(detail([item.damage, item.range, item.notes]))}</span></li>`)) : `<p class="tsheet-empty">No weapons recorded yet.</p>`}</div>
     <div><h4>Gear &amp; Holdings</h4>${equipment.length || holdings.length ? list([...equipment.map((item) => `<li><span>${escapeHtml(item.name)}${item.notes ? ` - ${escapeHtml(item.notes)}` : ""}</span>${item.quantity && item.quantity > 1 ? `<span class="tsheet-skill-lvl">x${item.quantity}</span>` : ""}</li>`), ...holdings.map((item) => `<li><span>${escapeHtml(item.name)}</span><span>${escapeHtml(item.notes || "")}</span></li>`)]): `<p class="tsheet-empty">No gear recorded.</p>`}<h4>People &amp; Notes</h4>${contacts.length || psionics.length || sheet.notes ? list([...contacts.map((item) => `<li><span>${escapeHtml(item.name)}</span><span>${escapeHtml(item.notes || "")}</span></li>`), ...psionics.map((item) => `<li><span>${escapeHtml(item.name)}</span><span>${escapeHtml(detail([item.level, item.notes]))}</span></li>`), ...(sheet.notes ? [`<li><span>${escapeHtml(sheet.notes)}</span></li>`] : [])]) : `<p class="tsheet-empty">No people or notes recorded.</p>`}${sheet.credits != null ? `<p class="tsheet-credits">${sheet.credits.toLocaleString()} Cr</p>` : ""}</div>
   </div></section>

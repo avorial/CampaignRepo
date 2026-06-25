@@ -128,19 +128,35 @@ describe("renderMarkdown", () => {
   });
 
   it("renders traveller-sheet fenced blocks as designed sheet HTML", () => {
-    const html = renderMarkdown("Before\n\n```traveller-sheet\nname: Victor Mendes\nspecies: Racial Solomani\ncharacteristics:\n  STR: 12\nskills:\n  - name: Advocate\n    level: 0\n  - name: Diplomat\n    level: 2\ngear:\n  - name: Vacc suit patches\n    quantity: 3\n    notes: Field kit\n```\n\nAfter", "gm");
+    const html = renderMarkdown("Before\n\n```traveller-sheet\nheader:\n  left: Third Imperium\n  center: Muster File\n  right: TAS-7\nportrait: Victor.png\nname: Victor Mendes\nspecies: Racial Solomani\ncharacteristics:\n  STR: 12\nskills:\n  Advocate: 0\n  Diplomat: 2\n  \"Tactics (Naval)\": 1\ngear:\n  Vacc suit patches: 3, Field kit\nweapons:\n  Laser Pistol: 3D, Medium, sidearm\narmour:\n  Cloth: 8, jacket\nholdings:\n  Ship Share: collateral\npeople:\n  Fixer: ally\npsionics:\n  Telepathy: 1, trained\n```\n\nAfter", "gm");
 
     expect(html).toContain('class="tsheet"');
     expect(html).toContain("Victor Mendes");
+    expect(html).toContain("Third Imperium");
+    expect(html).toContain("Muster File");
+    expect(html).toContain("TAS-7");
+    expect(html).toContain('src="/wiki/media/Victor.png"');
     expect(html).toContain("Racial Solomani");
     expect(html).toContain("Diplomat");
     expect(html).toContain("Vacc Suit");
     expect(html).toContain("Admin");
-    expect(html).toContain("Total levels: 2");
+    expect(html).toContain("Total levels: 3");
     expect(html).toContain('<span>Advocate</span><span class="tsheet-skill-lvl">0</span>');
+    expect(html).toContain('<span>Tactics (Naval)</span><span class="tsheet-skill-lvl">1</span>');
     expect(html).toContain('<span>Vacc Suit</span><span class="tsheet-skill-lvl">−</span>');
     expect(html).toContain("Vacc suit patches - Field kit");
     expect(html).toContain('class="tsheet-skill-lvl">x3</span>');
+    expect(html).toContain("Laser Pistol");
+    expect(html).toContain("3D - Medium - sidearm");
+    expect(html).toContain("Cloth");
+    expect(html).toContain("8 - jacket");
+    expect(html).toContain("Ship Share");
+    expect(html).toContain("collateral");
+    expect(html).toContain("Fixer");
+    expect(html).toContain("ally");
+    expect(html).toContain("Telepathy");
+    expect(html).toContain("1 - trained");
+    expect(html).not.toContain("tsheet-tabs");
     const firstSkillColumn = html.slice(html.indexOf('<div class="tsheet-skill-cols">'), html.indexOf("</ul>", html.indexOf('<div class="tsheet-skill-cols">')));
     expect(firstSkillColumn).toContain("Admin");
     expect(firstSkillColumn).toContain("Flyer (Grav)");
