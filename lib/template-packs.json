@@ -1,6 +1,27 @@
 {
   "Sword Chronicle": [
     {
+      "slug": "character-sheet",
+      "frontmatter": {
+        "category": "character",
+        "type": "character",
+        "name": "Character Sheet",
+        "summary": "Sword Chronicle character sheet template.",
+        "tags": [
+          "pc",
+          "character",
+          "sheet"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Character Sheet\n\n![portrait](/wiki/media/REPLACE.jpg)\n*Sword Chronicle House Character*\n\n**Player:**\n**Pronouns:**\n**Concept:**\n**Status:** active\n\n## Identity\n\n- **Ancestry / Species:**\n- **Culture / Home:**\n- **Calling / Career:**\n- **Affiliation:** [[Faction]]\n\n## Core Stats\n\n| Trait | Value | Notes |\n| --- | --- | --- |\n| Primary attribute |  |  |\n| Secondary attribute |  |  |\n| Defense / Save |  |  |\n| Health / Harm |  |  |\n| Resource |  |  |\n\n## Skills & Edges\n\n- Skill / edge - rating - note\n\n## Gear\n\n- Item - note\n\n## Bonds\n\n- [[NPC]] - relationship\n- [[Location]] - tie\n\n## Goals\n\n- Short-term:\n- Long-term:\n\n:::gm\n## GM Notes\n\nSecrets, flags, hooks, and pressure points.\n:::\n"
+    },
+    {
       "slug": "house",
       "frontmatter": {
         "category": "npc",
@@ -142,6 +163,27 @@
   ],
   "Dungeons & Dragons": [
     {
+      "slug": "character-sheet",
+      "frontmatter": {
+        "category": "character",
+        "type": "character",
+        "name": "Character Sheet",
+        "summary": "Dungeons & Dragons character sheet template.",
+        "tags": [
+          "pc",
+          "character",
+          "sheet"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Character Sheet\n\n![portrait](/wiki/media/REPLACE.jpg)\n*Dungeons & Dragons Player Character*\n\n**Player:**\n**Pronouns:**\n**Concept:**\n**Status:** active\n\n## Identity\n\n- **Ancestry / Species:**\n- **Culture / Home:**\n- **Calling / Career:**\n- **Affiliation:** [[Faction]]\n\n## Core Stats\n\n| Trait | Value | Notes |\n| --- | --- | --- |\n| Primary attribute |  |  |\n| Secondary attribute |  |  |\n| Defense / Save |  |  |\n| Health / Harm |  |  |\n| Resource |  |  |\n\n## Skills & Edges\n\n- Skill / edge - rating - note\n\n## Gear\n\n- Item - note\n\n## Bonds\n\n- [[NPC]] - relationship\n- [[Location]] - tie\n\n## Goals\n\n- Short-term:\n- Long-term:\n\n:::gm\n## GM Notes\n\nSecrets, flags, hooks, and pressure points.\n:::\n"
+    },
+    {
       "slug": "npc",
       "frontmatter": {
         "category": "npc",
@@ -261,6 +303,27 @@
     }
   ],
   "World of Darkness": [
+    {
+      "slug": "character-sheet",
+      "frontmatter": {
+        "category": "character",
+        "type": "character",
+        "name": "Character Sheet",
+        "summary": "World of Darkness character sheet template.",
+        "tags": [
+          "pc",
+          "character",
+          "sheet"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Character Sheet\n\n![portrait](/wiki/media/REPLACE.jpg)\n*World of Darkness Player Character*\n\n**Player:**\n**Pronouns:**\n**Concept:**\n**Status:** active\n\n## Identity\n\n- **Ancestry / Species:**\n- **Culture / Home:**\n- **Calling / Career:**\n- **Affiliation:** [[Faction]]\n\n## Core Stats\n\n| Trait | Value | Notes |\n| --- | --- | --- |\n| Primary attribute |  |  |\n| Secondary attribute |  |  |\n| Defense / Save |  |  |\n| Health / Harm |  |  |\n| Resource |  |  |\n\n## Skills & Edges\n\n- Skill / edge - rating - note\n\n## Gear\n\n- Item - note\n\n## Bonds\n\n- [[NPC]] - relationship\n- [[Location]] - tie\n\n## Goals\n\n- Short-term:\n- Long-term:\n\n:::gm\n## GM Notes\n\nSecrets, flags, hooks, and pressure points.\n:::\n"
+    },
     {
       "slug": "vampire",
       "frontmatter": {
@@ -384,6 +447,42 @@
     }
   ],
   "Traveller": [
+    {
+      "slug": "character-sheet",
+      "frontmatter": {
+        "category": "character",
+        "type": "character",
+        "name": "Character Sheet",
+        "summary": "Traveller character sheet with editable UPP, skills, credits, and equipment.",
+        "tags": [
+          "pc",
+          "character",
+          "sheet",
+          "traveller"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo",
+        "sheet": {
+          "system": "traveller",
+          "characteristics": {
+            "STR": 7,
+            "DEX": 7,
+            "END": 7,
+            "INT": 7,
+            "EDU": 7,
+            "SOC": 7
+          },
+          "skills": [],
+          "species": "Imperial Human",
+          "equipment": []
+        }
+      },
+      "body": "# Character Sheet\n\n![portrait](/wiki/media/REPLACE.jpg)\n*Career - Rank - Homeworld*\n\n**Player:**\n**Species:** Imperial Human\n**Homeworld:** [[World]]\n**UWP:**\n**Age:**\n**Credits:**\n\n## Career & Terms\n\n| Term | Career | Rank | Events / Benefits |\n| --- | --- | --- | --- |\n| 1 |  |  |  |\n| 2 |  |  |  |\n\n## Connections\n\n- [[NPC]] - ally / rival / contact\n- [[Faction]] - patron / employer / enemy\n\n## Equipment & Assets\n\n- Item - notes\n\n## Notes\n\nPersonality, ambitions, debts, and trouble following this traveller.\n\n:::gm\n## GM Notes\n\nRivals, secrets, obligations, and hooks.\n:::\n"
+    },
     {
       "slug": "npc",
       "frontmatter": {
@@ -510,6 +609,27 @@
     }
   ],
   "Custom": [
+    {
+      "slug": "character-sheet",
+      "frontmatter": {
+        "category": "character",
+        "type": "character",
+        "name": "Character Sheet",
+        "summary": "Custom character sheet template.",
+        "tags": [
+          "pc",
+          "character",
+          "sheet"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Character Sheet\n\n![portrait](/wiki/media/REPLACE.jpg)\n*Custom Player Character*\n\n**Player:**\n**Pronouns:**\n**Concept:**\n**Status:** active\n\n## Identity\n\n- **Ancestry / Species:**\n- **Culture / Home:**\n- **Calling / Career:**\n- **Affiliation:** [[Faction]]\n\n## Core Stats\n\n| Trait | Value | Notes |\n| --- | --- | --- |\n| Primary attribute |  |  |\n| Secondary attribute |  |  |\n| Defense / Save |  |  |\n| Health / Harm |  |  |\n| Resource |  |  |\n\n## Skills & Edges\n\n- Skill / edge - rating - note\n\n## Gear\n\n- Item - note\n\n## Bonds\n\n- [[NPC]] - relationship\n- [[Location]] - tie\n\n## Goals\n\n- Short-term:\n- Long-term:\n\n:::gm\n## GM Notes\n\nSecrets, flags, hooks, and pressure points.\n:::\n"
+    },
     {
       "slug": "character",
       "frontmatter": {

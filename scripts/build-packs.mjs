@@ -34,8 +34,115 @@ function stripSummary({ summary, ...rest }) {
   return rest;
 }
 
+function genericCharacterSheet(systemName, focus = "Player") {
+  return t("character-sheet", "Character Sheet", "character", ["pc", "character", "sheet"], `
+# Character Sheet
+
+![portrait](/wiki/media/REPLACE.jpg)
+*${systemName} ${focus} Character*
+
+**Player:**
+**Pronouns:**
+**Concept:**
+**Status:** active
+
+## Identity
+
+- **Ancestry / Species:**
+- **Culture / Home:**
+- **Calling / Career:**
+- **Affiliation:** [[Faction]]
+
+## Core Stats
+
+| Trait | Value | Notes |
+| --- | --- | --- |
+| Primary attribute |  |  |
+| Secondary attribute |  |  |
+| Defense / Save |  |  |
+| Health / Harm |  |  |
+| Resource |  |  |
+
+## Skills & Edges
+
+- Skill / edge - rating - note
+
+## Gear
+
+- Item - note
+
+## Bonds
+
+- [[NPC]] - relationship
+- [[Location]] - tie
+
+## Goals
+
+- Short-term:
+- Long-term:
+
+:::gm
+## GM Notes
+
+Secrets, flags, hooks, and pressure points.
+:::
+`, { summary: `${systemName} character sheet template.` });
+}
+
+function travellerCharacterSheet() {
+  return t("character-sheet", "Character Sheet", "character", ["pc", "character", "sheet", "traveller"], `
+# Character Sheet
+
+![portrait](/wiki/media/REPLACE.jpg)
+*Career - Rank - Homeworld*
+
+**Player:**
+**Species:** Imperial Human
+**Homeworld:** [[World]]
+**UWP:**
+**Age:**
+**Credits:**
+
+## Career & Terms
+
+| Term | Career | Rank | Events / Benefits |
+| --- | --- | --- | --- |
+| 1 |  |  |  |
+| 2 |  |  |  |
+
+## Connections
+
+- [[NPC]] - ally / rival / contact
+- [[Faction]] - patron / employer / enemy
+
+## Equipment & Assets
+
+- Item - notes
+
+## Notes
+
+Personality, ambitions, debts, and trouble following this traveller.
+
+:::gm
+## GM Notes
+
+Rivals, secrets, obligations, and hooks.
+:::
+`, {
+    summary: "Traveller character sheet with editable UPP, skills, credits, and equipment.",
+    sheet: {
+      system: "traveller",
+      characteristics: { STR: 7, DEX: 7, END: 7, INT: 7, EDU: 7, SOC: 7 },
+      skills: [],
+      species: "Imperial Human",
+      equipment: []
+    }
+  });
+}
+
 const packs = {
   "Sword Chronicle": [
+    genericCharacterSheet("Sword Chronicle", "House"),
     t("house", "House", "npc", ["faction", "house"], `
 # House
 
@@ -224,6 +331,7 @@ How much is real, who started it, and why.
   ],
 
   "Dungeons & Dragons": [
+    genericCharacterSheet("Dungeons & Dragons"),
     t("npc", "NPC", "npc", ["npc", "statblock"], `
 # NPC
 
@@ -379,6 +487,7 @@ Setups and consequences.
   ],
 
   "World of Darkness": [
+    genericCharacterSheet("World of Darkness"),
     t("vampire", "Vampire", "character", ["pc", "vampire"], `
 # Vampire
 
@@ -517,6 +626,7 @@ Who planted it and what it conceals.
   ],
 
   Traveller: [
+    travellerCharacterSheet(),
     t("npc", "NPC", "npc", ["npc"], `
 # NPC
 
@@ -654,6 +764,7 @@ Setups and consequences.
   ],
 
   Custom: [
+    genericCharacterSheet("Custom"),
     t("character", "Character", "character", ["character"], `
 # Character
 
