@@ -1,78 +1,95 @@
 # CampaignRepo
 
-CampaignRepo is a GitHub-backed campaign wiki for tabletop RPGs.
+CampaignRepo is a GitHub-backed campaign wiki for tabletop RPGs. It keeps every campaign in a normal GitHub repository while giving GMs and players a purpose-built web app for pages, media, templates, imports, search, review queues, and AI/MCP-assisted editing.
 
-It gives each campaign a normal GitHub repository for durable storage while providing a web app for GMs, players, imports, media, review queues, search, and AI/MCP-assisted editing.
+GMs get a durable Markdown workflow with approvals and private notes. Players get a clean portal that only exposes approved, player-safe material.
 
-## What It Does
+## Product Tour
 
-- Stores campaign pages as Markdown in GitHub.
-- Keeps campaign media, templates, import sources, search snapshots, and config in the same repo.
+### Campaign Dashboard
+
+Search across every connected campaign, open a repo, or expand setup tools only when you need them. Once GitHub is connected, setup panels stay collapsed by default.
+
+![Campaign dashboard](docs/screenshots/dashboard.png)
+
+### Campaign Workspace
+
+Each campaign has a workspace for search, wiki navigation, relationship maps, timelines, media, templates, settings, and repo maintenance. Campaign themes can reskin the workspace for systems such as Traveller.
+
+![Campaign workspace](docs/screenshots/workspace.png)
+
+### Wiki Page Editor
+
+Pages are Markdown with YAML frontmatter. The editor keeps source text and rendered preview side by side, with insert tools for wiki links, media references, and GM-only blocks.
+
+![Wiki page editor](docs/screenshots/editor.png)
+
+### GM Review Queue
+
+AI-created, imported, or otherwise unapproved content waits for GM review before it can become player-visible.
+
+![GM review queue](docs/screenshots/review-queue.png)
+
+### Player Portal
+
+Players see only pages that are both approved and marked player-visible. GM-only blocks and internal import metadata are stripped from player reads.
+
+![Player portal](docs/screenshots/player-portal.png)
+
+## What CampaignRepo Does
+
+- Stores campaign pages, media, templates, imports, search snapshots, and config in GitHub.
+- Renders Markdown wiki pages with `[[wiki-links]]`, aliases, backlinks, tags, key links, and `:::gm` secret blocks.
 - Gives GMs an editor, review queue, media manager, relationship map, timeline, and repo repair tools.
-- Gives players a clean portal that only shows approved, player-visible pages.
-- Supports wiki links like `[[Page]]`, aliases like `[[Page|Label]]`, backlinks, tags, key links, and GM-only Markdown blocks.
+- Gives players a no-GitHub-needed portal for approved, player-visible lore and handouts.
 - Imports Foundry Actor JSON and generic character JSON into campaign writeups.
+- Supports system template packs and per-campaign visual themes.
 - Exposes an MCP-style JSON-RPC API for AI tools and external clients.
 
-## Current Features
+## Core Features
 
 ### Accounts And Permissions
 
-- Username/password CampaignRepo accounts.
+- Local CampaignRepo accounts with username/password login.
 - Seeded local admin account with forced first-login password change.
-- Global admin dashboard for creating accounts, editing users, assigning campaign memberships, changing GM/player rights, resetting passwords, disabling accounts, and granting global admin access.
-- Per-campaign GM portal for adding existing accounts, manually creating new accounts, and managing invite links.
-- Player and GM campaign roles.
+- Global admin dashboard for users, campaign memberships, role changes, password resets, disabled accounts, and admin grants.
+- Per-campaign GM tools for members, invite links, and table access.
+- Owner, GM, and player campaign roles.
 
-### Campaign Repos
+### Campaign Repositories
 
-- One CampaignRepo app can manage many campaign repositories.
+- One app can manage many campaign repos.
 - GitHub App connection for normal repo read/write access.
 - Manual GitHub token fallback for local testing and repo creation.
-- Repo validation and repair for required campaign folders and starter files.
-- Portable repo structure, so campaign content remains readable without the app.
+- Repo validation and repair for required folders and starter files.
+- Portable repo structure, so campaign content remains readable without CampaignRepo.
 
 ### Wiki Editing
 
 - Markdown pages with YAML frontmatter.
-- Categories for characters, NPCs, locations, events, games, and custom content.
+- Categories for characters, NPCs, organizations, species, locations, items, events, lore, and game notes.
 - Safe Markdown rendering with sanitized HTML.
-- `[[wiki-links]]`, alias links, backlinks, tags, key links, and missing-page prompts for GMs.
+- `[[Page]]` and `[[Page|Label]]` wiki links.
 - GM-only blocks using `:::gm`.
-- Insert controls for wiki links, alias links, media snippets, and GM-only blocks.
-- Save conflict detection when a file changed on GitHub after it was opened.
+- Insert controls for wiki links, alias links, media snippets, and GM blocks.
+- Save conflict detection when GitHub changes a file after it was opened.
 - GM preview, player preview, and handout views.
 
-### Player Portal
-
-- Dedicated player-facing campaign view.
-- Players only see pages that are both approved and visible to players.
-- GM-only blocks and source import metadata are stripped from player reads.
-- Player accounts do not need GitHub access.
-
-### Imports And Media
+### Imports, Media, Search
 
 - Foundry Actor JSON import.
 - Generic JSON character import with optional field mapping.
 - Import source diffing for re-import review.
 - Media upload, rename, delete, captions, alt text, tags, and repo-persisted metadata.
-- Character writeups can include portrait/media references from the campaign repo.
-
-### Search, Graph, And Timeline
-
-- SQLite full-text search.
-- Portable search snapshot stored at `/wiki/search/index.json`.
-- Manual per-campaign search rebuild.
-- Relationship lists and visual relationship map.
-- Timeline view for event pages.
+- SQLite full-text search plus portable `/wiki/search/index.json` snapshots.
+- Relationship lists, visual relationship map, and event timeline.
 
 ### MCP And AI Workflow
 
 - MCP-style JSON-RPC endpoint at `/api/mcp`.
-- Personal access tokens can be minted from the dashboard and used with `Authorization: Bearer`.
-- In-app sessions can also call the MCP endpoint.
-- Tools include campaign search, page reads, page creation, unapproved updates, templates, media, graph data, review queue access, and setup instructions.
-- AI-created or AI-edited content is routed through approval before players can see it.
+- Dashboard-minted access tokens used with `Authorization: Bearer`.
+- Tools for campaign search, page reads, page creation, unapproved updates, templates, media, graph data, review queues, and setup instructions.
+- AI-created or AI-edited pages land as unapproved until a GM approves them.
 
 ## Quick Start
 
@@ -107,6 +124,65 @@ npm test           # Run Vitest tests
 npm run build      # Production build
 npm start          # Start built Next.js app
 ```
+
+## GitHub App Setup
+
+The easiest setup path is from the CampaignRepo dashboard:
+
+1. Sign in as a global admin.
+2. Click **Connect GitHub**.
+3. Let GitHub create the CampaignRepo GitHub App from the manifest.
+4. Choose the campaign repositories the app can access.
+5. Return to CampaignRepo and connect or repair a campaign repo.
+
+CampaignRepo stores the GitHub App configuration in SQLite and uses short-lived installation tokens for repo access.
+
+To create the GitHub App manually, create a new app at:
+
+```text
+https://github.com/settings/apps/new
+```
+
+Use these values:
+
+- Homepage URL: your CampaignRepo URL.
+- Callback URL: `https://YOUR-CAMPAIGNREPO-HOST/api/github/app/callback`.
+- Setup URL: `https://YOUR-CAMPAIGNREPO-HOST/api/github/app/callback`.
+- Repository permissions:
+  - Contents: read/write.
+  - Metadata: read-only.
+- Installation access: only the repositories CampaignRepo should manage.
+
+After adding the `GITHUB_APP_*` environment variables and restarting the app, use **Install or update GitHub App access** from the dashboard.
+
+## Campaign Repo Layout
+
+CampaignRepo creates and expects this structure inside each campaign repo:
+
+```text
+/wiki
+  /pages
+  /media
+    media.json
+  /templates/<game-type>
+  /imports/characters
+  /search
+    index.json
+  campaign.yaml
+README.md
+```
+
+Manual edits are welcome. Preserve YAML frontmatter and CampaignRepo conventions for wiki links, visibility, approvals, and GM-only blocks.
+
+## Visibility Rules
+
+Player safety is based on page metadata and GM-only blocks:
+
+- `visibility: players` makes a page eligible for player view.
+- `approvalStatus: approved` is required before players can see it.
+- `:::gm` blocks are removed from player reads.
+- Source import metadata is hidden from player reads.
+- Players can read campaign content without GitHub credentials.
 
 ## Docker
 
@@ -155,65 +231,6 @@ Recommended stack settings:
 - Update method: polling
 - Polling interval: 5 minutes
 
-## GitHub App Setup
-
-The easiest setup path is from the CampaignRepo dashboard:
-
-1. Sign in as a global admin.
-2. Click **Connect GitHub**.
-3. Let GitHub create the CampaignRepo GitHub App from the manifest.
-4. Choose the campaign repositories the app can access.
-5. Return to CampaignRepo and connect or repair the campaign repo.
-
-CampaignRepo stores the GitHub App configuration in SQLite and uses short-lived installation tokens for repo access.
-
-To create the GitHub App manually, create a new app at:
-
-```text
-https://github.com/settings/apps/new
-```
-
-Use these values:
-
-- Homepage URL: your CampaignRepo URL.
-- Callback URL: `https://YOUR-CAMPAIGNREPO-HOST/api/github/app/callback`.
-- Setup URL: `https://YOUR-CAMPAIGNREPO-HOST/api/github/app/callback`.
-- Repository permissions:
-  - Contents: read/write.
-  - Metadata: read-only.
-- Installation access: only the repositories CampaignRepo should manage.
-
-After adding the `GITHUB_APP_*` environment variables and restarting the app, use **Install or update GitHub App access** from the dashboard.
-
-## Campaign Repository Layout
-
-CampaignRepo creates and expects this structure inside each campaign repo:
-
-```text
-/wiki
-  /pages
-  /media
-    media.json
-  /templates/<game-type>
-  /imports/characters
-  /search
-    index.json
-  campaign.yaml
-README.md
-```
-
-Manual edits are allowed as long as YAML frontmatter and CampaignRepo conventions are preserved.
-
-## Visibility Rules
-
-Player safety is based on page metadata and GM-only blocks:
-
-- `visibility: players` makes a page eligible for player view.
-- `approvalStatus: approved` is required before players can see it.
-- `:::gm` blocks are removed from player reads.
-- Source import metadata is hidden from player reads.
-- Players can read campaign content without GitHub credentials.
-
 ## Roadmap
 
 Near-term priorities:
@@ -223,7 +240,6 @@ Near-term priorities:
 - Improved player handout library and session-facing navigation.
 - Stronger MCP schemas, resources, and prompt templates.
 - Invite expiration, email delivery, and audit history.
-- Media previews for images, PDFs, and audio.
 - Better search ranking, filters, highlights, graph labels, and timeline controls.
 - Branch and publishing workflows for staging campaign changes.
 - Production backup/restore documentation for SQLite and campaign repos.
