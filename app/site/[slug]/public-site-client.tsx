@@ -117,27 +117,26 @@ export default function PublicSiteClient({
 
   const cover = selectedPage?.frontmatter.cover ? resolveMedia(selectedPage.frontmatter.cover) : "";
   const themeVars = useMemo(() => themeToCssVars(theme) as CSSProperties, [theme]);
-  const banner = theme.banner ? resolveMedia(theme.banner) : "";
 
   return (
-    <main className="public-site" data-theme={theme.preset || undefined} style={themeVars}>
-      <header className={banner ? "public-masthead has-banner" : "public-masthead"} style={banner ? { backgroundImage: `linear-gradient(180deg, rgba(8,5,15,0.35), rgba(8,5,15,0.92)), url("${banner}")` } : undefined}>
-        <div className="public-masthead-inner">
-          <span className="public-kicker">{gameType}</span>
+    <main className="app-shell public-site" data-theme={theme.preset || undefined} style={themeVars}>
+      <header className="topbar public-topbar">
+        <div>
+          <span className="quiet-link">Published world</span>
           <h1>{campaignName}</h1>
-          <p>A published world powered by CampaignRepo</p>
-          <div className="public-masthead-actions">
-            <button type="button" className="button" onClick={cloneWorld} disabled={cloning}>Clone this world</button>
-            {cloneMsg && <span className="muted">{cloneMsg}</span>}
-          </div>
+          <p className="muted">{gameType} - player-visible, approved pages</p>
+        </div>
+        <div className="topbar-actions">
+          <button type="button" onClick={cloneWorld} disabled={cloning}>Clone this world</button>
+          {cloneMsg && <span className="public-clone-message">{cloneMsg}</span>}
         </div>
       </header>
 
-      <div className="public-shell">
-        <aside className="public-library">
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search this world" />
+      <div className="workspace public-shell">
+        <aside className="side-nav public-library">
+          <input className="nav-filter" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search this world" />
           {grouped.map(([cat, catPages]) => (
-            <div className="public-nav-group" key={cat}>
+            <div className="nav-group public-nav-group" key={cat}>
               <h3>
                 <span className="cat-dot" style={{ background: `var(--cat-${cat})` }} />
                 {cat}
@@ -146,7 +145,7 @@ export default function PublicSiteClient({
                 <button
                   type="button"
                   key={page.slug}
-                  className={page.slug === selectedPage?.slug ? "public-nav-link active" : "public-nav-link"}
+                  className={page.slug === selectedPage?.slug ? "nav-link public-nav-link active" : "nav-link public-nav-link"}
                   onClick={() => {
                     setSelectedSlug(page.slug);
                     window.history.replaceState(null, "", `#${page.slug}`);
@@ -161,37 +160,37 @@ export default function PublicSiteClient({
           {!filteredPages.length && <p className="muted">No public pages match.</p>}
         </aside>
 
-        <article className="public-reader">
-          {selectedPage ? (
-            <>
-              {cover && <div className="public-cover" style={{ backgroundImage: `url("${cover}")` }} />}
-              <header className="public-article-header">
-                <p className="public-article-cat">{selectedPage.frontmatter.category}</p>
-                <h1>{selectedPage.frontmatter.name}</h1>
-                {selectedPage.frontmatter.summary && <p className="public-summary">{selectedPage.frontmatter.summary}</p>}
-                {Boolean(selectedPage.frontmatter.tags?.length) && (
-                  <div className="public-tags">
-                    {(selectedPage.frontmatter.tags || []).map((tag) => (
-                      <span key={tag}>{tag}</span>
-                    ))}
-                  </div>
-                )}
-              </header>
-              <div className="public-prose" onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
-            </>
-          ) : (
-            <div className="public-empty">
-              <h2>This world is just getting started</h2>
-              <p className="muted">No player-visible pages have been published yet. Check back soon.</p>
-            </div>
-          )}
-        </article>
+        <div className="workspace-main">
+          <nav className="tabs">
+            <button type="button" className="tab active">Published pages</button>
+          </nav>
+          <article className="player-reader public-reader panel">
+            {selectedPage ? (
+              <>
+                {cover && <div className="public-cover" style={{ backgroundImage: `url("${cover}")` }} />}
+                <header className="handout-header public-article-header">
+                  <p>{selectedPage.frontmatter.category}</p>
+                  <h1>{selectedPage.frontmatter.name}</h1>
+                  {selectedPage.frontmatter.summary && <span>{selectedPage.frontmatter.summary}</span>}
+                  {Boolean(selectedPage.frontmatter.tags?.length) && (
+                    <div className="badges">
+                      {(selectedPage.frontmatter.tags || []).map((tag) => (
+                        <span key={tag}>{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                </header>
+                <div className="public-prose" onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
+              </>
+            ) : (
+              <div className="public-empty">
+                <h2>This world is just getting started</h2>
+                <p className="muted">No player-visible pages have been published yet. Check back soon.</p>
+              </div>
+            )}
+          </article>
+        </div>
       </div>
-
-      <footer className="public-footer">
-        <span>{campaignName}</span>
-        <span>Published with CampaignRepo</span>
-      </footer>
     </main>
   );
 }

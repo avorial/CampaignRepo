@@ -2604,13 +2604,22 @@ code {
 
 /* ---- Published public site (read-only, no login) ---- */
 .public-site {
-  background:
-    radial-gradient(1200px 600px at 50% -10%, rgba(160, 117, 255, 0.12), transparent 60%),
-    var(--bg-base);
+  background: transparent;
   color: var(--text-primary);
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  display: block;
+}
+
+.public-topbar h1 {
+  margin: 4px 0 6px;
+}
+
+.public-clone-message {
+  align-self: center;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  text-transform: uppercase;
 }
 
 .public-masthead {
@@ -2646,22 +2655,20 @@ code {
 
 .public-shell {
   display: grid;
-  flex: 1;
-  gap: 32px;
-  grid-template-columns: 260px 1fr;
-  margin: 0 auto;
-  max-width: 1080px;
-  padding: 32px 24px;
+  gap: 18px;
+  grid-template-columns: 260px minmax(0, 1fr);
+  margin: 0;
+  max-width: none;
+  padding: 0;
   width: 100%;
 }
 
 .public-library {
   align-self: start;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+  display: grid;
+  gap: 12px;
   position: sticky;
-  top: 24px;
+  top: 16px;
 }
 
 .public-library > input {
@@ -2674,9 +2681,8 @@ code {
 }
 
 .public-nav-group {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  display: grid;
+  gap: 4px;
 }
 
 .public-nav-group h3 {
@@ -2692,15 +2698,20 @@ code {
 }
 
 .public-nav-link {
-  background: none;
+  background: transparent;
   border: 0;
-  border-left: 2px solid transparent;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   cursor: pointer;
-  font: inherit;
-  padding: 6px 10px;
+  display: block;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  letter-spacing: 0;
+  min-height: 0;
+  padding: 8px;
   text-align: left;
+  text-transform: none;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
+  width: 100%;
 }
 
 .public-nav-link:hover {
@@ -2708,17 +2719,13 @@ code {
 }
 
 .public-nav-link.active {
-  background: var(--bg-elevated);
-  border-left-color: var(--gold);
+  background: var(--wash-gold);
   color: var(--gold-bright);
 }
 
 .public-reader {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-lg, 10px);
-  min-height: 60vh;
-  overflow: hidden;
+  min-height: 620px;
+  overflow: visible;
 }
 
 .public-cover {
@@ -2730,7 +2737,7 @@ code {
 }
 
 .public-article-header {
-  padding: 28px 36px 4px;
+  padding: 0 0 14px;
 }
 
 .public-article-cat {
@@ -2772,7 +2779,7 @@ code {
 
 .public-prose {
   line-height: 1.7;
-  padding: 16px 36px 40px;
+  padding: 0;
 }
 
 .public-prose h2 {
