@@ -360,3 +360,62 @@ isolated features.
 
 > Pick any item and I'll turn it into a concrete implementation plan (data shape,
 > files, routes, UI) and build it.
+
+---
+
+## Adoption, positioning & community — feedback backlog
+
+Captured from external feedback. The recurring theme: the technology is solid;
+the real work is **adoption**. Lead with the identity below and lower the barrier
+to entry before adding more content systems.
+
+**Positioning.** Reframe from "a wiki for GMs" to **"a Git-based campaign platform
+for Game Masters"** — the *Foundry VTT of campaign management*: open, self-hosted,
+your-data-is-yours. The wiki is one part; the story is ownership + version history
++ collaboration + public publishing + AI-friendly Markdown + easy deployment.
+Strongest differentiator: **one repository per campaign** — every world is fully
+isolated instead of one giant knowledge base that becomes an unmanageable mess.
+
+### 34. Pluggable storage backends — Local Folder, then Gitea/Forgejo  ·  L
+Make GitHub the **recommended, not required** backend; this removes the single
+biggest objection. Same on-disk shape everywhere (Markdown pages + images +
+templates) — only the location differs:
+- **Local Folder** — lowest barrier; no account, fully offline; works on a NAS or
+  with Dropbox / Syncthing / Nextcloud / OneDrive for optional sync.
+- **GitHub** (recommended) — version history, free offsite backup, collaboration,
+  multi-machine access.
+- **Gitea / Forgejo** (future) — for people running their own Git server.
+Do **not** invent a DB format — point at a folder (e.g. `D:\Campaigns\Traveller\`
+or `/mnt/nas/RPG/KingdomDivided/`). Support in-place upgrade with no data change:
+Local Folder → init Git → push to GitHub. Audience hierarchy: Local (everyone) →
+GitHub (power users) → Gitea/Forgejo (self-run).
+
+### 35. Zero-friction onboarding  ·  S-M
+"Click **New Campaign** — everything else happens automatically." Never surface
+"create a GitHub repository" to non-technical GMs; hide Git entirely unless they
+ask. The less people know GitHub is involved, the better the conversion.
+
+### 36. Migration importers (adoption > features)  ·  M-L  ·  extends #22
+People aren't switching software — they're migrating years of lore. Importers for
+**Obsidian, Notion, OneNote, World Anvil, LegendKeeper, Foundry Journals, and
+Google Docs**. Treat migration tooling as higher priority than net-new features.
+
+### 37. Publishing ecosystem — clone, fork, discover  ·  L  ·  builds on #8
+Evolve public links into "GitHub for RPG campaigns": share a page, share a whole
+campaign, **clone** a published campaign as a starting point, **fork** another
+GM's world, and submit **pull requests** for fixes/templates. Add a discovery page
+(by system, most-cloned, recently updated, highest rated) and a community library
+of campaigns + templates (a Traveller sector, a Pendragon county, a Vampire city,
+a Blades district, an Alien colony). World Anvil's public-content volume is a key
+draw — this is the path to matching it.
+
+### 38. AI campaign Q&A over Markdown  ·  M  ·  extends #14
+Because everything is Markdown, an LLM can read the entire campaign. Natural-
+language query + generation: "Who actually knows the Duke is a vampire?", "Show
+every NPC connected to House Silverridge", "Generate a session recap from the last
+five journal entries." Markdown-as-storage is a genuine long-term advantage.
+
+### 39. Hosted / managed option (business)  ·  L
+Self-hosting (Docker) is the core audience but loses the "everyone else" segment
+who just want "Click Sign In." Consider an optional managed/SaaS tier later —
+without abandoning the self-host, own-your-data identity that defines the project.
