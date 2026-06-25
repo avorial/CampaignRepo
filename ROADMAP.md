@@ -144,12 +144,19 @@ lists campaigns, and offers context-aware navigation (workspace, organize, maps,
 admin, player portal). Follow-ups: media/template results, parent path in the
 hint, and one-shot mutating actions (rebuild search, upload media, invite).
 
-### 17. Session workspace  ·  M
+### 17. Session workspace  ·  M  ·  ✅ SHIPPED
 Create a focused GM session view with agenda, scenes, encounters, handouts,
 initiative links, pinned pages, private notes, and a player-facing presentation
 queue. Store sessions as Markdown plus YAML frontmatter so preparation and play
 notes remain portable. After play, turn checked agenda items and notes into a
 session report or timeline events.
+
+Shipped: `/campaigns/[id]/sessions` (GM/owner) — create sessions, each stored as
+`wiki/sessions/<slug>.md` (YAML frontmatter + Markdown notes). The editor has an
+agenda checklist, pinned-page picker, status/date, private GM notes, and a "Make
+report page" action that spins the notes + checked agenda into an `event` page.
+Follow-ups: scenes/encounters/initiative blocks, handouts, player presentation
+queue.
 
 ### 18. Structured relationships & semantic graph  ·  M-L
 Replace plain `keyLinks` with typed relationships such as member-of, located-in,

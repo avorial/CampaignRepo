@@ -1,0 +1,93 @@
+import YAML from "yaml";
+import { getCampaignRepositoryToken } from "@/lib/db";
+import { deleteFile, getTextFile, GitHubError, listDirectoryTextFiles, putFile } from "@/lib/github";
+import { slugify } from "@/lib/slug";
+import type { Campaign } from "@/lib/types";
+
+export type AgendaItem = { text: string; done: boolean };
+export type SessionFrontmatter = {
+  title: string;
+  date?: string;
+  status?: string;
+  agenda: AgendaItem[];
+  pinned: string[];
+};
+export type Session = { slug: string; sha?: string; frontmatter: SessionFrontmatter; notes: string };
+
+const sessionsDir = "wiki/sessions";
+
+function tokenFor(campaign: Campaign) {
+  const token = getCampaignRepositoryToken(campaign.id);
+  if (!token) throw new Error("This campaign has no GitHub access configured.");
+  return token;
+}
+
+export function parseSession(slug: string, text: string, sha?: string): Session {
+  const match = text.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+  let fm: Record<string, unknown> = {};
+  let notes = text;
+  if (match) {
+    fm = (YAML.parse(match[1]) as Record<string, unknown>) || {};
+    notes = match[2].replace(/^\n+/, "");
+  }
+  const agenda = Array.isArray(fm.agenda)
+    ? (fm.agenda as unknown[]).map((a) => ({ text: String((a as AgendaItem)?.text ?? ""), done: Boolean((a as AgendaItem)?.done) }))
+    : [];
+  return {
+    slug,
+    sha,
+    frontmatter: {
+      title: String(fm.title || slug),
+      date: fm.date ? String(fm.date) : undefined,
+      status: fm.status ? String(fm.status) : undefined,
+      agenda,
+      pinned: Array.isArray(fm.pinned) ? (fm.pinned as unknown[]).map(String) : []
+    },
+    notes
+  };
+}
+
+export function serializeSession(frontmatter: SessionFrontmatter, notes: string): string {
+  return `---\n${YAML.stringify(frontmatter)}---\n\n${notes.trim()}\n`;
+}
+
+export async function listSessions(campaign: Campaign): Promise<Session[]> {
+  const token = tokenFor(campaign);
+  const files = await listDirectoryTextFiles(token, campaign, sessionsDir);
+  return files
+    .map((f) => parseSession(f.name.replace(/\.md$/, ""), f.text ?? "", f.sha))
+    .sort((a, b) => (b.frontmatter.date || "").localeCompare(a.frontmatter.date || "") || a.frontmatter.title.localeCompare(b.frontmatter.title));
+}
+
+export async function getSession(campaign: Campaign, slug: string): Promise<Session> {
+  const token = tokenFor(campaign);
+  const file = await getTextFile(token, campaign, `${sessionsDir}/${slug}.md`);
+  return parseSession(slug, file.text, file.sha);
+}
+
+export async function createSession(campaign: Campaign, title: string, date?: string): Promise<Session> {
+  const token = tokenFor(campaign);
+  const slug = slugify(title) || `session-${Date.now()}`;
+  const frontmatter: SessionFrontmatter = { title, date, agenda: [], pinned: [] };
+  await putFile(token, campaign, `${sessionsDir}/${slug}.md`, serializeSession(frontmatter, ""), `CampaignRepo: create session ${title}`);
+  return { slug, frontmatter, notes: "" };
+}
+
+export async function saveSession(campaign: Campaign, slug: string, frontmatter: SessionFrontmatter, notes: string): Promise<Session> {
+  const token = tokenFor(campaign);
+  let sha: string | undefined;
+  try {
+    const existing = await getTextFile(token, campaign, `${sessionsDir}/${slug}.md`);
+    sha = existing.sha;
+  } catch (error) {
+    if (!(error instanceof GitHubError && error.status === 404)) throw error;
+  }
+  await putFile(token, campaign, `${sessionsDir}/${slug}.md`, serializeSession(frontmatter, notes), `CampaignRepo: update session ${frontmatter.title}`, sha);
+  return { slug, sha, frontmatter, notes };
+}
+
+export async function deleteSession(campaign: Campaign, slug: string): Promise<void> {
+  const token = tokenFor(campaign);
+  const existing = await getTextFile(token, campaign, `${sessionsDir}/${slug}.md`);
+  await deleteFile(token, campaign, `${sessionsDir}/${slug}.md`, `CampaignRepo: delete session ${slug}`, existing.sha);
+}
