@@ -74,38 +74,22 @@ export default function TravellerSheet({ sheet, name }: { sheet: Sheet; name?: s
         </div>
       </div>
 
-      <div className="tsheet-topgrid">
-        <section className="tsheet-panel">
-          <h4>Characteristics <span>Click a value to roll 2D6 + that DM</span></h4>
-          <div className="tsheet-chars">
-            {CHARS.map(({ key, label }) => {
-              const value = sheet.characteristics?.[key];
-              return (
-                <div className="tsheet-char" key={key}>
-                  <span className="tsheet-char-key">{key}</span>
-                  <span className="tsheet-char-label">{label}</span>
-                  <span className="tsheet-char-val">{value ?? "-"}</span>
-                  <span className="tsheet-char-mod">{value == null ? "Mod -" : `Mod ${fmtMod(travellerDM(value))}`}</span>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="tsheet-panel">
-          <h4>Wielded <span>Add weapons in the Combat tab</span></h4>
-          {weapons.length ? (
-            <ul className="tsheet-skills">
-              {weapons.map((weapon, index) => (
-                <li key={`${weapon.name}-${index}`}>
-                  <span>{weapon.name}</span>
-                  <span>{detail([weapon.damage, weapon.range, weapon.notes])}</span>
-                </li>
-              ))}
-            </ul>
-          ) : <p className="tsheet-empty">No weapons.</p>}
-        </section>
-      </div>
+      <section className="tsheet-panel">
+        <h4>Characteristics <span>Click a value to roll 2D6 + that DM</span></h4>
+        <div className="tsheet-chars">
+          {CHARS.map(({ key, label }) => {
+            const value = sheet.characteristics?.[key];
+            return (
+              <div className="tsheet-char" key={key}>
+                <span className="tsheet-char-key">{key}</span>
+                <span className="tsheet-char-label">{label}</span>
+                <span className="tsheet-char-val">{value ?? "-"}</span>
+                <span className="tsheet-char-mod">{value == null ? "Mod -" : `Mod ${fmtMod(travellerDM(value))}`}</span>
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       <section className="tsheet-panel tsheet-band">
         <h4>Status & Conditions <span>Wound status + active conditions</span></h4>
@@ -120,8 +104,8 @@ export default function TravellerSheet({ sheet, name }: { sheet: Sheet; name?: s
         </div>
       </section>
 
-      <section className="tsheet-panel">
-        <h4>Skills <span>Total levels: {skills.reduce((sum, skill) => sum + (skill.level ?? 0), 0)}</span></h4>
+      <details className="tsheet-panel tsheet-skill-details">
+        <summary><h4>Skills <span>Total levels: {skills.reduce((sum, skill) => sum + (skill.level ?? 0), 0)}</span></h4></summary>
         {skills.length === 0 ? (
           <p className="tsheet-empty">No skills recorded.</p>
         ) : (
@@ -138,7 +122,7 @@ export default function TravellerSheet({ sheet, name }: { sheet: Sheet; name?: s
             ))}
           </div>
         )}
-      </section>
+      </details>
 
       <section className="tsheet-panel">
         <div className="tsheet-cols">
@@ -161,7 +145,7 @@ export default function TravellerSheet({ sheet, name }: { sheet: Sheet; name?: s
             ) : <p className="tsheet-empty">No weapons recorded yet.</p>}
           </div>
           <div>
-            <h4>Gear & Holdings</h4>
+            <h4>Items & Holdings</h4>
             {equipment.length || holdings.length ? (
               <ul className="tsheet-skills">
                 {equipment.map((e, i) => (
@@ -172,7 +156,7 @@ export default function TravellerSheet({ sheet, name }: { sheet: Sheet; name?: s
                 ))}
                 {holdings.map((item, i) => <li key={`${item.name}-${i}`}><span>{item.name}</span><span>{item.notes || ""}</span></li>)}
               </ul>
-            ) : <p className="tsheet-empty">No gear recorded.</p>}
+            ) : <p className="tsheet-empty">No items recorded.</p>}
             <h4>People & Notes</h4>
             {contacts.length || psionics.length || sheet.notes ? (
               <ul className="tsheet-skills">

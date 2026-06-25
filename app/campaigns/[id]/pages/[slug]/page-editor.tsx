@@ -32,7 +32,7 @@ function travellerSheetSnippet(name: string) {
     const label = skill.speciality ? `${skill.name} (${skill.speciality})` : skill.name;
     return `  ${JSON.stringify(label)}:`;
   }).join("\n");
-  return `\n\n\`\`\`traveller-sheet\nheader:\n  left: \n  center: \n  right: \nportrait: \nname: ${JSON.stringify(name || "")}\nspecies: \nage: \nhomeworld: \ncareer: \nrank: \ndossier: \nstatus: \nconditions: []\nspeciesTraits: []\ncharacteristics:\n  STR: \n  DEX: \n  END: \n  INT: \n  EDU: \n  SOC: \nskills:\n${skills}\nweapons:\n  # Laser Pistol: 3D, Medium, notes\narmour:\n  # Cloth: 8, notes\ngear:\n  # Medkit: 1, notes\nholdings:\n  # Ship Share: notes\npeople:\n  # Contact Name: notes\npsionics:\n  # Telepathy: 1, notes\nnotes: \n\`\`\`\n\n`;
+  return `\n\n\`\`\`traveller-sheet\nheader:\n  left: \n  center: \n  right: \nportrait: \nname: ${JSON.stringify(name || "")}\nspecies: \nage: \nhomeworld: \ncareer: \nrank: \ndossier: \nstatus: \nconditions: []\nspeciesTraits: []\ncharacteristics:\n  STR: \n  DEX: \n  END: \n  INT: \n  EDU: \n  SOC: \nskills:\n${skills}\nweapons:\n  # Laser Pistol: 3D, Medium, notes\narmour:\n  # Cloth: 8, notes\nitems:\n  # Medkit: 1, notes\nholdings:\n  # Ship Share: notes\npeople:\n  # Contact Name: notes\npsionics:\n  # Telepathy: 1, notes\nnotes: \n\`\`\`\n\n`;
 }
 
 export default function PageEditor({ campaign, slug }: { campaign: Campaign; slug: string }) {

@@ -3454,6 +3454,38 @@ code {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.tsheet-skill-details {
+  gap: 0;
+}
+
+.tsheet-skill-details > summary {
+  cursor: pointer;
+  display: flex;
+  list-style: none;
+}
+
+.tsheet-skill-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.tsheet-skill-details > summary::before {
+  color: #ffb331;
+  content: "›";
+  font-family: var(--font-mono);
+  font-size: 18px;
+  line-height: 1;
+  margin-right: 8px;
+  transition: transform 0.15s ease;
+}
+
+.tsheet-skill-details[open] {
+  gap: 10px;
+}
+
+.tsheet-skill-details[open] > summary::before {
+  transform: rotate(90deg);
+}
+
 .tsheet-skills {
   display: grid;
   gap: 2px;

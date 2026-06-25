@@ -150,7 +150,7 @@ weapons:
 # Laser Pistol: 3D, Medium, notes
 armour:
 # Cloth: 8, notes
-gear:
+items:
 # Medkit: 1, notes
 holdings:
 # Ship Share: notes

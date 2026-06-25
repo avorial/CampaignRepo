@@ -214,8 +214,8 @@ function normalizeTravellerSheet(input: unknown): TravellerSheet & { name?: stri
     ? raw.characteristics as Record<string, unknown>
     : {};
   const skills = normalizeTravellerSkills(raw.skills);
-  const equipmentInput = raw.equipment || raw.gear || raw.items;
-  const peopleInput = raw.contacts || raw.people;
+  const equipmentInputs = [raw.equipment, raw.gear, raw.items];
+  const peopleInputs = [raw.contacts, raw.people];
   const armour = [
     ...asRecordArray(raw.armour).map((item) => ({ name: String(item.name || ""), protection: item.protection ? String(item.protection) : undefined, notes: item.notes ? String(item.notes) : undefined })),
     ...compactRecords(raw.armour, (name, parts) => ({ name, protection: parts[0], notes: parts.slice(1).join(" - ") || undefined }))
@@ -225,16 +225,16 @@ function normalizeTravellerSheet(input: unknown): TravellerSheet & { name?: stri
     ...compactRecords(raw.weapons, (name, parts) => ({ name, damage: parts[0], range: parts[1], notes: parts.slice(2).join(" - ") || undefined }))
   ].filter((item) => item.name);
   const equipment = [
-    ...asRecordArray(equipmentInput).map((item) => ({ name: String(item.name || item.item || ""), quantity: item.quantity == null || item.quantity === "" ? undefined : asNumber(item.quantity), notes: item.notes ? String(item.notes) : undefined })),
-    ...compactRecords(equipmentInput, (name, parts) => ({ name, quantity: parts[0] && Number.isFinite(Number.parseInt(parts[0], 10)) ? asNumber(parts[0]) : undefined, notes: (parts[0] && Number.isFinite(Number.parseInt(parts[0], 10)) ? parts.slice(1) : parts).join(" - ") || undefined }))
+    ...equipmentInputs.flatMap((input) => asRecordArray(input).map((item) => ({ name: String(item.name || item.item || ""), quantity: item.quantity == null || item.quantity === "" ? undefined : asNumber(item.quantity), notes: item.notes ? String(item.notes) : undefined }))),
+    ...equipmentInputs.flatMap((input) => compactRecords(input, (name, parts) => ({ name, quantity: parts[0] && Number.isFinite(Number.parseInt(parts[0], 10)) ? asNumber(parts[0]) : undefined, notes: (parts[0] && Number.isFinite(Number.parseInt(parts[0], 10)) ? parts.slice(1) : parts).join(" - ") || undefined })))
   ].filter((item) => item.name);
   const holdings = [
     ...asRecordArray(raw.holdings).map((item) => ({ name: String(item.name || ""), notes: item.notes ? String(item.notes) : undefined })),
     ...compactRecords(raw.holdings, (name, parts) => ({ name, notes: parts.join(" - ") || undefined }))
   ].filter((item) => item.name);
   const contacts = [
-    ...asRecordArray(peopleInput).map((item) => ({ name: String(item.name || ""), notes: item.notes ? String(item.notes) : undefined })),
-    ...compactRecords(peopleInput, (name, parts) => ({ name, notes: parts.join(" - ") || undefined }))
+    ...peopleInputs.flatMap((input) => asRecordArray(input).map((item) => ({ name: String(item.name || ""), notes: item.notes ? String(item.notes) : undefined }))),
+    ...peopleInputs.flatMap((input) => compactRecords(input, (name, parts) => ({ name, notes: parts.join(" - ") || undefined })))
   ].filter((item) => item.name);
   const psionics = [
     ...asRecordArray(raw.psionics).map((item) => ({ name: String(item.name || ""), level: item.level == null ? undefined : asNumber(item.level), notes: item.notes ? String(item.notes) : undefined })),
@@ -328,21 +328,18 @@ function renderTravellerSheetHtml(rawInput: string) {
       </div>
     </div>
   </div>
-  <div class="tsheet-topgrid">
-    <section class="tsheet-panel"><h4>Characteristics <span>Click a value to roll 2D6 + that DM</span></h4><div class="tsheet-chars">
+  <section class="tsheet-panel"><h4>Characteristics <span>Click a value to roll 2D6 + that DM</span></h4><div class="tsheet-chars">
       ${chars.map(([key, label]) => {
         const value = sheet.characteristics[key];
         return `<div class="tsheet-char"><span class="tsheet-char-key">${key}</span><span class="tsheet-char-label">${escapeHtml(label)}</span><span class="tsheet-char-val">${value ?? "-"}</span><span class="tsheet-char-mod">${value == null ? "Mod -" : `Mod ${fmtMod(travellerDM(value))}`}</span></div>`;
       }).join("")}
     </div></section>
-    <section class="tsheet-panel"><h4>Wielded <span>Add weapons in the sheet block</span></h4>${weapons.length ? list(weapons.map((weapon) => `<li><span>${escapeHtml(weapon.name)}</span><span>${escapeHtml(detail([weapon.damage, weapon.range, weapon.notes]))}</span></li>`)) : `<p class="tsheet-empty">No weapons.</p>`}</section>
-  </div>
   <section class="tsheet-panel tsheet-band"><h4>Status &amp; Conditions <span>Wound status + active conditions</span></h4><strong class="tsheet-status">${escapeHtml(sheet.status || "-")}</strong><span>${escapeHtml(sheet.conditions?.length ? sheet.conditions.join(", ") : "No active conditions")}</span></section>
   <section class="tsheet-panel tsheet-band"><h4>Species <span>${escapeHtml(sheet.species || "-")}</span></h4><div class="badges">${traits.map((trait) => `<span>${escapeHtml(trait)}</span>`).join("")}</div></section>
-  <section class="tsheet-panel"><h4>Skills <span>Total levels: ${skills.reduce((sum, skill) => sum + (skill.level ?? 0), 0)}</span></h4>${skills.length ? `<div class="tsheet-skill-cols">${columns.map((column) => list(column.map((skill) => `<li><span>${escapeHtml(skill.name)}${skill.speciality ? ` (${escapeHtml(skill.speciality)})` : ""}</span><span class="tsheet-skill-lvl">${skill.level ?? "−"}</span></li>`))).join("")}</div>` : `<p class="tsheet-empty">No skills recorded.</p>`}</section>
+  <details class="tsheet-panel tsheet-skill-details"><summary><h4>Skills <span>Total levels: ${skills.reduce((sum, skill) => sum + (skill.level ?? 0), 0)}</span></h4></summary>${skills.length ? `<div class="tsheet-skill-cols">${columns.map((column) => list(column.map((skill) => `<li><span>${escapeHtml(skill.name)}${skill.speciality ? ` (${escapeHtml(skill.speciality)})` : ""}</span><span class="tsheet-skill-lvl">${skill.level ?? "−"}</span></li>`))).join("")}</div>` : `<p class="tsheet-empty">No skills recorded.</p>`}</details>
   <section class="tsheet-panel"><div class="tsheet-cols">
     <div><h4>Armour</h4>${armour.length ? list(armour.map((item) => `<li><span>${escapeHtml(item.name)}</span><span>${escapeHtml(detail([item.protection, item.notes]))}</span></li>`)) : `<p class="tsheet-empty">No armour recorded.</p>`}<h4>Weapons</h4>${weapons.length ? list(weapons.map((item) => `<li><span>${escapeHtml(item.name)}</span><span>${escapeHtml(detail([item.damage, item.range, item.notes]))}</span></li>`)) : `<p class="tsheet-empty">No weapons recorded yet.</p>`}</div>
-    <div><h4>Gear &amp; Holdings</h4>${equipment.length || holdings.length ? list([...equipment.map((item) => `<li><span>${escapeHtml(item.name)}${item.notes ? ` - ${escapeHtml(item.notes)}` : ""}</span>${item.quantity && item.quantity > 1 ? `<span class="tsheet-skill-lvl">x${item.quantity}</span>` : ""}</li>`), ...holdings.map((item) => `<li><span>${escapeHtml(item.name)}</span><span>${escapeHtml(item.notes || "")}</span></li>`)]): `<p class="tsheet-empty">No gear recorded.</p>`}<h4>People &amp; Notes</h4>${contacts.length || psionics.length || sheet.notes ? list([...contacts.map((item) => `<li><span>${escapeHtml(item.name)}</span><span>${escapeHtml(item.notes || "")}</span></li>`), ...psionics.map((item) => `<li><span>${escapeHtml(item.name)}</span><span>${escapeHtml(detail([item.level, item.notes]))}</span></li>`), ...(sheet.notes ? [`<li><span>${escapeHtml(sheet.notes)}</span></li>`] : [])]) : `<p class="tsheet-empty">No people or notes recorded.</p>`}${sheet.credits != null ? `<p class="tsheet-credits">${sheet.credits.toLocaleString()} Cr</p>` : ""}</div>
+    <div><h4>Items &amp; Holdings</h4>${equipment.length || holdings.length ? list([...equipment.map((item) => `<li><span>${escapeHtml(item.name)}${item.notes ? ` - ${escapeHtml(item.notes)}` : ""}</span>${item.quantity && item.quantity > 1 ? `<span class="tsheet-skill-lvl">x${item.quantity}</span>` : ""}</li>`), ...holdings.map((item) => `<li><span>${escapeHtml(item.name)}</span><span>${escapeHtml(item.notes || "")}</span></li>`)]): `<p class="tsheet-empty">No items recorded.</p>`}<h4>People &amp; Notes</h4>${contacts.length || psionics.length || sheet.notes ? list([...contacts.map((item) => `<li><span>${escapeHtml(item.name)}</span><span>${escapeHtml(item.notes || "")}</span></li>`), ...psionics.map((item) => `<li><span>${escapeHtml(item.name)}</span><span>${escapeHtml(detail([item.level, item.notes]))}</span></li>`), ...(sheet.notes ? [`<li><span>${escapeHtml(sheet.notes)}</span></li>`] : [])]) : `<p class="tsheet-empty">No people or notes recorded.</p>`}${sheet.credits != null ? `<p class="tsheet-credits">${sheet.credits.toLocaleString()} Cr</p>` : ""}</div>
   </div></section>
 </section>`;
 }

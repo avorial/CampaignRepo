@@ -25,7 +25,7 @@ describe("template packs", () => {
     expect(template?.body).toContain('  "Vacc Suit":');
     expect(template?.body).toContain("weapons:\n# Laser Pistol: 3D, Medium, notes");
     expect(template?.body).toContain("armour:\n# Cloth: 8, notes");
-    expect(template?.body).toContain("gear:\n# Medkit: 1, notes");
+    expect(template?.body).toContain("items:\n# Medkit: 1, notes");
     expect(template?.body).toContain("people:\n# Contact Name: notes");
     expect(template?.body).toContain("psionics:\n# Telepathy: 1, notes");
     expect(template?.body).not.toContain("Racial Solomani");
