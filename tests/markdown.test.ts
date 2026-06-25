@@ -134,6 +134,8 @@ describe("renderMarkdown", () => {
     expect(html).toContain("Victor Mendes");
     expect(html).toContain("Racial Solomani");
     expect(html).toContain("Diplomat");
+    expect(html).toContain("Vacc Suit");
+    expect(html).toContain("Admin");
     expect(html).not.toContain("<code");
   });
 

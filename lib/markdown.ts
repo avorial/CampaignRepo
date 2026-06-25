@@ -97,11 +97,56 @@ function asRecordArray(value: unknown) {
   return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item)) : [];
 }
 
+const standardTravellerSkills = [
+  ["Admin"], ["Advocate"], ["Animals"], ["Animals", "Handling"], ["Animals", "Riding"], ["Animals", "Training"], ["Animals", "Veterinary"],
+  ["Art"], ["Art", "Performer"], ["Art", "Holography"], ["Art", "Instrument"], ["Art", "Visual Media"], ["Art", "Write"],
+  ["Astrogation"], ["Athletics"], ["Athletics", "Dexterity"], ["Athletics", "Endurance"], ["Athletics", "Strength"], ["Broker"], ["Carouse"],
+  ["Deception"], ["Diplomat"], ["Drive"], ["Drive", "Hovercraft"], ["Drive", "Mole"], ["Drive", "Track"], ["Drive", "Walker"], ["Drive", "Wheel"],
+  ["Electronics"], ["Electronics", "Comms"], ["Electronics", "Computers"], ["Electronics", "Remote Ops"], ["Electronics", "Sensors"],
+  ["Engineer"], ["Engineer", "M-drive"], ["Engineer", "J-drive"], ["Engineer", "Life Support"], ["Engineer", "Power"],
+  ["Explosives"], ["Flyer"], ["Flyer", "Airship"], ["Flyer", "Grav"], ["Flyer", "Ornithopter"], ["Flyer", "Rotor"], ["Flyer", "Wing"],
+  ["Gambler"], ["Gun Combat"], ["Gun Combat", "Archaic"], ["Gun Combat", "Energy"], ["Gun Combat", "Slug"],
+  ["Gunner"], ["Gunner", "Turret"], ["Gunner", "Ortillery"], ["Gunner", "Screen"], ["Gunner", "Capital"],
+  ["Heavy Weapons"], ["Heavy Weapons", "Artillery"], ["Heavy Weapons", "Man Portable"], ["Heavy Weapons", "Vehicle"], ["Investigate"], ["Jack-of-All-Trades"],
+  ["Language"], ["Language", "Anglic"], ["Language", "Vilani"], ["Language", "Zdetl"], ["Language", "Oynprith"],
+  ["Leadership"], ["Mechanic"], ["Medic"], ["Melee"], ["Melee", "Unarmed"], ["Melee", "Blade"], ["Melee", "Bludgeon"], ["Melee", "Natural"], ["Melee", "Infighting"],
+  ["Navigation"], ["Persuade"], ["Pilot"], ["Pilot", "Small Craft"], ["Pilot", "Spacecraft"], ["Pilot", "Capital Ships"],
+  ["Profession"], ["Profession", "Belter"], ["Profession", "Biologicals"], ["Profession", "Civil Engineer"], ["Profession", "Construction"],
+  ["Profession", "Hydroponics"], ["Profession", "Life Sciences"], ["Profession", "Miner"], ["Profession", "Polymers"], ["Profession", "Religion"],
+  ["Recon"], ["Science"], ["Science", "Archaeology"], ["Science", "Astronomy"], ["Science", "Biology"], ["Science", "Chemistry"], ["Science", "Cosmology"],
+  ["Science", "Cybernetics"], ["Science", "Economics"], ["Science", "Genetics"], ["Science", "History"], ["Science", "Linguistics"], ["Science", "Philosophy"],
+  ["Science", "Physics"], ["Science", "Planetology"], ["Science", "Psionicology"], ["Science", "Psychology"], ["Science", "Robotics"], ["Science", "Sophontology"], ["Science", "Xenology"],
+  ["Seafarer"], ["Seafarer", "Ocean Ships"], ["Seafarer", "Personal"], ["Seafarer", "Sail"], ["Seafarer", "Submarine"], ["Stealth"], ["Steward"], ["Streetwise"],
+  ["Survival"], ["Tactics"], ["Tactics", "Military"], ["Tactics", "Naval"], ["Vacc Suit"]
+] as const;
+
+function travellerSkillKey(skill: { name: string; speciality?: string }) {
+  return `${skill.name.toLowerCase()}|${(skill.speciality || "").toLowerCase()}`;
+}
+
+function mergeTravellerSkills(skills: TravellerSheet["skills"]) {
+  const byKey = new Map(skills.map((skill) => [travellerSkillKey(skill), skill]));
+  const merged = standardTravellerSkills.map(([name, speciality]) => {
+    const existing = byKey.get(travellerSkillKey({ name, speciality }));
+    if (existing) {
+      byKey.delete(travellerSkillKey(existing));
+      return existing;
+    }
+    return { name, speciality, level: 0 };
+  });
+  return [...merged, ...byKey.values()];
+}
+
 function normalizeTravellerSheet(input: unknown): TravellerSheet & { name?: string } {
   const raw = input && typeof input === "object" && !Array.isArray(input) ? input as Record<string, unknown> : {};
   const characteristics = raw.characteristics && typeof raw.characteristics === "object" && !Array.isArray(raw.characteristics)
     ? raw.characteristics as Record<string, unknown>
     : {};
+  const skills = asRecordArray(raw.skills).map((skill) => ({
+    name: String(skill.name || ""),
+    speciality: skill.speciality ? String(skill.speciality) : undefined,
+    level: asNumber(skill.level, 0)
+  })).filter((skill) => skill.name);
   return {
     system: "traveller",
     name: raw.name ? String(raw.name) : undefined,
@@ -113,11 +158,7 @@ function normalizeTravellerSheet(input: unknown): TravellerSheet & { name?: stri
       EDU: asNumber(characteristics.EDU, 7),
       SOC: asNumber(characteristics.SOC, 7)
     },
-    skills: asRecordArray(raw.skills).map((skill) => ({
-      name: String(skill.name || ""),
-      speciality: skill.speciality ? String(skill.speciality) : undefined,
-      level: asNumber(skill.level, 0)
-    })).filter((skill) => skill.name),
+    skills: mergeTravellerSkills(skills),
     age: raw.age == null || raw.age === "" ? undefined : asNumber(raw.age),
     species: raw.species ? String(raw.species) : undefined,
     homeworld: raw.homeworld ? String(raw.homeworld) : undefined,

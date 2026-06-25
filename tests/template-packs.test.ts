@@ -17,5 +17,8 @@ describe("template packs", () => {
     expect(template?.body).toContain("species: Racial Solomani");
     expect(template?.body).toContain("STR: 12");
     expect(template?.body).toContain("speciality: History");
+    expect(template?.body).toContain("name: Vacc Suit");
+    expect(template?.body).toContain("weapons: []");
+    expect(template?.body).toContain("psionics: []");
   });
 });

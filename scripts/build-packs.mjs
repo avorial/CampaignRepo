@@ -118,21 +118,78 @@ characteristics:
   EDU: 10
   SOC: 12
 skills:
-  - name: Admin
-    level: 1
-  - name: Diplomat
-    level: 2
-  - name: Science
-    speciality: History
-    level: 1
-  - name: Science
-    speciality: Robotics
-    level: 1
-  - name: Streetwise
-    level: 2
+  - { name: Admin, level: 1 }
+  - { name: Advocate, level: 0 }
+  - { name: Animals, level: 0 }
+  - { name: Animals, speciality: Handling, level: 0 }
+  - { name: Animals, speciality: Riding, level: 0 }
+  - { name: Animals, speciality: Training, level: 0 }
+  - { name: Animals, speciality: Veterinary, level: 0 }
+  - { name: Art, level: 0 }
+  - { name: Art, speciality: Performer, level: 1 }
+  - { name: Astrogation, level: 0 }
+  - { name: Athletics, level: 0 }
+  - { name: Athletics, speciality: Dexterity, level: 1 }
+  - { name: Athletics, speciality: Endurance, level: 0 }
+  - { name: Athletics, speciality: Strength, level: 0 }
+  - { name: Broker, level: 1 }
+  - { name: Carouse, level: 0 }
+  - { name: Deception, level: 2 }
+  - { name: Diplomat, level: 2 }
+  - { name: Drive, level: 0 }
+  - { name: Drive, speciality: Walker, level: 0 }
+  - { name: Electronics, level: 0 }
+  - { name: Electronics, speciality: Comms, level: 0 }
+  - { name: Electronics, speciality: Computers, level: 0 }
+  - { name: Electronics, speciality: Remote Ops, level: 1 }
+  - { name: Electronics, speciality: Sensors, level: 0 }
+  - { name: Engineer, level: 0 }
+  - { name: Engineer, speciality: J-drive, level: 0 }
+  - { name: Engineer, speciality: M-drive, level: 0 }
+  - { name: Engineer, speciality: Life Support, level: 0 }
+  - { name: Engineer, speciality: Power, level: 0 }
+  - { name: Explosives, level: 0 }
+  - { name: Flyer, level: 0 }
+  - { name: Gambler, level: 0 }
+  - { name: Gun Combat, level: 0 }
+  - { name: Gun Combat, speciality: Archaic, level: 0 }
+  - { name: Gun Combat, speciality: Energy, level: 0 }
+  - { name: Gun Combat, speciality: Slug, level: 0 }
+  - { name: Gunner, level: 0 }
+  - { name: Gunner, speciality: Turret, level: 0 }
+  - { name: Heavy Weapons, level: 0 }
+  - { name: Investigate, level: 0 }
+  - { name: Jack-of-All-Trades, level: 0 }
+  - { name: Language, level: 0 }
+  - { name: Leadership, level: 0 }
+  - { name: Mechanic, level: 0 }
+  - { name: Medic, level: 1 }
+  - { name: Melee, level: 0 }
+  - { name: Melee, speciality: Blade, level: 0 }
+  - { name: Melee, speciality: Unarmed, level: 0 }
+  - { name: Navigation, level: 0 }
+  - { name: Persuade, level: 1 }
+  - { name: Pilot, level: 0 }
+  - { name: Pilot, speciality: Small Craft, level: 1 }
+  - { name: Pilot, speciality: Spacecraft, level: 0 }
+  - { name: Profession, level: 0 }
+  - { name: Recon, level: 0 }
+  - { name: Science, level: 0 }
+  - { name: Science, speciality: History, level: 1 }
+  - { name: Science, speciality: Robotics, level: 1 }
+  - { name: Seafarer, level: 0 }
+  - { name: Stealth, level: 1 }
+  - { name: Steward, level: 0 }
+  - { name: Streetwise, level: 2 }
+  - { name: Survival, level: 0 }
+  - { name: Tactics, level: 0 }
+  - { name: Vacc Suit, level: 0 }
 weapons: []
 armour: []
 equipment: []
+holdings: []
+contacts: []
+psionics: []
 notes: Chargen complete - Mongoose Traveller 2.0 layout
 \`\`\`
 
