@@ -21,6 +21,25 @@ export default function PublicSiteClient({
 }) {
   const [selectedSlug, setSelectedSlug] = useState(pages[0]?.slug || "");
   const [query, setQuery] = useState("");
+  const [cloning, setCloning] = useState(false);
+  const [cloneMsg, setCloneMsg] = useState("");
+
+  async function cloneWorld() {
+    setCloning(true);
+    setCloneMsg("Cloning this world into your own repo…");
+    const res = await fetch(`/api/site/${slug}/clone`, { method: "POST" });
+    if (res.status === 401) {
+      window.location.href = "/login";
+      return;
+    }
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.campaignId) {
+      window.location.href = `/campaigns/${data.campaignId}`;
+      return;
+    }
+    setCloning(false);
+    setCloneMsg(data.error || "Could not clone this world.");
+  }
 
   useEffect(() => {
     const hashSlug = window.location.hash.replace(/^#/, "");
@@ -107,6 +126,10 @@ export default function PublicSiteClient({
           <span className="public-kicker">{gameType}</span>
           <h1>{campaignName}</h1>
           <p>A published world powered by CampaignRepo</p>
+          <div className="public-masthead-actions">
+            <button type="button" className="button" onClick={cloneWorld} disabled={cloning}>Clone this world</button>
+            {cloneMsg && <span className="muted">{cloneMsg}</span>}
+          </div>
         </div>
       </header>
 

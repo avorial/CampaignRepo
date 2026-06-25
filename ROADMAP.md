@@ -404,24 +404,28 @@ People aren't switching software — they're migrating years of lore. Importers 
 **Obsidian, Notion, OneNote, World Anvil, LegendKeeper, Foundry Journals, and
 Google Docs**. Treat migration tooling as higher priority than net-new features.
 
-### 37. Publishing ecosystem — public view, top-campaign list, clone & fork  ·  L  ·  ★ TOP PRIORITY  ·  🚧 GALLERY SHIPPED  ·  builds on #8
+### 37. Publishing ecosystem — public view, top-campaign list, clone & fork  ·  L  ·  ★ TOP PRIORITY  ·  🚧 GALLERY + CLONE SHIPPED  ·  builds on #8
 External links and public view are the highest-priority adoption lever. Evolve
 public sharing into "GitHub for RPG campaigns":
 - **Share** a single page or a whole campaign via a public link (extends the
   shipped public site, #8).
 - **Top-campaign list** — a public, browsable gallery of published campaigns.
   Anyone can open and read one; without edit approval it is **view-only**.
-  *Shipped: `/site` — a no-login gallery of every published world with a
-  name/system search, linking to each read-only public site (which already has
-  per-world page search). Linked from the login page. Follow-ups below.*
+  *Shipped: `/site` — a no-login gallery of every published world, sorted by
+  most-cloned, with a name/system search; links to each read-only public site
+  (which already has per-world page search). Linked from the login page.*
 - **Clone for your own game** — one click copies a published campaign into the
   viewer's own editable campaign/repo as a starting point.
+  *Shipped: "Clone this world" on each public site creates a fresh repo +
+  campaign owned by the viewer and copies the public pages + referenced media in
+  one commit; bumps the source's clone count (drives most-cloned discovery).
+  Needs GitHub connected; >1 MB media is skipped (follow-up: git blobs).*
 - **Fork & pull requests** — fork another GM's world; submit fixes/templates back
-  to the source.
-- **Discovery** — browse by system, most-cloned, recently updated, highest rated;
-  a community library of campaigns + templates (a Traveller sector, a Pendragon
-  county, a Vampire city, a Blades district, an Alien colony). World Anvil's
-  public-content volume is the bar — this is the path to matching it.
+  to the source. *(Follow-up: cross-repo PR machinery.)*
+- **Discovery** — browse by system, most-cloned (✅ sort live), recently updated,
+  highest rated; a community library of campaigns + templates (a Traveller
+  sector, a Pendragon county, a Vampire city, a Blades district, an Alien colony).
+  World Anvil's public-content volume is the bar — this is the path to it.
 
 ### 38. AI campaign Q&A over Markdown  ·  M  ·  extends #14
 Because everything is Markdown, an LLM can read the entire campaign. Natural-

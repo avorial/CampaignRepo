@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-type Site = { slug: string; name: string; gameType: string };
+type Site = { slug: string; name: string; gameType: string; clones: number };
 
 export default function PublicGalleryClient({ sites }: { sites: Site[] }) {
   const [query, setQuery] = useState("");
@@ -43,7 +43,7 @@ export default function PublicGalleryClient({ sites }: { sites: Site[] }) {
             {filtered.map((s) => (
               <Link key={s.slug} className="gallery-card" href={`/site/${s.slug}`}>
                 <strong>{s.name}</strong>
-                <span>{s.gameType}</span>
+                <span>{s.gameType}{s.clones > 0 ? ` · ${s.clones} clone${s.clones === 1 ? "" : "s"}` : ""}</span>
                 <span className="gallery-card-cta">View world →</span>
               </Link>
             ))}

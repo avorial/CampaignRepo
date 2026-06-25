@@ -145,6 +145,11 @@ if (!userColumns.some((column) => column.name === "disabled")) {
   db.exec("ALTER TABLE users ADD COLUMN disabled INTEGER NOT NULL DEFAULT 0");
 }
 
+const publicSiteColumns = db.prepare("PRAGMA table_info(public_sites)").all() as Array<{ name: string }>;
+if (!publicSiteColumns.some((column) => column.name === "clones")) {
+  db.exec("ALTER TABLE public_sites ADD COLUMN clones INTEGER NOT NULL DEFAULT 0");
+}
+
 const adminHash = bcrypt.hashSync("admin", 12);
 db.prepare(
   `INSERT OR IGNORE INTO users (email, name, passwordHash, mustChangePassword, isAdmin, disabled)
@@ -247,16 +252,22 @@ export function getPublicSiteCampaign(slug: string): Campaign | null {
 }
 
 /** Every enabled public campaign, for the public discovery gallery (no auth). */
-export function listPublicSites(): { slug: string; name: string; gameType: string }[] {
+export function listPublicSites(): { slug: string; name: string; gameType: string; clones: number }[] {
   return db
     .prepare(
-      `SELECT public_sites.slug AS slug, campaigns.name AS name, campaigns.gameType AS gameType
+      `SELECT public_sites.slug AS slug, campaigns.name AS name, campaigns.gameType AS gameType,
+              public_sites.clones AS clones
        FROM public_sites
        JOIN campaigns ON campaigns.id = public_sites.campaignId
        WHERE public_sites.enabled = 1
-       ORDER BY campaigns.name COLLATE NOCASE`
+       ORDER BY public_sites.clones DESC, campaigns.name COLLATE NOCASE`
     )
-    .all() as { slug: string; name: string; gameType: string }[];
+    .all() as { slug: string; name: string; gameType: string; clones: number }[];
+}
+
+/** Bump a published world's clone counter (drives most-cloned discovery). */
+export function incrementCloneCount(campaignId: number) {
+  db.prepare("UPDATE public_sites SET clones = clones + 1 WHERE campaignId = ?").run(campaignId);
 }
 
 /** Publish (or re-enable) a campaign's public site. Mints a stable random slug on first publish. */
