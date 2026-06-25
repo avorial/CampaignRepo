@@ -7,7 +7,6 @@ const DEFAULT_SHEET: TravellerSheet = {
   system: "traveller",
   characteristics: { STR: 7, DEX: 7, END: 7, INT: 7, EDU: 7, SOC: 7 },
   skills: [],
-  species: "Imperial Human",
   status: "Unwounded",
   speciesTraits: []
 };
