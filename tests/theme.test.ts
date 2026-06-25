@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { themePresetForGame } from "@/lib/game-pack-branding";
 import { sanitizeTheme, themeToCssVars, hexToRgba, lighten, isValidHex } from "@/lib/theme";
 
 describe("theme sanitization", () => {
@@ -36,6 +37,15 @@ describe("theme to css vars", () => {
 
   it("lets preset tokens win over unchanged default custom fields", () => {
     expect(themeToCssVars({ preset: "traveller", accent: "#d4a957", accent2: "#a075ff", displayFont: "Fraunces" })).toEqual({});
+  });
+});
+
+describe("game theme presets", () => {
+  it("maps flagship and genre packs to their design-system presets", () => {
+    expect(themePresetForGame("Traveller")).toBe("traveller");
+    expect(themePresetForGame("Vampire: The Masquerade")).toBe("vampire");
+    expect(themePresetForGame("Mage: The Ascension")).toBe("mage");
+    expect(themePresetForGame("Dungeons & Dragons")).toBe("fantasy");
   });
 });
 

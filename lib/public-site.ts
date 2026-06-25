@@ -1,6 +1,7 @@
 import YAML from "yaml";
 import type { Campaign, WikiPage } from "@/lib/types";
 import { getCampaignRepositoryToken } from "@/lib/db";
+import { themePresetForGame } from "@/lib/game-pack-branding";
 import { getTextFile, GitHubError, listDirectory, putFile } from "@/lib/github";
 import { parsePage, stripGmBlocks } from "@/lib/markdown";
 import { sanitizeTheme, type CampaignTheme } from "@/lib/theme";
@@ -43,14 +44,16 @@ const campaignConfigPath = "wiki/campaign.yaml";
 
 /** Read the campaign's theme block from wiki/campaign.yaml. Returns {} on any problem. */
 export async function loadCampaignTheme(campaign: Campaign): Promise<CampaignTheme> {
+  const fallbackPreset = themePresetForGame(campaign.gameType);
   const repoToken = getCampaignRepositoryToken(campaign.id);
-  if (!repoToken) return {};
+  if (!repoToken) return { preset: fallbackPreset };
   try {
     const file = await getTextFile(repoToken, campaign, campaignConfigPath);
     const parsed = YAML.parse(file.text || "") as Record<string, unknown> | null;
-    return sanitizeTheme(parsed?.theme);
+    const theme = sanitizeTheme(parsed?.theme);
+    return theme.preset ? theme : { ...theme, preset: fallbackPreset };
   } catch {
-    return {};
+    return { preset: fallbackPreset };
   }
 }
 
