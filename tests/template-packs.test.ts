@@ -16,8 +16,11 @@ describe("template packs", () => {
     expect(template?.body).toContain("```traveller-sheet");
     expect(template?.body).toContain("species: Racial Solomani");
     expect(template?.body).toContain("STR: 12");
-    expect(template?.body).toContain("speciality: History");
-    expect(template?.body).toContain("name: Vacc Suit");
+    expect(template?.body).toContain('name: "Advocate", level: 0');
+    expect(template?.body).toContain('speciality: "History", level: 1');
+    expect(template?.body).toContain('speciality: "K\'kree Ritual"');
+    expect(template?.body).toContain('{ name: "Vacc Suit" }');
+    expect(template?.body).not.toContain('name: "Vacc Suit", level: 0');
     expect(template?.body).toContain("weapons: []");
     expect(template?.body).toContain("psionics: []");
   });

@@ -134,7 +134,7 @@ export type WikiPageFrontmatter = {
   sheet?: TravellerSheet;
 };
 
-export type TravellerSkill = { name: string; level: number; speciality?: string };
+export type TravellerSkill = { name: string; level?: number; speciality?: string };
 export type TravellerSheet = {
   system: "traveller";
   characteristics: { STR: number; DEX: number; END: number; INT: number; EDU: number; SOC: number };

@@ -89,6 +89,34 @@ Secrets, flags, hooks, and pressure points.
 `, { summary: `${systemName} character sheet template.` });
 }
 
+const travellerSkillRows = [
+  { name: "Admin", level: 1 }, { name: "Advocate", level: 0 }, { name: "Animals" }, { name: "Animals", speciality: "Handling" }, { name: "Animals", speciality: "Riding" }, { name: "Animals", speciality: "Veterinary" }, { name: "Animals", speciality: "Training" },
+  { name: "Art", level: 0 }, { name: "Art", speciality: "Performer", level: 1 }, { name: "Art", speciality: "Holography" }, { name: "Art", speciality: "Instrument" }, { name: "Art", speciality: "Visual Media" }, { name: "Art", speciality: "Write" },
+  { name: "Astrogation", level: 0 }, { name: "Athletics", level: 0 }, { name: "Athletics", speciality: "Dexterity", level: 1 }, { name: "Athletics", speciality: "Endurance" }, { name: "Athletics", speciality: "Strength" }, { name: "Broker", level: 1 }, { name: "Carouse" },
+  { name: "Deception", level: 2 }, { name: "Diplomat", level: 2 }, { name: "Drive", level: 0 }, { name: "Drive", speciality: "Hovercraft" }, { name: "Drive", speciality: "Mole" }, { name: "Drive", speciality: "Track" }, { name: "Drive", speciality: "Walker", level: 0 }, { name: "Drive", speciality: "Wheel" },
+  { name: "Electronics", level: 0 }, { name: "Electronics", speciality: "Comms", level: 0 }, { name: "Electronics", speciality: "Computers", level: 0 }, { name: "Electronics", speciality: "Remote Ops", level: 1 }, { name: "Electronics", speciality: "Sensors" },
+  { name: "Engineer" }, { name: "Engineer", speciality: "M-drive" }, { name: "Engineer", speciality: "J-drive" }, { name: "Engineer", speciality: "Life Support" }, { name: "Engineer", speciality: "Power" }, { name: "Explosives" },
+  { name: "Flyer", level: 0 }, { name: "Flyer", speciality: "Airship" }, { name: "Flyer", speciality: "Grav" }, { name: "Flyer", speciality: "Ornithopter" }, { name: "Flyer", speciality: "Rotor" }, { name: "Flyer", speciality: "Wing" },
+  { name: "Gambler" }, { name: "Gun Combat", level: 0 }, { name: "Gun Combat", speciality: "Archaic" }, { name: "Gun Combat", speciality: "Energy" }, { name: "Gun Combat", speciality: "Slug" },
+  { name: "Gunner" }, { name: "Gunner", speciality: "Turret" }, { name: "Gunner", speciality: "Ortillery" }, { name: "Gunner", speciality: "Screen" }, { name: "Gunner", speciality: "Capital" },
+  { name: "Heavy Weapons" }, { name: "Heavy Weapons", speciality: "Artillery" }, { name: "Heavy Weapons", speciality: "Man Portable" }, { name: "Heavy Weapons", speciality: "Vehicle" }, { name: "Investigate" }, { name: "Jack-of-All-Trades" },
+  { name: "Language" }, { name: "Language", speciality: "Anglic" }, { name: "Language", speciality: "Vilani" }, { name: "Language", speciality: "Zdetl" }, { name: "Language", speciality: "Oynprith" },
+  { name: "Leadership", level: 0 }, { name: "Mechanic", level: 0 }, { name: "Medic", level: 1 }, { name: "Melee", level: 0 }, { name: "Melee", speciality: "Unarmed" }, { name: "Melee", speciality: "Blade" }, { name: "Melee", speciality: "Bludgeon" }, { name: "Melee", speciality: "Natural" }, { name: "Melee", speciality: "Infighting" },
+  { name: "Navigation" }, { name: "Persuade", level: 1 }, { name: "Pilot", level: 0 }, { name: "Pilot", speciality: "Small Craft", level: 1 }, { name: "Pilot", speciality: "Spacecraft", level: 0 }, { name: "Pilot", speciality: "Capital Ships" },
+  { name: "Profession" }, { name: "Profession", speciality: "Belter" }, { name: "Profession", speciality: "Biologicals" }, { name: "Profession", speciality: "Civil Engineering" }, { name: "Profession", speciality: "Construction" }, { name: "Profession", speciality: "Hydroponics" }, { name: "Profession", speciality: "K'kree Ritual" }, { name: "Profession", speciality: "Miner" }, { name: "Profession", speciality: "Polymers" }, { name: "Profession", speciality: "Religion" },
+  { name: "Recon", level: 0 }, { name: "Science", level: 0 }, { name: "Science", speciality: "Archaeology" }, { name: "Science", speciality: "Astronomy" }, { name: "Science", speciality: "Belief" }, { name: "Science", speciality: "Biology" }, { name: "Science", speciality: "Chemistry" }, { name: "Science", speciality: "Cosmology" }, { name: "Science", speciality: "Cybernetics" }, { name: "Science", speciality: "Economics" }, { name: "Science", speciality: "Genetics" }, { name: "Science", speciality: "History", level: 1 }, { name: "Science", speciality: "Linguistics" }, { name: "Science", speciality: "Philosophy" }, { name: "Science", speciality: "Physics" }, { name: "Science", speciality: "Planetology" }, { name: "Science", speciality: "Psionicology" }, { name: "Science", speciality: "Psychology" }, { name: "Science", speciality: "Robotics", level: 1 }, { name: "Science", speciality: "Sophontology" }, { name: "Science", speciality: "Xenology" },
+  { name: "Seafarer" }, { name: "Seafarer", speciality: "Ocean Ships" }, { name: "Seafarer", speciality: "Personal" }, { name: "Seafarer", speciality: "Sail" }, { name: "Seafarer", speciality: "Submarine" }, { name: "Stealth", level: 1 }, { name: "Steward" }, { name: "Streetwise", level: 2 }, { name: "Survival" }, { name: "Tactics" }, { name: "Tactics", speciality: "Military" }, { name: "Tactics", speciality: "Naval" }, { name: "Vacc Suit" }
+];
+
+function travellerSkillYamlRows() {
+  return travellerSkillRows.map((skill) => {
+    const parts = [`name: ${JSON.stringify(skill.name)}`];
+    if (skill.speciality) parts.push(`speciality: ${JSON.stringify(skill.speciality)}`);
+    if (skill.level !== undefined) parts.push(`level: ${skill.level}`);
+    return `  - { ${parts.join(", ")} }`;
+  }).join("\n");
+}
+
 function travellerCharacterSheet() {
   return t("character-sheet", "Character Sheet", "character", ["pc", "character", "sheet", "traveller"], `
 # Character Sheet
@@ -118,72 +146,7 @@ characteristics:
   EDU: 10
   SOC: 12
 skills:
-  - { name: Admin, level: 1 }
-  - { name: Advocate, level: 0 }
-  - { name: Animals, level: 0 }
-  - { name: Animals, speciality: Handling, level: 0 }
-  - { name: Animals, speciality: Riding, level: 0 }
-  - { name: Animals, speciality: Training, level: 0 }
-  - { name: Animals, speciality: Veterinary, level: 0 }
-  - { name: Art, level: 0 }
-  - { name: Art, speciality: Performer, level: 1 }
-  - { name: Astrogation, level: 0 }
-  - { name: Athletics, level: 0 }
-  - { name: Athletics, speciality: Dexterity, level: 1 }
-  - { name: Athletics, speciality: Endurance, level: 0 }
-  - { name: Athletics, speciality: Strength, level: 0 }
-  - { name: Broker, level: 1 }
-  - { name: Carouse, level: 0 }
-  - { name: Deception, level: 2 }
-  - { name: Diplomat, level: 2 }
-  - { name: Drive, level: 0 }
-  - { name: Drive, speciality: Walker, level: 0 }
-  - { name: Electronics, level: 0 }
-  - { name: Electronics, speciality: Comms, level: 0 }
-  - { name: Electronics, speciality: Computers, level: 0 }
-  - { name: Electronics, speciality: Remote Ops, level: 1 }
-  - { name: Electronics, speciality: Sensors, level: 0 }
-  - { name: Engineer, level: 0 }
-  - { name: Engineer, speciality: J-drive, level: 0 }
-  - { name: Engineer, speciality: M-drive, level: 0 }
-  - { name: Engineer, speciality: Life Support, level: 0 }
-  - { name: Engineer, speciality: Power, level: 0 }
-  - { name: Explosives, level: 0 }
-  - { name: Flyer, level: 0 }
-  - { name: Gambler, level: 0 }
-  - { name: Gun Combat, level: 0 }
-  - { name: Gun Combat, speciality: Archaic, level: 0 }
-  - { name: Gun Combat, speciality: Energy, level: 0 }
-  - { name: Gun Combat, speciality: Slug, level: 0 }
-  - { name: Gunner, level: 0 }
-  - { name: Gunner, speciality: Turret, level: 0 }
-  - { name: Heavy Weapons, level: 0 }
-  - { name: Investigate, level: 0 }
-  - { name: Jack-of-All-Trades, level: 0 }
-  - { name: Language, level: 0 }
-  - { name: Leadership, level: 0 }
-  - { name: Mechanic, level: 0 }
-  - { name: Medic, level: 1 }
-  - { name: Melee, level: 0 }
-  - { name: Melee, speciality: Blade, level: 0 }
-  - { name: Melee, speciality: Unarmed, level: 0 }
-  - { name: Navigation, level: 0 }
-  - { name: Persuade, level: 1 }
-  - { name: Pilot, level: 0 }
-  - { name: Pilot, speciality: Small Craft, level: 1 }
-  - { name: Pilot, speciality: Spacecraft, level: 0 }
-  - { name: Profession, level: 0 }
-  - { name: Recon, level: 0 }
-  - { name: Science, level: 0 }
-  - { name: Science, speciality: History, level: 1 }
-  - { name: Science, speciality: Robotics, level: 1 }
-  - { name: Seafarer, level: 0 }
-  - { name: Stealth, level: 1 }
-  - { name: Steward, level: 0 }
-  - { name: Streetwise, level: 2 }
-  - { name: Survival, level: 0 }
-  - { name: Tactics, level: 0 }
-  - { name: Vacc Suit, level: 0 }
+${travellerSkillYamlRows()}
 weapons: []
 armour: []
 equipment: []

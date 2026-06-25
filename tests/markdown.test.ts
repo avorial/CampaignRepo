@@ -136,6 +136,9 @@ describe("renderMarkdown", () => {
     expect(html).toContain("Diplomat");
     expect(html).toContain("Vacc Suit");
     expect(html).toContain("Admin");
+    expect(html).toContain("Total levels: 17");
+    expect(html).toContain('<span>Advocate</span><span class="tsheet-skill-lvl">0</span>');
+    expect(html).toContain('<span>Vacc Suit</span><span class="tsheet-skill-lvl">−</span>');
     expect(html).not.toContain("<code");
   });
 

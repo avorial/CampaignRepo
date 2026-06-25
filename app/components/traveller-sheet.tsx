@@ -116,7 +116,7 @@ export default function TravellerSheet({ sheet, name }: { sheet: Sheet; name?: s
       </section>
 
       <section className="tsheet-panel">
-        <h4>Skills <span>Total levels: {skills.reduce((sum, skill) => sum + skill.level, 0)}</span></h4>
+        <h4>Skills <span>Total levels: {skills.reduce((sum, skill) => sum + (skill.level ?? 0), 0)}</span></h4>
         {skills.length === 0 ? (
           <p className="tsheet-empty">No skills recorded.</p>
         ) : (
@@ -126,7 +126,7 @@ export default function TravellerSheet({ sheet, name }: { sheet: Sheet; name?: s
                 {column.map((s, i) => (
                   <li key={`${s.name}-${s.speciality || ""}-${columnIndex}-${i}`}>
                     <span>{s.name}{s.speciality ? ` (${s.speciality})` : ""}</span>
-                    <span className="tsheet-skill-lvl">{s.level}</span>
+                    <span className="tsheet-skill-lvl">{s.level ?? "−"}</span>
                   </li>
                 ))}
               </ul>
