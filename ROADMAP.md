@@ -233,13 +233,20 @@ an imported page is approved, notify GMs" or "when an Event is created, add it t
 the active timeline." Extensions must preserve the Markdown/YAML source-of-truth
 model and declare every repository write they perform.
 
-### 26. Fantasy calendars & world time engine  ·  M-L
+### 26. Fantasy calendars & world time engine  ·  M-L  ·  🚧 CORE SHIPPED
 Support multiple custom calendars with configurable months, weekdays, leap rules,
 eras, seasons, moons, phases, and named holidays. Link events, sessions, births,
 deaths, and quests to in-world dates while retaining optional real-world dates.
 Provide date conversion, age calculation, recurring events, current-world-date
 tracking, and calendar/timeline cross-navigation. Store calendar definitions as
 portable YAML and avoid assuming Earth-like date arithmetic.
+
+Shipped: `/campaigns/[id]/calendar` — a custom calendar in `campaign.yaml`
+(`calendar`) with editable months (name + length), weekdays, and era. Tracks a
+current in-world date with weekday-correct formatting and no Earth assumptions
+(advance ±day / +week / +month). A player-safe "Current date" widget feeds the
+Overview dashboard. Follow-ups: multiple calendars, leap rules, moons/seasons/
+holidays, linking events/sessions/quests to in-world dates, age calc.
 
 ### 27. Infinite boards, diagrams & plot canvases  ·  L
 Add a freeform visual workspace for conspiracy boards, plot flows, magic systems,

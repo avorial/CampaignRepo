@@ -5,8 +5,9 @@ import type { Campaign } from "@/lib/types";
 
 // Client-safe widget metadata (mirrors lib/dashboard.WIDGETS without its
 // server-only imports). gmOnly widgets never render in the player view.
-type WidgetId = "counts" | "timeline" | "quicklinks" | "quests" | "review" | "health";
+type WidgetId = "calendar" | "counts" | "timeline" | "quicklinks" | "quests" | "review" | "health";
 const WIDGETS: { id: WidgetId; label: string; gmOnly: boolean }[] = [
+  { id: "calendar", label: "Current date", gmOnly: false },
   { id: "counts", label: "Page counts", gmOnly: false },
   { id: "timeline", label: "Timeline", gmOnly: false },
   { id: "quicklinks", label: "Quick links", gmOnly: false },
@@ -32,7 +33,8 @@ export default function OverviewClient({ campaign, canManage }: { campaign: Camp
 
     const reqs: Record<string, Promise<any>> = {
       pages: fetch(`${base}/pages`).then((r) => (r.ok ? r.json() : { pages: [] })),
-      graph: fetch(`${base}/graph`).then((r) => (r.ok ? r.json() : { timeline: [] }))
+      graph: fetch(`${base}/graph`).then((r) => (r.ok ? r.json() : { timeline: [] })),
+      calendar: fetch(`${base}/calendar`).then((r) => (r.ok ? r.json() : null))
     };
     if (canManage) {
       reqs.reviews = fetch(`${base}/admin/reviews`).then((r) => (r.ok ? r.json() : { reviews: [] }));
@@ -139,6 +141,7 @@ function Widget({ id, base, data, canManage }: { id: WidgetId; base: string; dat
   return (
     <div className="panel overview-widget">
       <h2>{labelOf(id)}</h2>
+      {id === "calendar" && <CalendarWidget data={data.calendar} base={base} />}
       {id === "counts" && <Counts pages={data.pages?.pages || []} />}
       {id === "timeline" && <Timeline items={data.graph?.timeline || []} base={base} />}
       {id === "quicklinks" && <QuickLinks base={base} canManage={canManage} />}
@@ -147,6 +150,11 @@ function Widget({ id, base, data, canManage }: { id: WidgetId; base: string; dat
       {id === "health" && <HealthSummary health={data.health} base={base} />}
     </div>
   );
+}
+
+function CalendarWidget({ data, base }: { data: any; base: string }) {
+  if (!data?.formatted) return <p className="muted">No calendar set. <a href={`${base}/calendar`}>Set it up</a></p>;
+  return <p className="tsheet-credits" style={{ margin: 0, fontSize: "var(--text-lg)" }}>{data.formatted}</p>;
 }
 
 function Counts({ pages }: { pages: any[] }) {
