@@ -186,7 +186,23 @@ Player safety is based on page metadata and GM-only blocks:
 
 ## Docker
 
-Run with Docker Compose:
+Run the prebuilt image from GitHub Container Registry:
+
+```bash
+docker compose -f docker-compose.image.yml up -d
+```
+
+The published image is:
+
+```text
+ghcr.io/avorial/campaignrepo:latest
+```
+
+For Portainer, create a stack from `docker-compose.image.yml` or use this image in your own compose file. The SQLite database is stored in the `campaignrepo-data` volume at `/app/data`.
+
+After the first publish, make the GHCR package public in GitHub Packages if you want unauthenticated pulls.
+
+To build locally instead:
 
 ```bash
 docker compose up -d --build
@@ -197,8 +213,6 @@ Open:
 ```text
 http://127.0.0.1:3000
 ```
-
-The SQLite database is stored in the `campaignrepo-data` volume at `/app/data`.
 
 Useful environment variables:
 
