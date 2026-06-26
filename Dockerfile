@@ -13,6 +13,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
+RUN node_modules/.bin/tsc --noEmit 2>&1 || true
 RUN npm run build
 
 # --- Runner: minimal image running the Next standalone server ---
