@@ -20,6 +20,7 @@ const STATUSES: Frontmatter["status"][] = ["hook", "active", "completed", "faile
 
 export default function QuestEditor({ campaign, slug }: { campaign: Campaign; slug: string }) {
   const base = `/campaigns/${campaign.id}`;
+  const api = `/api${base}`;
   const [fm, setFm] = useState<Frontmatter | null>(null);
   const [description, setDescription] = useState("");
   const [pages, setPages] = useState<PageRef[]>([]);
@@ -31,7 +32,7 @@ export default function QuestEditor({ campaign, slug }: { campaign: Campaign; sl
 
   useEffect(() => {
     (async () => {
-      const [qRes, pRes] = await Promise.all([fetch(`${base}/quests/${slug}`), fetch(`${base}/pages`)]);
+      const [qRes, pRes] = await Promise.all([fetch(`${api}/quests/${slug}`), fetch(`${api}/pages`)]);
       if (qRes.ok) {
         const data = await qRes.json();
         setFm(data.quest.frontmatter);
@@ -51,13 +52,13 @@ export default function QuestEditor({ campaign, slug }: { campaign: Campaign; sl
     if (!fm) return;
     setBusy(true);
     setMessage("Saving…");
-    const res = await fetch(`${base}/quests/${slug}`, { method: "PUT", body: JSON.stringify({ frontmatter: fm, description }) });
+    const res = await fetch(`${api}/quests/${slug}`, { method: "PUT", body: JSON.stringify({ frontmatter: fm, description }) });
     setBusy(false);
     setMessage(res.ok ? "Quest saved." : (await res.json().catch(() => ({})))?.error || "Save failed.");
   }
   async function remove() {
     if (!window.confirm("Delete this quest?")) return;
-    const res = await fetch(`${base}/quests/${slug}`, { method: "DELETE" });
+    const res = await fetch(`${api}/quests/${slug}`, { method: "DELETE" });
     if (res.ok) window.location.href = `${base}/quests`;
     else setMessage("Could not delete quest.");
   }

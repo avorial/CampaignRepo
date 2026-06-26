@@ -33,12 +33,13 @@ function format(c: Calendar, d: WorldDate) {
 
 export default function CalendarClient({ campaign }: { campaign: Campaign }) {
   const base = `/campaigns/${campaign.id}`;
+  const api = `/api${base}`;
   const [cal, setCal] = useState<Calendar | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    fetch(`${base}/calendar`).then((r) => (r.ok ? r.json() : null)).then((d) => d && setCal(d.calendar)).catch(() => setMessage("Could not load calendar."));
+    fetch(`${api}/calendar`).then((r) => (r.ok ? r.json() : null)).then((d) => d && setCal(d.calendar)).catch(() => setMessage("Could not load calendar."));
   }, []);
 
   if (!cal) return <p className="muted">{message || "Loading calendar…"}</p>;
@@ -53,7 +54,7 @@ export default function CalendarClient({ campaign }: { campaign: Campaign }) {
   async function save() {
     setBusy(true);
     setMessage("Saving…");
-    const res = await fetch(`${base}/calendar`, { method: "PUT", body: JSON.stringify({ calendar: cal }) });
+    const res = await fetch(`${api}/calendar`, { method: "PUT", body: JSON.stringify({ calendar: cal }) });
     const data = await res.json();
     setBusy(false);
     if (res.ok) { setCal(data.calendar); setMessage("Calendar saved to campaign.yaml."); }

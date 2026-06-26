@@ -21,6 +21,7 @@ const gmOnly = (id: WidgetId) => WIDGETS.find((w) => w.id === id)?.gmOnly ?? fal
 
 export default function OverviewClient({ campaign, canManage }: { campaign: Campaign; canManage: boolean }) {
   const base = `/campaigns/${campaign.id}`;
+  const api = `/api${base}`;
   const [widgets, setWidgets] = useState<WidgetId[]>([]);
   const [draft, setDraft] = useState<WidgetId[] | null>(null);
   const [data, setData] = useState<Record<string, any>>({});
@@ -29,19 +30,19 @@ export default function OverviewClient({ campaign, canManage }: { campaign: Camp
 
   async function load() {
     setLoading(true);
-    const cfg = await fetch(`${base}/dashboard`).then((r) => (r.ok ? r.json() : { dashboard: { widgets: [] } }));
+    const cfg = await fetch(`${api}/dashboard`).then((r) => (r.ok ? r.json() : { dashboard: { widgets: [] } }));
     setWidgets(cfg.dashboard?.widgets || []);
 
     const reqs: Record<string, Promise<any>> = {
-      pages: fetch(`${base}/pages`).then((r) => (r.ok ? r.json() : { pages: [] })),
-      graph: fetch(`${base}/graph`).then((r) => (r.ok ? r.json() : { timeline: [] })),
-      calendar: fetch(`${base}/calendar`).then((r) => (r.ok ? r.json() : null))
+      pages: fetch(`${api}/pages`).then((r) => (r.ok ? r.json() : { pages: [] })),
+      graph: fetch(`${api}/graph`).then((r) => (r.ok ? r.json() : { timeline: [] })),
+      calendar: fetch(`${api}/calendar`).then((r) => (r.ok ? r.json() : null))
     };
     if (canManage) {
-      reqs.reviews = fetch(`${base}/admin/reviews`).then((r) => (r.ok ? r.json() : { reviews: [] }));
-      reqs.health = fetch(`${base}/health`).then((r) => (r.ok ? r.json() : { findings: [], counts: {} }));
-      reqs.quests = fetch(`${base}/quests`).then((r) => (r.ok ? r.json() : { quests: [] }));
-      reqs.activity = fetch(`${base}/activity`).then((r) => (r.ok ? r.json() : []));
+      reqs.reviews = fetch(`${api}/admin/reviews`).then((r) => (r.ok ? r.json() : { reviews: [] }));
+      reqs.health = fetch(`${api}/health`).then((r) => (r.ok ? r.json() : { findings: [], counts: {} }));
+      reqs.quests = fetch(`${api}/quests`).then((r) => (r.ok ? r.json() : { quests: [] }));
+      reqs.activity = fetch(`${api}/activity`).then((r) => (r.ok ? r.json() : []));
     }
     const entries = await Promise.all(Object.entries(reqs).map(async ([k, p]) => [k, await p.catch(() => null)] as const));
     setData(Object.fromEntries(entries));
@@ -56,7 +57,7 @@ export default function OverviewClient({ campaign, canManage }: { campaign: Camp
   async function saveLayout() {
     if (!draft) return;
     setMessage("Saving layout…");
-    const res = await fetch(`${base}/dashboard`, { method: "PUT", body: JSON.stringify({ dashboard: { widgets: draft } }) });
+    const res = await fetch(`${api}/dashboard`, { method: "PUT", body: JSON.stringify({ dashboard: { widgets: draft } }) });
     const out = await res.json();
     if (res.ok) {
       setWidgets(out.dashboard.widgets);

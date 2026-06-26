@@ -14,13 +14,14 @@ const STATUS_LABEL: Record<string, string> = { active: "Active", hook: "Hooks", 
 
 export default function QuestsClient({ campaign }: { campaign: Campaign }) {
   const base = `/campaigns/${campaign.id}`;
+  const api = `/api${base}`;
   const [quests, setQuests] = useState<Quest[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
   async function load() {
     setLoading(true);
-    const res = await fetch(`${base}/quests`);
+    const res = await fetch(`${api}/quests`);
     const data = res.ok ? await res.json() : { quests: [] };
     setQuests(data.quests || []);
     setLoading(false);
@@ -33,7 +34,7 @@ export default function QuestsClient({ campaign }: { campaign: Campaign }) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     setMessage("Creating quest…");
-    const res = await fetch(`${base}/quests`, { method: "POST", body: JSON.stringify({ title: form.get("title") }) });
+    const res = await fetch(`${api}/quests`, { method: "POST", body: JSON.stringify({ title: form.get("title") }) });
     const data = await res.json();
     if (res.ok) window.location.href = `${base}/quests/${data.quest.slug}`;
     else setMessage(data.error || "Could not create quest.");

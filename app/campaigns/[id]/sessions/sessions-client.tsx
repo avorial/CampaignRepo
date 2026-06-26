@@ -133,6 +133,7 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
 
 export default function SessionsClient({ campaign }: { campaign: Campaign }) {
   const base = `/campaigns/${campaign.id}`;
+  const api = `/api${base}`;
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -140,7 +141,7 @@ export default function SessionsClient({ campaign }: { campaign: Campaign }) {
 
   async function load() {
     setLoading(true);
-    const res = await fetch(`${base}/sessions`);
+    const res = await fetch(`${api}/sessions`);
     const data = res.ok ? await res.json() : { sessions: [] };
     setSessions(data.sessions || []);
     setLoading(false);
@@ -153,7 +154,7 @@ export default function SessionsClient({ campaign }: { campaign: Campaign }) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     setMessage("Creating session…");
-    const res = await fetch(`${base}/sessions`, {
+    const res = await fetch(`${api}/sessions`, {
       method: "POST",
       body: JSON.stringify({ title: form.get("title"), date: sessionDate || undefined })
     });

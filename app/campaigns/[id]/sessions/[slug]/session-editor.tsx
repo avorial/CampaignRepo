@@ -9,6 +9,7 @@ type PageRef = { slug: string; name: string };
 
 export default function SessionEditor({ campaign, slug }: { campaign: Campaign; slug: string }) {
   const base = `/campaigns/${campaign.id}`;
+  const api = `/api${base}`;
   const [fm, setFm] = useState<Frontmatter | null>(null);
   const [notes, setNotes] = useState("");
   const [pages, setPages] = useState<PageRef[]>([]);
@@ -19,7 +20,7 @@ export default function SessionEditor({ campaign, slug }: { campaign: Campaign; 
 
   useEffect(() => {
     (async () => {
-      const [sRes, pRes] = await Promise.all([fetch(`${base}/sessions/${slug}`), fetch(`${base}/pages`)]);
+      const [sRes, pRes] = await Promise.all([fetch(`${api}/sessions/${slug}`), fetch(`${api}/pages`)]);
       if (sRes.ok) {
         const data = await sRes.json();
         setFm(data.session.frontmatter);
@@ -44,14 +45,14 @@ export default function SessionEditor({ campaign, slug }: { campaign: Campaign; 
     if (!fm) return;
     setBusy(true);
     setMessage("Saving…");
-    const res = await fetch(`${base}/sessions/${slug}`, { method: "PUT", body: JSON.stringify({ frontmatter: fm, notes }) });
+    const res = await fetch(`${api}/sessions/${slug}`, { method: "PUT", body: JSON.stringify({ frontmatter: fm, notes }) });
     setBusy(false);
     setMessage(res.ok ? "Session saved." : (await res.json().catch(() => ({})))?.error || "Save failed.");
   }
 
   async function remove() {
     if (!window.confirm("Delete this session? This cannot be undone.")) return;
-    const res = await fetch(`${base}/sessions/${slug}`, { method: "DELETE" });
+    const res = await fetch(`${api}/sessions/${slug}`, { method: "DELETE" });
     if (res.ok) window.location.href = `${base}/sessions`;
     else setMessage("Could not delete session.");
   }
@@ -62,7 +63,7 @@ export default function SessionEditor({ campaign, slug }: { campaign: Campaign; 
     const body = `${notes}${agendaMd}\n`;
     setBusy(true);
     setMessage("Creating report page…");
-    const res = await fetch(`${base}/pages`, {
+    const res = await fetch(`${api}/pages`, {
       method: "POST",
       body: JSON.stringify({ name: `${fm.title} (report)`, category: "event", visibility: "gm" })
     });
@@ -73,10 +74,10 @@ export default function SessionEditor({ campaign, slug }: { campaign: Campaign; 
       return;
     }
     // Round-trip: read the created page's frontmatter, then write the notes body.
-    const pageRes = await fetch(`${base}/pages/${data.slug}`);
+    const pageRes = await fetch(`${api}/pages/${data.slug}`);
     if (pageRes.ok) {
       const { page } = await pageRes.json();
-      await fetch(`${base}/pages/${data.slug}`, {
+      await fetch(`${api}/pages/${data.slug}`, {
         method: "PUT",
         body: JSON.stringify({ frontmatter: page.frontmatter, content: body })
       }).catch(() => undefined);
