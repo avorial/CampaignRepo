@@ -5,9 +5,9 @@ import { parsePage, stripGmBlocks } from "@/lib/markdown";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import { readPageCache, refreshPageCache, refreshPageCacheInBackground } from "@/lib/page-cache";
 import { getStorageAdapter } from "@/lib/storage";
+import type { CampaignGraphEdge, CampaignGraphNode, CampaignTimelineItem, WikiPage } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-import type { CampaignGraphEdge, CampaignGraphNode, CampaignTimelineItem, WikiPage } from "@/lib/types";
 
 function visibleForRole(page: WikiPage, role?: string) {
   if (role !== "player") return true;
