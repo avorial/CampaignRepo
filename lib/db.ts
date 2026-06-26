@@ -14,6 +14,7 @@ if (dbPath !== ":memory:" && !fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { re
 
 const db = new Database(dbPath);
 db.pragma("journal_mode = WAL");
+db.pragma("busy_timeout = 5000");
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS users (
