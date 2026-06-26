@@ -681,6 +681,7 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
   }
 
   return (
+    <>
     <form onSubmit={save} className="page-grid">
       <aside className="page-sidebar">
         {breadcrumbsEl}
@@ -923,5 +924,6 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
         <img className="lightbox-img" src={lightboxSrc} alt="" onClick={(e) => e.stopPropagation()} />
       </div>
     )}
+    </>
   );
 }
