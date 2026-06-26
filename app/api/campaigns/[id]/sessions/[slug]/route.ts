@@ -5,12 +5,31 @@ import { canManageCampaign, getCampaign } from "@/lib/db";
 import { deleteSession, getSession, saveSession } from "@/lib/sessions";
 import { isNotFoundError } from "@/lib/storage";
 
+const attendeeSchema = z.object({
+  name: z.string(),
+  status: z.enum(["present", "late", "left-early", "absent"])
+});
+
+const assetSchema = z.object({
+  label: z.string(),
+  url: z.string()
+});
+
 const saveSchema = z.object({
   frontmatter: z.object({
     title: z.string().trim().min(1),
+    number: z.number().int().positive().optional(),
     date: z.string().trim().optional(),
-    status: z.string().trim().optional(),
+    status: z.enum(["planned", "played", "cancelled"]).optional(),
+    mood: z.string().trim().optional(),
+    arc: z.string().trim().optional(),
+    attendees: z.array(attendeeSchema).default([]),
+    assets: z.array(assetSchema).default([]),
     agenda: z.array(z.object({ text: z.string(), done: z.boolean() })).default([]),
+    summary: z.string().optional(),
+    npcs: z.array(z.string()).default([]),
+    locations: z.array(z.string()).default([]),
+    threads: z.array(z.object({ text: z.string(), done: z.boolean() })).default([]),
     pinned: z.array(z.string()).default([])
   }),
   notes: z.string().default("")
@@ -43,7 +62,22 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if ("error" in guarded) return guarded.error;
   const { user, campaign } = guarded;
   const input = saveSchema.parse(await req.json());
-  const session = await saveSession(campaign, slug, { ...input.frontmatter, date: input.frontmatter.date || undefined }, input.notes, user.githubToken);
+  const fm = input.frontmatter;
+  const session = await saveSession(
+    campaign,
+    slug,
+    {
+      ...fm,
+      date: fm.date || undefined,
+      status: fm.status || undefined,
+      mood: fm.mood || undefined,
+      arc: fm.arc || undefined,
+      number: fm.number || undefined,
+      summary: fm.summary || undefined
+    },
+    input.notes,
+    user.githubToken
+  );
   return NextResponse.json({ session });
 }
 

@@ -4,13 +4,27 @@ import { slugify } from "@/lib/slug";
 import type { Campaign } from "@/lib/types";
 
 export type AgendaItem = { text: string; done: boolean };
+export type AssetLink = { label: string; url: string };
+export type Attendee = { name: string; status: "present" | "late" | "left-early" | "absent" };
+export type Thread = { text: string; done: boolean };
+
 export type SessionFrontmatter = {
   title: string;
+  number?: number;
   date?: string;
-  status?: string;
+  status?: "planned" | "played" | "cancelled";
+  mood?: string;
+  arc?: string;
+  attendees: Attendee[];
+  assets: AssetLink[];
   agenda: AgendaItem[];
+  summary?: string;
+  npcs: string[];
+  locations: string[];
+  threads: Thread[];
   pinned: string[];
 };
+
 export type Session = { slug: string; sha?: string; frontmatter: SessionFrontmatter; notes: string };
 
 const sessionsDir = "wiki/sessions";
@@ -29,17 +43,50 @@ export function parseSession(slug: string, text: string, sha?: string): Session 
     fm = (YAML.parse(match[1]) as Record<string, unknown>) || {};
     notes = match[2].replace(/^\n+/, "");
   }
+
   const agenda = Array.isArray(fm.agenda)
     ? (fm.agenda as unknown[]).map((a) => ({ text: String((a as AgendaItem)?.text ?? ""), done: Boolean((a as AgendaItem)?.done) }))
     : [];
+
+  const attendees = Array.isArray(fm.attendees)
+    ? (fm.attendees as unknown[]).map((a) => ({
+        name: String((a as Attendee)?.name ?? ""),
+        status: (["present", "late", "left-early", "absent"].includes(String((a as Attendee)?.status))
+          ? (a as Attendee).status
+          : "present") as Attendee["status"]
+      })).filter((a) => a.name)
+    : [];
+
+  const assets = Array.isArray(fm.assets)
+    ? (fm.assets as unknown[]).map((a) => ({
+        label: String((a as AssetLink)?.label ?? ""),
+        url: String((a as AssetLink)?.url ?? "")
+      })).filter((a) => a.url)
+    : [];
+
+  const threads = Array.isArray(fm.threads)
+    ? (fm.threads as unknown[]).map((t) => ({ text: String((t as Thread)?.text ?? ""), done: Boolean((t as Thread)?.done) }))
+    : [];
+
+  const validStatus = ["planned", "played", "cancelled"];
+
   return {
     slug,
     sha,
     frontmatter: {
       title: String(fm.title || slug),
+      number: fm.number ? Number(fm.number) : undefined,
       date: fm.date ? String(fm.date) : undefined,
-      status: fm.status ? String(fm.status) : undefined,
+      status: validStatus.includes(String(fm.status)) ? fm.status as SessionFrontmatter["status"] : undefined,
+      mood: fm.mood ? String(fm.mood) : undefined,
+      arc: fm.arc ? String(fm.arc) : undefined,
+      attendees,
+      assets,
       agenda,
+      summary: fm.summary ? String(fm.summary) : undefined,
+      npcs: Array.isArray(fm.npcs) ? (fm.npcs as unknown[]).map(String) : [],
+      locations: Array.isArray(fm.locations) ? (fm.locations as unknown[]).map(String) : [],
+      threads,
       pinned: Array.isArray(fm.pinned) ? (fm.pinned as unknown[]).map(String) : []
     },
     notes
@@ -47,7 +94,21 @@ export function parseSession(slug: string, text: string, sha?: string): Session 
 }
 
 export function serializeSession(frontmatter: SessionFrontmatter, notes: string): string {
-  return `---\n${YAML.stringify(frontmatter)}---\n\n${notes.trim()}\n`;
+  const fm: Record<string, unknown> = { title: frontmatter.title };
+  if (frontmatter.number != null) fm.number = frontmatter.number;
+  if (frontmatter.date) fm.date = frontmatter.date;
+  if (frontmatter.status) fm.status = frontmatter.status;
+  if (frontmatter.mood) fm.mood = frontmatter.mood;
+  if (frontmatter.arc) fm.arc = frontmatter.arc;
+  if (frontmatter.attendees.length) fm.attendees = frontmatter.attendees;
+  if (frontmatter.assets.length) fm.assets = frontmatter.assets;
+  fm.agenda = frontmatter.agenda;
+  if (frontmatter.summary) fm.summary = frontmatter.summary;
+  if (frontmatter.npcs.length) fm.npcs = frontmatter.npcs;
+  if (frontmatter.locations.length) fm.locations = frontmatter.locations;
+  if (frontmatter.threads.length) fm.threads = frontmatter.threads;
+  if (frontmatter.pinned.length) fm.pinned = frontmatter.pinned;
+  return `---\n${YAML.stringify(fm)}---\n\n${notes.trim()}\n`;
 }
 
 export async function listSessions(campaign: Campaign, userToken?: string | null): Promise<Session[]> {
@@ -67,7 +128,7 @@ export async function getSession(campaign: Campaign, slug: string, userToken?: s
 export async function createSession(campaign: Campaign, title: string, date?: string, userToken?: string | null): Promise<Session> {
   const storage = adapterFor(campaign, userToken);
   const slug = slugify(title) || `session-${Date.now()}`;
-  const frontmatter: SessionFrontmatter = { title, date, agenda: [], pinned: [] };
+  const frontmatter: SessionFrontmatter = { title, date, attendees: [], assets: [], agenda: [], npcs: [], locations: [], threads: [], pinned: [] };
   await storage.putFile(`${sessionsDir}/${slug}.md`, serializeSession(frontmatter, ""), `CampaignRepo: create session ${title}`);
   return { slug, frontmatter, notes: "" };
 }
