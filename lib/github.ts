@@ -356,6 +356,52 @@ export async function ensureFile(token: string, campaign: Campaign, filePath: st
   }
 }
 
+export type GitHubCommit = {
+  sha: string;
+  html_url: string;
+  commit: { message: string; author: { name: string; date: string } };
+};
+
+export async function listFileCommits(
+  token: string,
+  campaign: Pick<Campaign, "owner" | "repo" | "branch">,
+  filePath: string,
+  perPage = 20
+): Promise<GitHubCommit[]> {
+  const path = `/repos/${campaign.owner}/${campaign.repo}/commits?path=${encodeURIComponent(filePath)}&sha=${encodeURIComponent(campaign.branch)}&per_page=${perPage}`;
+  return gh<GitHubCommit[]>(token, path);
+}
+
+export async function listRecentCommits(
+  token: string,
+  campaign: Pick<Campaign, "owner" | "repo" | "branch">,
+  perPage = 30
+): Promise<GitHubCommit[]> {
+  const path = `/repos/${campaign.owner}/${campaign.repo}/commits?sha=${encodeURIComponent(campaign.branch)}&per_page=${perPage}`;
+  return gh<GitHubCommit[]>(token, path);
+}
+
+export async function getFileAtCommit(
+  token: string,
+  campaign: Pick<Campaign, "owner" | "repo">,
+  filePath: string,
+  sha: string
+): Promise<string> {
+  const encoded = filePath.split("/").map(encodeURIComponent).join("/");
+  const authToken = await appInstallationAccessToken(token);
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github.raw",
+    "X-GitHub-Api-Version": "2022-11-28"
+  };
+  if (authToken) headers.Authorization = `Bearer ${authToken}`;
+  const res = await fetch(`${apiBase}/repos/${campaign.owner}/${campaign.repo}/contents/${encoded}?ref=${encodeURIComponent(sha)}`, {
+    headers,
+    cache: "no-store"
+  });
+  if (!res.ok) throw new GitHubError(await res.text(), res.status);
+  return res.text();
+}
+
 export async function initializeRepo(token: string, campaign: Campaign) {
   await ensureFile(token, campaign, "README.md", repoReadme(campaign.name), "CampaignRepo: add README");
   await ensureFile(token, campaign, "wiki/campaign.yaml", campaignYaml(campaign.name, campaign.gameType as GameType), "CampaignRepo: add campaign config");

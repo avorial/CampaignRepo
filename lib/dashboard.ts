@@ -1,6 +1,5 @@
 import YAML from "yaml";
-import { getCampaignRepositoryToken } from "@/lib/db";
-import { getTextFile, GitHubError, putFile } from "@/lib/github";
+import { getStorageAdapter } from "@/lib/storage";
 import type { Campaign } from "@/lib/types";
 
 export type WidgetId = "calendar" | "counts" | "timeline" | "quicklinks" | "quests" | "review" | "health";
@@ -35,10 +34,10 @@ export function sanitizeDashboard(raw: unknown): DashboardConfig {
 
 /** Read the campaign's dashboard layout from wiki/campaign.yaml. Falls back to the default. */
 export async function loadCampaignDashboard(campaign: Campaign): Promise<DashboardConfig> {
-  const repoToken = getCampaignRepositoryToken(campaign.id);
-  if (!repoToken) return defaultDashboard();
+  const storage = getStorageAdapter(campaign);
+  if (!storage) return defaultDashboard();
   try {
-    const file = await getTextFile(repoToken, campaign, campaignConfigPath);
+    const file = await storage.getTextFile(campaignConfigPath);
     const parsed = YAML.parse(file.text || "") as Record<string, unknown> | null;
     return sanitizeDashboard(parsed?.dashboard);
   } catch {
@@ -48,20 +47,18 @@ export async function loadCampaignDashboard(campaign: Campaign): Promise<Dashboa
 
 /** Merge the dashboard layout into wiki/campaign.yaml, preserving other keys (e.g. theme). */
 export async function saveCampaignDashboard(campaign: Campaign, config: DashboardConfig): Promise<DashboardConfig> {
-  const repoToken = getCampaignRepositoryToken(campaign.id);
-  if (!repoToken) throw new Error("This campaign has no GitHub access configured.");
+  const storage = getStorageAdapter(campaign);
+  if (!storage) throw new Error("No storage configured for this campaign.");
   let yaml: Record<string, unknown> = {};
   let sha: string | undefined;
   try {
-    const file = await getTextFile(repoToken, campaign, campaignConfigPath);
+    const file = await storage.getTextFile(campaignConfigPath);
     sha = file.sha;
     const parsed = YAML.parse(file.text || "") as Record<string, unknown> | null;
     if (parsed && typeof parsed === "object") yaml = parsed;
-  } catch (error) {
-    if (!(error instanceof GitHubError && error.status === 404)) throw error;
-  }
+  } catch { /* file doesn't exist yet */ }
   const clean = sanitizeDashboard(config);
   yaml.dashboard = clean;
-  await putFile(repoToken, campaign, campaignConfigPath, YAML.stringify(yaml), "CampaignRepo: update dashboard layout", sha);
+  await storage.putFile(campaignConfigPath, YAML.stringify(yaml), "CampaignRepo: update dashboard layout", sha);
   return clean;
 }

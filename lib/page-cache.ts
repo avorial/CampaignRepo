@@ -1,6 +1,6 @@
 import type { Campaign, WikiPage } from "@/lib/types";
 import { getDb } from "@/lib/db";
-import { getTextFile, listDirectoryTextFiles } from "@/lib/github";
+import type { StorageAdapter } from "@/lib/storage";
 import { parsePage } from "@/lib/markdown";
 
 type CacheRow = {
@@ -39,10 +39,10 @@ export function readPageCache(campaignId: number): PageCacheSnapshot {
   };
 }
 
-async function refresh(token: string, campaign: Campaign): Promise<PageCacheSnapshot> {
+async function refresh(storage: StorageAdapter, campaign: Campaign): Promise<PageCacheSnapshot> {
   const db = getDb();
   try {
-    const entries = await listDirectoryTextFiles(token, campaign, "wiki/pages");
+    const entries = await storage.listDirectoryTextFiles("wiki/pages");
     const cached = new Map(
       (db.prepare("SELECT slug, sha, pageJson FROM campaign_page_cache WHERE campaignId = ?").all(campaign.id) as CacheRow[]).map(
         (row) => [row.slug, row]
@@ -56,13 +56,11 @@ async function refresh(token: string, campaign: Campaign): Promise<PageCacheSnap
           try {
             return { ...(JSON.parse(existing.pageJson) as WikiPage), sha: existing.sha };
           } catch {
-            // A corrupt local row is repaired by fetching the source file below.
+            // Corrupt row — re-parse below.
           }
         }
         if (entry.text !== null) return parsePage(slug, entry.text, entry.sha);
-        // GraphQL omits blob text above its text-size limit. Fall back only
-        // for that exceptional file instead of issuing a request per page.
-        const file = await getTextFile(token, campaign, entry.path);
+        const file = await storage.getTextFile(entry.path);
         return parsePage(slug, file.text, file.sha);
       })
     );
@@ -98,16 +96,16 @@ async function refresh(token: string, campaign: Campaign): Promise<PageCacheSnap
   }
 }
 
-export function refreshPageCache(token: string, campaign: Campaign) {
+export function refreshPageCache(storage: StorageAdapter, campaign: Campaign) {
   const active = refreshes.get(campaign.id);
   if (active) return active;
-  const task = refresh(token, campaign).finally(() => refreshes.delete(campaign.id));
+  const task = refresh(storage, campaign).finally(() => refreshes.delete(campaign.id));
   refreshes.set(campaign.id, task);
   return task;
 }
 
-export function refreshPageCacheInBackground(token: string, campaign: Campaign) {
-  void refreshPageCache(token, campaign).catch((error) => {
+export function refreshPageCacheInBackground(storage: StorageAdapter, campaign: Campaign) {
+  void refreshPageCache(storage, campaign).catch((error) => {
     console.error(`Could not refresh page cache for campaign ${campaign.id}.`, error);
   });
 }

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign, getDb } from "@/lib/db";
-import { putFile } from "@/lib/github";
+import { getStorageAdapter } from "@/lib/storage";
 import { defaultFrontmatter } from "@/lib/templates";
 import { serializePage } from "@/lib/markdown";
 import { slugify } from "@/lib/slug";
@@ -81,8 +81,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const user = await requireUser();
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
-  if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const storage = getStorageAdapter(campaign, user.githubToken);
+  if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const input = schema.parse(await req.json());
   const name = importName(input.sourceJson, input.mapping);
   const slug = slugify(name);
@@ -96,9 +98,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     sourceImport: sourcePath,
     foundryLink: input.source === "foundry" ? input.sourceJson.uuid || input.sourceJson._id : undefined
   };
-  await putFile(user.githubToken, campaign, sourcePath, JSON.stringify(input.sourceJson, null, 2) + "\n", `CampaignRepo: import source JSON for ${name}`);
-  await putFile(user.githubToken, campaign, `wiki/pages/${slug}.md`, serializePage(frontmatter, importBody(input.sourceJson, name, input.mapping)), `CampaignRepo: import character ${name}`);
+  await storage.putFile(sourcePath, JSON.stringify(input.sourceJson, null, 2) + "\n", `CampaignRepo: import source JSON for ${name}`);
+  await storage.putFile(`wiki/pages/${slug}.md`, serializePage(frontmatter, importBody(input.sourceJson, name, input.mapping)), `CampaignRepo: import character ${name}`);
   getDb().prepare("INSERT INTO imports (campaignId, source, sourceId, pageSlug) VALUES (?, ?, ?, ?)").run(campaign.id, input.source, sourceId, slug);
-  scheduleSearchIndexRebuild(user.githubToken, campaign);
+  scheduleSearchIndexRebuild(campaign);
   return NextResponse.json({ slug });
 }

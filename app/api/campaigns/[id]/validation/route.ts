@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
-import { getContent, GitHubError, initializeRepo } from "@/lib/github";
-import { githubContentType } from "@/lib/validation";
+import { getStorageAdapter, isNotFoundError } from "@/lib/storage";
 
 const expectedPaths = [
   { path: "README.md", type: "file", label: "Campaign README" },
@@ -16,50 +15,42 @@ const expectedPaths = [
   { path: "wiki/search/index.json", type: "file", label: "Portable search snapshot" }
 ];
 
-async function validate(token: string, campaign: NonNullable<ReturnType<typeof getCampaign>>) {
+async function validate(storage: NonNullable<ReturnType<typeof getStorageAdapter>>, campaign: NonNullable<ReturnType<typeof getCampaign>>) {
   const checks = await Promise.all(
     expectedPaths.map(async (item) => {
       const path = item.path.replace("{gameType}", campaign.gameType);
       try {
-        const content = await getContent(token, campaign, path);
-        const actualType = githubContentType(content);
-        const ok = actualType === item.type;
-        return {
-          ...item,
-          path,
-          ok,
-          actualType,
-          status: ok ? "ok" : "wrong-type"
-        };
+        const content = await storage.getContent(path);
+        const ok = content.type === item.type;
+        return { ...item, path, ok, actualType: content.type, status: ok ? "ok" : "wrong-type" };
       } catch (error) {
-        if (error instanceof GitHubError && error.status === 404) {
-          return { ...item, path, ok: false, status: "missing" };
-        }
+        if (isNotFoundError(error)) return { ...item, path, ok: false, status: "missing" };
         return { ...item, path, ok: false, status: "error", error: error instanceof Error ? error.message : "Unknown error" };
       }
     })
   );
-  return {
-    ok: checks.every((check) => check.ok),
-    checks
-  };
+  return { ok: checks.every((check) => check.ok), checks };
 }
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
-  if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  return NextResponse.json(await validate(user.githubToken, campaign));
+  const storage = getStorageAdapter(campaign);
+  if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json(await validate(storage, campaign));
 }
 
 export async function POST(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
-  if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  await initializeRepo(user.githubToken, campaign);
-  return NextResponse.json(await validate(user.githubToken, campaign));
+  const storage = getStorageAdapter(campaign, user.githubToken);
+  if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  await storage.initializeRepo(campaign);
+  return NextResponse.json(await validate(storage, campaign));
 }

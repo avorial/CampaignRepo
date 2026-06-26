@@ -5,7 +5,7 @@ import type { Campaign } from "@/lib/types";
 
 // Client-safe widget metadata (mirrors lib/dashboard.WIDGETS without its
 // server-only imports). gmOnly widgets never render in the player view.
-type WidgetId = "calendar" | "counts" | "timeline" | "quicklinks" | "quests" | "review" | "health";
+type WidgetId = "calendar" | "counts" | "timeline" | "quicklinks" | "quests" | "review" | "health" | "activity";
 const WIDGETS: { id: WidgetId; label: string; gmOnly: boolean }[] = [
   { id: "calendar", label: "Current date", gmOnly: false },
   { id: "counts", label: "Page counts", gmOnly: false },
@@ -13,7 +13,8 @@ const WIDGETS: { id: WidgetId; label: string; gmOnly: boolean }[] = [
   { id: "quicklinks", label: "Quick links", gmOnly: false },
   { id: "quests", label: "Active quests", gmOnly: true },
   { id: "review", label: "Review queue", gmOnly: true },
-  { id: "health", label: "Campaign health", gmOnly: true }
+  { id: "health", label: "Campaign health", gmOnly: true },
+  { id: "activity", label: "Recent activity", gmOnly: true }
 ];
 const labelOf = (id: WidgetId) => WIDGETS.find((w) => w.id === id)?.label || id;
 const gmOnly = (id: WidgetId) => WIDGETS.find((w) => w.id === id)?.gmOnly ?? false;
@@ -40,6 +41,7 @@ export default function OverviewClient({ campaign, canManage }: { campaign: Camp
       reqs.reviews = fetch(`${base}/admin/reviews`).then((r) => (r.ok ? r.json() : { reviews: [] }));
       reqs.health = fetch(`${base}/health`).then((r) => (r.ok ? r.json() : { findings: [], counts: {} }));
       reqs.quests = fetch(`${base}/quests`).then((r) => (r.ok ? r.json() : { quests: [] }));
+      reqs.activity = fetch(`${base}/activity`).then((r) => (r.ok ? r.json() : []));
     }
     const entries = await Promise.all(Object.entries(reqs).map(async ([k, p]) => [k, await p.catch(() => null)] as const));
     setData(Object.fromEntries(entries));
@@ -148,6 +150,7 @@ function Widget({ id, base, data, canManage }: { id: WidgetId; base: string; dat
       {id === "quests" && <Quests quests={data.quests?.quests || []} base={base} />}
       {id === "review" && <Reviews reviews={data.reviews?.reviews || []} base={base} />}
       {id === "health" && <HealthSummary health={data.health} base={base} />}
+      {id === "activity" && <ActivityFeed commits={Array.isArray(data.activity) ? data.activity : []} />}
     </div>
   );
 }
@@ -246,5 +249,22 @@ function HealthSummary({ health, base }: { health: any; base: string }) {
         {Object.entries(counts).map(([type, n]) => <li key={type}><strong>{n as number}</strong> {type.replace(/-/g, " ")}</li>)}
       </ul>
     </>
+  );
+}
+
+function ActivityFeed({ commits }: { commits: { sha: string; url: string; message: string; author: string; date: string }[] }) {
+  if (!commits.length) return <p className="muted">No recent activity.</p>;
+  return (
+    <div className="activity-feed">
+      {commits.slice(0, 15).map((c) => (
+        <div className="activity-commit" key={c.sha}>
+          <div>
+            <div className="activity-commit-meta">{new Date(c.date).toLocaleDateString()} · {c.author}</div>
+            <a href={c.url} target="_blank" rel="noreferrer" className="activity-commit-msg">{c.message}</a>
+          </div>
+          <span className="activity-sha">{c.sha.slice(0, 7)}</span>
+        </div>
+      ))}
+    </div>
   );
 }

@@ -1,6 +1,5 @@
 import YAML from "yaml";
-import { getCampaignRepositoryToken } from "@/lib/db";
-import { getTextFile, GitHubError, putFile } from "@/lib/github";
+import { getStorageAdapter } from "@/lib/storage";
 import type { Campaign } from "@/lib/types";
 
 export type CalendarMonth = { name: string; days: number };
@@ -88,10 +87,10 @@ export function formatDate(cal: CalendarConfig, date: WorldDate): string {
 }
 
 export async function loadCampaignCalendar(campaign: Campaign): Promise<CalendarConfig> {
-  const repoToken = getCampaignRepositoryToken(campaign.id);
-  if (!repoToken) return defaultCalendar();
+  const storage = getStorageAdapter(campaign);
+  if (!storage) return defaultCalendar();
   try {
-    const file = await getTextFile(repoToken, campaign, campaignConfigPath);
+    const file = await storage.getTextFile(campaignConfigPath);
     const parsed = YAML.parse(file.text || "") as Record<string, unknown> | null;
     return sanitizeCalendar(parsed?.calendar);
   } catch {
@@ -100,20 +99,18 @@ export async function loadCampaignCalendar(campaign: Campaign): Promise<Calendar
 }
 
 export async function saveCampaignCalendar(campaign: Campaign, config: CalendarConfig): Promise<CalendarConfig> {
-  const repoToken = getCampaignRepositoryToken(campaign.id);
-  if (!repoToken) throw new Error("This campaign has no GitHub access configured.");
+  const storage = getStorageAdapter(campaign);
+  if (!storage) throw new Error("No storage configured for this campaign.");
   let yaml: Record<string, unknown> = {};
   let sha: string | undefined;
   try {
-    const file = await getTextFile(repoToken, campaign, campaignConfigPath);
+    const file = await storage.getTextFile(campaignConfigPath);
     sha = file.sha;
     const parsed = YAML.parse(file.text || "") as Record<string, unknown> | null;
     if (parsed && typeof parsed === "object") yaml = parsed;
-  } catch (error) {
-    if (!(error instanceof GitHubError && error.status === 404)) throw error;
-  }
+  } catch { /* file not found yet */ }
   const clean = sanitizeCalendar(config);
   yaml.calendar = clean;
-  await putFile(repoToken, campaign, campaignConfigPath, YAML.stringify(yaml), "CampaignRepo: update calendar", sha);
+  await storage.putFile(campaignConfigPath, YAML.stringify(yaml), "CampaignRepo: update calendar", sha);
   return clean;
 }

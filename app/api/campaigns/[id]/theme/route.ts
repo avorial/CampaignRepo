@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
-import { GitHubError } from "@/lib/github";
 import { loadCampaignTheme, saveCampaignTheme } from "@/lib/public-site";
 import { sanitizeTheme } from "@/lib/theme";
 
@@ -27,12 +26,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const theme = await saveCampaignTheme(campaign, sanitizeTheme(body.theme));
     return NextResponse.json({ theme });
   } catch (error) {
-    const message =
-      error instanceof GitHubError
-        ? `GitHub error${error.status ? ` ${error.status}` : ""}: ${error.message}`
-        : error instanceof Error
-          ? error.message
-          : "Could not save theme.";
+    const message = error instanceof Error ? error.message : "Could not save theme.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { canManageCampaign, getCampaign, getCampaignRepositoryToken } from "@/lib/db";
-import { deleteFile, getTextFile, GitHubError, putFile } from "@/lib/github";
+import { canManageCampaign, getCampaign } from "@/lib/db";
+import { getStorageAdapter, isConflictError, isNotFoundError } from "@/lib/storage";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
 import { readPageCache, refreshPageCache } from "@/lib/page-cache";
@@ -21,10 +21,7 @@ function sanitizePlayerPage<T extends ReturnType<typeof parsePage>>(page: T): T 
     ...page,
     content: stripGmBlocks(page.content),
     raw: stripGmBlocks(page.raw),
-    frontmatter: {
-      ...page.frontmatter,
-      sourceImport: undefined
-    }
+    frontmatter: { ...page.frontmatter, sourceImport: undefined }
   };
 }
 
@@ -33,12 +30,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { id, slug } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const repoToken = getCampaignRepositoryToken(campaign.id);
-  if (!repoToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const storage = getStorageAdapter(campaign);
+  if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
   let page = readPageCache(campaign.id).pages.find((candidate) => candidate.slug === slug);
   if (!page) {
     try {
-      page = (await refreshPageCache(repoToken, campaign)).pages.find((candidate) => candidate.slug === slug);
+      page = (await refreshPageCache(storage, campaign)).pages.find((candidate) => candidate.slug === slug);
     } catch (error) {
       return NextResponse.json(
         { error: error instanceof Error ? error.message : "Could not refresh campaign pages." },
@@ -59,8 +56,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const user = await requireUser();
   const { id, slug } = await params;
   const campaign = getCampaign(user.id, Number(id));
-  if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const storage = getStorageAdapter(campaign, user.githubToken);
+  if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const input = schema.parse(await req.json());
   const frontmatter = {
     ...input.frontmatter,
@@ -68,29 +67,28 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     lastEditedBy: input.ai ? "AI via CampaignRepo" : user.name
   };
   const raw = serializePage(frontmatter, input.content);
-  const current = input.sha ? { sha: input.sha } : await getTextFile(user.githubToken, campaign, `wiki/pages/${slug}.md`);
+  let sha = input.sha;
+  if (!sha) {
+    const current = await storage.getTextFile(`wiki/pages/${slug}.md`);
+    sha = current.sha;
+  }
   try {
-    const saved = (await putFile(user.githubToken, campaign, `wiki/pages/${slug}.md`, raw, `CampaignRepo: update ${frontmatter.name || slug}`, current.sha)) as { content?: { sha?: string } };
-    scheduleSearchIndexRebuild(user.githubToken, campaign);
-    return NextResponse.json({ ok: true, sha: saved.content?.sha });
+    const saved = await storage.putFile(`wiki/pages/${slug}.md`, raw, `CampaignRepo: update ${frontmatter.name || slug}`, sha);
+    scheduleSearchIndexRebuild(campaign);
+    return NextResponse.json({ ok: true, sha: saved.sha });
   } catch (error) {
-    if (error instanceof GitHubError && error.status === 409) {
-      const latest = await getTextFile(user.githubToken, campaign, `wiki/pages/${slug}.md`);
+    if (isConflictError(error)) {
+      const latest = await storage.getTextFile(`wiki/pages/${slug}.md`);
       return NextResponse.json(
         {
-          error: "This page changed on GitHub after you opened it. Reload the latest version before saving.",
+          error: "This page changed after you opened it. Reload the latest version before saving.",
           conflict: true,
           latest: parsePage(slug, latest.text, latest.sha)
         },
         { status: 409 }
       );
     }
-    const message =
-      error instanceof GitHubError
-        ? `GitHub error${error.status ? ` ${error.status}` : ""}: ${error.message}`
-        : error instanceof Error
-          ? error.message
-          : "Save failed.";
+    const message = error instanceof Error ? error.message : "Save failed.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
@@ -99,19 +97,19 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const user = await requireUser();
   const { id, slug } = await params;
   const campaign = getCampaign(user.id, Number(id));
-  if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const storage = getStorageAdapter(campaign, user.githubToken);
+  if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const path = `wiki/pages/${slug}.md`;
   try {
-    const file = await getTextFile(user.githubToken, campaign, path);
-    await deleteFile(user.githubToken, campaign, path, `CampaignRepo: delete ${slug}`, file.sha);
-    scheduleSearchIndexRebuild(user.githubToken, campaign);
+    const file = await storage.getTextFile(path);
+    await storage.deleteFile(path, `CampaignRepo: delete ${slug}`, file.sha);
+    scheduleSearchIndexRebuild(campaign);
     return NextResponse.json({ ok: true });
   } catch (error) {
-    if (error instanceof GitHubError && error.status === 404) {
-      return NextResponse.json({ ok: true, alreadyMissing: true });
-    }
-    const message = error instanceof GitHubError ? `GitHub error${error.status ? ` ${error.status}` : ""}: ${error.message}` : error instanceof Error ? error.message : "Delete failed.";
+    if (isNotFoundError(error)) return NextResponse.json({ ok: true, alreadyMissing: true });
+    const message = error instanceof Error ? error.message : "Delete failed.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

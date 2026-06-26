@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import Logo from "@/app/components/logo";
 
 type Site = { slug: string; name: string; gameType: string; clones: number };
 
@@ -15,16 +16,19 @@ export default function PublicGalleryClient({ sites }: { sites: Site[] }) {
   }, [sites, query]);
 
   return (
-    <div className="public-site">
-      <header className="public-masthead">
-        <div className="public-masthead-inner">
-          <p className="public-kicker">CampaignRepo · Public worlds</p>
+    <main className="app-shell">
+      <header className="topbar">
+        <div>
+          <Logo href="/site" />
           <h1>Explore worlds</h1>
-          <p>Browse published RPG campaigns. Read and search any world — no account needed.</p>
+          <p className="muted">Browse published RPG campaigns — no account needed.</p>
+        </div>
+        <div className="topbar-actions">
+          <Link href="/login" className="quiet-link">Sign in</Link>
         </div>
       </header>
 
-      <main className="gallery-shell">
+      <div className="gallery-shell">
         <input
           className="gallery-search"
           value={query}
@@ -37,7 +41,7 @@ export default function PublicGalleryClient({ sites }: { sites: Site[] }) {
         {sites.length === 0 ? (
           <p className="public-empty">No public worlds have been published yet.</p>
         ) : filtered.length === 0 ? (
-          <p className="muted">No worlds match “{query}”.</p>
+          <p className="muted">No worlds match "{query}".</p>
         ) : (
           <div className="gallery-grid">
             {filtered.map((s) => (
@@ -49,12 +53,7 @@ export default function PublicGalleryClient({ sites }: { sites: Site[] }) {
             ))}
           </div>
         )}
-      </main>
-
-      <footer className="public-footer">
-        <span>Published with CampaignRepo</span>
-        <Link className="quiet-link" href="/login">Sign in</Link>
-      </footer>
-    </div>
+      </div>
+    </main>
   );
 }

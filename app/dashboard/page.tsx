@@ -1,3 +1,5 @@
+import os from "node:os";
+import nodePath from "node:path";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import Logo from "@/app/components/logo";
@@ -12,6 +14,7 @@ export default async function DashboardPage() {
   if (!user) redirect("/login");
   if (user.mustChangePassword) redirect("/change-password");
   const campaigns = listCampaigns(user.id);
+  const suggestedBasePath = nodePath.join(os.homedir(), "Campaigns");
 
   return (
     <main className="app-shell">
@@ -29,7 +32,7 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <DashboardClient user={user} campaigns={campaigns} categories={categories} githubAppConfigured={isGitHubAppConfigured()} />
+      <DashboardClient user={user} campaigns={campaigns} categories={categories} githubAppConfigured={isGitHubAppConfigured()} suggestedBasePath={suggestedBasePath} />
     </main>
   );
 }

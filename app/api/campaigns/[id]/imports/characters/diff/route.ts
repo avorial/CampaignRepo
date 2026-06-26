@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
-import { getTextFile } from "@/lib/github";
+import { getStorageAdapter } from "@/lib/storage";
 
 const schema = z.object({
   sourcePath: z.string().min(1),
@@ -39,13 +39,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const user = await requireUser();
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
-  if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const storage = getStorageAdapter(campaign);
+  if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const input = schema.parse(await req.json());
   if (!validSourcePath(input.sourcePath)) return NextResponse.json({ error: "Invalid import source path." }, { status: 400 });
 
-  const existingFile = await getTextFile(user.githubToken, campaign, input.sourcePath);
+  const existingFile = await storage.getTextFile(input.sourcePath);
   const before = flatten(JSON.parse(existingFile.text));
   const after = flatten(input.sourceJson);
   const paths = Array.from(new Set([...Object.keys(before), ...Object.keys(after)])).sort();

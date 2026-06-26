@@ -1,8 +1,8 @@
-import { getTextFile, GitHubError, listDirectory, putFile } from "@/lib/github";
 import { stripGmBlocks } from "@/lib/markdown";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import type { Campaign, SearchDocument, WikiPage } from "@/lib/types";
 import { upsertSearchDocuments } from "@/lib/db";
+import { getStorageAdapter, type StorageAdapter } from "@/lib/storage";
 import { refreshPageCache } from "@/lib/page-cache";
 
 type MediaMetadata = {
@@ -23,16 +23,15 @@ function withBacklinks(pages: WikiPage[]) {
   return pages.map((page) => ({ ...page, backlinks: backlinks.get(page.slug) || [] }));
 }
 
-async function buildMediaSearchDocuments(token: string, campaign: Campaign): Promise<SearchDocument[]> {
+async function buildMediaSearchDocuments(storage: StorageAdapter, campaign: Campaign): Promise<SearchDocument[]> {
   const [entries, metadata] = await Promise.all([
-    listDirectory(token, campaign, "wiki/media"),
+    storage.listDirectory("wiki/media"),
     (async () => {
       try {
-        const file = await getTextFile(token, campaign, "wiki/media/media.json");
+        const file = await storage.getTextFile("wiki/media/media.json");
         return JSON.parse(file.text || "{}") as Record<string, MediaMetadata>;
-      } catch (error) {
-        if (error instanceof GitHubError && error.status === 404) return {};
-        throw error;
+      } catch {
+        return {} as Record<string, MediaMetadata>;
       }
     })()
   ]);
@@ -65,11 +64,8 @@ async function buildMediaSearchDocuments(token: string, campaign: Campaign): Pro
     });
 }
 
-export async function buildSearchDocuments(token: string, campaign: Campaign): Promise<SearchDocument[]> {
-  // One GraphQL tree read refreshes the local page cache. The old implementation
-  // made one REST request per page, which quickly triggered GitHub's secondary
-  // rate limit on large campaigns.
-  const pages = (await refreshPageCache(token, campaign)).pages;
+export async function buildSearchDocuments(storage: StorageAdapter, campaign: Campaign): Promise<SearchDocument[]> {
+  const pages = (await refreshPageCache(storage, campaign)).pages;
   const pageDocs = withBacklinks(pages).map((page) => ({
     id: `${campaign.id}:${page.slug}`,
     campaignId: campaign.id,
@@ -88,36 +84,36 @@ export async function buildSearchDocuments(token: string, campaign: Campaign): P
     backlinks: page.backlinks,
     keyLinks: page.frontmatter.keyLinks
   }));
-  const mediaDocs = await buildMediaSearchDocuments(token, campaign);
+  const mediaDocs = await buildMediaSearchDocuments(storage, campaign);
   return [...pageDocs, ...mediaDocs];
 }
 
-export async function rebuildSearchIndex(token: string, campaign: Campaign) {
-  const docs = await buildSearchDocuments(token, campaign);
+export async function rebuildSearchIndex(storage: StorageAdapter, campaign: Campaign) {
+  const docs = await buildSearchDocuments(storage, campaign);
   upsertSearchDocuments(campaign.id, docs);
   let sha: string | undefined;
   try {
-    const existing = await getTextFile(token, campaign, "wiki/search/index.json");
+    const existing = await storage.getTextFile("wiki/search/index.json");
     sha = existing.sha;
-  } catch (error) {
-    if (error instanceof GitHubError && error.status === 404) sha = undefined;
-    else throw error;
+  } catch {
+    sha = undefined;
   }
-  await putFile(token, campaign, "wiki/search/index.json", JSON.stringify(docs, null, 2) + "\n", "CampaignRepo: update search snapshot", sha);
+  await storage.putFile("wiki/search/index.json", JSON.stringify(docs, null, 2) + "\n", "CampaignRepo: update search snapshot", sha);
   return docs;
 }
 
 const scheduledRebuilds = new Map<number, ReturnType<typeof setTimeout>>();
 
-/** Coalesce mutation-triggered rebuilds and keep GitHub indexing off the write response path. */
-export function scheduleSearchIndexRebuild(token: string, campaign: Campaign, delayMs = 15_000) {
+export function scheduleSearchIndexRebuild(campaign: Campaign, delayMs = 15_000) {
   const existing = scheduledRebuilds.get(campaign.id);
   if (existing) clearTimeout(existing);
   const timer = setTimeout(() => {
     scheduledRebuilds.delete(campaign.id);
-    void rebuildSearchIndex(token, campaign).catch((error) => {
+    const storage = getStorageAdapter(campaign);
+    if (!storage) return;
+    void rebuildSearchIndex(storage, campaign).catch((error) => {
       console.error(`Background search rebuild failed for campaign ${campaign.id}.`, error);
     });
   }, delayMs);
-  timer.unref?.();
+  scheduledRebuilds.set(campaign.id, timer);
 }

@@ -1,6 +1,5 @@
 import YAML from "yaml";
-import { getCampaignRepositoryToken } from "@/lib/db";
-import { deleteFile, getTextFile, GitHubError, listDirectoryTextFiles, putFile } from "@/lib/github";
+import { getStorageAdapter } from "@/lib/storage";
 import { slugify } from "@/lib/slug";
 import type { Campaign } from "@/lib/types";
 
@@ -22,10 +21,10 @@ export type Quest = { slug: string; sha?: string; frontmatter: QuestFrontmatter;
 
 const questsDir = "wiki/quests";
 
-function tokenFor(campaign: Campaign) {
-  const token = getCampaignRepositoryToken(campaign.id);
-  if (!token) throw new Error("This campaign has no GitHub access configured.");
-  return token;
+function adapterFor(campaign: Campaign) {
+  const storage = getStorageAdapter(campaign);
+  if (!storage) throw new Error("No storage configured for this campaign.");
+  return storage;
 }
 
 function normStatus(v: unknown): QuestStatus {
@@ -65,42 +64,40 @@ export function serializeQuest(frontmatter: QuestFrontmatter, description: strin
 }
 
 export async function listQuests(campaign: Campaign): Promise<Quest[]> {
-  const token = tokenFor(campaign);
-  const files = await listDirectoryTextFiles(token, campaign, questsDir);
+  const storage = adapterFor(campaign);
+  const files = await storage.listDirectoryTextFiles(questsDir);
   return files
     .map((f) => parseQuest(f.name.replace(/\.md$/, ""), f.text ?? "", f.sha))
     .sort((a, b) => a.frontmatter.title.localeCompare(b.frontmatter.title));
 }
 
 export async function getQuest(campaign: Campaign, slug: string): Promise<Quest> {
-  const token = tokenFor(campaign);
-  const file = await getTextFile(token, campaign, `${questsDir}/${slug}.md`);
+  const storage = adapterFor(campaign);
+  const file = await storage.getTextFile(`${questsDir}/${slug}.md`);
   return parseQuest(slug, file.text, file.sha);
 }
 
 export async function createQuest(campaign: Campaign, title: string): Promise<Quest> {
-  const token = tokenFor(campaign);
+  const storage = adapterFor(campaign);
   const slug = slugify(title) || `quest-${Date.now()}`;
   const frontmatter: QuestFrontmatter = { title, status: "active", visibility: "gm", objectives: [], participants: [], locations: [] };
-  await putFile(token, campaign, `${questsDir}/${slug}.md`, serializeQuest(frontmatter, ""), `CampaignRepo: create quest ${title}`);
+  await storage.putFile(`${questsDir}/${slug}.md`, serializeQuest(frontmatter, ""), `CampaignRepo: create quest ${title}`);
   return { slug, frontmatter, description: "" };
 }
 
 export async function saveQuest(campaign: Campaign, slug: string, frontmatter: QuestFrontmatter, description: string): Promise<Quest> {
-  const token = tokenFor(campaign);
+  const storage = adapterFor(campaign);
   let sha: string | undefined;
   try {
-    const existing = await getTextFile(token, campaign, `${questsDir}/${slug}.md`);
+    const existing = await storage.getTextFile(`${questsDir}/${slug}.md`);
     sha = existing.sha;
-  } catch (error) {
-    if (!(error instanceof GitHubError && error.status === 404)) throw error;
-  }
-  await putFile(token, campaign, `${questsDir}/${slug}.md`, serializeQuest(frontmatter, description), `CampaignRepo: update quest ${frontmatter.title}`, sha);
+  } catch { /* new file */ }
+  await storage.putFile(`${questsDir}/${slug}.md`, serializeQuest(frontmatter, description), `CampaignRepo: update quest ${frontmatter.title}`, sha);
   return { slug, sha, frontmatter, description };
 }
 
 export async function deleteQuest(campaign: Campaign, slug: string): Promise<void> {
-  const token = tokenFor(campaign);
-  const existing = await getTextFile(token, campaign, `${questsDir}/${slug}.md`);
-  await deleteFile(token, campaign, `${questsDir}/${slug}.md`, `CampaignRepo: delete quest ${slug}`, existing.sha);
+  const storage = adapterFor(campaign);
+  const existing = await storage.getTextFile(`${questsDir}/${slug}.md`);
+  await storage.deleteFile(`${questsDir}/${slug}.md`, `CampaignRepo: delete quest ${slug}`, existing.sha);
 }

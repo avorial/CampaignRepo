@@ -146,6 +146,14 @@ if (!userColumns.some((column) => column.name === "disabled")) {
   db.exec("ALTER TABLE users ADD COLUMN disabled INTEGER NOT NULL DEFAULT 0");
 }
 
+const campaignColumns = db.prepare("PRAGMA table_info(campaigns)").all() as Array<{ name: string }>;
+if (!campaignColumns.some((c) => c.name === "storageBackend")) {
+  db.exec("ALTER TABLE campaigns ADD COLUMN storageBackend TEXT NOT NULL DEFAULT 'github'");
+}
+if (!campaignColumns.some((c) => c.name === "localPath")) {
+  db.exec("ALTER TABLE campaigns ADD COLUMN localPath TEXT");
+}
+
 const publicSiteColumns = db.prepare("PRAGMA table_info(public_sites)").all() as Array<{ name: string }>;
 if (!publicSiteColumns.some((column) => column.name === "clones")) {
   db.exec("ALTER TABLE public_sites ADD COLUMN clones INTEGER NOT NULL DEFAULT 0");

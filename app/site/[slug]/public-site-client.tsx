@@ -5,6 +5,7 @@ import type { WikiPage } from "@/lib/types";
 import { renderMarkdown, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
 import { themeToCssVars, type CampaignTheme } from "@/lib/theme";
+import Logo from "@/app/components/logo";
 
 export default function PublicSiteClient({
   slug,
@@ -23,6 +24,14 @@ export default function PublicSiteClient({
   const [query, setQuery] = useState("");
   const [cloning, setCloning] = useState(false);
   const [cloneMsg, setCloneMsg] = useState("");
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!lightboxSrc) return;
+    const handler = (e: globalThis.KeyboardEvent) => { if (e.key === "Escape") setLightboxSrc(null); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [lightboxSrc]);
 
   async function cloneWorld() {
     setCloning(true);
@@ -65,7 +74,6 @@ export default function PublicSiteClient({
 
   const selectedPage = pages.find((page) => page.slug === selectedSlug) || filteredPages[0] || pages[0];
 
-  // Group the sidebar by category, in a stable, friendly order.
   const categoryOrder = ["lore", "location", "organization", "character", "npc", "species", "item", "event", "game"];
   const grouped = useMemo(() => {
     const byCat = new Map<string, WikiPage[]>();
@@ -101,6 +109,12 @@ export default function PublicSiteClient({
 
   const onPreviewClick = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
+      const galleryAnchor = (event.target as HTMLElement).closest("a.gallery-item");
+      if (galleryAnchor) {
+        event.preventDefault();
+        setLightboxSrc(galleryAnchor.getAttribute("href") || null);
+        return;
+      }
       const anchor = (event.target as HTMLElement).closest("a.wiki-link");
       if (!anchor) return;
       event.preventDefault();
@@ -119,12 +133,12 @@ export default function PublicSiteClient({
   const themeVars = useMemo(() => themeToCssVars(theme) as CSSProperties, [theme]);
 
   return (
-    <main className="app-shell public-site" data-theme={theme.preset || undefined} style={themeVars}>
-      <header className="topbar public-topbar">
+    <main className="app-shell" data-theme={theme.preset || undefined} style={themeVars}>
+      <header className="topbar">
         <div>
-          <span className="quiet-link">Published world</span>
+          <Logo href="/site" />
           <h1>{campaignName}</h1>
-          <p className="muted">{gameType} - player-visible, approved pages</p>
+          <p className="muted">{gameType}</p>
         </div>
         <div className="topbar-actions">
           <button type="button" onClick={cloneWorld} disabled={cloning}>Clone this world</button>
@@ -132,11 +146,11 @@ export default function PublicSiteClient({
         </div>
       </header>
 
-      <div className="workspace public-shell">
-        <aside className="side-nav public-library">
+      <div className="workspace">
+        <aside className="side-nav">
           <input className="nav-filter" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search this world" />
           {grouped.map(([cat, catPages]) => (
-            <div className="nav-group public-nav-group" key={cat}>
+            <div className="nav-group" key={cat}>
               <h3>
                 <span className="cat-dot" style={{ background: `var(--cat-${cat})` }} />
                 {cat}
@@ -145,7 +159,7 @@ export default function PublicSiteClient({
                 <button
                   type="button"
                   key={page.slug}
-                  className={page.slug === selectedPage?.slug ? "nav-link public-nav-link active" : "nav-link public-nav-link"}
+                  className={page.slug === selectedPage?.slug ? "nav-link active" : "nav-link"}
                   onClick={() => {
                     setSelectedSlug(page.slug);
                     window.history.replaceState(null, "", `#${page.slug}`);
@@ -160,15 +174,12 @@ export default function PublicSiteClient({
           {!filteredPages.length && <p className="muted">No public pages match.</p>}
         </aside>
 
-        <div className="workspace-main">
-          <nav className="tabs">
-            <button type="button" className="tab active">Published pages</button>
-          </nav>
-          <article className="player-reader public-reader panel">
+        <div className="reader-shell">
+          <article className="preview page-reader">
             {selectedPage ? (
               <>
-                {cover && <div className="public-cover" style={{ backgroundImage: `url("${cover}")` }} />}
-                <header className="handout-header public-article-header">
+                {cover && <img className="page-cover page-cover-clickable" src={cover} alt={selectedPage.frontmatter.name} onClick={() => setLightboxSrc(cover)} />}
+                <header className="handout-header">
                   <p>{selectedPage.frontmatter.category}</p>
                   <h1>{selectedPage.frontmatter.name}</h1>
                   {selectedPage.frontmatter.summary && <span>{selectedPage.frontmatter.summary}</span>}
@@ -180,7 +191,7 @@ export default function PublicSiteClient({
                     </div>
                   )}
                 </header>
-                <div className="public-prose" onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
+                <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
               </>
             ) : (
               <div className="public-empty">
@@ -191,6 +202,12 @@ export default function PublicSiteClient({
           </article>
         </div>
       </div>
+      {lightboxSrc && (
+        <div className="lightbox-overlay" onClick={() => setLightboxSrc(null)} role="dialog" aria-modal>
+          <button className="lightbox-close" onClick={() => setLightboxSrc(null)} aria-label="Close">✕</button>
+          <img className="lightbox-img" src={lightboxSrc} alt="" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
     </main>
   );
 }

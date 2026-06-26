@@ -1,4 +1,4 @@
-import { listDirectoryTextFiles } from "@/lib/github";
+import type { StorageAdapter } from "@/lib/storage";
 import { parsePage, stripGmBlocks } from "@/lib/markdown";
 import type { ApprovalStatus, Campaign, Category, Visibility } from "@/lib/types";
 
@@ -16,9 +16,8 @@ export interface ReviewItem {
 }
 
 /** List the unapproved/rejected pages in a campaign repo for GM review. */
-export async function listReviewPages(token: string, campaign: Campaign): Promise<ReviewItem[]> {
-  // One GraphQL tree read instead of one REST request per page.
-  const files = await listDirectoryTextFiles(token, campaign, "wiki/pages");
+export async function listReviewPages(storage: StorageAdapter, _campaign: Campaign): Promise<ReviewItem[]> {
+  const files = await storage.listDirectoryTextFiles("wiki/pages");
   const pages = files.map((file) => parsePage(file.name.replace(/\.md$/, ""), file.text ?? "", file.sha));
 
   return pages

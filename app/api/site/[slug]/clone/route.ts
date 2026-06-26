@@ -8,7 +8,8 @@ import { serializePage } from "@/lib/markdown";
 import { slugify } from "@/lib/slug";
 import type { Campaign } from "@/lib/types";
 
-// Clone a published world into a NEW repo + campaign owned by the viewer.
+// Clone a published world into a NEW GitHub repo + campaign owned by the viewer.
+// Cloning always targets GitHub (GitHub App access is blocked).
 export async function POST(_: Request, { params }: { params: Promise<{ slug: string }> }) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in to clone this world." }, { status: 401 });
@@ -27,7 +28,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
     const repoName = `${slugify(source.name) || "campaign"}-${crypto.randomBytes(3).toString("hex")}`;
     const created = await createRepo(user.githubToken, repoName, true);
     const insert = getDb()
-      .prepare("INSERT INTO campaigns (userId, name, owner, repo, branch, gameType) VALUES (?, ?, ?, ?, ?, ?)")
+      .prepare("INSERT INTO campaigns (userId, name, owner, repo, branch, gameType, storageBackend) VALUES (?, ?, ?, ?, ?, ?, 'github')")
       .run(user.id, `${source.name} (clone)`, created.owner.login, created.name, created.default_branch || "main", source.gameType);
     getDb().prepare("INSERT OR IGNORE INTO campaign_memberships (campaignId, userId, role) VALUES (?, ?, 'owner')").run(insert.lastInsertRowid, user.id);
     const campaign = getDb().prepare("SELECT * FROM campaigns WHERE id = ?").get(insert.lastInsertRowid) as Campaign;
@@ -39,6 +40,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
       content: serializePage(page.frontmatter, page.content)
     }));
 
+    // Media is a GitHub-specific copy — get the source repo token directly for this step.
     const sourceToken = getCampaignRepositoryToken(source.id);
     if (sourceToken) {
       const mediaNames = new Set<string>();
@@ -56,7 +58,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
       for (const name of mediaNames) {
         try {
           const item = await getContent(sourceToken, source, `wiki/media/${name}`);
-          // The Contents API returns "" for files > 1MB; those are skipped (follow-up: git blobs).
+          // The Contents API returns "" for files > 1MB; those are skipped.
           if (item.content) files.push({ path: `wiki/media/${name}`, content: item.content.replace(/\s/g, ""), encoding: "base64" });
         } catch {
           /* skip missing/oversized media */

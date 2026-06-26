@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
-import { listDirectory, listDirectoryTextFiles } from "@/lib/github";
+import { getStorageAdapter } from "@/lib/storage";
 import { parsePage } from "@/lib/markdown";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 
@@ -12,12 +12,14 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const user = await requireUser();
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
-  if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const storage = getStorageAdapter(campaign);
+  if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const [files, media] = await Promise.all([
-    listDirectoryTextFiles(user.githubToken, campaign, "wiki/pages"),
-    listDirectory(user.githubToken, campaign, "wiki/media")
+    storage.listDirectoryTextFiles("wiki/pages"),
+    storage.listDirectory("wiki/media")
   ]);
   const pages = files.map((f) => parsePage(f.name.replace(/\.md$/, ""), f.text ?? "", f.sha));
   const bySlug = new Map(pages.map((p) => [p.slug, p]));
@@ -26,7 +28,6 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
   const findings: Finding[] = [];
 
-  // Duplicate aliases (same alias claimed by more than one page).
   const aliasOwners = new Map<string, string[]>();
   for (const page of pages) {
     for (const alias of page.frontmatter.aliases || []) {
@@ -53,13 +54,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       if (!parent) {
         findings.push({ type: "invalid-parent", severity: "error", slug: page.slug, title: name || page.slug, detail: `Parent "${page.frontmatter.parent}" does not exist.` });
       } else if (parent.frontmatter.category !== page.frontmatter.category) {
-        findings.push({
-          type: "parent-mismatch",
-          severity: "warn",
-          slug: page.slug,
-          title: name || page.slug,
-          detail: `Parent "${parent.frontmatter.name}" is ${parent.frontmatter.category}, not ${page.frontmatter.category} — it won't nest in the sidebar.`
-        });
+        findings.push({ type: "parent-mismatch", severity: "warn", slug: page.slug, title: name || page.slug, detail: `Parent "${parent.frontmatter.name}" is ${parent.frontmatter.category}, not ${page.frontmatter.category} — it won't nest in the sidebar.` });
       }
     }
     for (const link of page.outgoingLinks) {

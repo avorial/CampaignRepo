@@ -2,11 +2,12 @@
 
 import { FormEvent, KeyboardEvent, MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bold, Code2, Heading1, Heading2, Heading3, Italic, Link2, List, ListOrdered, Quote } from "lucide-react";
+import { Bold, Code2, Heading1, Heading2, Heading3, Italic, Link2, List, ListOrdered, Minus, Quote, Table2 } from "lucide-react";
 import type { Campaign, CampaignMedia, WikiPage } from "@/lib/types";
 import { renderMarkdown, type IncludeResolver, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
 import { categories } from "@/lib/templates";
+import { RELATIONSHIP_TYPES, REL_TYPE_MAP } from "@/lib/relationships";
 
 const travellerSkillRows: Array<{ name: string; speciality?: string; level?: number }> = [
   { name: "Admin" }, { name: "Advocate" }, { name: "Animals" }, { name: "Animals", speciality: "Handling" }, { name: "Animals", speciality: "Riding" }, { name: "Animals", speciality: "Veterinary" }, { name: "Animals", speciality: "Training" },
@@ -55,12 +56,48 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
   const [parentFilter, setParentFilter] = useState("");
   const [linkFilter, setLinkFilter] = useState("");
   const [mediaFilter, setMediaFilter] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyCommits, setHistoryCommits] = useState<{ sha: string; url: string; message: string; author: string; date: string }[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [slashMenu, setSlashMenu] = useState<{ query: string; insertStart: number; top: number; left: number } | null>(null);
+  const [slashMenuIdx, setSlashMenuIdx] = useState(0);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!lightboxSrc) return;
+    const handler = (e: globalThis.KeyboardEvent) => { if (e.key === "Escape") setLightboxSrc(null); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [lightboxSrc]);
 
   const applyPage = useCallback((nextPage: WikiPage) => {
     setPage(nextPage);
     setContent(nextPage.content);
     setFrontmatter(nextPage.frontmatter);
   }, []);
+
+  const openHistory = useCallback(() => {
+    setShowHistory(true);
+    if (historyCommits.length > 0) return;
+    setHistoryLoading(true);
+    fetch(`/api/campaigns/${campaign.id}/pages/${slug}/history`)
+      .then((r) => r.json())
+      .then((data) => { setHistoryCommits(Array.isArray(data) ? data : []); setHistoryLoading(false); })
+      .catch(() => setHistoryLoading(false));
+  }, [campaign.id, slug, historyCommits.length]);
+
+  const SLASH_COMMANDS = [
+    { id: "h1",       label: "Heading 1",    snippet: "\n# "                                                          },
+    { id: "h2",       label: "Heading 2",    snippet: "\n## "                                                         },
+    { id: "h3",       label: "Heading 3",    snippet: "\n### "                                                        },
+    { id: "quote",    label: "Quote",        snippet: "\n> "                                                          },
+    { id: "code",     label: "Code block",   snippet: "\n```\n{{selection}}\n```"                                     },
+    { id: "table",    label: "Table",        snippet: "\n| Col 1 | Col 2 |\n|-------|-------|\n| Cell  | Cell  |\n"   },
+    { id: "divider",  label: "Divider",      snippet: "\n---\n"                                                       },
+    { id: "task",     label: "Task list",    snippet: "\n- [ ] Task\n- [ ] Task\n"                                    },
+    { id: "gm",       label: "GM block",     snippet: "\n:::gm\n{{selection}}\n:::"                                   },
+    { id: "include",  label: "Include page", snippet: ":::include [[Page Name]]:::"                                   },
+  ];
 
   const loadPage = useCallback(() => {
     return fetch(`/api/campaigns/${campaign.id}/pages/${slug}`)
@@ -120,8 +157,29 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
 
   const preview = useMemo(() => renderMarkdown(content, mode, resolveLink, resolveMedia, resolveInclude), [content, mode, resolveLink, resolveMedia, resolveInclude]);
 
+  const incomingRelationships = useMemo(() => {
+    if (!page) return [];
+    const bySlug = new Map(knownPages.map(p => [p.slug, p]));
+    const byName = new Map(knownPages.map(p => [p.frontmatter.name.toLowerCase(), p]));
+    return knownPages.flatMap(p => {
+      if (p.slug === slug) return [];
+      return (p.frontmatter.relationships || [])
+        .filter((r: any) => {
+          const resolved = bySlug.get(r.target) ?? byName.get((r.target || "").toLowerCase());
+          return resolved?.slug === slug;
+        })
+        .map((r: any) => ({ sourceSlug: p.slug, sourceName: p.frontmatter.name, type: r.type }));
+    });
+  }, [knownPages, slug, page]);
+
   const onPreviewClick = useCallback(
     async (event: MouseEvent<HTMLDivElement>) => {
+      const galleryAnchor = (event.target as HTMLElement).closest("a.gallery-item");
+      if (galleryAnchor) {
+        event.preventDefault();
+        setLightboxSrc(galleryAnchor.getAttribute("href") || null);
+        return;
+      }
       const anchor = (event.target as HTMLElement).closest("a.wiki-link");
       if (!anchor) return;
       event.preventDefault();
@@ -304,6 +362,27 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
   }
 
   function onEditorKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (slashMenu && filteredSlashCmds.length > 0) {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setSlashMenuIdx((i) => (i + 1) % filteredSlashCmds.length);
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setSlashMenuIdx((i) => (i - 1 + filteredSlashCmds.length) % filteredSlashCmds.length);
+        return;
+      }
+      if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        onSlashSelect(filteredSlashCmds[slashMenuIdx]);
+        return;
+      }
+      if (event.key === "Escape") {
+        setSlashMenu(null);
+        return;
+      }
+    }
     if (!(event.ctrlKey || event.metaKey)) return;
     const key = event.key.toLowerCase();
     if (key === "b") {
@@ -328,6 +407,87 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
     if (!item) return;
     insertSnippet(item.markdown);
   }
+
+  function insertTable() {
+    insertSnippet("\n| Column 1 | Column 2 | Column 3 |\n|----------|----------|----------|\n|          |          |          |\n|          |          |          |\n");
+  }
+
+  async function onPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const files = Array.from(e.clipboardData.files).filter((f) => f.type.startsWith("image/"));
+    if (!files.length || !canManage) return;
+    e.preventDefault();
+    const file = files[0];
+    const placeholder = `![Uploading ${file.name}…]()`;
+    insertSnippet(placeholder);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch(`/api/campaigns/${campaign.id}/media`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileName: file.name, base64, mimeType: file.type, alt: "" }),
+      });
+      const data = await res.json();
+      if (data.media?.markdown) {
+        setContent((prev) => prev.replace(placeholder, data.media.markdown));
+        setMedia((prev) => [data.media, ...prev]);
+      } else {
+        setContent((prev) => prev.replace(placeholder, ""));
+        setMessage(data.error || "Image upload failed.");
+      }
+    } catch {
+      setContent((prev) => prev.replace(placeholder, ""));
+      setMessage("Image upload failed.");
+    }
+  }
+
+  function onSlashSelect(cmd: typeof SLASH_COMMANDS[0]) {
+    if (!textareaRef.current || !slashMenu) return;
+    const textarea = textareaRef.current;
+    const slashEnd = textarea.selectionStart;
+    const before = content.slice(0, slashMenu.insertStart);
+    const after = content.slice(slashEnd);
+    const snippet = cmd.snippet.replace("{{selection}}", "");
+    const next = before + snippet + after;
+    setContent(next);
+    setSlashMenu(null);
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const cursor = slashMenu.insertStart + snippet.length;
+      textarea.setSelectionRange(cursor, cursor);
+    });
+  }
+
+  function onContentChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const val = e.target.value;
+    const pos = e.target.selectionStart;
+    setContent(val);
+
+    const beforeCursor = val.slice(0, pos);
+    const lineStart = beforeCursor.lastIndexOf("\n") + 1;
+    const currentLine = beforeCursor.slice(lineStart);
+    const slashMatch = currentLine.match(/^\/(\w*)$/);
+
+    if (slashMatch && textareaRef.current) {
+      const query = slashMatch[1].toLowerCase();
+      const linesBeforeLine = beforeCursor.slice(0, lineStart).split("\n").length;
+      const lineHeight = 22;
+      const rect = textareaRef.current.getBoundingClientRect();
+      const menuTop = rect.top + linesBeforeLine * lineHeight - textareaRef.current.scrollTop + lineHeight + 4;
+      setSlashMenu({ query, insertStart: lineStart, top: menuTop, left: rect.left + 8 });
+      setSlashMenuIdx(0);
+    } else {
+      setSlashMenu(null);
+    }
+  }
+
+  const filteredSlashCmds = slashMenu
+    ? SLASH_COMMANDS.filter((c) => !slashMenu.query || c.id.startsWith(slashMenu.query) || c.label.toLowerCase().includes(slashMenu.query))
+    : [];
 
   async function compareSourceImport() {
     if (!frontmatter.sourceImport) return;
@@ -442,20 +602,36 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
 
   const coverRaw = frontmatter.cover ? String(frontmatter.cover) : "";
   const coverSrc = coverRaw ? (/^https?:\/\//i.test(coverRaw) ? coverRaw : resolveMedia(coverRaw.replace(/^\/?wiki\/media\//, ""))) : "";
-  const coverEl = coverSrc ? <img className="page-cover" src={coverSrc} alt="" /> : null;
+  const coverEl = coverSrc ? <img className="page-cover page-cover-clickable" src={coverSrc} alt="" onClick={() => setLightboxSrc(coverSrc)} /> : null;
 
   if (!isEditing) {
     return (
       <section className="reader-shell">
         <div className="editor-panel">
           <div className="editor-toolbar">
-            {canManage && <button type="button" className={mode === "gm" ? "active" : ""} onClick={() => setMode("gm")}>GM preview</button>}
-            <button type="button" className={mode === "player" ? "active" : ""} onClick={() => setMode("player")}>Player preview</button>
-            <button type="button" className={mode === "handout" ? "active" : ""} onClick={() => setMode("handout")}>Handout</button>
+            {canManage && <button type="button" className={mode === "gm" ? "active" : ""} onClick={() => { setShowHistory(false); setMode("gm"); }}>GM preview</button>}
+            <button type="button" className={mode === "player" ? "active" : ""} onClick={() => { setShowHistory(false); setMode("player"); }}>Player preview</button>
+            <button type="button" className={mode === "handout" ? "active" : ""} onClick={() => { setShowHistory(false); setMode("handout"); }}>Handout</button>
+            {canManage && <button type="button" className={showHistory ? "active" : ""} onClick={showHistory ? () => setShowHistory(false) : openHistory}>History</button>}
             {canManage && <button type="button" onClick={() => setIsEditing(true)}>Edit page</button>}
             {canManage && <button type="button" className="danger" disabled={isSaving} onClick={deletePage}>Delete page</button>}
           </div>
           {message && <p className="toast editor-toast">{message}</p>}
+          {showHistory ? (
+            <div className="page-history">
+              <h3>Page history</h3>
+              {historyLoading && <p className="muted">Loading…</p>}
+              {!historyLoading && historyCommits.length === 0 && <p className="muted">No commits found.</p>}
+              {historyCommits.map((c) => (
+                <div className="history-commit" key={c.sha}>
+                  <span className="history-meta">{new Date(c.date).toLocaleDateString()} · {c.author}</span>
+                  <a href={c.url} target="_blank" rel="noreferrer" className="quiet-link history-message">{c.message}</a>
+                  <span className="history-sha">{c.sha.slice(0, 7)}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+          <>
           {mode !== "handout" && breadcrumbsEl}
           <article className={mode === "handout" ? "preview page-reader handout-preview" : "preview page-reader"}>
             {coverEl}
@@ -468,6 +644,37 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
             )}
             <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
           </article>
+          {mode !== "handout" && (frontmatter.relationships?.length > 0 || incomingRelationships.length > 0) && (
+            <section className="rel-panel">
+              <h4>Connections</h4>
+              <div className="rel-groups">
+                {(frontmatter.relationships || []).map((rel: any, i: number) => {
+                  const rtDef = REL_TYPE_MAP.get(rel.type);
+                  const targetPage = pageBySlug.get(rel.target) ?? knownPages.find(p => p.frontmatter.name.toLowerCase() === (rel.target || "").toLowerCase());
+                  return (
+                    <div className="rel-item" key={`out-${rel.type}-${rel.target}-${i}`}>
+                      <span className="rel-type">{rtDef?.label ?? rel.type}</span>
+                      <a href={targetPage ? `/campaigns/${campaign.id}/pages/${targetPage.slug}` : "#"} className="quiet-link">
+                        {targetPage?.frontmatter.name ?? rel.target}
+                      </a>
+                      {rel.notes && <span className="muted">{rel.notes}</span>}
+                    </div>
+                  );
+                })}
+                {incomingRelationships.map(({ sourceSlug, sourceName, type }, i) => {
+                  const rtDef = REL_TYPE_MAP.get(type);
+                  return (
+                    <div className="rel-item" key={`in-${type}-${sourceSlug}-${i}`}>
+                      <span className="rel-type rel-type-inverse">{rtDef?.inverseLabel ?? type}</span>
+                      <a href={`/campaigns/${campaign.id}/pages/${sourceSlug}`} className="quiet-link">{sourceName}</a>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+          </>
+          )}
         </div>
       </section>
     );
@@ -520,6 +727,41 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
           <label>Key links<input value={keyLinks.join(", ")} onChange={(e) => updateField("keyLinks", e.target.value.split(",").map((v) => v.trim()).filter(Boolean))} readOnly={!fieldsEditable} /></label>
           <label>Cover image<input value={frontmatter.cover || ""} onChange={(e) => updateField("cover", e.target.value || undefined)} readOnly={!fieldsEditable} placeholder="filename.jpg (in /wiki/media) or URL" /></label>
           <label>Foundry link<input value={frontmatter.foundryLink || ""} onChange={(e) => updateField("foundryLink", e.target.value)} readOnly={!fieldsEditable} placeholder="Actor UUID or scene URL" /></label>
+        </div>
+
+        <div className="field-group">
+          <h3>Relationships</h3>
+          {(frontmatter.relationships || []).map((rel: any, i: number) => (
+            <div className="rel-row" key={i}>
+              <select value={rel.type || "related-to"} disabled={!fieldsEditable} onChange={(e) => {
+                const rels = [...(frontmatter.relationships || [])];
+                rels[i] = { ...rel, type: e.target.value };
+                updateField("relationships", rels);
+              }}>
+                {RELATIONSHIP_TYPES.map(rt => <option key={rt.type} value={rt.type}>{rt.label}</option>)}
+              </select>
+              <input value={rel.target || ""} readOnly={!fieldsEditable} placeholder="Page name" list="rel-target-list"
+                onChange={(e) => {
+                  const rels = [...(frontmatter.relationships || [])];
+                  rels[i] = { ...rel, target: e.target.value };
+                  updateField("relationships", rels);
+                }}
+              />
+              {fieldsEditable && (
+                <button type="button" className="linklike" onClick={() =>
+                  updateField("relationships", (frontmatter.relationships || []).filter((_: any, j: number) => j !== i))
+                }>×</button>
+              )}
+            </div>
+          ))}
+          {fieldsEditable && (
+            <button type="button" className="secondary" onClick={() =>
+              updateField("relationships", [...(frontmatter.relationships || []), { type: "related-to", target: "" }])
+            }>Add relationship</button>
+          )}
+          <datalist id="rel-target-list">
+            {knownPages.map(p => <option key={p.slug} value={p.frontmatter.name} />)}
+          </datalist>
         </div>
 
         {isEvent && (
@@ -632,10 +874,22 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
                 <button type="button" className="icon-button" title="Inline code" onClick={() => wrapSelection("`", "`", "code")}><Code2 size={18} /></button>
                 <button type="button" className="icon-button" title="Code block" onClick={codeBlock}><Code2 size={18} /></button>
                 <button type="button" className="icon-button" title="Link" onClick={markdownLink}><Link2 size={18} /></button>
+                <button type="button" className="icon-button" title="Table" onClick={insertTable}><Table2 size={18} /></button>
+                <button type="button" className="icon-button" title="Divider" onClick={() => insertSnippet("\n---\n")}><Minus size={18} /></button>
               </div>
             )}
+            {slashMenu && filteredSlashCmds.length > 0 && (
+              <ul className="slash-menu" style={{ top: slashMenu.top, left: slashMenu.left }}>
+                {filteredSlashCmds.map((cmd, i) => (
+                  <li key={cmd.id} className={i === slashMenuIdx ? "slash-menu-item active" : "slash-menu-item"} onMouseEnter={() => setSlashMenuIdx(i)} onMouseDown={(e) => { e.preventDefault(); onSlashSelect(cmd); }}>
+                    <strong>{cmd.label}</strong>
+                    <span>{cmd.id}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
             <div className="editor-split">
-              <textarea ref={textareaRef} value={content} onChange={(e) => setContent(e.target.value)} onKeyDown={onEditorKeyDown} spellCheck={false} readOnly={!fieldsEditable} />
+              <textarea ref={textareaRef} value={content} onChange={onContentChange} onKeyDown={onEditorKeyDown} onPaste={onPaste} spellCheck={false} readOnly={!fieldsEditable} />
               <article className={mode === "handout" ? "preview handout-preview" : "preview"}>
                 {mode === "handout" && (
                   <header className="handout-header">
@@ -663,5 +917,11 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
         )}
       </section>
     </form>
+    {lightboxSrc && (
+      <div className="lightbox-overlay" onClick={() => setLightboxSrc(null)} role="dialog" aria-modal>
+        <button className="lightbox-close" onClick={() => setLightboxSrc(null)} aria-label="Close">✕</button>
+        <img className="lightbox-img" src={lightboxSrc} alt="" onClick={(e) => e.stopPropagation()} />
+      </div>
+    )}
   );
 }

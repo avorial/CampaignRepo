@@ -12,7 +12,7 @@ const createSchema = z.object({
 async function guard(id: string) {
   const user = await requireUser();
   const campaign = getCampaign(user.id, Number(id));
-  if (!campaign || !user.githubToken) return { error: NextResponse.json({ error: "Not found" }, { status: 404 }) };
+  if (!campaign) return { error: NextResponse.json({ error: "Not found" }, { status: 404 }) };
   if (!canManageCampaign(user.id, campaign.id)) return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   return { campaign };
 }

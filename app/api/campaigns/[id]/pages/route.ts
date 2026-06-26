@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { canManageCampaign, getCampaign, getCampaignRepositoryToken } from "@/lib/db";
-import { getTextFile, GitHubError, putFile } from "@/lib/github";
+import { canManageCampaign, getCampaign } from "@/lib/db";
+import { getStorageAdapter, isConflictError } from "@/lib/storage";
 import { parsePage, serializePage } from "@/lib/markdown";
 import { sanitizePlayerPage } from "@/lib/public-site";
 import { categoryIds, defaultFrontmatter, starterBody } from "@/lib/templates";
@@ -24,21 +24,21 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const repoToken = getCampaignRepositoryToken(campaign.id);
-  if (!repoToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const storage = getStorageAdapter(campaign);
+  if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const url = new URL(req.url);
   const cached = readPageCache(campaign.id);
   const waitForRefresh = url.searchParams.get("refresh") === "wait" || cached.pages.length === 0;
   let snapshot;
   try {
-    snapshot = waitForRefresh ? await refreshPageCache(repoToken, campaign) : cached;
+    snapshot = waitForRefresh ? await refreshPageCache(storage, campaign) : cached;
   } catch (error) {
     return NextResponse.json(
       { pages: cached.pages, error: error instanceof Error ? error.message : "Could not refresh campaign pages." },
       { status: cached.pages.length ? 200 : 503 }
     );
   }
-  if (!waitForRefresh) refreshPageCacheInBackground(repoToken, campaign);
+  if (!waitForRefresh) refreshPageCacheInBackground(storage, campaign);
   const pages = snapshot.pages;
   const mode = url.searchParams.get("mode");
   const visiblePages =
@@ -61,25 +61,27 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const user = await requireUser();
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
-  if (!campaign || !user.githubToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const storage = getStorageAdapter(campaign, user.githubToken);
+  if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
   try {
     const input = schema.parse(await req.json());
     const slug = slugify(input.name);
     const pagePath = `wiki/pages/${slug}.md`;
     try {
-      await getTextFile(user.githubToken, campaign, pagePath);
+      await storage.getTextFile(pagePath);
       return NextResponse.json(
         { error: `An entry named "${input.name}" already exists. Open the existing entry or choose a different name.`, slug },
         { status: 409 }
       );
     } catch (error) {
-      if (!(error instanceof GitHubError && error.status === 404)) throw error;
+      if (!isConflictError(error) && (error as any)?.status !== 404) throw error;
     }
     let frontmatter = defaultFrontmatter(input.name, input.category, input.visibility);
     let content = starterBody(input.name, input.category, campaign.gameType as any);
     if (input.templatePath?.startsWith("wiki/templates/") && input.templatePath.endsWith(".md")) {
-      const template = await getTextFile(user.githubToken, campaign, input.templatePath);
+      const template = await storage.getTextFile(input.templatePath);
       const parsedTemplate = parsePage(slug, template.text, template.sha);
       frontmatter = {
         ...parsedTemplate.frontmatter,
@@ -94,22 +96,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       };
       content = parsedTemplate.content.replace(/^# .*/m, `# ${input.name}`);
     }
-    await putFile(user.githubToken, campaign, pagePath, serializePage(frontmatter, content), `CampaignRepo: create ${input.name}`);
-    scheduleSearchIndexRebuild(user.githubToken, campaign);
+    await storage.putFile(pagePath, serializePage(frontmatter, content), `CampaignRepo: create ${input.name}`);
+    scheduleSearchIndexRebuild(campaign);
     return NextResponse.json({ slug });
   } catch (error) {
-    if (error instanceof GitHubError && /sha[\s\S]*supplied/i.test(error.message)) {
+    if (isConflictError(error)) {
       return NextResponse.json(
         { error: "An entry with that name was created before this request completed. Open the existing entry or choose a different name." },
         { status: 409 }
       );
     }
-    const message =
-      error instanceof GitHubError
-        ? `GitHub error${error.status ? ` ${error.status}` : ""}: ${error.message}`
-        : error instanceof Error
-          ? error.message
-          : "Could not create page.";
+    const message = error instanceof Error ? error.message : "Could not create page.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

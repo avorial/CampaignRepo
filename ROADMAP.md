@@ -47,9 +47,12 @@ frontmatter fields and section scaffold. Mostly data — extends the pack system
 (`![[Page]]` or `:::include Page:::`) to embed one page's content/section inside
 another. Huge for reusable lore (a faction blurb shown on many pages).
 
-### 5. Image galleries & cover images  ·  S
+### ~~5. Image galleries & cover images~~  ·  S  ✅ SHIPPED
 A `cover` frontmatter image rendered as an article banner, and a `:::gallery`
 block for image grids with lightbox. Makes pages feel like WA/LK articles.
+*Shipped: `:::gallery` parses markdown image syntax into a CSS grid; cover renders
+as a banner; clicking either opens a fullscreen lightbox overlay (Esc to close).
+Both wired in the private page editor and the public site.*
 
 ---
 
@@ -60,17 +63,17 @@ Upgrade the current date-sorted list into **eras/ages**, multiple parallel
 tracks (political / personal / cosmic), and a visual horizontal timeline.
 Driven by `/wiki/timelines/*.yaml` + event frontmatter.
 
-### 7. Relationship trees & genealogy views  ·  M-L
-Build an interactive, node-based relationship explorer inspired by
-[`v-relations`](https://v-relations.com/), where a user can start from any page,
-expand nearby connections, refocus the tree on another node, and inspect or edit
-the relationship without leaving the view. Genealogy is one layout preset using
-parent/child/spouse/guardian/adopted relationships; political, social, faction,
-location, ownership, and session-appearance trees use the same engine. Support
-typed and directional edges, labels, colors, notes, time ranges, hidden GM-only
-connections, filters, collapsed clusters, search, zoom/pan, and a readable
-selected-node details panel. Store the relationships in page frontmatter or a
-portable repo sidecar rather than a separate graph database.
+### 7. Relationship trees & genealogy views  ·  M-L  ·  🚧 CORE SHIPPED
+Dedicated `/campaigns/[id]/graph` page with a force-directed SVG explorer:
+all campaign pages as nodes colored by category; wiki links + typed semantic
+relationships (#18) as edges (typed edges dashed + labeled on hover); click any
+node to focus — dims unconnected nodes, shows a detail panel with outgoing and
+incoming links including relationship-type labels; refocus by clicking adjacent
+nodes; pan by drag, zoom by scroll; category filter checkboxes; typed-only edge
+toggle. Graph API updated to include `relType` edges from page frontmatter.
+"Graph" button added to campaign topbar nav.
+Follow-ups: genealogy hierarchy layout preset for family trees; collapsed clusters
+for dense subgraphs; edit-relationship from graph view; search/highlight by name.
 
 ### 8. Published public site / shareable links  ·  M  ·  ✅ SHIPPED
 A read-only, no-login public presentation of player-visible, approved pages
@@ -86,10 +89,18 @@ A campaign sets accent colors, a curated display font, and a banner image via a
 player portal, and public site. Edited from the Settings tab; colors and font
 are validated/sanitized server-side (no arbitrary CSS).
 
-### 10. Editor upgrades (toward block editing)  ·  M–L
+### 10. Editor upgrades (toward block editing)  ·  M–L  ·  🚧 CORE SHIPPED
 Slash-command menu, drag-to-reorder, table support, inline image paste-upload,
 and a cleaner WYSIWYG-ish surface over Markdown. Closes the gap with LK's
 block editor without abandoning Markdown-on-disk.
+
+Shipped: `/` at the start of a line opens a slash command menu (filtered by
+typing, keyboard navigable with ↑↓/Tab/Enter, Escape to close) inserting
+headings, quote, code block, table, divider, task list, GM block, and include.
+Table button and Divider button added to the format toolbar. Paste an image into
+the editor to upload it directly to media and insert the markdown reference
+(fallback error if no personal token). Cmd+S saves. Follow-ups: drag-to-reorder
+blocks, contenteditable WYSIWYG surface, frontmatter-aware tab completion.
 
 ---
 
@@ -166,7 +177,7 @@ report page" action that spins the notes + checked agenda into an `event` page.
 Follow-ups: scenes/encounters/initiative blocks, handouts, player presentation
 queue.
 
-### 18. Structured relationships & semantic graph  ·  M-L
+### 18. Structured relationships & semantic graph  ·  M-L  ·  🚧 CORE SHIPPED
 Replace plain `keyLinks` with typed relationships such as member-of, located-in,
 allied-with, enemy-of, owns, parent-of, and appears-in-session. Keep wiki links
 as the simple default, but allow richer edges in frontmatter. Use the same data
@@ -175,11 +186,30 @@ context, graph filters, genealogy layouts, campaign health checks, and MCP tools
 Define inverse relationships and direction rules centrally so "member-of" can
 render as "has-member" from the opposite node without duplicating data.
 
-### 19. Version history, activity feed & restore  ·  M
+Shipped: `relationships` frontmatter field (`[{ type, target, label?, notes? }]`)
+on any page. 20 built-in typed relationships across faction, family, location,
+ownership, political, and session categories, each with a defined inverse label
+(e.g. "member-of" ↔ "has-member"). Page editor sidebar has an add/edit/remove
+relationship UI with a type dropdown and page name datalist. Reader shows a
+"Connections" panel with outgoing (gold label) and incoming (computed from all
+pages, shown with inverse label) relationships. Stored as plain YAML in the page
+file — no separate graph database. Follow-ups: graph view integration (typed
+edge colors/filters), genealogy layout, campaign health check for broken targets,
+MCP tool for relationship queries, notes/since/until fields in the UI.
+
+### 19. Version history, activity feed & restore  ·  M  ·  🚧 CORE SHIPPED
 Expose the Git history already protecting campaign content. Show who changed
 what, compare revisions, restore an earlier page or media metadata file, and
 surface recent activity by campaign. Add a compact dashboard feed for new pages,
 approvals, imports, comments, invites, and publishing changes.
+
+Shipped: "History" tab in the page reader toolbar fetches the last 20 commits for
+that file (`/api/campaigns/[id]/pages/[slug]/history`) and shows date, author,
+commit message, and SHA with a link to the GitHub diff. "Recent activity" widget
+added to the overview dashboard (`/api/campaigns/[id]/activity`) showing the last
+30 repo commits with author, date, message, and GitHub link. Both use existing
+GitHub API auth. Follow-ups: diff/compare view, restore (commit with old content),
+media file history, mention-based filtering.
 
 ### 20. Campaign health & repair center  ·  S-M  ·  ✅ SHIPPED
 Expand repo validation into an actionable health dashboard: broken links,
@@ -387,7 +417,7 @@ your-data-is-yours. The wiki is one part; the story is ownership + version histo
 Strongest differentiator: **one repository per campaign** — every world is fully
 isolated instead of one giant knowledge base that becomes an unmanageable mess.
 
-### 34. Pluggable storage backends — Local Folder, then Gitea/Forgejo  ·  L
+### ~~34. Pluggable storage backends — Local Folder, then Gitea/Forgejo~~  ·  L  ✅ SHIPPED
 Make GitHub the **recommended, not required** backend; this removes the single
 biggest objection. Same on-disk shape everywhere (Markdown pages + images +
 templates) — only the location differs:
@@ -400,6 +430,9 @@ Do **not** invent a DB format — point at a folder (e.g. `D:\Campaigns\Travelle
 or `/mnt/nas/RPG/KingdomDivided/`). Support in-place upgrade with no data change:
 Local Folder → init Git → push to GitHub. Audience hierarchy: Local (everyone) →
 GitHub (power users) → Gitea/Forgejo (self-run).
+**Shipped:** `StorageAdapter` interface + `LocalFolderAdapter` + `GitHubAdapter`; all
+routes/libs migrated to go through `getStorageAdapter(campaign, token?)`; DB columns
+`storageBackend`/`localPath` added via migration; dashboard "Local folder" mode.
 
 ### 35. Zero-friction onboarding  ·  S-M
 "Click **New Campaign** — everything else happens automatically." Never surface

@@ -70,6 +70,8 @@ export type Campaign = {
   repo: string;
   branch: string;
   gameType: GameType;
+  storageBackend: "github" | "local";
+  localPath?: string | null;
   role?: CampaignRole;
   createdAt: string;
 };
@@ -104,6 +106,16 @@ export type CampaignInvite = {
   createdAt: string;
 };
 
+export type WikiRelationship = {
+  type: string;
+  target: string;
+  label?: string;
+  notes?: string;
+  since?: string;
+  until?: string;
+  hidden?: boolean;
+};
+
 export type WikiPageFrontmatter = {
   category: Category;
   type: string;
@@ -115,6 +127,7 @@ export type WikiPageFrontmatter = {
   knownToPlayers: boolean;
   keyLinks: string[];
   aliases: string[];
+  relationships?: WikiRelationship[];
   parent?: string;
   cover?: string;
   foundryLink?: string;
@@ -219,6 +232,7 @@ export type CampaignGraphEdge = {
   target: string;
   label: string;
   missing: boolean;
+  relType?: string;
 };
 
 export type CampaignTimelineItem = {

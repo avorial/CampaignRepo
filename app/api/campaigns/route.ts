@@ -1,3 +1,5 @@
+import fs from "node:fs/promises";
+import nodePath from "node:path";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
@@ -5,16 +7,33 @@ import { getDb, listCampaigns, removeCampaign } from "@/lib/db";
 import { createRepo, GitHubError, initializeRepo, isGitHubAppConnection } from "@/lib/github";
 import { parseRepoInput } from "@/lib/repo";
 import { gameTypes } from "@/lib/templates";
+import { getStorageAdapter } from "@/lib/storage";
+import type { Campaign } from "@/lib/types";
 
-const createSchema = z.object({
-  mode: z.enum(["create", "connect"]),
-  name: z.string().min(1),
-  owner: z.string().optional(),
-  repo: z.string().optional(),
-  private: z.boolean().default(true),
-  branch: z.string().default("main"),
-  gameType: z.enum(gameTypes as [string, ...string[]])
-});
+const createSchema = z.discriminatedUnion("mode", [
+  z.object({
+    mode: z.literal("create"),
+    name: z.string().min(1),
+    repo: z.string().optional(),
+    private: z.boolean().default(true),
+    branch: z.string().default("main"),
+    gameType: z.enum(gameTypes as [string, ...string[]])
+  }),
+  z.object({
+    mode: z.literal("connect"),
+    name: z.string().min(1),
+    owner: z.string().optional(),
+    repo: z.string().optional(),
+    branch: z.string().default("main"),
+    gameType: z.enum(gameTypes as [string, ...string[]])
+  }),
+  z.object({
+    mode: z.literal("local"),
+    name: z.string().min(1),
+    localPath: z.string().min(1),
+    gameType: z.enum(gameTypes as [string, ...string[]])
+  })
+]);
 
 const deleteSchema = z.object({ id: z.number().int().positive() });
 
@@ -36,26 +55,54 @@ export async function DELETE(req: Request) {
 
 export async function POST(req: Request) {
   const user = await requireUser();
-  if (!user.githubToken) return NextResponse.json({ error: "Connect GitHub first." }, { status: 400 });
   const input = createSchema.parse(await req.json());
-  let { owner, repo } = parseRepoInput(input.owner || "", input.repo || "");
-  let branch = input.branch || "main";
+
+  if (input.mode === "local") {
+    const absPath = nodePath.resolve(input.localPath);
+    try {
+      await fs.access(absPath);
+    } catch {
+      return NextResponse.json({ error: `Folder not found: ${absPath}` }, { status: 400 });
+    }
+    const basename = nodePath.basename(absPath);
+    const db = getDb();
+    let result;
+    try {
+      result = db
+        .prepare("INSERT INTO campaigns (userId, name, owner, repo, branch, gameType, storageBackend, localPath) VALUES (?, ?, 'local', ?, 'local', ?, 'local', ?)")
+        .run(user.id, input.name, basename, input.gameType, absPath);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "";
+      if (msg.includes("UNIQUE")) return NextResponse.json({ error: `A local campaign already exists for "${basename}".` }, { status: 409 });
+      throw error;
+    }
+    db.prepare("INSERT OR IGNORE INTO campaign_memberships (campaignId, userId, role) VALUES (?, ?, 'owner')").run(result.lastInsertRowid, user.id);
+    const campaign = db.prepare("SELECT * FROM campaigns WHERE id = ?").get(result.lastInsertRowid) as Campaign;
+    const storage = getStorageAdapter(campaign);
+    if (storage) await storage.initializeRepo(campaign);
+    return NextResponse.json({ campaign });
+  }
+
+  if (!user.githubToken) return NextResponse.json({ error: "Connect GitHub first." }, { status: 400 });
+  let { owner, repo } = parseRepoInput((input as any).owner || "", (input as any).repo || "");
+  let branch = (input as any).branch || "main";
   try {
     if (input.mode === "create") {
       if (isGitHubAppConnection(user.githubToken)) {
         return NextResponse.json({ error: "GitHub App access can connect existing repos. To create repos from CampaignRepo, connect a manual GitHub token fallback." }, { status: 400 });
       }
-      const created = await createRepo(user.githubToken, input.repo || input.name, input.private);
+      const created = await createRepo(user.githubToken, (input as any).repo || input.name, (input as any).private ?? true);
       owner = created.owner.login;
       repo = created.name;
       branch = created.default_branch || "main";
     }
     if (!owner || !repo) return NextResponse.json({ error: "Owner and repo are required." }, { status: 400 });
-    const result = getDb()
-      .prepare("INSERT INTO campaigns (userId, name, owner, repo, branch, gameType) VALUES (?, ?, ?, ?, ?, ?)")
+    const db = getDb();
+    const result = db
+      .prepare("INSERT INTO campaigns (userId, name, owner, repo, branch, gameType, storageBackend) VALUES (?, ?, ?, ?, ?, ?, 'github')")
       .run(user.id, input.name, owner, repo, branch, input.gameType);
-    getDb().prepare("INSERT OR IGNORE INTO campaign_memberships (campaignId, userId, role) VALUES (?, ?, 'owner')").run(result.lastInsertRowid, user.id);
-    const campaign = getDb().prepare("SELECT * FROM campaigns WHERE id = ?").get(result.lastInsertRowid) as any;
+    db.prepare("INSERT OR IGNORE INTO campaign_memberships (campaignId, userId, role) VALUES (?, ?, 'owner')").run(result.lastInsertRowid, user.id);
+    const campaign = db.prepare("SELECT * FROM campaigns WHERE id = ?").get(result.lastInsertRowid) as Campaign;
     await initializeRepo(user.githubToken, campaign);
     return NextResponse.json({ campaign });
   } catch (error) {

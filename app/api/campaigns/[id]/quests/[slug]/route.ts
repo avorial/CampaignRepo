@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { deleteQuest, getQuest, QUEST_STATUSES, saveQuest } from "@/lib/quests";
-import { GitHubError } from "@/lib/github";
+import { isNotFoundError } from "@/lib/storage";
 
 const saveSchema = z.object({
   frontmatter: z.object({
@@ -22,7 +22,7 @@ const saveSchema = z.object({
 async function guard(id: string) {
   const user = await requireUser();
   const campaign = getCampaign(user.id, Number(id));
-  if (!campaign || !user.githubToken) return { error: NextResponse.json({ error: "Not found" }, { status: 404 }) };
+  if (!campaign) return { error: NextResponse.json({ error: "Not found" }, { status: 404 }) };
   if (!canManageCampaign(user.id, campaign.id)) return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   return { campaign };
 }
@@ -34,7 +34,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   try {
     return NextResponse.json({ quest: await getQuest(campaign, slug) });
   } catch (e) {
-    if (e instanceof GitHubError && e.status === 404) return NextResponse.json({ error: "Quest not found" }, { status: 404 });
+    if (isNotFoundError(e)) return NextResponse.json({ error: "Quest not found" }, { status: 404 });
     throw e;
   }
 }

@@ -1,9 +1,32 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
-import { getCampaign, getCampaignRepositoryToken } from "@/lib/db";
-import { getRawFile, GitHubError } from "@/lib/github";
+import { getCampaign } from "@/lib/db";
+import { getStorageAdapter, isNotFoundError } from "@/lib/storage";
 
-function contentType(fileName: string) {
+export async function GET(_: Request, { params }: { params: Promise<{ id: string; path: string[] }> }) {
+  const user = await requireUser();
+  const { id, path } = await params;
+  const campaign = getCampaign(user.id, Number(id));
+  if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const storage = getStorageAdapter(campaign);
+  if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const cleanParts = path.filter(Boolean);
+  if (!cleanParts.length || cleanParts.some((part) => part === "." || part === ".." || part.includes("/") || part.includes("\\"))) {
+    return NextResponse.json({ error: "Invalid media path" }, { status: 400 });
+  }
+  const fileName = cleanParts[cleanParts.length - 1];
+  const mediaPath = `wiki/media/${cleanParts.join("/")}`;
+  try {
+    const file = await storage.getRawFile(mediaPath);
+    const ct = file.contentType || guessContentType(fileName);
+    return new NextResponse(file.bytes, { headers: { "Content-Type": ct, "Cache-Control": "private, max-age=300" } });
+  } catch (error) {
+    if (isNotFoundError(error)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    throw error;
+  }
+}
+
+function guessContentType(fileName: string) {
   const lower = fileName.toLowerCase();
   if (lower.endsWith(".png")) return "image/png";
   if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
@@ -15,33 +38,4 @@ function contentType(fileName: string) {
   if (lower.endsWith(".wav")) return "audio/wav";
   if (lower.endsWith(".ogg")) return "audio/ogg";
   return "application/octet-stream";
-}
-
-export async function GET(_: Request, { params }: { params: Promise<{ id: string; path: string[] }> }) {
-  const user = await requireUser();
-  const { id, path } = await params;
-  const campaign = getCampaign(user.id, Number(id));
-  if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const repoToken = getCampaignRepositoryToken(campaign.id);
-  if (!repoToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const cleanParts = path.filter(Boolean);
-  if (!cleanParts.length || cleanParts.some((part) => part === "." || part === ".." || part.includes("/") || part.includes("\\"))) {
-    return NextResponse.json({ error: "Invalid media path" }, { status: 400 });
-  }
-
-  const fileName = cleanParts[cleanParts.length - 1];
-  const mediaPath = `wiki/media/${cleanParts.join("/")}`;
-  try {
-    const file = await getRawFile(repoToken, campaign, mediaPath);
-    return new NextResponse(file.bytes, {
-      headers: {
-        "Content-Type": file.contentType || contentType(fileName),
-        "Cache-Control": "private, max-age=300"
-      }
-    });
-  } catch (error) {
-    if (error instanceof GitHubError && error.status === 404) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    throw error;
-  }
 }

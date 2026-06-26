@@ -10,31 +10,38 @@ import { darkPlatePacks, gamePackLogos } from "@/lib/game-pack-branding";
 export default function DashboardClient({
   user,
   campaigns,
-  githubAppConfigured
+  githubAppConfigured,
+  suggestedBasePath = ""
 }: {
   user: User;
   campaigns: Campaign[];
   categories: { id: string; label: string }[];
   githubAppConfigured: boolean;
+  suggestedBasePath?: string;
 }) {
+  const githubConnected = Boolean(user.githubToken);
+  const isGitHubApp = Boolean(user.githubToken?.startsWith("github-app:"));
+  const defaultMode = isGitHubApp ? "connect" : githubConnected ? "create" : "local";
   const [message, setMessage] = useState("");
   const [repos, setRepos] = useState<Campaign[]>(campaigns);
-  const isGitHubApp = Boolean(user.githubToken?.startsWith("github-app:"));
-  const [mode, setMode] = useState<"create" | "connect">(isGitHubApp ? "connect" : "create");
+  const [mode, setMode] = useState<"create" | "connect" | "local">(defaultMode);
+  const [campaignName, setCampaignName] = useState("");
   const [buildError, setBuildError] = useState("");
   const [search, setSearch] = useState<any[]>([]);
   const [tokens, setTokens] = useState<ApiToken[]>([]);
   const [newToken, setNewToken] = useState("");
   const [reviewGroups, setReviewGroups] = useState<any[]>([]);
   const [expandedPanels, setExpandedPanels] = useState({
-    github: !Boolean(user.githubToken),
-    build: !Boolean(user.githubToken),
-    mcp: !Boolean(user.githubToken)
+    github: false,
+    build: true,
+    mcp: false
   });
   const mcpUrl = typeof window !== "undefined" ? `${window.location.origin}/api/mcp` : "/api/mcp";
   const githubConnection = user.githubToken?.startsWith("github-app:") ? "GitHub App" : user.githubToken ? "Manual token" : "Not connected";
-  const githubConnected = Boolean(user.githubToken);
   const githubUser = user.githubToken?.startsWith("github-app:") ? "Avorial" : user.githubToken ? "GitHub token user" : "";
+  const suggestedLocalPath = suggestedBasePath && campaignName.trim()
+    ? `${suggestedBasePath}/${campaignName.trim().replace(/[<>:"/\\|?*]/g, "-")}`
+    : suggestedBasePath || "";
 
   const setPanelOpen = (panel: keyof typeof expandedPanels, open: boolean) => {
     setExpandedPanels((current) => ({ ...current, [panel]: open }));
@@ -81,25 +88,20 @@ export default function DashboardClient({
   async function buildRepo(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const res = await fetch("/api/campaigns", {
-      method: "POST",
-      body: JSON.stringify({
-        mode,
-        name: form.get("name"),
-        owner: form.get("owner") || undefined,
-        repo: form.get("repo"),
-        branch: form.get("branch") || "main",
-        gameType: form.get("gameType"),
-        private: form.get("private") === "on"
-      })
-    });
+    let body: Record<string, unknown>;
+    if (mode === "local") {
+      body = { mode: "local", name: form.get("name"), localPath: form.get("localPath") || suggestedLocalPath, gameType: form.get("gameType") };
+    } else {
+      body = { mode, name: form.get("name"), owner: form.get("owner") || undefined, repo: form.get("repo"), branch: form.get("branch") || "main", gameType: form.get("gameType"), private: form.get("private") === "on" };
+    }
+    const res = await fetch("/api/campaigns", { method: "POST", body: JSON.stringify(body) });
     const data = await res.json();
     if (res.ok) window.location.href = `/campaigns/${data.campaign.id}`;
     else setBuildError(data.error || "Could not build repo.");
   }
 
   async function removeRepo(id: number, name: string) {
-    if (!confirm(`Remove "${name}" from CampaignRepo? This disconnects the repo here - the GitHub repository is not deleted.`)) return;
+    if (!confirm(`Remove "${name}" from CampaignRepo? The underlying files are not deleted.`)) return;
     const res = await fetch("/api/campaigns", { method: "DELETE", body: JSON.stringify({ id }) });
     const data = await res.json();
     if (res.ok) {
@@ -154,8 +156,8 @@ export default function DashboardClient({
                     )}
                     <strong>{campaign.name}</strong>
                   </div>
-                  <span>{campaign.owner}/{campaign.repo}</span>
-                  <small>{campaign.gameType} - {campaign.branch} - {campaign.role}</small>
+                  <span>{campaign.storageBackend === "local" ? (campaign.localPath || "local folder") : `${campaign.owner}/${campaign.repo}`}</span>
+                  <small>{campaign.gameType}{campaign.storageBackend !== "local" && ` - ${campaign.branch}`} - {campaign.storageBackend === "local" ? "local" : "github"} - {campaign.role}</small>
                 </Link>
                 {campaign.role === "owner" && (
                   <button type="button" className="repo-remove danger" onClick={() => removeRepo(campaign.id, campaign.name)}>
@@ -219,10 +221,17 @@ export default function DashboardClient({
         <details className="panel dashboard-toggle-panel" open={expandedPanels.build} onToggle={(event) => setPanelOpen("build", event.currentTarget.open)}>
           <summary>
             <span>Build Campaign Repo</span>
-            <small>{mode === "create" ? "Create repo" : "Connect repo"}</small>
+            <small>{mode === "create" ? "Create repo" : mode === "local" ? "Local folder" : "Connect repo"}</small>
           </summary>
           <div className="dashboard-toggle-body">
+            {!githubConnected && (
+              <div className="setup-callout callout-info" style={{ marginBottom: 8 }}>
+                <strong>No GitHub needed</strong>
+                <span>Create a local campaign — your files stay on this machine. You can connect GitHub later to get version history and multi-device sync.</span>
+              </div>
+            )}
             <div className="segmented">
+              <button type="button" className={mode === "local" ? "active" : ""} onClick={() => { setMode("local"); setBuildError(""); }}>Local folder</button>
               <button
                 type="button"
                 className={mode === "create" ? "active" : ""}
@@ -230,26 +239,39 @@ export default function DashboardClient({
                 title={isGitHubApp ? "GitHub App access can't create repos - add a manual token to enable this" : undefined}
                 onClick={() => { setMode("create"); setBuildError(""); }}
               >
-                {isGitHubApp && <Lock size={11} aria-hidden style={{ marginRight: 5 }} />}Create repo
+                {isGitHubApp && <Lock size={11} aria-hidden style={{ marginRight: 5 }} />}Create GitHub repo
               </button>
-              <button type="button" className={mode === "connect" ? "active" : ""} onClick={() => { setMode("connect"); setBuildError(""); }}>Connect repo</button>
+              <button type="button" className={mode === "connect" ? "active" : ""} onClick={() => { setMode("connect"); setBuildError(""); }}>Connect GitHub repo</button>
             </div>
-            {isGitHubApp && (
+            {isGitHubApp && mode !== "local" && (
               <div className="setup-callout callout-warn">
                 <strong><Lock size={13} aria-hidden style={{ marginRight: 6, verticalAlign: "-2px" }} />Creating repos is locked</strong>
                 <span>You&apos;re connected via the <strong>GitHub App</strong>, which can <strong>connect existing repos</strong> but can&apos;t create new ones. Make the repo at <a href="https://github.com/new" target="_blank" rel="noreferrer">github.com/new</a>, then use <button type="button" className="linklike" onClick={() => { setMode("connect"); setBuildError(""); }}>Connect repo</button> - or add a manual GitHub token under <em>Connection troubleshooting</em> to unlock creation.</span>
               </div>
             )}
+            {(mode === "create" || mode === "connect") && !githubConnected && (
+              <div className="setup-callout callout-warn" style={{ marginTop: 8 }}>
+                <strong>GitHub not connected</strong>
+                <span>Connect GitHub below, or use <button type="button" className="linklike" onClick={() => { setMode("local"); setBuildError(""); }}>Local folder</button> to get started without an account.</span>
+              </div>
+            )}
             <form onSubmit={buildRepo} className="stack">
-              <label>Campaign name<input name="name" required placeholder="The Jardin File" /></label>
+              <label>Campaign name<input name="name" required placeholder="The Jardin File" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} /></label>
+              {mode === "local" && (
+                <label>
+                  Local folder path
+                  <input name="localPath" placeholder={suggestedLocalPath || "Path where campaign files will be saved"} />
+                  {suggestedLocalPath && <small className="muted">Leave blank to use: {suggestedLocalPath}</small>}
+                </label>
+              )}
               {mode === "connect" && <label>Owner<input name="owner" placeholder="avorial (optional if pasting URL)" /></label>}
-              <label>{mode === "connect" ? "Repo name or URL" : "Repo name"}<input name="repo" required placeholder={mode === "connect" ? "kdwiki or https://github.com/avorial/kdwiki" : "jardin-campaign"} /></label>
-              <label>Branch<input name="branch" defaultValue="main" /></label>
+              {mode !== "local" && <label>{mode === "connect" ? "Repo name or URL" : "Repo name"}<input name="repo" required placeholder={mode === "connect" ? "kdwiki or https://github.com/avorial/kdwiki" : "jardin-campaign"} /></label>}
+              {mode !== "local" && <label>Branch<input name="branch" defaultValue="main" /></label>}
               <label>Game template pack<select name="gameType">{gameTypeGroups.map((group) => (
                 <optgroup key={group.label} label={group.label}>{group.types.map((type) => <option key={type}>{type}</option>)}</optgroup>
               ))}</select></label>
               {mode === "create" && <label className="check"><input type="checkbox" name="private" defaultChecked /> Private repo</label>}
-              <button disabled={isGitHubApp && mode === "create"}>{mode === "create" ? "Create and initialize" : "Connect and repair"}</button>
+              <button disabled={isGitHubApp && mode === "create"}>{mode === "create" ? "Create and initialize" : mode === "local" ? "Create local campaign" : "Connect and repair"}</button>
               {buildError && <p className="error">{buildError}</p>}
             </form>
           </div>

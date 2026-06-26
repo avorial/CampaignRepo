@@ -1,6 +1,5 @@
 import YAML from "yaml";
-import { getCampaignRepositoryToken } from "@/lib/db";
-import { deleteFile, getTextFile, GitHubError, listDirectoryTextFiles, putFile } from "@/lib/github";
+import { getStorageAdapter } from "@/lib/storage";
 import { slugify } from "@/lib/slug";
 import type { Campaign } from "@/lib/types";
 
@@ -16,10 +15,10 @@ export type Session = { slug: string; sha?: string; frontmatter: SessionFrontmat
 
 const sessionsDir = "wiki/sessions";
 
-function tokenFor(campaign: Campaign) {
-  const token = getCampaignRepositoryToken(campaign.id);
-  if (!token) throw new Error("This campaign has no GitHub access configured.");
-  return token;
+function adapterFor(campaign: Campaign) {
+  const storage = getStorageAdapter(campaign);
+  if (!storage) throw new Error("No storage configured for this campaign.");
+  return storage;
 }
 
 export function parseSession(slug: string, text: string, sha?: string): Session {
@@ -52,42 +51,40 @@ export function serializeSession(frontmatter: SessionFrontmatter, notes: string)
 }
 
 export async function listSessions(campaign: Campaign): Promise<Session[]> {
-  const token = tokenFor(campaign);
-  const files = await listDirectoryTextFiles(token, campaign, sessionsDir);
+  const storage = adapterFor(campaign);
+  const files = await storage.listDirectoryTextFiles(sessionsDir);
   return files
     .map((f) => parseSession(f.name.replace(/\.md$/, ""), f.text ?? "", f.sha))
     .sort((a, b) => (b.frontmatter.date || "").localeCompare(a.frontmatter.date || "") || a.frontmatter.title.localeCompare(b.frontmatter.title));
 }
 
 export async function getSession(campaign: Campaign, slug: string): Promise<Session> {
-  const token = tokenFor(campaign);
-  const file = await getTextFile(token, campaign, `${sessionsDir}/${slug}.md`);
+  const storage = adapterFor(campaign);
+  const file = await storage.getTextFile(`${sessionsDir}/${slug}.md`);
   return parseSession(slug, file.text, file.sha);
 }
 
 export async function createSession(campaign: Campaign, title: string, date?: string): Promise<Session> {
-  const token = tokenFor(campaign);
+  const storage = adapterFor(campaign);
   const slug = slugify(title) || `session-${Date.now()}`;
   const frontmatter: SessionFrontmatter = { title, date, agenda: [], pinned: [] };
-  await putFile(token, campaign, `${sessionsDir}/${slug}.md`, serializeSession(frontmatter, ""), `CampaignRepo: create session ${title}`);
+  await storage.putFile(`${sessionsDir}/${slug}.md`, serializeSession(frontmatter, ""), `CampaignRepo: create session ${title}`);
   return { slug, frontmatter, notes: "" };
 }
 
 export async function saveSession(campaign: Campaign, slug: string, frontmatter: SessionFrontmatter, notes: string): Promise<Session> {
-  const token = tokenFor(campaign);
+  const storage = adapterFor(campaign);
   let sha: string | undefined;
   try {
-    const existing = await getTextFile(token, campaign, `${sessionsDir}/${slug}.md`);
+    const existing = await storage.getTextFile(`${sessionsDir}/${slug}.md`);
     sha = existing.sha;
-  } catch (error) {
-    if (!(error instanceof GitHubError && error.status === 404)) throw error;
-  }
-  await putFile(token, campaign, `${sessionsDir}/${slug}.md`, serializeSession(frontmatter, notes), `CampaignRepo: update session ${frontmatter.title}`, sha);
+  } catch { /* new file */ }
+  await storage.putFile(`${sessionsDir}/${slug}.md`, serializeSession(frontmatter, notes), `CampaignRepo: update session ${frontmatter.title}`, sha);
   return { slug, sha, frontmatter, notes };
 }
 
 export async function deleteSession(campaign: Campaign, slug: string): Promise<void> {
-  const token = tokenFor(campaign);
-  const existing = await getTextFile(token, campaign, `${sessionsDir}/${slug}.md`);
-  await deleteFile(token, campaign, `${sessionsDir}/${slug}.md`, `CampaignRepo: delete session ${slug}`, existing.sha);
+  const storage = adapterFor(campaign);
+  const existing = await storage.getTextFile(`${sessionsDir}/${slug}.md`);
+  await storage.deleteFile(`${sessionsDir}/${slug}.md`, `CampaignRepo: delete session ${slug}`, existing.sha);
 }

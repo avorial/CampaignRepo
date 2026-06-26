@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
-import { GitHubError } from "@/lib/github";
 import { loadCampaignDashboard, saveCampaignDashboard, sanitizeDashboard } from "@/lib/dashboard";
 
 export const dynamic = "force-dynamic";
@@ -28,12 +27,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const dashboard = await saveCampaignDashboard(campaign, sanitizeDashboard(body.dashboard));
     return NextResponse.json({ dashboard });
   } catch (error) {
-    const message =
-      error instanceof GitHubError
-        ? `GitHub error${error.status ? ` ${error.status}` : ""}: ${error.message}`
-        : error instanceof Error
-          ? error.message
-          : "Could not save dashboard.";
+    const message = error instanceof Error ? error.message : "Could not save dashboard.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

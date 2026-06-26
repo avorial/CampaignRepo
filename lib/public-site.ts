@@ -1,8 +1,7 @@
 import YAML from "yaml";
 import type { Campaign, WikiPage } from "@/lib/types";
-import { getCampaignRepositoryToken } from "@/lib/db";
 import { themePresetForGame } from "@/lib/game-pack-branding";
-import { getTextFile, GitHubError, listDirectory, putFile } from "@/lib/github";
+import { getStorageAdapter } from "@/lib/storage";
 import { parsePage, stripGmBlocks } from "@/lib/markdown";
 import { sanitizeTheme, type CampaignTheme } from "@/lib/theme";
 
@@ -17,20 +16,20 @@ export function sanitizePlayerPage(page: WikiPage): WikiPage {
 }
 
 /**
- * Load the player-safe pages for a campaign straight from its GitHub repo —
+ * Load the player-safe pages for a campaign straight from its storage —
  * only pages that are player-visible AND approved, with GM blocks stripped.
  * Used by the public published site (no auth) and reusable by the player portal.
  */
 export async function loadPublicPages(campaign: Campaign): Promise<WikiPage[]> {
-  const repoToken = getCampaignRepositoryToken(campaign.id);
-  if (!repoToken) return [];
-  const entries = await listDirectory(repoToken, campaign, "wiki/pages");
+  const storage = getStorageAdapter(campaign);
+  if (!storage) return [];
+  const entries = await storage.listDirectory("wiki/pages");
   const pages = await Promise.all(
     entries
       .filter((entry) => entry.type === "file" && entry.name.endsWith(".md"))
       .map(async (entry) => {
         const slug = entry.name.replace(/\.md$/, "");
-        const file = await getTextFile(repoToken, campaign, entry.path);
+        const file = await storage.getTextFile(entry.path);
         return parsePage(slug, file.text, file.sha);
       })
   );
@@ -45,10 +44,10 @@ const campaignConfigPath = "wiki/campaign.yaml";
 /** Read the campaign's theme block from wiki/campaign.yaml. Returns {} on any problem. */
 export async function loadCampaignTheme(campaign: Campaign): Promise<CampaignTheme> {
   const fallbackPreset = themePresetForGame(campaign.gameType);
-  const repoToken = getCampaignRepositoryToken(campaign.id);
-  if (!repoToken) return { preset: fallbackPreset };
+  const storage = getStorageAdapter(campaign);
+  if (!storage) return { preset: fallbackPreset };
   try {
-    const file = await getTextFile(repoToken, campaign, campaignConfigPath);
+    const file = await storage.getTextFile(campaignConfigPath);
     const parsed = YAML.parse(file.text || "") as Record<string, unknown> | null;
     const theme = sanitizeTheme(parsed?.theme);
     return theme.preset ? theme : { ...theme, preset: fallbackPreset };
@@ -59,20 +58,18 @@ export async function loadCampaignTheme(campaign: Campaign): Promise<CampaignThe
 
 /** Merge a sanitized theme into wiki/campaign.yaml, preserving other keys. */
 export async function saveCampaignTheme(campaign: Campaign, theme: CampaignTheme): Promise<CampaignTheme> {
-  const repoToken = getCampaignRepositoryToken(campaign.id);
-  if (!repoToken) throw new Error("This campaign has no GitHub access configured.");
+  const storage = getStorageAdapter(campaign);
+  if (!storage) throw new Error("No storage configured for this campaign.");
   let config: Record<string, unknown> = {};
   let sha: string | undefined;
   try {
-    const file = await getTextFile(repoToken, campaign, campaignConfigPath);
+    const file = await storage.getTextFile(campaignConfigPath);
     sha = file.sha;
     const parsed = YAML.parse(file.text || "") as Record<string, unknown> | null;
     if (parsed && typeof parsed === "object") config = parsed;
-  } catch (error) {
-    if (!(error instanceof GitHubError && error.status === 404)) throw error;
-  }
+  } catch { /* file not found yet */ }
   const clean = sanitizeTheme(theme);
   config.theme = clean;
-  await putFile(repoToken, campaign, campaignConfigPath, YAML.stringify(config), "CampaignRepo: update theme", sha);
+  await storage.putFile(campaignConfigPath, YAML.stringify(config), "CampaignRepo: update theme", sha);
   return clean;
 }

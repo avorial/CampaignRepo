@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign, listCampaigns, searchDocs } from "@/lib/db";
-import { commitFiles, getTextFile, GitHubError, listDirectory, listDirectoryTextFiles, putBase64File, putFile } from "@/lib/github";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { categoryIds, defaultFrontmatter, gameTypes, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
+import { getStorageAdapter, isNotFoundError, type StorageAdapter } from "@/lib/storage";
 import type { Campaign, CampaignGraphEdge, CampaignGraphNode, CampaignMedia, CampaignTimelineItem, Category, GameType, WikiPage, WikiTemplate } from "@/lib/types";
 
 type RpcRequest = {
@@ -47,12 +47,12 @@ function mediaType(name: string): CampaignMedia["mediaType"] {
   return "other";
 }
 
-async function readMediaMetadata(token: string, campaign: Campaign) {
+async function readMediaMetadata(storage: StorageAdapter) {
   try {
-    const file = await getTextFile(token, campaign, "wiki/media/media.json");
+    const file = await storage.getTextFile("wiki/media/media.json");
     return JSON.parse(file.text || "{}") as Record<string, { alt?: string; caption?: string; tags?: string[] }>;
   } catch (error) {
-    if (error instanceof GitHubError && error.status === 404) return {};
+    if (isNotFoundError(error)) return {};
     throw error;
   }
 }
@@ -65,32 +65,23 @@ function safeMediaName(fileName: string) {
   return cleaned || "upload";
 }
 
-async function listMcpTemplates(token: string, campaign: Campaign): Promise<WikiTemplate[]> {
-  const rootEntries = await listDirectory(token, campaign, "wiki/templates");
+async function listMcpTemplates(storage: StorageAdapter, campaign: Campaign): Promise<WikiTemplate[]> {
+  const rootEntries = await storage.listDirectory("wiki/templates");
   const templates: WikiTemplate[] = [];
   for (const dir of rootEntries.filter((entry) => entry.type === "dir")) {
-    const entries = await listDirectory(token, campaign, dir.path);
+    const entries = await storage.listDirectory(dir.path);
     for (const entry of entries.filter((item) => item.type === "file" && item.name.endsWith(".md"))) {
-      const file = await getTextFile(token, campaign, entry.path);
+      const file = await storage.getTextFile(entry.path);
       const slug = entry.name.replace(/\.md$/, "");
       const page = parsePage(slug, file.text, file.sha);
-      templates.push({
-        slug,
-        path: entry.path,
-        sha: file.sha,
-        gameType: dir.name as GameType,
-        category: page.frontmatter.category,
-        name: page.frontmatter.name,
-        summary: page.frontmatter.summary,
-        content: page.content
-      });
+      templates.push({ slug, path: entry.path, sha: file.sha, gameType: dir.name as GameType, category: page.frontmatter.category, name: page.frontmatter.name, summary: page.frontmatter.summary, content: page.content });
     }
   }
   return templates.sort((a, b) => `${a.gameType}:${a.category}:${a.name}`.localeCompare(`${b.gameType}:${b.category}:${b.name}`));
 }
 
-async function listMcpMedia(token: string, campaign: Campaign): Promise<CampaignMedia[]> {
-  const [entries, metadata] = await Promise.all([listDirectory(token, campaign, "wiki/media"), readMediaMetadata(token, campaign)]);
+async function listMcpMedia(storage: StorageAdapter): Promise<CampaignMedia[]> {
+  const [entries, metadata] = await Promise.all([storage.listDirectory("wiki/media"), readMediaMetadata(storage)]);
   return entries
     .filter((entry) => entry.type === "file" && entry.name !== ".gitkeep" && entry.path !== "wiki/media/media.json")
     .map((entry) => {
@@ -100,8 +91,8 @@ async function listMcpMedia(token: string, campaign: Campaign): Promise<Campaign
         name: entry.name,
         path: entry.path,
         sha: entry.sha,
-        size: (entry as any).size,
-        downloadUrl: (entry as any).download_url || undefined,
+        size: entry.size,
+        downloadUrl: entry.downloadUrl,
         mediaType: type,
         alt: itemMetadata.alt,
         caption: itemMetadata.caption,
@@ -111,9 +102,8 @@ async function listMcpMedia(token: string, campaign: Campaign): Promise<Campaign
     });
 }
 
-async function buildMcpGraph(token: string, campaign: Campaign) {
-  // One GraphQL tree read instead of one REST request per page.
-  const files = await listDirectoryTextFiles(token, campaign, "wiki/pages");
+async function buildMcpGraph(storage: StorageAdapter, campaign: Campaign) {
+  const files = await storage.listDirectoryTextFiles("wiki/pages");
   const allPages = files.map((file) => {
     const slug = file.name.replace(/\.md$/, "");
     const raw = file.text ?? "";
@@ -162,9 +152,8 @@ async function buildMcpGraph(token: string, campaign: Campaign) {
   return { nodes, edges, timeline };
 }
 
-async function listReviewPages(token: string, campaign: Campaign) {
-  // One GraphQL tree read instead of one REST request per page.
-  const files = await listDirectoryTextFiles(token, campaign, "wiki/pages");
+async function listMcpReviewPages(storage: StorageAdapter) {
+  const files = await storage.listDirectoryTextFiles("wiki/pages");
   const pages = files.map((file) => parsePage(file.name.replace(/\.md$/, ""), file.text ?? "", file.sha));
   return pages.filter((page) => page.frontmatter.approvalStatus !== "approved").map((page) => ({
     slug: page.slug,
@@ -246,7 +235,7 @@ export async function POST(req: Request) {
       resources: listCampaigns(user.id).map((campaign) => ({
         uri: `campaignrepo://campaign/${campaign.id}/pages`,
         name: campaign.name,
-        description: `${campaign.owner}/${campaign.repo}`
+        description: campaign.storageBackend === "local" ? (campaign.localPath || "local") : `${campaign.owner}/${campaign.repo}`
       }))
     });
   }
@@ -281,10 +270,16 @@ export async function POST(req: Request) {
     if (name === "search_campaign" || name === "search_all_repos") {
       return toolResult(body.id, searchDocs(user.id, args.query || "", name === "search_campaign" ? Number(args.campaignId) : undefined, "gm"));
     }
+    function storageFor(campaign: Campaign) {
+      const s = getStorageAdapter(campaign, user.githubToken);
+      if (!s) throw new Error("Campaign not found");
+      return s;
+    }
     if (name === "get_page") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
-      if (!campaign || !user.githubToken) throw new Error("Campaign not found");
-      const file = await getTextFile(user.githubToken, campaign, `wiki/pages/${args.slug}.md`);
+      if (!campaign) throw new Error("Campaign not found");
+      const storage = storageFor(campaign);
+      const file = await storage.getTextFile(`wiki/pages/${args.slug}.md`);
       const page = parsePage(args.slug, file.text, file.sha);
       if (campaign.role === "player" && (page.frontmatter.visibility !== "players" || page.frontmatter.approvalStatus !== "approved")) {
         throw new Error("Forbidden");
@@ -293,20 +288,22 @@ export async function POST(req: Request) {
     }
     if (name === "create_page") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
-      if (!campaign || !user.githubToken) throw new Error("Campaign not found");
+      if (!campaign) throw new Error("Campaign not found");
       if (!canManageCampaign(user.id, campaign.id)) throw new Error("Forbidden");
+      const storage = storageFor(campaign);
       const title = String(args.name || "AI Draft");
       const slug = slugify(title);
       const fm = { ...defaultFrontmatter(title, args.category || "npc", "gm"), approvalStatus: "unapproved" as const, lastEditedBy: "AI via MCP" };
       const content = args.content || starterBody(title, fm.category, campaign.gameType as any);
-      await putFile(user.githubToken, campaign, `wiki/pages/${slug}.md`, serializePage(fm, content), `CampaignRepo MCP: create unapproved ${title}`);
-      scheduleSearchIndexRebuild(user.githubToken, campaign);
+      await storage.putFile(`wiki/pages/${slug}.md`, serializePage(fm, content), `CampaignRepo MCP: create unapproved ${title}`);
+      scheduleSearchIndexRebuild(campaign);
       return toolResult(body.id, { slug, approvalStatus: "unapproved" });
     }
     if (name === "create_pages") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
-      if (!campaign || !user.githubToken) throw new Error("Campaign not found");
+      if (!campaign) throw new Error("Campaign not found");
       if (!canManageCampaign(user.id, campaign.id)) throw new Error("Forbidden");
+      const storage = storageFor(campaign);
       const input = Array.isArray(args.pages) ? args.pages : [];
       if (!input.length) throw new Error("pages must be a non-empty array");
       const slugs: string[] = [];
@@ -318,18 +315,18 @@ export async function POST(req: Request) {
         const content = p?.content || starterBody(title, fm.category, campaign.gameType as any);
         return { path: `wiki/pages/${slug}.md`, content: serializePage(fm, content) };
       });
-      const result = await commitFiles(user.githubToken, campaign, files, `CampaignRepo MCP: create ${files.length} unapproved pages`);
-      scheduleSearchIndexRebuild(user.githubToken, campaign);
+      const result = await storage.commitFiles(files, `CampaignRepo MCP: create ${files.length} unapproved pages`);
+      scheduleSearchIndexRebuild(campaign);
       return toolResult(body.id, { created: files.length, slugs, commit: result?.commit, approvalStatus: "unapproved" });
     }
     if (name === "update_pages") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
-      if (!campaign || !user.githubToken) throw new Error("Campaign not found");
+      if (!campaign) throw new Error("Campaign not found");
       if (!canManageCampaign(user.id, campaign.id)) throw new Error("Forbidden");
+      const storage = storageFor(campaign);
       const updates = Array.isArray(args.updates) ? args.updates : [];
       if (!updates.length) throw new Error("updates must be a non-empty array");
-      // One GraphQL read of every page, then one commit for all the edits.
-      const existing = await listDirectoryTextFiles(user.githubToken, campaign, "wiki/pages");
+      const existing = await storage.listDirectoryTextFiles("wiki/pages");
       const bySlug = new Map(existing.map((file) => [file.name.replace(/\.md$/, ""), file]));
       const files: { path: string; content: string }[] = [];
       const missing: string[] = [];
@@ -340,83 +337,77 @@ export async function POST(req: Request) {
         const page = parsePage(slug, file.text ?? "", file.sha);
         const patch: Record<string, unknown> = { ...(update?.frontmatter || {}) };
         if (update?.category) { patch.category = update.category; patch.type = update.category; }
-        // Preserve approvalStatus — a GM-initiated bulk edit shouldn't unpublish.
         const fm = { ...page.frontmatter, ...patch, lastEditedBy: "AI via MCP" };
         files.push({ path: `wiki/pages/${slug}.md`, content: serializePage(fm, page.content) });
       }
-      const result = files.length ? await commitFiles(user.githubToken, campaign, files, `CampaignRepo MCP: update ${files.length} pages`) : null;
-      scheduleSearchIndexRebuild(user.githubToken, campaign);
+      const result = files.length ? await storage.commitFiles(files, `CampaignRepo MCP: update ${files.length} pages`) : null;
+      scheduleSearchIndexRebuild(campaign);
       return toolResult(body.id, { updated: files.length, missing, commit: result?.commit });
     }
     if (name === "propose_page_update") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
-      if (!campaign || !user.githubToken) throw new Error("Campaign not found");
+      if (!campaign) throw new Error("Campaign not found");
       if (!canManageCampaign(user.id, campaign.id)) throw new Error("Forbidden");
-      const current = await getTextFile(user.githubToken, campaign, `wiki/pages/${args.slug}.md`);
+      const storage = storageFor(campaign);
+      const current = await storage.getTextFile(`wiki/pages/${args.slug}.md`);
       const page = parsePage(args.slug, current.text, current.sha);
       const fm = { ...page.frontmatter, ...(args.frontmatter || {}), approvalStatus: "unapproved" as const, lastEditedBy: "AI via MCP" };
-      await putFile(user.githubToken, campaign, `wiki/pages/${args.slug}.md`, serializePage(fm, args.content || page.content), `CampaignRepo MCP: propose update ${fm.name}`, current.sha);
-      scheduleSearchIndexRebuild(user.githubToken, campaign);
+      await storage.putFile(`wiki/pages/${args.slug}.md`, serializePage(fm, args.content || page.content), `CampaignRepo MCP: propose update ${fm.name}`, current.sha);
+      scheduleSearchIndexRebuild(campaign);
       return toolResult(body.id, { ok: true, approvalStatus: "unapproved" });
     }
     if (name === "list_templates") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
-      if (!campaign || !user.githubToken) throw new Error("Campaign not found");
+      if (!campaign) throw new Error("Campaign not found");
       requireManage(user.id, campaign);
-      return toolResult(body.id, await listMcpTemplates(user.githubToken, campaign));
+      return toolResult(body.id, await listMcpTemplates(storageFor(campaign), campaign));
     }
     if (name === "create_template") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
-      if (!campaign || !user.githubToken) throw new Error("Campaign not found");
+      if (!campaign) throw new Error("Campaign not found");
       requireManage(user.id, campaign);
+      const storage = storageFor(campaign);
       const templateName = String(args.name || "AI Template");
       const gameType = gameTypes.includes(args.gameType) ? (args.gameType as GameType) : (campaign.gameType as GameType);
       const category = ((categoryIds as readonly string[]).includes(args.category) ? args.category : "npc") as Category;
       const slug = slugify(templateName);
-      const frontmatter = {
-        ...defaultFrontmatter(templateName, category, "gm"),
-        summary: String(args.summary || ""),
-        tags: Array.isArray(args.tags) ? args.tags.map(String) : ["template", category],
-        approvalStatus: "approved" as const,
-        lastEditedBy: "AI via MCP"
-      };
+      const frontmatter = { ...defaultFrontmatter(templateName, category, "gm"), summary: String(args.summary || ""), tags: Array.isArray(args.tags) ? args.tags.map(String) : ["template", category], approvalStatus: "approved" as const, lastEditedBy: "AI via MCP" };
       const content = String(args.content || starterBody(templateName, category, gameType));
       const path = `wiki/templates/${gameType}/${slug}.md`;
-      await putFile(user.githubToken, campaign, path, serializePage(frontmatter, content), `CampaignRepo MCP: create template ${templateName}`);
+      await storage.putFile(path, serializePage(frontmatter, content), `CampaignRepo MCP: create template ${templateName}`);
       return toolResult(body.id, { template: { slug, path, gameType, category, name: templateName, summary: frontmatter.summary } });
     }
     if (name === "list_media") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
-      if (!campaign || !user.githubToken) throw new Error("Campaign not found");
+      if (!campaign) throw new Error("Campaign not found");
       requireManage(user.id, campaign);
-      return toolResult(body.id, await listMcpMedia(user.githubToken, campaign));
+      return toolResult(body.id, await listMcpMedia(storageFor(campaign)));
     }
     if (name === "upload_media") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
-      if (!campaign || !user.githubToken) throw new Error("Campaign not found");
+      if (!campaign) throw new Error("Campaign not found");
       requireManage(user.id, campaign);
+      const storage = storageFor(campaign);
       if (!args.base64) throw new Error("base64 file contents are required");
       const fileName = safeMediaName(args.fileName || "upload");
       const path = `wiki/media/${fileName}`;
       const base64 = String(args.base64).replace(/^data:[^;]+;base64,/, "");
-      // Overwrite if it already exists (look up the current sha so re-uploads succeed).
       let existingSha: string | undefined;
       try {
-        const existing = await getTextFile(user.githubToken, campaign, path);
+        const existing = await storage.getTextFile(path);
         existingSha = existing.sha;
       } catch (error) {
-        if (!(error instanceof GitHubError && error.status === 404)) throw error;
+        if (!isNotFoundError(error)) throw error;
       }
-      await putBase64File(user.githubToken, campaign, path, base64, `CampaignRepo MCP: upload media ${fileName}`, existingSha);
-      // Best-effort alt/caption metadata; never block the upload on it.
+      await storage.putBase64File(path, base64, `CampaignRepo MCP: upload media ${fileName}`, existingSha);
       if (args.alt) {
         try {
-          const meta = await getTextFile(user.githubToken, campaign, "wiki/media/media.json");
+          const meta = await storage.getTextFile("wiki/media/media.json");
           const parsed = JSON.parse(meta.text || "{}") as Record<string, { alt?: string; caption?: string; tags?: string[] }>;
           parsed[path] = { ...parsed[path], alt: String(args.alt) };
-          await putFile(user.githubToken, campaign, "wiki/media/media.json", JSON.stringify(parsed, null, 2) + "\n", `CampaignRepo MCP: media metadata ${fileName}`, meta.sha);
+          await storage.putFile("wiki/media/media.json", JSON.stringify(parsed, null, 2) + "\n", `CampaignRepo MCP: media metadata ${fileName}`, meta.sha);
         } catch {
-          /* metadata is optional — the file still renders and lists without it */
+          /* metadata is optional */
         }
       }
       const type = mediaType(fileName);
@@ -425,34 +416,34 @@ export async function POST(req: Request) {
     }
     if (name === "get_campaign_graph") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
-      if (!campaign || !user.githubToken) throw new Error("Campaign not found");
-      return toolResult(body.id, await buildMcpGraph(user.githubToken, campaign));
+      if (!campaign) throw new Error("Campaign not found");
+      return toolResult(body.id, await buildMcpGraph(storageFor(campaign), campaign));
     }
     if (name === "list_review_queue") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
-      if (!campaign || !user.githubToken) throw new Error("Campaign not found");
+      if (!campaign) throw new Error("Campaign not found");
       requireManage(user.id, campaign);
-      return toolResult(body.id, await listReviewPages(user.githubToken, campaign));
+      return toolResult(body.id, await listMcpReviewPages(storageFor(campaign)));
     }
     if (name === "review_page") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
-      if (!campaign || !user.githubToken) throw new Error("Campaign not found");
+      if (!campaign) throw new Error("Campaign not found");
       requireManage(user.id, campaign);
+      const storage = storageFor(campaign);
       const decision = args.decision === "rejected" ? "rejected" : "approved";
-      const current = await getTextFile(user.githubToken, campaign, `wiki/pages/${args.slug}.md`);
+      const current = await storage.getTextFile(`wiki/pages/${args.slug}.md`);
       const page = parsePage(args.slug, current.text, current.sha);
-      const frontmatter = {
-        ...page.frontmatter,
-        approvalStatus: decision as "approved" | "rejected",
-        lastEditedBy: "GM review via MCP"
-      };
-      await putFile(user.githubToken, campaign, `wiki/pages/${args.slug}.md`, serializePage(frontmatter, page.content), `CampaignRepo MCP: ${decision} ${frontmatter.name}`, current.sha);
-      scheduleSearchIndexRebuild(user.githubToken, campaign);
+      const frontmatter = { ...page.frontmatter, approvalStatus: decision as "approved" | "rejected", lastEditedBy: "GM review via MCP" };
+      await storage.putFile(`wiki/pages/${args.slug}.md`, serializePage(frontmatter, page.content), `CampaignRepo MCP: ${decision} ${frontmatter.name}`, current.sha);
+      scheduleSearchIndexRebuild(campaign);
       return toolResult(body.id, { ok: true, approvalStatus: decision });
     }
     if (name === "get_repo_setup_instructions") {
       const campaign = getCampaign(user.id, Number(args.campaignId));
       if (!campaign) throw new Error("Campaign not found");
+      if (campaign.storageBackend === "local") {
+        return toolResult(body.id, `Local folder campaign at ${campaign.localPath}. Required folders: wiki/pages, wiki/media, wiki/templates/${campaign.gameType}, wiki/imports/characters, wiki/search/index.json, wiki/campaign.yaml.`);
+      }
       return toolResult(body.id, `Build or connect https://github.com/${campaign.owner}/${campaign.repo}. Required folders: /wiki/pages, /wiki/media, /wiki/templates/${campaign.gameType}, /wiki/imports/characters, /wiki/search/index.json, /wiki/campaign.yaml.`);
     }
   }

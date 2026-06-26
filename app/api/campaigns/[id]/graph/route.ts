@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
-import { getCampaign, getCampaignRepositoryToken } from "@/lib/db";
+import { getCampaign } from "@/lib/db";
 import { parsePage, stripGmBlocks } from "@/lib/markdown";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import { readPageCache, refreshPageCache, refreshPageCacheInBackground } from "@/lib/page-cache";
+import { getStorageAdapter } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 import type { CampaignGraphEdge, CampaignGraphNode, CampaignTimelineItem, WikiPage } from "@/lib/types";
@@ -18,12 +19,12 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const repoToken = getCampaignRepositoryToken(campaign.id);
-  if (!repoToken) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const storage = getStorageAdapter(campaign);
+  if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const cached = readPageCache(campaign.id);
-  const snapshot = cached.pages.length ? cached : await refreshPageCache(repoToken, campaign);
-  if (cached.pages.length) refreshPageCacheInBackground(repoToken, campaign);
+  const snapshot = cached.pages.length ? cached : await refreshPageCache(storage, campaign);
+  if (cached.pages.length) refreshPageCacheInBackground(storage, campaign);
   const allPages =
     campaign.role === "player"
       ? snapshot.pages.map((page) => parsePage(page.slug, stripGmBlocks(page.raw), page.sha))
@@ -46,6 +47,14 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       const target = resolveTarget(aliases, keyLink);
       const missing = !visibleSlugs.has(target);
       if (campaign.role !== "player" || !missing) edges.push({ source: page.slug, target, label: "key link", missing });
+    }
+    for (const rel of page.frontmatter.relationships || []) {
+      if (rel.hidden && campaign.role === "player") continue;
+      const target = resolveTarget(aliases, rel.target);
+      const missing = !visibleSlugs.has(target);
+      if (campaign.role !== "player" || !missing) {
+        edges.push({ source: page.slug, target, label: rel.label || rel.type, missing, relType: rel.type });
+      }
     }
   }
 

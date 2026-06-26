@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
-import { GitHubError } from "@/lib/github";
 import { formatDate, loadCampaignCalendar, saveCampaignCalendar, sanitizeCalendar } from "@/lib/calendar";
 
 export const dynamic = "force-dynamic";
@@ -25,12 +24,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const body = await req.json().catch(() => ({}));
     return NextResponse.json({ calendar: await saveCampaignCalendar(campaign, sanitizeCalendar(body.calendar)) });
   } catch (error) {
-    const message =
-      error instanceof GitHubError
-        ? `GitHub error${error.status ? ` ${error.status}` : ""}: ${error.message}`
-        : error instanceof Error
-          ? error.message
-          : "Could not save calendar.";
+    const message = error instanceof Error ? error.message : "Could not save calendar.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
