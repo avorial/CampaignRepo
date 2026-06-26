@@ -26,8 +26,9 @@ async function guard(id: string) {
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string; slug: string }> }) {
   const { id, slug } = await params;
-  const { user, campaign, error } = await guard(id);
-  if (error) return error;
+  const guarded = await guard(id);
+  if ("error" in guarded) return guarded.error;
+  const { user, campaign } = guarded;
   try {
     return NextResponse.json({ session: await getSession(campaign, slug, user.githubToken) });
   } catch (e) {
@@ -38,8 +39,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string; slug: string }> }) {
   const { id, slug } = await params;
-  const { user, campaign, error } = await guard(id);
-  if (error) return error;
+  const guarded = await guard(id);
+  if ("error" in guarded) return guarded.error;
+  const { user, campaign } = guarded;
   const input = saveSchema.parse(await req.json());
   const session = await saveSession(campaign, slug, { ...input.frontmatter, date: input.frontmatter.date || undefined }, input.notes, user.githubToken);
   return NextResponse.json({ session });
@@ -47,8 +49,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ id: string; slug: string }> }) {
   const { id, slug } = await params;
-  const { user, campaign, error } = await guard(id);
-  if (error) return error;
+  const guarded = await guard(id);
+  if ("error" in guarded) return guarded.error;
+  const { user, campaign } = guarded;
   await deleteSession(campaign, slug, user.githubToken);
   return NextResponse.json({ ok: true });
 }

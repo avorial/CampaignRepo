@@ -19,15 +19,17 @@ async function guard(id: string) {
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { user, campaign, error } = await guard(id);
-  if (error) return error;
+  const guarded = await guard(id);
+  if ("error" in guarded) return guarded.error;
+  const { user, campaign } = guarded;
   return NextResponse.json({ sessions: await listSessions(campaign, user.githubToken) });
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { user, campaign, error } = await guard(id);
-  if (error) return error;
+  const guarded = await guard(id);
+  if ("error" in guarded) return guarded.error;
+  const { user, campaign } = guarded;
   const input = createSchema.parse(await req.json());
   const session = await createSession(campaign, input.title, input.date || undefined, user.githubToken);
   return NextResponse.json({ session });
