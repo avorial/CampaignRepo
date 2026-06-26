@@ -25,6 +25,8 @@ export default function PublicSiteClient({
   const [cloning, setCloning] = useState(false);
   const [cloneMsg, setCloneMsg] = useState("");
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [openCats, setOpenCats] = useState<Record<string, boolean>>({});
+  const [openNodes, setOpenNodes] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!lightboxSrc) return;
@@ -75,6 +77,30 @@ export default function PublicSiteClient({
   const selectedPage = pages.find((page) => page.slug === selectedSlug) || filteredPages[0] || pages[0];
 
   const categoryOrder = ["lore", "location", "organization", "character", "npc", "species", "item", "event", "game"];
+  const categoryLabels: Record<string, string> = {
+    character: "Characters",
+    npc: "NPCs",
+    location: "Locations",
+    event: "Events",
+    game: "Game",
+    organization: "Organizations",
+    species: "Species",
+    item: "Items",
+    lore: "Lore"
+  };
+  const sortedPages = useMemo(() => [...pages].sort((a, b) => a.frontmatter.name.localeCompare(b.frontmatter.name)), [pages]);
+  const pageBySlug = useMemo(() => new Map(pages.map((page) => [page.slug, page])), [pages]);
+  const childrenByParent = useMemo(() => {
+    const byParent = new Map<string, WikiPage[]>();
+    for (const page of sortedPages) {
+      const parentPage = page.frontmatter.parent ? pageBySlug.get(page.frontmatter.parent) : undefined;
+      if (parentPage && parentPage.frontmatter.category === page.frontmatter.category) {
+        byParent.set(page.frontmatter.parent!, [...(byParent.get(page.frontmatter.parent!) || []), page]);
+      }
+    }
+    return byParent;
+  }, [pageBySlug, sortedPages]);
+  const queryActive = query.trim().length > 0;
   const grouped = useMemo(() => {
     const byCat = new Map<string, WikiPage[]>();
     for (const page of filteredPages) {
@@ -131,6 +157,45 @@ export default function PublicSiteClient({
 
   const cover = selectedPage?.frontmatter.cover ? resolveMedia(selectedPage.frontmatter.cover) : "";
   const themeVars = useMemo(() => themeToCssVars(theme) as CSSProperties, [theme]);
+  const selectPublicPage = (page: WikiPage) => {
+    setSelectedSlug(page.slug);
+    window.history.replaceState(null, "", `#${page.slug}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const renderTree = (page: WikiPage, depth = 0) => {
+    const kids = childrenByParent.get(page.slug) || [];
+    const isOpen = openNodes[page.slug] ?? true;
+    return (
+      <div className="nav-tree-item" key={page.slug}>
+        <div className="nav-tree-row" style={{ paddingLeft: depth * 14 }}>
+          {kids.length ? (
+            <button
+              type="button"
+              className="nav-tree-toggle"
+              aria-expanded={isOpen}
+              aria-label={`${isOpen ? "Collapse" : "Expand"} ${kids.length} child page${kids.length === 1 ? "" : "s"} under ${page.frontmatter.name}`}
+              title={`${isOpen ? "Collapse" : "Expand"} ${kids.length} child page${kids.length === 1 ? "" : "s"}`}
+              onClick={() => setOpenNodes((state) => ({ ...state, [page.slug]: !isOpen }))}
+            >
+              {isOpen ? "-" : "+"}
+            </button>
+          ) : (
+            <span className="nav-tree-spacer" />
+          )}
+          <button
+            type="button"
+            className={page.slug === selectedPage?.slug ? "nav-link nav-tree-link active" : "nav-link nav-tree-link"}
+            onClick={() => selectPublicPage(page)}
+          >
+            <span className="cat-dot" style={{ background: `var(--cat-${page.frontmatter.category})` }} />
+            <span className="nav-tree-name">{page.frontmatter.name}</span>
+            {kids.length > 0 && <span className="nav-tree-child-count" title={`${kids.length} direct child page${kids.length === 1 ? "" : "s"}`}>{kids.length}</span>}
+          </button>
+        </div>
+        {kids.length > 0 && isOpen && kids.map((child) => renderTree(child, depth + 1))}
+      </div>
+    );
+  };
 
   return (
     <main className="app-shell" data-theme={theme.preset || undefined} style={themeVars}>
@@ -151,24 +216,30 @@ export default function PublicSiteClient({
           <input className="nav-filter" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search this world" />
           {grouped.map(([cat, catPages]) => (
             <div className="nav-group" key={cat}>
-              <h3>
-                <span className="cat-dot" style={{ background: `var(--cat-${cat})` }} />
-                {cat}
-              </h3>
-              {catPages.map((page) => (
-                <button
-                  type="button"
-                  key={page.slug}
-                  className={page.slug === selectedPage?.slug ? "nav-link active" : "nav-link"}
-                  onClick={() => {
-                    setSelectedSlug(page.slug);
-                    window.history.replaceState(null, "", `#${page.slug}`);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                >
-                  {page.frontmatter.name}
-                </button>
-              ))}
+              <button type="button" className="nav-group-header" aria-expanded={openCats[cat] ?? true} onClick={() => setOpenCats((state) => ({ ...state, [cat]: !(state[cat] ?? true) }))}>
+                <span className="nav-group-title">
+                  {(openCats[cat] ?? true) ? "v" : ">"} {categoryLabels[cat] || cat}
+                </span>
+                <span className="nav-count">{catPages.length}</span>
+              </button>
+              {(openCats[cat] ?? true) && (queryActive
+                ? catPages.map((page) => (
+                    <button
+                      type="button"
+                      key={page.slug}
+                      className={page.slug === selectedPage?.slug ? "nav-link nav-tree-link nav-tree-filtered active" : "nav-link nav-tree-link nav-tree-filtered"}
+                      onClick={() => selectPublicPage(page)}
+                    >
+                      <span className="cat-dot" style={{ background: `var(--cat-${page.frontmatter.category})` }} />
+                      {page.frontmatter.name}
+                    </button>
+                  ))
+                : catPages
+                    .filter((page) => {
+                      const parentPage = page.frontmatter.parent ? pageBySlug.get(page.frontmatter.parent) : undefined;
+                      return !(parentPage && parentPage.frontmatter.category === cat);
+                    })
+                    .map((page) => renderTree(page)))}
             </div>
           ))}
           {!filteredPages.length && <p className="muted">No public pages match.</p>}

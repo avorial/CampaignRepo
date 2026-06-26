@@ -717,6 +717,10 @@ button.nav-link {
   width: 100%;
 }
 
+button.nav-tree-link {
+  display: flex;
+}
+
 button.nav-link.active {
   background: var(--wash-gold);
   color: var(--gold-bright);
