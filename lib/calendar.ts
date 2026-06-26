@@ -86,8 +86,8 @@ export function formatDate(cal: CalendarConfig, date: WorldDate): string {
   return `${weekdayName(cal, date)}, ${date.day} ${month?.name || ""}, ${date.year}${era}`;
 }
 
-export async function loadCampaignCalendar(campaign: Campaign): Promise<CalendarConfig> {
-  const storage = getStorageAdapter(campaign);
+export async function loadCampaignCalendar(campaign: Campaign, userToken?: string | null): Promise<CalendarConfig> {
+  const storage = getStorageAdapter(campaign, userToken);
   if (!storage) return defaultCalendar();
   try {
     const file = await storage.getTextFile(campaignConfigPath);
@@ -98,8 +98,8 @@ export async function loadCampaignCalendar(campaign: Campaign): Promise<Calendar
   }
 }
 
-export async function saveCampaignCalendar(campaign: Campaign, config: CalendarConfig): Promise<CalendarConfig> {
-  const storage = getStorageAdapter(campaign);
+export async function saveCampaignCalendar(campaign: Campaign, config: CalendarConfig, userToken?: string | null): Promise<CalendarConfig> {
+  const storage = getStorageAdapter(campaign, userToken);
   if (!storage) throw new Error("No storage configured for this campaign.");
   let yaml: Record<string, unknown> = {};
   let sha: string | undefined;

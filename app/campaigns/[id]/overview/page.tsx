@@ -16,7 +16,7 @@ export default async function OverviewPage({ params }: { params: Promise<{ id: s
   if (!campaign) redirect("/dashboard");
 
   const canManage = campaign.role === "owner" || campaign.role === "gm";
-  const theme = await loadCampaignTheme(campaign);
+  const theme = await loadCampaignTheme(campaign, user.githubToken);
   const themeVars = themeToCssVars(theme) as CSSProperties;
   return (
     <main className="app-shell" data-theme={theme.preset || undefined} style={themeVars}>

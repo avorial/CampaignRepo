@@ -24,15 +24,15 @@ async function guard(id: string) {
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) return { error: NextResponse.json({ error: "Not found" }, { status: 404 }) };
   if (!canManageCampaign(user.id, campaign.id)) return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
-  return { campaign };
+  return { user, campaign };
 }
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string; slug: string }> }) {
   const { id, slug } = await params;
-  const { campaign, error } = await guard(id);
+  const { user, campaign, error } = await guard(id);
   if (error) return error;
   try {
-    return NextResponse.json({ quest: await getQuest(campaign, slug) });
+    return NextResponse.json({ quest: await getQuest(campaign, slug, user.githubToken) });
   } catch (e) {
     if (isNotFoundError(e)) return NextResponse.json({ error: "Quest not found" }, { status: 404 });
     throw e;
@@ -41,22 +41,23 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string; slug: string }> }) {
   const { id, slug } = await params;
-  const { campaign, error } = await guard(id);
+  const { user, campaign, error } = await guard(id);
   if (error) return error;
   const input = saveSchema.parse(await req.json());
   const quest = await saveQuest(
     campaign,
     slug,
     { ...input.frontmatter, arc: input.frontmatter.arc || undefined, reward: input.frontmatter.reward || undefined },
-    input.description
+    input.description,
+    user.githubToken
   );
   return NextResponse.json({ quest });
 }
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ id: string; slug: string }> }) {
   const { id, slug } = await params;
-  const { campaign, error } = await guard(id);
+  const { user, campaign, error } = await guard(id);
   if (error) return error;
-  await deleteQuest(campaign, slug);
+  await deleteQuest(campaign, slug, user.githubToken);
   return NextResponse.json({ ok: true });
 }

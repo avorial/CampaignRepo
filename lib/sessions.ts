@@ -15,8 +15,8 @@ export type Session = { slug: string; sha?: string; frontmatter: SessionFrontmat
 
 const sessionsDir = "wiki/sessions";
 
-function adapterFor(campaign: Campaign) {
-  const storage = getStorageAdapter(campaign);
+function adapterFor(campaign: Campaign, userToken?: string | null) {
+  const storage = getStorageAdapter(campaign, userToken);
   if (!storage) throw new Error("No storage configured for this campaign.");
   return storage;
 }
@@ -50,30 +50,30 @@ export function serializeSession(frontmatter: SessionFrontmatter, notes: string)
   return `---\n${YAML.stringify(frontmatter)}---\n\n${notes.trim()}\n`;
 }
 
-export async function listSessions(campaign: Campaign): Promise<Session[]> {
-  const storage = adapterFor(campaign);
+export async function listSessions(campaign: Campaign, userToken?: string | null): Promise<Session[]> {
+  const storage = adapterFor(campaign, userToken);
   const files = await storage.listDirectoryTextFiles(sessionsDir);
   return files
     .map((f) => parseSession(f.name.replace(/\.md$/, ""), f.text ?? "", f.sha))
     .sort((a, b) => (b.frontmatter.date || "").localeCompare(a.frontmatter.date || "") || a.frontmatter.title.localeCompare(b.frontmatter.title));
 }
 
-export async function getSession(campaign: Campaign, slug: string): Promise<Session> {
-  const storage = adapterFor(campaign);
+export async function getSession(campaign: Campaign, slug: string, userToken?: string | null): Promise<Session> {
+  const storage = adapterFor(campaign, userToken);
   const file = await storage.getTextFile(`${sessionsDir}/${slug}.md`);
   return parseSession(slug, file.text, file.sha);
 }
 
-export async function createSession(campaign: Campaign, title: string, date?: string): Promise<Session> {
-  const storage = adapterFor(campaign);
+export async function createSession(campaign: Campaign, title: string, date?: string, userToken?: string | null): Promise<Session> {
+  const storage = adapterFor(campaign, userToken);
   const slug = slugify(title) || `session-${Date.now()}`;
   const frontmatter: SessionFrontmatter = { title, date, agenda: [], pinned: [] };
   await storage.putFile(`${sessionsDir}/${slug}.md`, serializeSession(frontmatter, ""), `CampaignRepo: create session ${title}`);
   return { slug, frontmatter, notes: "" };
 }
 
-export async function saveSession(campaign: Campaign, slug: string, frontmatter: SessionFrontmatter, notes: string): Promise<Session> {
-  const storage = adapterFor(campaign);
+export async function saveSession(campaign: Campaign, slug: string, frontmatter: SessionFrontmatter, notes: string, userToken?: string | null): Promise<Session> {
+  const storage = adapterFor(campaign, userToken);
   let sha: string | undefined;
   try {
     const existing = await storage.getTextFile(`${sessionsDir}/${slug}.md`);
@@ -83,8 +83,8 @@ export async function saveSession(campaign: Campaign, slug: string, frontmatter:
   return { slug, sha, frontmatter, notes };
 }
 
-export async function deleteSession(campaign: Campaign, slug: string): Promise<void> {
-  const storage = adapterFor(campaign);
+export async function deleteSession(campaign: Campaign, slug: string, userToken?: string | null): Promise<void> {
+  const storage = adapterFor(campaign, userToken);
   const existing = await storage.getTextFile(`${sessionsDir}/${slug}.md`);
   await storage.deleteFile(`${sessionsDir}/${slug}.md`, `CampaignRepo: delete session ${slug}`, existing.sha);
 }

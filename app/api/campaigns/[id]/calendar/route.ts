@@ -10,7 +10,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const calendar = await loadCampaignCalendar(campaign);
+  const calendar = await loadCampaignCalendar(campaign, user.githubToken);
   return NextResponse.json({ calendar, formatted: formatDate(calendar, calendar.currentDate), canManage: canManageCampaign(user.id, campaign.id) });
 }
 
@@ -22,7 +22,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
     const body = await req.json().catch(() => ({}));
-    return NextResponse.json({ calendar: await saveCampaignCalendar(campaign, sanitizeCalendar(body.calendar)) });
+    return NextResponse.json({ calendar: await saveCampaignCalendar(campaign, sanitizeCalendar(body.calendar), user.githubToken) });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save calendar.";
     return NextResponse.json({ error: message }, { status: 400 });

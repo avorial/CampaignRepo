@@ -20,8 +20,8 @@ export function sanitizePlayerPage(page: WikiPage): WikiPage {
  * only pages that are player-visible AND approved, with GM blocks stripped.
  * Used by the public published site (no auth) and reusable by the player portal.
  */
-export async function loadPublicPages(campaign: Campaign): Promise<WikiPage[]> {
-  const storage = getStorageAdapter(campaign);
+export async function loadPublicPages(campaign: Campaign, userToken?: string | null): Promise<WikiPage[]> {
+  const storage = getStorageAdapter(campaign, userToken);
   if (!storage) return [];
   const entries = await storage.listDirectory("wiki/pages");
   const pages = await Promise.all(
@@ -42,9 +42,9 @@ export async function loadPublicPages(campaign: Campaign): Promise<WikiPage[]> {
 const campaignConfigPath = "wiki/campaign.yaml";
 
 /** Read the campaign's theme block from wiki/campaign.yaml. Returns {} on any problem. */
-export async function loadCampaignTheme(campaign: Campaign): Promise<CampaignTheme> {
+export async function loadCampaignTheme(campaign: Campaign, userToken?: string | null): Promise<CampaignTheme> {
   const fallbackPreset = themePresetForGame(campaign.gameType);
-  const storage = getStorageAdapter(campaign);
+  const storage = getStorageAdapter(campaign, userToken);
   if (!storage) return { preset: fallbackPreset };
   try {
     const file = await storage.getTextFile(campaignConfigPath);
@@ -57,8 +57,8 @@ export async function loadCampaignTheme(campaign: Campaign): Promise<CampaignThe
 }
 
 /** Merge a sanitized theme into wiki/campaign.yaml, preserving other keys. */
-export async function saveCampaignTheme(campaign: Campaign, theme: CampaignTheme): Promise<CampaignTheme> {
-  const storage = getStorageAdapter(campaign);
+export async function saveCampaignTheme(campaign: Campaign, theme: CampaignTheme, userToken?: string | null): Promise<CampaignTheme> {
+  const storage = getStorageAdapter(campaign, userToken);
   if (!storage) throw new Error("No storage configured for this campaign.");
   let config: Record<string, unknown> = {};
   let sha: string | undefined;

@@ -21,15 +21,15 @@ async function guard(id: string) {
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) return { error: NextResponse.json({ error: "Not found" }, { status: 404 }) };
   if (!canManageCampaign(user.id, campaign.id)) return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
-  return { campaign };
+  return { user, campaign };
 }
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string; slug: string }> }) {
   const { id, slug } = await params;
-  const { campaign, error } = await guard(id);
+  const { user, campaign, error } = await guard(id);
   if (error) return error;
   try {
-    return NextResponse.json({ session: await getSession(campaign, slug) });
+    return NextResponse.json({ session: await getSession(campaign, slug, user.githubToken) });
   } catch (e) {
     if (isNotFoundError(e)) return NextResponse.json({ error: "Session not found" }, { status: 404 });
     throw e;
@@ -38,17 +38,17 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string; slug: string }> }) {
   const { id, slug } = await params;
-  const { campaign, error } = await guard(id);
+  const { user, campaign, error } = await guard(id);
   if (error) return error;
   const input = saveSchema.parse(await req.json());
-  const session = await saveSession(campaign, slug, { ...input.frontmatter, date: input.frontmatter.date || undefined }, input.notes);
+  const session = await saveSession(campaign, slug, { ...input.frontmatter, date: input.frontmatter.date || undefined }, input.notes, user.githubToken);
   return NextResponse.json({ session });
 }
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ id: string; slug: string }> }) {
   const { id, slug } = await params;
-  const { campaign, error } = await guard(id);
+  const { user, campaign, error } = await guard(id);
   if (error) return error;
-  await deleteSession(campaign, slug);
+  await deleteSession(campaign, slug, user.githubToken);
   return NextResponse.json({ ok: true });
 }

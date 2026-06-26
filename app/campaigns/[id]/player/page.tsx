@@ -14,7 +14,7 @@ export default async function PlayerPortalPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) redirect("/dashboard");
-  const theme = await loadCampaignTheme(campaign);
+  const theme = await loadCampaignTheme(campaign, user.githubToken);
   const themeVars = themeToCssVars(theme) as CSSProperties;
 
   return (

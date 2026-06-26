@@ -33,8 +33,8 @@ export function sanitizeDashboard(raw: unknown): DashboardConfig {
 }
 
 /** Read the campaign's dashboard layout from wiki/campaign.yaml. Falls back to the default. */
-export async function loadCampaignDashboard(campaign: Campaign): Promise<DashboardConfig> {
-  const storage = getStorageAdapter(campaign);
+export async function loadCampaignDashboard(campaign: Campaign, userToken?: string | null): Promise<DashboardConfig> {
+  const storage = getStorageAdapter(campaign, userToken);
   if (!storage) return defaultDashboard();
   try {
     const file = await storage.getTextFile(campaignConfigPath);
@@ -46,8 +46,8 @@ export async function loadCampaignDashboard(campaign: Campaign): Promise<Dashboa
 }
 
 /** Merge the dashboard layout into wiki/campaign.yaml, preserving other keys (e.g. theme). */
-export async function saveCampaignDashboard(campaign: Campaign, config: DashboardConfig): Promise<DashboardConfig> {
-  const storage = getStorageAdapter(campaign);
+export async function saveCampaignDashboard(campaign: Campaign, config: DashboardConfig, userToken?: string | null): Promise<DashboardConfig> {
+  const storage = getStorageAdapter(campaign, userToken);
   if (!storage) throw new Error("No storage configured for this campaign.");
   let yaml: Record<string, unknown> = {};
   let sha: string | undefined;

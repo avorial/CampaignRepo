@@ -16,7 +16,7 @@ export default async function OrganizePage({ params }: { params: Promise<{ id: s
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) redirect("/dashboard");
   if (campaign.role !== "owner" && campaign.role !== "gm") redirect(`/campaigns/${campaign.id}`);
-  const theme = await loadCampaignTheme(campaign);
+  const theme = await loadCampaignTheme(campaign, user.githubToken);
   const themeVars = themeToCssVars(theme) as CSSProperties;
 
   return (

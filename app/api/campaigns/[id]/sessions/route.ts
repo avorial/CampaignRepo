@@ -14,21 +14,21 @@ async function guard(id: string) {
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) return { error: NextResponse.json({ error: "Not found" }, { status: 404 }) };
   if (!canManageCampaign(user.id, campaign.id)) return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
-  return { campaign };
+  return { user, campaign };
 }
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { campaign, error } = await guard(id);
+  const { user, campaign, error } = await guard(id);
   if (error) return error;
-  return NextResponse.json({ sessions: await listSessions(campaign) });
+  return NextResponse.json({ sessions: await listSessions(campaign, user.githubToken) });
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { campaign, error } = await guard(id);
+  const { user, campaign, error } = await guard(id);
   if (error) return error;
   const input = createSchema.parse(await req.json());
-  const session = await createSession(campaign, input.title, input.date || undefined);
+  const session = await createSession(campaign, input.title, input.date || undefined, user.githubToken);
   return NextResponse.json({ session });
 }

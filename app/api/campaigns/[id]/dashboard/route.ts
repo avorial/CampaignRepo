@@ -11,7 +11,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({
-    dashboard: await loadCampaignDashboard(campaign),
+    dashboard: await loadCampaignDashboard(campaign, user.githubToken),
     canManage: canManageCampaign(user.id, campaign.id)
   });
 }
@@ -24,7 +24,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
     const body = await req.json().catch(() => ({}));
-    const dashboard = await saveCampaignDashboard(campaign, sanitizeDashboard(body.dashboard));
+    const dashboard = await saveCampaignDashboard(campaign, sanitizeDashboard(body.dashboard), user.githubToken);
     return NextResponse.json({ dashboard });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save dashboard.";

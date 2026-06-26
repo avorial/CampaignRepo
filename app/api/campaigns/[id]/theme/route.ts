@@ -12,7 +12,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  return NextResponse.json({ theme: await loadCampaignTheme(campaign) });
+  return NextResponse.json({ theme: await loadCampaignTheme(campaign, user.githubToken) });
 }
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -23,7 +23,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
     const body = await req.json().catch(() => ({}));
-    const theme = await saveCampaignTheme(campaign, sanitizeTheme(body.theme));
+    const theme = await saveCampaignTheme(campaign, sanitizeTheme(body.theme), user.githubToken);
     return NextResponse.json({ theme });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save theme.";
