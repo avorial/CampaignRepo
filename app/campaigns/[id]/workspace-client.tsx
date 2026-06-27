@@ -32,7 +32,18 @@ function publicLinkInput(value: string) {
     .toLowerCase();
 }
 
+function categoryIdInput(value: string) {
+  return value
+    .trim()
+    .replace(/['"]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 40)
+    .toLowerCase();
+}
+
 export default function CampaignClient({ campaign, categories }: { campaign: Campaign; categories: { id: string; label: string }[] }) {
+  const [campaignCategories, setCampaignCategories] = useState(categories);
   const [pages, setPages] = useState<WikiPage[]>([]);
   const [templates, setTemplates] = useState<WikiTemplate[]>([]);
   const [media, setMedia] = useState<CampaignMedia[]>([]);
@@ -56,7 +67,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
 
   async function load() {
     const canManage = campaign.role === "owner" || campaign.role === "gm";
-    const [pagesRes, graphRes, setupRes, templatesRes, mediaRes, validationRes, publicRes, themeRes] = await Promise.all([
+    const [pagesRes, graphRes, setupRes, templatesRes, mediaRes, validationRes, publicRes, themeRes, categoriesRes] = await Promise.all([
       fetch(`/api/campaigns/${campaign.id}/pages`),
       fetch(`/api/campaigns/${campaign.id}/graph`),
       fetch(`/api/campaigns/${campaign.id}/setup`),
@@ -64,7 +75,8 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
       canManage ? fetch(`/api/campaigns/${campaign.id}/media`) : Promise.resolve(null),
       canManage ? fetch(`/api/campaigns/${campaign.id}/validation`) : Promise.resolve(null),
       canManage ? fetch(`/api/campaigns/${campaign.id}/public`) : Promise.resolve(null),
-      canManage ? fetch(`/api/campaigns/${campaign.id}/theme`) : Promise.resolve(null)
+      canManage ? fetch(`/api/campaigns/${campaign.id}/theme`) : Promise.resolve(null),
+      canManage ? fetch(`/api/campaigns/${campaign.id}/categories`) : Promise.resolve(null)
     ]);
     const pagesData = await pagesRes.json();
     const graphData = graphRes.ok ? await graphRes.json() : { nodes: [], edges: [], timeline: [] };
@@ -74,6 +86,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     const validationData = validationRes && validationRes.ok ? await validationRes.json() : null;
     const publicData = publicRes && publicRes.ok ? await publicRes.json() : { site: null };
     const themeData = themeRes && themeRes.ok ? await themeRes.json() : { theme: {} };
+    const categoriesData = categoriesRes && categoriesRes.ok ? await categoriesRes.json() : { categories };
     setPages(pagesData.pages || []);
     setGraph({ nodes: graphData.nodes || [], edges: graphData.edges || [], timeline: graphData.timeline || [] });
     setSetup(setupData.markdown || "");
@@ -83,6 +96,10 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     setPublicSite(publicData.site || null);
     setPublicLinkName(publicData.site?.slug || publicLinkInput(campaign.name));
     setTheme(themeData.theme || {});
+    if (categoriesData.categories?.length) {
+      setCampaignCategories(categoriesData.categories);
+      if (!categoriesData.categories.some((category: { id: string }) => category.id === pageCategory)) setPageCategory(categoriesData.categories[0].id);
+    }
     if (pagesData.cache?.cached) {
       void fetch(`/api/campaigns/${campaign.id}/pages?refresh=wait`)
         .then((response) => response.ok ? response.json() : null)
@@ -132,6 +149,22 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   async function savePublicLink(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await setPublic("publish", publicLinkName);
+  }
+
+  async function saveCategories(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("Saving categories...");
+    const cleaned = campaignCategories
+      .map((category) => ({ id: categoryIdInput(category.id || category.label), label: category.label.trim() }))
+      .filter((category) => category.id && category.label);
+    const res = await fetch(`/api/campaigns/${campaign.id}/categories`, { method: "PUT", body: JSON.stringify({ categories: cleaned }) });
+    const data = await res.json();
+    if (res.ok) {
+      setCampaignCategories(data.categories || cleaned);
+      setMessage("Categories saved to campaign.yaml.");
+    } else {
+      setMessage(data.error || "Could not save categories.");
+    }
   }
 
   useEffect(() => { load(); }, []);
@@ -363,7 +396,13 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
       childrenByParent.set(page.frontmatter.parent!, [...(childrenByParent.get(page.frontmatter.parent!) || []), page]);
     }
   }
-  const catDot = (page: WikiPage) => <span className="cat-dot" style={{ background: `var(--cat-${page.frontmatter.category})` }} />;
+  const catDot = (page: WikiPage) => <span className="cat-dot" style={{ background: `var(--cat-${page.frontmatter.category}, var(--gold))` }} />;
+  const navCategories = [
+    ...campaignCategories,
+    ...Array.from(new Set(pages.map((page) => page.frontmatter.category)))
+      .filter((id) => !campaignCategories.some((category) => category.id === id))
+      .map((id) => ({ id, label: id }))
+  ];
   const navLink = (page: WikiPage, depth: number): ReactNode => {
     const kids = childrenByParent.get(page.slug) || [];
     const isOpen = openNodes[page.slug] ?? false;
@@ -394,7 +433,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
       </div>
     );
   };
-  const navTree: ReactNode = categories.map((cat) => {
+  const navTree: ReactNode = navCategories.map((cat) => {
     const catPages = sortedPages.filter((page) => page.frontmatter.category === cat.id);
     const visible = navFilterLc ? catPages.filter((page) => page.frontmatter.name.toLowerCase().includes(navFilterLc)) : catPages;
     if (navFilterLc && visible.length === 0) return null;
@@ -502,7 +541,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
               <h2>Create page</h2>
               <form onSubmit={createPage} className="stack">
                 <label>Name<input name="name" required placeholder="Victor Mendes" /></label>
-                <label>Category<select name="category" value={pageCategory} onChange={(event) => setPageCategory(event.target.value)}>{categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.label}</option>)}</select></label>
+                <label>Category<select name="category" value={pageCategory} onChange={(event) => setPageCategory(event.target.value)}>{campaignCategories.map((cat) => <option key={cat.id} value={cat.id}>{cat.label}</option>)}</select></label>
                 <label>Template<select name="templatePath"><option value="">Starter default</option>{pageTemplates.map((template) => <option key={template.path} value={template.path}>{template.gameType} - {template.category} - {template.name}</option>)}</select></label>
                 <label>Visibility<select name="visibility"><option value="gm">GM only</option><option value="players">Player visible</option></select></label>
                 <button>Create page</button>
@@ -669,7 +708,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
                 <label>Game type<select name="gameType" defaultValue={campaign.gameType}>{gameTypeGroups.map((group) => (
                   <optgroup key={group.label} label={group.label}>{group.types.map((type) => <option key={type}>{type}</option>)}</optgroup>
                 ))}</select></label>
-                <label>Content type<select name="templateCategory">{categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.label}</option>)}</select></label>
+                <label>Content type<select name="templateCategory">{campaignCategories.map((cat) => <option key={cat.id} value={cat.id}>{cat.label}</option>)}</select></label>
                 <label>Summary<input name="summary" placeholder="Reusable structure for..." /></label>
                 <label>Tags<input name="tags" placeholder="traveller, patron, navy" /></label>
                 <label>Markdown body<textarea name="content" rows={10} placeholder={"# {{name}}\n\n## Overview\n\n\n:::gm\nSecret notes.\n::: "} /></label>
@@ -773,6 +812,59 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
               </div>
               <div className="member-actions">
                 <button type="submit">Save theme</button>
+              </div>
+            </form>
+          </section>
+        )}
+
+        {canManage && tab === "settings" && (
+          <section className="panel">
+            <div className="section-heading">
+              <div>
+                <h2>Categories</h2>
+                <p className="muted">Rename or add page categories for this campaign. These are stored in campaign.yaml and used by the workspace, player-facing lists, and public site.</p>
+              </div>
+              <div className="member-actions">
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setCampaignCategories((current) => [...current, { id: `custom_${current.length + 1}`, label: "New category" }])}
+                >
+                  Add category
+                </button>
+              </div>
+            </div>
+            <form onSubmit={saveCategories} className="category-form">
+              <div className="category-editor-list">
+                {campaignCategories.map((category, index) => (
+                  <div className="category-editor-row" key={`${category.id}-${index}`}>
+                    <label>
+                      Label
+                      <input
+                        value={category.label}
+                        onChange={(event) => setCampaignCategories((current) => current.map((item, i) => i === index ? { ...item, label: event.target.value } : item))}
+                      />
+                    </label>
+                    <label>
+                      ID
+                      <input
+                        value={category.id}
+                        onChange={(event) => setCampaignCategories((current) => current.map((item, i) => i === index ? { ...item, id: categoryIdInput(event.target.value) } : item))}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className="secondary danger"
+                      disabled={campaignCategories.length <= 1}
+                      onClick={() => setCampaignCategories((current) => current.filter((_, i) => i !== index))}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="member-actions">
+                <button type="submit">Save categories</button>
               </div>
             </form>
           </section>

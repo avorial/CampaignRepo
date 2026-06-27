@@ -2776,6 +2776,35 @@ button.nav-link.active {
   width: 100%;
 }
 
+.category-form {
+  display: grid;
+  gap: 14px;
+}
+
+.category-editor-list {
+  display: grid;
+  gap: 10px;
+}
+
+.category-editor-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(120px, 220px) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.category-editor-row label {
+  color: var(--text-secondary);
+  display: grid;
+  font-size: 13px;
+  gap: 6px;
+}
+
+button.danger {
+  color: var(--danger);
+  border-color: rgba(255, 101, 85, 0.45);
+}
+
 /* ---- Bulk organize: pages table + bulk-edit bar ---- */
 .organize {
   display: grid;

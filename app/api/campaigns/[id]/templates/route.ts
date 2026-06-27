@@ -4,14 +4,14 @@ import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getStorageAdapter, type StorageAdapter } from "@/lib/storage";
 import { parsePage, serializePage } from "@/lib/markdown";
-import { categoryIds, defaultFrontmatter, gameTypes, starterBody } from "@/lib/templates";
+import { defaultFrontmatter, gameTypes, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
 import type { GameType, WikiTemplate } from "@/lib/types";
 
 const createSchema = z.object({
   name: z.string().min(1),
   gameType: z.enum(gameTypes as [string, ...string[]]),
-  category: z.enum(categoryIds),
+  category: z.string().min(1).max(40).regex(/^[a-z0-9_/-]+$/),
   summary: z.string().optional(),
   tags: z.array(z.string()).default([]),
   content: z.string().optional()

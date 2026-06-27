@@ -12,13 +12,15 @@ export default function PublicSiteClient({
   campaignName,
   gameType,
   pages,
-  theme
+  theme,
+  categories
 }: {
   slug: string;
   campaignName: string;
   gameType: string;
   pages: WikiPage[];
   theme: CampaignTheme;
+  categories: { id: string; label: string }[];
 }) {
   const [selectedSlug, setSelectedSlug] = useState(pages[0]?.slug || "");
   const [query, setQuery] = useState("");
@@ -76,18 +78,8 @@ export default function PublicSiteClient({
 
   const selectedPage = pages.find((page) => page.slug === selectedSlug) || filteredPages[0] || pages[0];
 
-  const categoryOrder = ["lore", "location", "organization", "character", "npc", "species", "item", "event", "game"];
-  const categoryLabels: Record<string, string> = {
-    character: "Characters",
-    npc: "NPCs",
-    location: "Locations",
-    event: "Events",
-    game: "Game",
-    organization: "Organizations",
-    species: "Species",
-    item: "Items",
-    lore: "Lore"
-  };
+  const categoryOrder = categories.map((category) => category.id);
+  const categoryLabels = Object.fromEntries(categories.map((category) => [category.id, category.label]));
   const sortedPages = useMemo(() => [...pages].sort((a, b) => a.frontmatter.name.localeCompare(b.frontmatter.name)), [pages]);
   const pageBySlug = useMemo(() => new Map(pages.map((page) => [page.slug, page])), [pages]);
   const childrenByParent = useMemo(() => {
@@ -187,7 +179,7 @@ export default function PublicSiteClient({
             className={page.slug === selectedPage?.slug ? "nav-link nav-tree-link active" : "nav-link nav-tree-link"}
             onClick={() => selectPublicPage(page)}
           >
-            <span className="cat-dot" style={{ background: `var(--cat-${page.frontmatter.category})` }} />
+            <span className="cat-dot" style={{ background: `var(--cat-${page.frontmatter.category}, var(--gold))` }} />
             <span className="nav-tree-name">{page.frontmatter.name}</span>
             {kids.length > 0 && <span className="nav-tree-child-count" title={`${kids.length} direct child page${kids.length === 1 ? "" : "s"}`}>{kids.length}</span>}
           </button>
@@ -230,7 +222,7 @@ export default function PublicSiteClient({
                       className={page.slug === selectedPage?.slug ? "nav-link nav-tree-link nav-tree-filtered active" : "nav-link nav-tree-link nav-tree-filtered"}
                       onClick={() => selectPublicPage(page)}
                     >
-                      <span className="cat-dot" style={{ background: `var(--cat-${page.frontmatter.category})` }} />
+                      <span className="cat-dot" style={{ background: `var(--cat-${page.frontmatter.category}, var(--gold))` }} />
                       {page.frontmatter.name}
                     </button>
                   ))
@@ -251,7 +243,7 @@ export default function PublicSiteClient({
               <>
                 {cover && <img className="page-cover page-cover-clickable" src={cover} alt={selectedPage.frontmatter.name} onClick={() => setLightboxSrc(cover)} />}
                 <header className="handout-header">
-                  <p>{selectedPage.frontmatter.category}</p>
+                  <p>{categoryLabels[selectedPage.frontmatter.category] || selectedPage.frontmatter.category}</p>
                   <h1>{selectedPage.frontmatter.name}</h1>
                   {selectedPage.frontmatter.summary && <span>{selectedPage.frontmatter.summary}</span>}
                   {Boolean(selectedPage.frontmatter.tags?.length) && (

@@ -3,8 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { getCampaign } from "@/lib/db";
+import { loadCampaignCategories } from "@/lib/categories";
 import { loadCampaignTheme } from "@/lib/public-site";
-import { categories } from "@/lib/templates";
 import { themeToCssVars } from "@/lib/theme";
 import CampaignClient from "./workspace-client";
 
@@ -15,7 +15,10 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) redirect("/dashboard");
-  const theme = await loadCampaignTheme(campaign, user.githubToken);
+  const [theme, categories] = await Promise.all([
+    loadCampaignTheme(campaign, user.githubToken),
+    loadCampaignCategories(campaign, user.githubToken)
+  ]);
   const themeVars = themeToCssVars(theme) as CSSProperties;
   return (
     <main className="app-shell" data-theme={theme.preset || undefined} style={themeVars}>

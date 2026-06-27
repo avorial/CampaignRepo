@@ -5,7 +5,7 @@ import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getStorageAdapter, isConflictError } from "@/lib/storage";
 import { parsePage, serializePage } from "@/lib/markdown";
 import { sanitizePlayerPage } from "@/lib/public-site";
-import { categoryIds, defaultFrontmatter, starterBody } from "@/lib/templates";
+import { defaultFrontmatter, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
 import { readPageCache, refreshPageCache, refreshPageCacheInBackground } from "@/lib/page-cache";
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 const schema = z.object({
   name: z.string().min(1),
-  category: z.enum(categoryIds),
+  category: z.string().min(1).max(40).regex(/^[a-z0-9_/-]+$/),
   visibility: z.enum(["gm", "players"]).default("gm"),
   templatePath: z.string().optional()
 });

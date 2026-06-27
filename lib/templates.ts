@@ -122,7 +122,7 @@ export function starterBody(name: string, category: Category, gameType: GameType
 }
 
 export function campaignYaml(name: string, gameType: GameType) {
-  const cats = categories.map((category) => `  - ${category.label}`).join("\n");
+  const cats = categories.map((category) => `  - id: ${category.id}\n    label: ${JSON.stringify(category.label)}`).join("\n");
   return `name: ${JSON.stringify(name)}\ngameType: ${JSON.stringify(gameType)}\ncategories:\n${cats}\nvisibility:\n  default: gm\napprovals:\n  aiDefault: unapproved\ntheme:\n  preset: ${JSON.stringify(themePresetForGame(gameType))}\n  accent: "#d4a957"\n  accent2: "#a075ff"\n  displayFont: "Fraunces"\n  banner: ""\n`;
 }
 

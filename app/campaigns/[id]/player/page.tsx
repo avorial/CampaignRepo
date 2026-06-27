@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { getCampaign } from "@/lib/db";
+import { loadCampaignCategories } from "@/lib/categories";
 import { loadCampaignTheme } from "@/lib/public-site";
 import { themeToCssVars } from "@/lib/theme";
 import PlayerPortalClient from "./player-portal-client";
@@ -14,7 +15,10 @@ export default async function PlayerPortalPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) redirect("/dashboard");
-  const theme = await loadCampaignTheme(campaign, user.githubToken);
+  const [theme, categories] = await Promise.all([
+    loadCampaignTheme(campaign, user.githubToken),
+    loadCampaignCategories(campaign, user.githubToken)
+  ]);
   const themeVars = themeToCssVars(theme) as CSSProperties;
 
   return (
@@ -29,7 +33,7 @@ export default async function PlayerPortalPage({ params }: { params: Promise<{ i
           <Link className="button secondary" href={`/campaigns/${campaign.id}`}>Campaign Workspace</Link>
         </div>
       </header>
-      <PlayerPortalClient campaign={campaign} />
+      <PlayerPortalClient campaign={campaign} categories={categories} />
     </main>
   );
 }

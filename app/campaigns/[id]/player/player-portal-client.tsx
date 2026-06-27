@@ -5,7 +5,7 @@ import type { Campaign, WikiPage } from "@/lib/types";
 import { renderMarkdown, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
 
-export default function PlayerPortalClient({ campaign }: { campaign: Campaign }) {
+export default function PlayerPortalClient({ campaign, categories }: { campaign: Campaign; categories: { id: string; label: string }[] }) {
   const [pages, setPages] = useState<WikiPage[]>([]);
   const [selectedSlug, setSelectedSlug] = useState("");
   const [query, setQuery] = useState("");
@@ -38,6 +38,7 @@ export default function PlayerPortalClient({ campaign }: { campaign: Campaign })
   }, [pages, query]);
 
   const selectedPage = pages.find((page) => page.slug === selectedSlug) || filteredPages[0] || pages[0];
+  const categoryLabels = useMemo(() => new Map(categories.map((category) => [category.id, category.label])), [categories]);
 
   const resolveLink = useMemo<WikiLinkResolver>(() => {
     const aliasMap = buildAliasMap(
@@ -96,7 +97,7 @@ export default function PlayerPortalClient({ campaign }: { campaign: Campaign })
               }}
             >
               <strong>{page.frontmatter.name}</strong>
-              <span>{page.frontmatter.category}</span>
+              <span>{categoryLabels.get(page.frontmatter.category) || page.frontmatter.category}</span>
             </button>
           ))}
           {!filteredPages.length && <p className="muted">No approved player-visible pages match.</p>}
@@ -107,7 +108,7 @@ export default function PlayerPortalClient({ campaign }: { campaign: Campaign })
         {selectedPage ? (
           <>
             <header className="handout-header">
-              <p>{selectedPage.frontmatter.category}</p>
+              <p>{categoryLabels.get(selectedPage.frontmatter.category) || selectedPage.frontmatter.category}</p>
               <h1>{selectedPage.frontmatter.name}</h1>
               {selectedPage.frontmatter.summary && <span>{selectedPage.frontmatter.summary}</span>}
               <div className="badges">

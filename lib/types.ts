@@ -46,7 +46,8 @@ export type GameType =
   | "Fate Core"
   | "Savage Worlds"
   | "Custom";
-export type Category = "character" | "npc" | "location" | "event" | "game" | "organization" | "species" | "item" | "lore";
+export type DefaultCategory = "character" | "npc" | "location" | "event" | "game" | "organization" | "species" | "item" | "lore";
+export type Category = DefaultCategory | (string & {});
 export type Visibility = "gm" | "players";
 export type ApprovalStatus = "approved" | "unapproved" | "rejected";
 export type CampaignRole = "owner" | "gm" | "player";

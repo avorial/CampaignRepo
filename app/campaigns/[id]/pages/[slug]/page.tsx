@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { getCampaign } from "@/lib/db";
+import { loadCampaignCategories } from "@/lib/categories";
 import { loadCampaignTheme } from "@/lib/public-site";
 import { themeToCssVars } from "@/lib/theme";
 import PageEditor from "./page-editor";
@@ -14,7 +15,10 @@ export default async function WikiPage({ params }: { params: Promise<{ id: strin
   const { id, slug } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) redirect("/dashboard");
-  const theme = await loadCampaignTheme(campaign, user.githubToken);
+  const [theme, categories] = await Promise.all([
+    loadCampaignTheme(campaign, user.githubToken),
+    loadCampaignCategories(campaign, user.githubToken)
+  ]);
   const themeVars = themeToCssVars(theme) as CSSProperties;
   return (
     <main className="app-shell" data-theme={theme.preset || undefined} style={themeVars}>
@@ -25,7 +29,7 @@ export default async function WikiPage({ params }: { params: Promise<{ id: strin
         </div>
         <a className="button secondary" href={`https://github.com/${campaign.owner}/${campaign.repo}/tree/${campaign.branch}/wiki/pages/${slug}.md`}>Open source</a>
       </header>
-      <PageEditor campaign={campaign} slug={slug} />
+      <PageEditor campaign={campaign} slug={slug} categories={categories} />
     </main>
   );
 }

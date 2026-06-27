@@ -4,14 +4,13 @@ import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getStorageAdapter } from "@/lib/storage";
 import { parsePage, serializePage } from "@/lib/markdown";
-import { categoryIds } from "@/lib/templates";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
 
 const schema = z.object({
   slugs: z.array(z.string().min(1)).min(1),
   set: z
     .object({
-      category: z.enum(categoryIds).optional(),
+      category: z.string().min(1).max(40).regex(/^[a-z0-9_/-]+$/).optional(),
       visibility: z.enum(["gm", "players"]).optional(),
       approvalStatus: z.enum(["approved", "unapproved", "rejected"]).optional(),
       parent: z.string().optional()

@@ -6,7 +6,6 @@ import { Bold, Code2, Heading1, Heading2, Heading3, Italic, Link2, List, ListOrd
 import type { Campaign, CampaignMedia, WikiPage } from "@/lib/types";
 import { renderMarkdown, type IncludeResolver, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
-import { categories } from "@/lib/templates";
 import { RELATIONSHIP_TYPES, REL_TYPE_MAP } from "@/lib/relationships";
 
 const travellerSkillRows: Array<{ name: string; speciality?: string; level?: number }> = [
@@ -36,7 +35,7 @@ function travellerSheetSnippet(name: string) {
   return `\n\n\`\`\`traveller-sheet\nheader:\n  left: \n  center: \n  right: \nportrait: \nname: ${JSON.stringify(name || "")}\nspecies: \nage: \nhomeworld: \ncareer: \nrank: \ndossier: \nstatus: \nconditions: []\nspeciesTraits: []\ncharacteristics:\n  STR: \n  DEX: \n  END: \n  INT: \n  EDU: \n  SOC: \nskills:\n${skills}\nweapons:\n  # Laser Pistol: 3D, Medium, notes\narmour:\n  # Cloth: 8, notes\nitems:\n  # Medkit: 1, notes\nholdings:\n  # Ship Share: notes\npeople:\n  # Contact Name: notes\npsionics:\n  # Telepathy: 1, notes\nnotes: \n\`\`\`\n\n`;
 }
 
-export default function PageEditor({ campaign, slug }: { campaign: Campaign; slug: string }) {
+export default function PageEditor({ campaign, slug, categories }: { campaign: Campaign; slug: string; categories: { id: string; label: string }[] }) {
   const router = useRouter();
   const [page, setPage] = useState<WikiPage | null>(null);
   const [content, setContent] = useState("");
@@ -603,6 +602,9 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
   const coverRaw = frontmatter.cover ? String(frontmatter.cover) : "";
   const coverSrc = coverRaw ? (/^https?:\/\//i.test(coverRaw) ? coverRaw : resolveMedia(coverRaw.replace(/^\/?wiki\/media\//, ""))) : "";
   const coverEl = coverSrc ? <img className="page-cover page-cover-clickable" src={coverSrc} alt="" onClick={() => setLightboxSrc(coverSrc)} /> : null;
+  const editorCategories = frontmatter.category && !categories.some((category) => category.id === frontmatter.category)
+    ? [...categories, { id: frontmatter.category, label: frontmatter.category }]
+    : categories;
 
   if (!isEditing) {
     return (
@@ -702,7 +704,7 @@ export default function PageEditor({ campaign, slug }: { campaign: Campaign; slu
             onChange={(e) => setFrontmatter((current: any) => ({ ...current, category: e.target.value, type: e.target.value }))}
             disabled={!fieldsEditable}
           >
-            {categories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}
+            {editorCategories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}
           </select></label>
           <label>Summary<textarea value={frontmatter.summary || ""} onChange={(e) => updateField("summary", e.target.value)} readOnly={!fieldsEditable} /></label>
           <label>Status<input value={frontmatter.status || ""} onChange={(e) => updateField("status", e.target.value)} readOnly={!fieldsEditable} placeholder="alive, active, destroyed..." /></label>
