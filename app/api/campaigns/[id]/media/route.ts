@@ -75,7 +75,8 @@ function isEditableMediaPath(path: string) {
 }
 
 function proxyMediaUrl(campaignId: number, path: string) {
-  return `/campaign-media/${campaignId}/${path.split("/").map(encodeURIComponent).join("/")}`;
+  const mediaPath = path.replace(/^\/?wiki\/media\//, "");
+  return `/campaign-media/${campaignId}/${mediaPath.split("/").map(encodeURIComponent).join("/")}`;
 }
 
 function toMedia(campaignId: number, entry: { name: string; path: string; sha: string; size?: number; downloadUrl?: string }, metadata: MediaMetadata = {}): CampaignMedia {
