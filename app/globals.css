@@ -710,6 +710,7 @@ button.nav-link {
   cursor: pointer;
   font-family: inherit;
   font-size: var(--text-sm);
+  justify-content: flex-start;
   letter-spacing: 0;
   min-height: 0;
   text-align: left;
@@ -719,6 +720,7 @@ button.nav-link {
 
 button.nav-tree-link {
   display: flex;
+  justify-content: flex-start;
 }
 
 button.nav-link.active {
