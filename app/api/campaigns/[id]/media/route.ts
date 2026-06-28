@@ -45,8 +45,12 @@ function cleanFileName(fileName: string) {
   return `${slugify(base)}${ext}`;
 }
 
+function encodeMediaPath(name: string) {
+  return name.split("/").map(encodeURIComponent).join("/");
+}
+
 function markdownFor(name: string, type: CampaignMedia["mediaType"], alt?: string) {
-  const path = `/wiki/media/${name}`;
+  const path = `/wiki/media/${encodeMediaPath(name)}`;
   if (type === "image") return `![${alt || name}](${path})`;
   return `[${alt || name}](${path})`;
 }
@@ -70,14 +74,18 @@ function isEditableMediaPath(path: string) {
   return path.startsWith("wiki/media/") && !path.includes("..") && !path.endsWith("/.gitkeep") && path !== metadataPath;
 }
 
-function toMedia(entry: { name: string; path: string; sha: string; size?: number; downloadUrl?: string }, metadata: MediaMetadata = {}): CampaignMedia {
+function proxyMediaUrl(campaignId: number, path: string) {
+  return `/campaign-media/${campaignId}/${path.split("/").map(encodeURIComponent).join("/")}`;
+}
+
+function toMedia(campaignId: number, entry: { name: string; path: string; sha: string; size?: number; downloadUrl?: string }, metadata: MediaMetadata = {}): CampaignMedia {
   const type = mediaType(entry.name);
   return {
     name: entry.name,
     path: entry.path,
     sha: entry.sha,
     size: entry.size,
-    downloadUrl: entry.downloadUrl,
+    downloadUrl: entry.downloadUrl || proxyMediaUrl(campaignId, entry.path),
     mediaType: type,
     alt: metadata.alt,
     caption: metadata.caption,
@@ -96,7 +104,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const [entries, metadataFile] = await Promise.all([storage.listDirectory("wiki/media"), readMetadata(storage)]);
   const media = entries
     .filter((entry) => entry.type === "file" && entry.name !== ".gitkeep" && entry.path !== metadataPath)
-    .map((entry) => toMedia(entry, metadataFile.metadata[entry.path]));
+    .map((entry) => toMedia(campaign.id, entry, metadataFile.metadata[entry.path]));
   return NextResponse.json({ media });
 }
 
@@ -118,7 +126,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const metadata = { ...metadataFile.metadata, [path]: { alt: input.alt || name, caption: input.caption || "", tags: input.tags } };
   await writeMetadata(storage, metadata, metadataFile.sha);
   scheduleSearchIndexRebuild(campaign);
-  return NextResponse.json({ media: { name, path, sha: uploaded.sha, alt: input.alt || name, caption: input.caption || "", tags: input.tags, mediaType: type, markdown: markdownFor(name, type, input.alt) } });
+  return NextResponse.json({ media: { name, path, sha: uploaded.sha, downloadUrl: proxyMediaUrl(campaign.id, path), alt: input.alt || name, caption: input.caption || "", tags: input.tags, mediaType: type, markdown: markdownFor(name, type, input.alt) } });
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -141,7 +149,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const nextMetadata = { ...metadataFile.metadata, [input.path]: { alt: input.alt ?? currentMeta.alt ?? name, caption: input.caption ?? currentMeta.caption ?? "", tags: input.tags ?? currentMeta.tags ?? [] } };
     await writeMetadata(storage, nextMetadata, metadataFile.sha);
     scheduleSearchIndexRebuild(campaign);
-    return NextResponse.json({ media: toMedia({ name, path: input.path, sha: current.sha }, nextMetadata[input.path]) });
+    return NextResponse.json({ media: toMedia(campaign.id, { name, path: input.path, sha: current.sha }, nextMetadata[input.path]) });
   }
 
   const name = cleanFileName(input.fileName);
@@ -150,7 +158,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (nextPath === input.path) {
     const fresh = await storage.getContent(input.path);
     const metadataFile = await readMetadata(storage);
-    return NextResponse.json({ media: toMedia({ name, path: nextPath, sha: fresh.sha }, metadataFile.metadata[nextPath]) });
+    return NextResponse.json({ media: toMedia(campaign.id, { name, path: nextPath, sha: fresh.sha }, metadataFile.metadata[nextPath]) });
   }
   try {
     await storage.getContent(nextPath);
@@ -167,7 +175,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   await writeMetadata(storage, nextMetadata, metadataFile.sha);
   scheduleSearchIndexRebuild(campaign);
   const renamed = await storage.getContent(nextPath);
-  return NextResponse.json({ media: toMedia({ name, path: nextPath, sha: renamed.sha }, nextMetadata[nextPath]) });
+  return NextResponse.json({ media: toMedia(campaign.id, { name, path: nextPath, sha: renamed.sha }, nextMetadata[nextPath]) });
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
