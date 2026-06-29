@@ -118,7 +118,8 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
       accent: String(form.get("accent") || ""),
       accent2: String(form.get("accent2") || ""),
       displayFont: String(form.get("displayFont") || "") || undefined,
-      banner: String(form.get("banner") || "") || undefined
+      banner: String(form.get("banner") || "") || undefined,
+      logo: String(form.get("logo") || "") || undefined
     };
     setMessage("Saving theme...");
     const res = await fetch(`/api/campaigns/${campaign.id}/theme`, { method: "PUT", body: JSON.stringify({ theme: next }) });
@@ -803,6 +804,13 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
                 <label>Secondary (purple)<input type="color" name="accent2" defaultValue={theme.accent2 || defaultAccent2} key={`a2-${theme.accent2 || ""}`} /></label>
                 <label>Display font<select name="displayFont" defaultValue={theme.displayFont || "Fraunces"} key={`f-${theme.displayFont || ""}`}>{themeFontNames.map((font) => <option key={font} value={font}>{font}</option>)}</select></label>
                 <label>Banner image<select name="banner" defaultValue={theme.banner || ""} key={`b-${theme.banner || ""}`}>
+                  <option value="">None</option>
+                  {media.filter((item) => item.mediaType === "image").map((item) => {
+                    const rel = item.path.replace(/^wiki\/media\//, "");
+                    return <option key={item.path} value={rel}>{item.name}</option>;
+                  })}
+                </select></label>
+                <label>Logo image<select name="logo" defaultValue={theme.logo || ""} key={`l-${theme.logo || ""}`}>
                   <option value="">None</option>
                   {media.filter((item) => item.mediaType === "image").map((item) => {
                     const rel = item.path.replace(/^wiki\/media\//, "");

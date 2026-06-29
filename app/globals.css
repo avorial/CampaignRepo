@@ -386,6 +386,15 @@ code {
   letter-spacing: var(--tracking-tight);
 }
 
+.campaign-title-logo {
+  display: block;
+  width: min(280px, 44vw);
+  max-height: 96px;
+  object-fit: contain;
+  object-position: left center;
+  margin: 2px 0 8px;
+}
+
 .eyebrow {
   color: var(--gold);
   font-family: var(--font-mono);

@@ -9,6 +9,7 @@ export type CampaignTheme = {
   accent2?: string;
   displayFont?: string;
   banner?: string;
+  logo?: string;
 };
 
 /** Curated display fonts (all preloaded globally in app/layout.tsx). */
@@ -64,6 +65,7 @@ export function sanitizeTheme(input: unknown): CampaignTheme {
   if (isValidHex(raw.accent2)) theme.accent2 = raw.accent2.trim();
   if (typeof raw.displayFont === "string" && themeFonts[raw.displayFont]) theme.displayFont = raw.displayFont;
   if (typeof raw.banner === "string" && raw.banner.trim() && !raw.banner.includes("..")) theme.banner = raw.banner.trim();
+  if (typeof raw.logo === "string" && raw.logo.trim() && !raw.logo.includes("..")) theme.logo = raw.logo.trim();
   return theme;
 }
 

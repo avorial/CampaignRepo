@@ -8,6 +8,13 @@ import { loadCampaignTheme } from "@/lib/public-site";
 import { themeToCssVars } from "@/lib/theme";
 import CampaignClient from "./workspace-client";
 
+function themeLogoSrc(campaignId: number, logo?: string) {
+  if (!logo) return "";
+  if (/^https?:\/\//i.test(logo)) return logo;
+  const clean = logo.replace(/^\/?wiki\/media\//, "");
+  return `/campaign-media/${campaignId}/${clean.split("/").map(encodeURIComponent).join("/")}`;
+}
+
 export default async function CampaignPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await currentUser();
   if (!user) redirect("/login");
@@ -20,12 +27,13 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
     loadCampaignCategories(campaign, user.githubToken)
   ]);
   const themeVars = themeToCssVars(theme) as CSSProperties;
+  const logoSrc = themeLogoSrc(campaign.id, theme.logo);
   return (
     <main className="app-shell" data-theme={theme.preset || undefined} style={themeVars}>
       <header className="topbar">
         <div>
           <Link href="/dashboard" className="quiet-link">Dashboard</Link>
-          <h1>{campaign.name}</h1>
+          {logoSrc ? <img className="campaign-title-logo" src={logoSrc} alt={campaign.name} /> : <h1>{campaign.name}</h1>}
           <p className="muted">{campaign.owner}/{campaign.repo} · {campaign.gameType}</p>
         </div>
         <div className="topbar-actions">
