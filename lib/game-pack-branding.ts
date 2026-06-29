@@ -53,7 +53,7 @@ const categoryTheme = {
   Generic: "generic"
 } as const;
 
-export const themePresetNames = ["", "fantasy", "horror", "scifi", "generic", "traveller", "vampire", "mage"] as const;
+export const themePresetNames = ["", "fantasy", "horror", "scifi", "generic", "traveller", "vampire", "mage", "dark-ages-vampire"] as const;
 export type ThemePreset = typeof themePresetNames[number];
 
 export const themePresetLabels: Record<ThemePreset, string> = {
@@ -64,13 +64,15 @@ export const themePresetLabels: Record<ThemePreset, string> = {
   generic: "Generic",
   traveller: "Traveller - flagship",
   vampire: "Vampire - flagship",
-  mage: "Mage - flagship"
+  mage: "Mage - flagship",
+  "dark-ages-vampire": "Dark Ages: Vampire - flagship"
 };
 
 export function themePresetForGame(gameType: GameType): ThemePreset {
   if (gameType === "Traveller") return "traveller";
   if (gameType === "Vampire: The Masquerade") return "vampire";
   if (gameType === "Mage: The Ascension") return "mage";
+  if (gameType === "Dark Ages: Vampire") return "dark-ages-vampire";
   return categoryTheme[gamePackCategory[gameType]];
 }
 

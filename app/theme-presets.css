@@ -338,6 +338,61 @@
   --backdrop-size: auto, auto, auto;
 }
 
+/* ================ FLAGSHIP: DARK AGES VAMPIRE ================== */
+/* Medieval Cainite horror — ancient stone, dried blood, tallow gold. */
+[data-theme="dark-ages-vampire"] {
+  --bg-base: #09080b;
+  --bg-surface: #110e16;
+  --bg-elevated: #1a1620;
+  --bg-glass: rgba(17, 14, 22, 0.62);
+  --field-bg: #09070c;
+
+  --border-faint: rgba(180, 100, 80, 0.07);
+  --border-soft: rgba(180, 100, 80, 0.14);
+  --border-strong: rgba(155, 38, 55, 0.36);
+
+  --gold: #8b1e35;          /* dried blood primary */
+  --gold-bright: #b3364d;
+  --gold-glow: rgba(139, 30, 53, 0.36);
+  --purple: #c8a96a;        /* tallow candle / aged gold secondary */
+  --purple-deep: #8e7442;
+  --purple-glow: rgba(200, 169, 106, 0.28);
+
+  --text-primary: #e6d8c8;  /* aged vellum */
+  --text-secondary: #a08a7a;
+  --text-tertiary: #6e5248;
+  --text-muted: #453030;
+  --danger: #c23050;
+
+  --font-display: "Cinzel", Georgia, serif;
+  --font-body: "EB Garamond", Georgia, serif;
+  --font-mono: "IM Fell English", Georgia, serif;
+  --tracking-eyebrow: 0.22em;
+  --tracking-label: 0.14em;
+  --tracking-tight: 0.005em;
+
+  --radius-sm: 0px;
+  --radius-md: 1px;
+  --radius-lg: 2px;
+  --radius-xl: 2px;
+  --radius-2xl: 3px;
+  --radius-pill: 999px;
+  --control-h: 40px;
+
+  --shadow-panel: 0 24px 64px rgba(0, 0, 0, 0.82);
+  --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.65);
+  --ring-gold: 0 0 0 3px rgba(139, 30, 53, 0.34);
+  --ring-purple: 0 0 0 3px rgba(200, 169, 106, 0.26);
+  --wash-gold: rgba(139, 30, 53, 0.12);
+  --wash-purple: rgba(200, 169, 106, 0.10);
+
+  --backdrop:
+    radial-gradient(800px 500px at 50% 115%, rgba(160, 60, 20, 0.13), transparent 55%),
+    radial-gradient(700px 450px at 50% -8%, rgba(139, 30, 53, 0.09), transparent 60%),
+    #09080b; /* @kind other */
+  --backdrop-size: auto, auto, auto;
+}
+
 /* ======================= FLAGSHIP: MAGE ========================= */
 /* Modern/occult flagship — Hermetic indigo, luminous violet + teal ley-lines. */
 [data-theme="mage"] {
