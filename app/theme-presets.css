@@ -339,29 +339,29 @@
 }
 
 /* ================ FLAGSHIP: DARK AGES VAMPIRE ================== */
-/* Medieval Cainite horror — ancient stone, dried blood, tallow gold. */
+/* Medieval Cainite horror — pure stone-black, vivid crimson, cold moonlit teal. */
 [data-theme="dark-ages-vampire"] {
-  --bg-base: #09080b;
-  --bg-surface: #110e16;
-  --bg-elevated: #1a1620;
-  --bg-glass: rgba(17, 14, 22, 0.62);
-  --field-bg: #09070c;
+  --bg-base: #08080c;
+  --bg-surface: #0f0e16;
+  --bg-elevated: #181620;
+  --bg-glass: rgba(15, 14, 22, 0.65);
+  --field-bg: #080710;
 
-  --border-faint: rgba(180, 100, 80, 0.07);
-  --border-soft: rgba(180, 100, 80, 0.14);
-  --border-strong: rgba(155, 38, 55, 0.36);
+  --border-faint: rgba(160, 100, 130, 0.07);
+  --border-soft: rgba(160, 100, 130, 0.14);
+  --border-strong: rgba(185, 28, 55, 0.44);
 
-  --gold: #8b1e35;          /* dried blood primary */
-  --gold-bright: #b3364d;
-  --gold-glow: rgba(139, 30, 53, 0.36);
-  --purple: #c8a96a;        /* tallow candle / aged gold secondary */
-  --purple-deep: #8e7442;
-  --purple-glow: rgba(200, 169, 106, 0.28);
+  --gold: #961f38;          /* blood crimson primary */
+  --gold-bright: #c03350;
+  --gold-glow: rgba(150, 31, 56, 0.38);
+  --purple: #2e8080;        /* cold moonlight / undead teal secondary */
+  --purple-deep: #1a5252;
+  --purple-glow: rgba(46, 128, 128, 0.28);
 
-  --text-primary: #e6d8c8;  /* aged vellum */
-  --text-secondary: #a08a7a;
-  --text-tertiary: #6e5248;
-  --text-muted: #453030;
+  --text-primary: #e2d6c4;  /* aged vellum */
+  --text-secondary: #9a8878;
+  --text-tertiary: #6c5448;
+  --text-muted: #433030;
   --danger: #c23050;
 
   --font-display: "Cinzel", Georgia, serif;
@@ -379,18 +379,20 @@
   --radius-pill: 999px;
   --control-h: 40px;
 
-  --shadow-panel: 0 24px 64px rgba(0, 0, 0, 0.82);
-  --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.65);
-  --ring-gold: 0 0 0 3px rgba(139, 30, 53, 0.34);
-  --ring-purple: 0 0 0 3px rgba(200, 169, 106, 0.26);
-  --wash-gold: rgba(139, 30, 53, 0.12);
-  --wash-purple: rgba(200, 169, 106, 0.10);
+  --shadow-panel: 0 24px 64px rgba(0, 0, 0, 0.86);
+  --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.70);
+  --ring-gold: 0 0 0 3px rgba(150, 31, 56, 0.36);
+  --ring-purple: 0 0 0 3px rgba(46, 128, 128, 0.26);
+  --wash-gold: rgba(150, 31, 56, 0.12);
+  --wash-purple: rgba(46, 128, 128, 0.10);
 
   --backdrop:
-    radial-gradient(800px 500px at 50% 115%, rgba(160, 60, 20, 0.13), transparent 55%),
-    radial-gradient(700px 450px at 50% -8%, rgba(139, 30, 53, 0.09), transparent 60%),
-    #09080b; /* @kind other */
-  --backdrop-size: auto, auto, auto;
+    radial-gradient(800px 500px at 50% 110%, rgba(150, 40, 10, 0.12), transparent 55%),
+    radial-gradient(700px 450px at 50% -8%, rgba(150, 31, 56, 0.09), transparent 60%),
+    repeating-linear-gradient(45deg, rgba(150, 31, 56, 0.022) 0 1px, transparent 1px 9px),
+    repeating-linear-gradient(-45deg, rgba(150, 31, 56, 0.022) 0 1px, transparent 1px 9px),
+    #08080c; /* @kind other */
+  --backdrop-size: auto, auto, auto, auto, auto;
 }
 
 /* ======================= FLAGSHIP: MAGE ========================= */
