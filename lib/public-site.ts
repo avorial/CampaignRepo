@@ -1,6 +1,6 @@
 import YAML from "yaml";
 import type { Campaign, WikiPage } from "@/lib/types";
-import { themePresetForGame } from "@/lib/game-pack-branding";
+import { themePresetForGame, categoryPresetForGame } from "@/lib/game-pack-branding";
 import { getStorageAdapter } from "@/lib/storage";
 import { parsePage, stripGmBlocks } from "@/lib/markdown";
 import { sanitizeTheme, type CampaignTheme } from "@/lib/theme";
@@ -50,7 +50,11 @@ export async function loadCampaignTheme(campaign: Campaign, userToken?: string |
     const file = await storage.getTextFile(campaignConfigPath);
     const parsed = YAML.parse(file.text || "") as Record<string, unknown> | null;
     const theme = sanitizeTheme(parsed?.theme);
-    return theme.preset ? theme : { ...theme, preset: fallbackPreset };
+    // Upgrade campaigns whose saved preset is just the old auto-assigned category
+    // default — e.g. "fantasy" for Dark Ages: Vampire, which now has a flagship theme.
+    // A GM who deliberately picked a non-category preset keeps their choice.
+    const isStaleDefault = !theme.preset || theme.preset === categoryPresetForGame(campaign.gameType);
+    return isStaleDefault ? { ...theme, preset: fallbackPreset } : theme;
   } catch {
     return { preset: fallbackPreset };
   }

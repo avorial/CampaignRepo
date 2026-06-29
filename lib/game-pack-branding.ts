@@ -76,6 +76,11 @@ export function themePresetForGame(gameType: GameType): ThemePreset {
   return categoryTheme[gamePackCategory[gameType]];
 }
 
+/** The generic category preset for a game — what was auto-assigned before flagship theming existed. */
+export function categoryPresetForGame(gameType: GameType): ThemePreset {
+  return categoryTheme[gamePackCategory[gameType]];
+}
+
 const worldOfDarknessLogo = "/brand/logo-world-of-darkness.png";
 
 export const gamePackLogos: Partial<Record<GameType, string>> = {
