@@ -23,12 +23,13 @@ export function stripGmBlocks(content: string) {
 
 export function normalizeFrontmatter(raw: Record<string, unknown>, fallbackName: string): WikiPageFrontmatter {
   const category = String(raw.category || raw.type || "npc").toLowerCase() as Category;
+  const name = String(raw.name || raw.title || fallbackName);
   return {
-    ...defaultFrontmatter(String(raw.name || fallbackName), category),
+    ...defaultFrontmatter(name, category),
     ...raw,
     category,
     type: String(raw.type || category),
-    name: String(raw.name || fallbackName),
+    name,
     summary: String(raw.summary || ""),
     tags: Array.isArray(raw.tags) ? raw.tags.map(String) : [],
     visibility: (raw.visibility === "players" ? "players" : "gm") as Visibility,
