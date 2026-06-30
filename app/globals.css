@@ -2816,7 +2816,23 @@ button.danger {
   border-color: rgba(255, 101, 85, 0.45);
 }
 
-//* ---- Generators ---- */
+//* ---- Lexicon ---- */
+.lexicon-shell {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+.lexicon-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.lexicon-toolbar input { width: 220px; }
+.lexicon-table th, .lexicon-table td { vertical-align: top; }
+.lexicon-table td:first-child { font-weight: 600; min-width: 80px; }
+
+/* ---- Generators ---- */
 .generate-shell {
   display: grid;
   gap: 16px;
