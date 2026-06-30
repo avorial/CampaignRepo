@@ -2822,6 +2822,49 @@ button.danger {
   gap: 14px;
 }
 
+.tab-row {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+.tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+  margin-bottom: -1px;
+  padding: 6px 16px 8px;
+}
+.tab-btn.active {
+  border-bottom-color: var(--gold);
+  color: var(--text);
+  font-weight: 600;
+}
+.tab-btn:hover:not(.active) { color: var(--text); }
+
+.tag-chip {
+  background: color-mix(in srgb, var(--gold) 20%, transparent);
+  border: 1px solid color-mix(in srgb, var(--gold) 40%, transparent);
+  border-radius: 10px;
+  color: var(--gold);
+  display: inline-block;
+  font-size: 11px;
+  line-height: 1;
+  margin-right: 4px;
+  padding: 2px 8px;
+}
+
+button.danger {
+  background: color-mix(in srgb, #c0392b 80%, transparent);
+  border-color: #c0392b;
+  color: #fff;
+}
+button.danger:hover:not(:disabled) { background: #c0392b; }
+
 .organize-toolbar {
   align-items: center;
   display: flex;
