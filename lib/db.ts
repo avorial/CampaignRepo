@@ -12,9 +12,9 @@ const dbPath = process.env.CAMPAIGNREPO_DB || path.join(dataDir, "campaignrepo.s
 
 if (dbPath !== ":memory:" && !fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
-const db = new Database(dbPath);
+const db = new Database(dbPath, { timeout: 10000 });
 db.pragma("journal_mode = WAL");
-db.pragma("busy_timeout = 5000");
+db.pragma("busy_timeout = 10000");
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS users (
