@@ -4781,6 +4781,17 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   font-size: var(--text-label-sm);
 }
 
+/* ─── Presence / co-editor banner ─────────────────────────────── */
+.presence-banner {
+  background: rgba(212, 169, 87, 0.1);
+  border: 1px solid rgba(212, 169, 87, 0.3);
+  border-radius: 6px;
+  padding: 0.45rem 0.9rem;
+  font-size: var(--text-sm);
+  color: var(--gold);
+  margin: 0;
+}
+
 /* ─── AI Chat ──────────────────────────────────────────────────── */
 .ai-chat-shell {
   display: flex;

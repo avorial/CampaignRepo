@@ -61,6 +61,7 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
   const [slashMenu, setSlashMenu] = useState<{ query: string; insertStart: number; top: number; left: number } | null>(null);
   const [slashMenuIdx, setSlashMenuIdx] = useState(0);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [coEditors, setCoEditors] = useState<{ userId: number; name: string }[]>([]);
 
   useEffect(() => {
     if (!lightboxSrc) return;
@@ -68,6 +69,23 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [lightboxSrc]);
+
+  useEffect(() => {
+    if (!isEditing || !canManage) return;
+    const url = `/api/campaigns/${campaign.id}/pages/${slug}/presence`;
+    const announce = () =>
+      fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ editing: true }) })
+        .then((r) => r.json())
+        .then((d: { editors?: { userId: number; name: string }[] }) => setCoEditors(d.editors || []))
+        .catch(() => {});
+    announce();
+    const timer = setInterval(announce, 20_000);
+    return () => {
+      clearInterval(timer);
+      fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ editing: false }) }).catch(() => {});
+      setCoEditors([]);
+    };
+  }, [isEditing, canManage, campaign.id, slug]);
 
   const applyPage = useCallback((nextPage: WikiPage) => {
     setPage(nextPage);
@@ -1035,6 +1053,11 @@ notes: ""
           {canManage && <button type="button" className="danger" disabled={isSaving} onClick={deletePage}>Delete page</button>}
         </div>
         {message && <p className="toast editor-toast">{message}</p>}
+        {coEditors.length > 0 && (
+          <p className="presence-banner">
+            ⚠ Also editing: {coEditors.map((e) => e.name).join(", ")} — save carefully to avoid conflicts.
+          </p>
+        )}
         {fieldsEditable && (
           <div className="insert-toolbar">
             <label>
