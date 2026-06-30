@@ -2,6 +2,7 @@ import YAML from "yaml";
 import { getStorageAdapter } from "@/lib/storage";
 import { slugify } from "@/lib/slug";
 import type { Campaign } from "@/lib/types";
+import type { WorldDate } from "@/lib/calendar";
 
 export type AgendaItem = { text: string; done: boolean };
 export type AssetLink = { label: string; url: string };
@@ -12,6 +13,7 @@ export type SessionFrontmatter = {
   title: string;
   number?: number;
   date?: string;
+  worldDate?: WorldDate;
   status?: "planned" | "played" | "cancelled";
   mood?: string;
   arc?: string;
@@ -77,6 +79,9 @@ export function parseSession(slug: string, text: string, sha?: string): Session 
       title: String(fm.title || slug),
       number: fm.number ? Number(fm.number) : undefined,
       date: fm.date ? String(fm.date) : undefined,
+      worldDate: fm.worldDate && typeof fm.worldDate === "object" && !Array.isArray(fm.worldDate)
+        ? { year: Math.max(1, Number((fm.worldDate as Record<string,unknown>).year) || 1), month: Math.max(1, Number((fm.worldDate as Record<string,unknown>).month) || 1), day: Math.max(1, Number((fm.worldDate as Record<string,unknown>).day) || 1) }
+        : undefined,
       status: validStatus.includes(String(fm.status)) ? fm.status as SessionFrontmatter["status"] : undefined,
       mood: fm.mood ? String(fm.mood) : undefined,
       arc: fm.arc ? String(fm.arc) : undefined,
@@ -97,6 +102,7 @@ export function serializeSession(frontmatter: SessionFrontmatter, notes: string)
   const fm: Record<string, unknown> = { title: frontmatter.title };
   if (frontmatter.number != null) fm.number = frontmatter.number;
   if (frontmatter.date) fm.date = frontmatter.date;
+  if (frontmatter.worldDate) fm.worldDate = frontmatter.worldDate;
   if (frontmatter.status) fm.status = frontmatter.status;
   if (frontmatter.mood) fm.mood = frontmatter.mood;
   if (frontmatter.arc) fm.arc = frontmatter.arc;

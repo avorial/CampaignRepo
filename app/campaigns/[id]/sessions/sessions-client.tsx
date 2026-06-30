@@ -5,18 +5,27 @@ import type { Campaign } from "@/lib/types";
 import { DatePicker, formatDateDisplay } from "./date-picker";
 
 type Attendee = { name: string; status: string };
+type WorldDate = { year: number; month: number; day: number };
+type CalMonth = { name: string; days: number };
+type Cal = { months: CalMonth[]; weekdays: string[]; eraName?: string };
 type Session = {
   slug: string;
   frontmatter: {
     title: string;
     number?: number;
     date?: string;
+    worldDate?: WorldDate;
     status?: string;
     mood?: string;
     attendees?: Attendee[];
     agenda: { text: string; done: boolean }[];
   };
 };
+
+function fmtWorldDate(cal: Cal, d: WorldDate): string {
+  const monthName = cal.months[Math.max(0, d.month - 1)]?.name ?? `Month ${d.month}`;
+  return `${d.day} ${monthName}, ${d.year}${cal.eraName ? ` ${cal.eraName}` : ""}`;
+}
 
 const MOOD_LABEL: Record<string, string> = {
   investigation: "Investigation", combat: "Combat", political: "Political",
@@ -31,12 +40,14 @@ export default function SessionsClient({ campaign }: { campaign: Campaign }) {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [sessionDate, setSessionDate] = useState("");
+  const [calendar, setCalendar] = useState<Cal | null>(null);
 
   async function load() {
     setLoading(true);
-    const res = await fetch(`${api}/sessions`);
+    const [res, calRes] = await Promise.all([fetch(`${api}/sessions`), fetch(`${api}/calendar`)]);
     const data = res.ok ? await res.json() : { sessions: [] };
     setSessions(data.sessions || []);
+    if (calRes.ok) { const d = await calRes.json(); if (d.calendar) setCalendar(d.calendar); }
     setLoading(false);
   }
   useEffect(() => { load(); }, []);
@@ -79,8 +90,11 @@ export default function SessionsClient({ campaign }: { campaign: Campaign }) {
               const present = attendees.filter((a) => a.status !== "absent").length;
               const agendaDone = s.frontmatter.agenda.filter((a) => a.done).length;
               const title = s.frontmatter.number ? `${s.frontmatter.number}. ${s.frontmatter.title}` : s.frontmatter.title;
+              const worldDateStr = s.frontmatter.worldDate && calendar
+                ? fmtWorldDate(calendar, s.frontmatter.worldDate) : null;
               const meta = [
                 s.frontmatter.date ? formatDateDisplay(s.frontmatter.date) : null,
+                worldDateStr ? `⟨${worldDateStr}⟩` : null,
                 s.frontmatter.status,
                 s.frontmatter.mood ? MOOD_LABEL[s.frontmatter.mood] || s.frontmatter.mood : null,
                 attendees.length > 0 ? `${present}/${attendees.length} attended` : null,

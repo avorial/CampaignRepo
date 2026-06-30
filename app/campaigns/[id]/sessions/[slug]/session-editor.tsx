@@ -12,6 +12,10 @@ const MOOD_LABEL: Record<string, string> = {
 };
 const VALID_STATUSES = ["planned", "played", "cancelled"];
 
+type WorldDate = { year: number; month: number; day: number };
+type CalendarMonth = { name: string; days: number };
+type CalendarConfig = { months: CalendarMonth[]; weekdays: string[]; eraName?: string; currentDate: WorldDate };
+
 type Attendee = { name: string; status: "present" | "late" | "left-early" | "absent" };
 type AssetLink = { label: string; url: string };
 type AgendaItem = { text: string; done: boolean };
@@ -20,6 +24,7 @@ type Frontmatter = {
   title: string;
   number?: number;
   date?: string;
+  worldDate?: WorldDate;
   status?: "planned" | "played" | "cancelled";
   mood?: string;
   arc?: string;
@@ -33,6 +38,13 @@ type Frontmatter = {
   pinned: string[];
 };
 type PageRef = { slug: string; name: string };
+
+function formatWorldDate(cal: CalendarConfig, d: WorldDate): string {
+  const monthIdx = Math.min(cal.months.length - 1, Math.max(0, d.month - 1));
+  const monthName = cal.months[monthIdx]?.name ?? `Month ${d.month}`;
+  const era = cal.eraName ? ` ${cal.eraName}` : "";
+  return `${d.day} ${monthName}, ${d.year}${era}`;
+}
 
 export default function SessionEditor({ campaign, slug }: { campaign: Campaign; slug: string }) {
   const base = `/campaigns/${campaign.id}`;
@@ -50,10 +62,15 @@ export default function SessionEditor({ campaign, slug }: { campaign: Campaign; 
   const [addPin, setAddPin] = useState("");
   const [newAssetLabel, setNewAssetLabel] = useState("");
   const [newAssetUrl, setNewAssetUrl] = useState("");
+  const [calendar, setCalendar] = useState<CalendarConfig | null>(null);
 
   useEffect(() => {
     (async () => {
-      const [sRes, pRes] = await Promise.all([fetch(`${api}/sessions/${slug}`), fetch(`${api}/pages`)]);
+      const [sRes, pRes, calRes] = await Promise.all([
+        fetch(`${api}/sessions/${slug}`),
+        fetch(`${api}/pages`),
+        fetch(`${api}/calendar`)
+      ]);
       if (sRes.ok) {
         const data = await sRes.json();
         const s = data.session;
@@ -62,6 +79,7 @@ export default function SessionEditor({ campaign, slug }: { campaign: Campaign; 
           title: s.frontmatter.title || "",
           number: s.frontmatter.number,
           date: s.frontmatter.date || "",
+          worldDate: s.frontmatter.worldDate || undefined,
           status: VALID_STATUSES.includes(rawStatus) ? rawStatus : "planned",
           mood: s.frontmatter.mood || "",
           arc: s.frontmatter.arc || "",
@@ -82,6 +100,10 @@ export default function SessionEditor({ campaign, slug }: { campaign: Campaign; 
         const data = await pRes.json();
         setPages((data.pages || []).map((p: { slug: string; frontmatter: { name: string } }) => ({ slug: p.slug, name: p.frontmatter.name })));
       }
+      if (calRes.ok) {
+        const data = await calRes.json();
+        if (data.calendar) setCalendar(data.calendar);
+      }
     })();
   }, [slug]);
 
@@ -98,6 +120,7 @@ export default function SessionEditor({ campaign, slug }: { campaign: Campaign; 
         frontmatter: {
           ...fm,
           date: fm.date || undefined,
+          worldDate: fm.worldDate || undefined,
           status: fm.status || undefined,
           mood: fm.mood || undefined,
           arc: fm.arc || undefined,
@@ -190,6 +213,53 @@ export default function SessionEditor({ campaign, slug }: { campaign: Campaign; 
         </div>
 
         <label>Date<DatePicker value={fm.date || ""} onChange={(v) => patch({ date: v })} /></label>
+
+        {calendar && (
+          <div className="field-group">
+            <h3>In-world date</h3>
+            {fm.worldDate && <p className="muted" style={{ fontSize: "12px", margin: "0 0 8px" }}>{formatWorldDate(calendar, fm.worldDate)}</p>}
+            <div className="mapper-grid" style={{ gridTemplateColumns: "72px 1fr 72px" }}>
+              <label style={{ fontSize: "11px" }}>Year
+                <input type="number" min={1} value={fm.worldDate?.year ?? ""}
+                  placeholder="—"
+                  onChange={(e) => {
+                    const year = e.target.value ? Number(e.target.value) : undefined;
+                    if (year) patch({ worldDate: { year, month: fm.worldDate?.month ?? 1, day: fm.worldDate?.day ?? 1 } });
+                    else patch({ worldDate: undefined });
+                  }} />
+              </label>
+              <label style={{ fontSize: "11px" }}>Month
+                <select value={fm.worldDate?.month ?? ""}
+                  onChange={(e) => {
+                    const month = Number(e.target.value);
+                    if (month && fm.worldDate) {
+                      const maxDay = calendar.months[month - 1]?.days ?? 30;
+                      patch({ worldDate: { ...fm.worldDate, month, day: Math.min(fm.worldDate.day, maxDay) } });
+                    } else if (month) {
+                      patch({ worldDate: { year: 1, month, day: 1 } });
+                    }
+                  }}>
+                  <option value="">—</option>
+                  {calendar.months.map((m, i) => <option key={i} value={i + 1}>{m.name}</option>)}
+                </select>
+              </label>
+              <label style={{ fontSize: "11px" }}>Day
+                <input type="number" min={1}
+                  max={fm.worldDate ? (calendar.months[fm.worldDate.month - 1]?.days ?? 30) : 30}
+                  value={fm.worldDate?.day ?? ""}
+                  placeholder="—"
+                  onChange={(e) => {
+                    const day = e.target.value ? Number(e.target.value) : undefined;
+                    if (day && fm.worldDate) patch({ worldDate: { ...fm.worldDate, day } });
+                  }} />
+              </label>
+            </div>
+            {fm.worldDate && (
+              <button type="button" className="linklike" style={{ fontSize: "11px" }}
+                onClick={() => patch({ worldDate: undefined })}>Clear in-world date</button>
+            )}
+          </div>
+        )}
 
         <label>Mood
           <select value={fm.mood || ""} onChange={(e) => patch({ mood: e.target.value || undefined })}>

@@ -20,6 +20,7 @@ const saveSchema = z.object({
     title: z.string().trim().min(1),
     number: z.number().int().positive().optional(),
     date: z.string().trim().optional(),
+    worldDate: z.object({ year: z.number().int(), month: z.number().int(), day: z.number().int() }).optional(),
     status: z.enum(["planned", "played", "cancelled"]).optional(),
     mood: z.string().trim().optional(),
     arc: z.string().trim().optional(),
@@ -69,6 +70,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     {
       ...fm,
       date: fm.date || undefined,
+      worldDate: fm.worldDate || undefined,
       status: fm.status || undefined,
       mood: fm.mood || undefined,
       arc: fm.arc || undefined,
