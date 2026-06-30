@@ -167,7 +167,22 @@ export default function DashboardClient({
               </div>
             );
           })}
-          {!repos.length && <p className="muted">No campaign repos connected yet.</p>}
+          {!repos.length && (
+            <div className="onboarding-hero">
+              <div className="onboarding-hero-icon">📖</div>
+              <h3>Your first campaign is one click away</h3>
+              <p>No installs, no accounts required. CampaignRepo stores your world in a plain folder — pages, maps, sessions, and media — so you own everything and can open files anywhere.</p>
+              <button type="button" onClick={() => setPanelOpen("build", true)} className="button">
+                Create your first campaign ↓
+              </button>
+              <ul className="onboarding-feature-list">
+                <li>Wiki pages with rich markdown, images, and relationships</li>
+                <li>Session planning, quests, and in-world calendar</li>
+                <li>Traveller, WoD, and D&amp;D character sheets</li>
+                <li>Optional GitHub sync for history and multi-device access</li>
+              </ul>
+            </div>
+          )}
         </div>
       </section>
 
@@ -220,58 +235,64 @@ export default function DashboardClient({
 
         <details className="panel dashboard-toggle-panel" open={expandedPanels.build} onToggle={(event) => setPanelOpen("build", event.currentTarget.open)}>
           <summary>
-            <span>Build Campaign Repo</span>
-            <small>{mode === "create" ? "Create repo" : mode === "local" ? "Local folder" : "Connect repo"}</small>
+            <span>New campaign</span>
+            <small>{mode === "create" ? "GitHub (new)" : mode === "local" ? "Local folder" : "GitHub (connect existing)"}</small>
           </summary>
           <div className="dashboard-toggle-body">
-            {!githubConnected && (
-              <div className="setup-callout callout-info" style={{ marginBottom: 8 }}>
-                <strong>No GitHub needed</strong>
-                <span>Create a local campaign — your files stay on this machine. You can connect GitHub later to get version history and multi-device sync.</span>
-              </div>
-            )}
             <div className="segmented">
-              <button type="button" className={mode === "local" ? "active" : ""} onClick={() => { setMode("local"); setBuildError(""); }}>Local folder</button>
+              <button type="button" className={mode === "local" ? "active" : ""} onClick={() => { setMode("local"); setBuildError(""); }}>
+                Local folder
+              </button>
               <button
                 type="button"
                 className={mode === "create" ? "active" : ""}
                 disabled={isGitHubApp}
-                title={isGitHubApp ? "GitHub App access can't create repos - add a manual token to enable this" : undefined}
+                title={isGitHubApp ? "GitHub App access can't create repos — add a manual token to enable this" : undefined}
                 onClick={() => { setMode("create"); setBuildError(""); }}
               >
-                {isGitHubApp && <Lock size={11} aria-hidden style={{ marginRight: 5 }} />}Create GitHub repo
+                {isGitHubApp && <Lock size={11} aria-hidden style={{ marginRight: 5 }} />}GitHub (new repo)
               </button>
-              <button type="button" className={mode === "connect" ? "active" : ""} onClick={() => { setMode("connect"); setBuildError(""); }}>Connect GitHub repo</button>
+              <button type="button" className={mode === "connect" ? "active" : ""} onClick={() => { setMode("connect"); setBuildError(""); }}>
+                GitHub (connect existing)
+              </button>
             </div>
+            {mode === "local" && (
+              <p className="muted" style={{ fontSize: "12px", margin: "8px 0 0" }}>
+                Campaign files stay on this machine in a plain folder. Connect GitHub later for version history and multi-device sync.
+              </p>
+            )}
             {isGitHubApp && mode !== "local" && (
-              <div className="setup-callout callout-warn">
-                <strong><Lock size={13} aria-hidden style={{ marginRight: 6, verticalAlign: "-2px" }} />Creating repos is locked</strong>
-                <span>You&apos;re connected via the <strong>GitHub App</strong>, which can <strong>connect existing repos</strong> but can&apos;t create new ones. Make the repo at <a href="https://github.com/new" target="_blank" rel="noreferrer">github.com/new</a>, then use <button type="button" className="linklike" onClick={() => { setMode("connect"); setBuildError(""); }}>Connect repo</button> - or add a manual GitHub token under <em>Connection troubleshooting</em> to unlock creation.</span>
+              <div className="setup-callout callout-warn" style={{ marginTop: 8 }}>
+                <strong><Lock size={13} aria-hidden style={{ marginRight: 6, verticalAlign: "-2px" }} />Creating new repos is locked</strong>
+                <span>You&apos;re connected via the GitHub App, which can connect existing repos but can&apos;t create new ones. Make the repo at <a href="https://github.com/new" target="_blank" rel="noreferrer">github.com/new</a>, then use <button type="button" className="linklike" onClick={() => { setMode("connect"); setBuildError(""); }}>Connect existing</button> — or add a manual token under <em>GitHub connection → troubleshooting</em>.</span>
               </div>
             )}
             {(mode === "create" || mode === "connect") && !githubConnected && (
               <div className="setup-callout callout-warn" style={{ marginTop: 8 }}>
                 <strong>GitHub not connected</strong>
-                <span>Connect GitHub below, or use <button type="button" className="linklike" onClick={() => { setMode("local"); setBuildError(""); }}>Local folder</button> to get started without an account.</span>
+                <span>Connect GitHub below, or use <button type="button" className="linklike" onClick={() => { setMode("local"); setBuildError(""); }}>Local folder</button> to get started without any account.</span>
               </div>
             )}
-            <form onSubmit={buildRepo} className="stack">
+            <form onSubmit={buildRepo} className="stack" style={{ marginTop: 12 }}>
               <label>Campaign name<input name="name" required placeholder="The Jardin File" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} /></label>
+              <label>Game system<select name="gameType">{gameTypeGroups.map((group) => (
+                <optgroup key={group.label} label={group.label}>{group.types.map((type) => <option key={type}>{type}</option>)}</optgroup>
+              ))}</select></label>
               {mode === "local" && (
-                <label>
-                  Local folder path
-                  <input name="localPath" placeholder={suggestedLocalPath || "Path where campaign files will be saved"} />
-                  {suggestedLocalPath && <small className="muted">Leave blank to use: {suggestedLocalPath}</small>}
-                </label>
+                <details>
+                  <summary style={{ cursor: "pointer", fontSize: "12px", color: "var(--muted)" }}>Advanced: choose folder location</summary>
+                  <label style={{ marginTop: 8 }}>
+                    Folder path
+                    <input name="localPath" placeholder={suggestedLocalPath || "Leave blank to use default location"} />
+                    {suggestedLocalPath && <small className="muted">Default: {suggestedLocalPath}</small>}
+                  </label>
+                </details>
               )}
               {mode === "connect" && <label>Owner<input name="owner" placeholder="avorial (optional if pasting URL)" /></label>}
               {mode !== "local" && <label>{mode === "connect" ? "Repo name or URL" : "Repo name"}<input name="repo" required placeholder={mode === "connect" ? "kdwiki or https://github.com/avorial/kdwiki" : "jardin-campaign"} /></label>}
               {mode !== "local" && <label>Branch<input name="branch" defaultValue="main" /></label>}
-              <label>Game template pack<select name="gameType">{gameTypeGroups.map((group) => (
-                <optgroup key={group.label} label={group.label}>{group.types.map((type) => <option key={type}>{type}</option>)}</optgroup>
-              ))}</select></label>
               {mode === "create" && <label className="check"><input type="checkbox" name="private" defaultChecked /> Private repo</label>}
-              <button disabled={isGitHubApp && mode === "create"}>{mode === "create" ? "Create and initialize" : mode === "local" ? "Create local campaign" : "Connect and repair"}</button>
+              <button disabled={isGitHubApp && mode === "create"}>{mode === "create" ? "Create and initialize" : mode === "local" ? "Create campaign" : "Connect and initialize"}</button>
               {buildError && <p className="error">{buildError}</p>}
             </form>
           </div>
@@ -324,10 +345,13 @@ export default function DashboardClient({
       )}
 
       <section className="band instructions">
-        <h2>GitHub repo instructions</h2>
-        <p>CampaignRepo can create a repo for you, or connect to one you already made at <a href="https://github.com/new">github.com/new</a>.</p>
-        <p>Required structure: <code>/wiki/pages</code>, <code>/wiki/media</code>, <code>/wiki/templates</code>, <code>/wiki/imports/characters</code>, <code>/wiki/search/index.json</code>, and <code>/wiki/campaign.yaml</code>.</p>
-        <p>Use <code>[[Page Name]]</code> links, <code>:::gm</code> blocks for secrets, and keep frontmatter intact when editing manually.</p>
+        <h2>Editing outside CampaignRepo</h2>
+        <p>Every campaign is a folder of plain Markdown files. Edit pages in any text editor or IDE — the same way you&apos;d edit a README. Campaign files live under <code>wiki/pages/</code>, media under <code>wiki/media/</code>.</p>
+        <p>In page content, <code>[[Page Name]]</code> creates a wiki link, <code>:::gm</code> blocks are GM-only secrets, and frontmatter (the YAML between <code>---</code> lines) controls category, visibility, and approval.</p>
+        <details>
+          <summary style={{ cursor: "pointer", fontSize: "13px" }}>GitHub / technical details</summary>
+          <p>Required folder structure: <code>wiki/pages</code>, <code>wiki/media</code>, <code>wiki/templates</code>, <code>wiki/imports/characters</code>, <code>wiki/search/index.json</code>, and <code>wiki/campaign.yaml</code>. CampaignRepo initializes this automatically when you create a campaign. To connect an existing GitHub repo, use &quot;GitHub (connect existing)&quot; — it will repair missing structure on first connect.</p>
+        </details>
       </section>
       {message && <p className="toast">{message}</p>}
     </>
