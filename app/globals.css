@@ -3105,6 +3105,65 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
 
 .organize-table input[type="checkbox"] { width: auto; }
 
+/* ---- Manuscripts ---- */
+.manuscript-shell { display: flex; flex-direction: column; height: 100%; }
+.manuscript-toolbar {
+  align-items: center;
+  background: var(--card);
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px;
+}
+.manuscript-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  padding: 20px;
+}
+.manuscript-card { display: flex; flex-direction: column; gap: 6px; }
+.manuscript-card-header { align-items: center; display: flex; gap: 8px; }
+.manuscript-card-actions { display: flex; gap: 6px; margin-top: 6px; }
+.manuscript-edit-layout {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 260px 1fr 1fr;
+  flex: 1;
+  overflow: hidden;
+  padding: 16px;
+}
+.manuscript-edit-layout > .panel { overflow-y: auto; }
+.manuscript-meta { gap: 10px; }
+.manuscript-page-list { list-style: none; margin: 0; padding: 0; }
+.manuscript-page-row {
+  align-items: center;
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  font-size: 13px;
+  gap: 6px;
+  padding: 6px 0;
+}
+.manuscript-page-row:last-child { border-bottom: none; }
+.manuscript-page-num { color: var(--muted); font-size: 11px; min-width: 18px; text-align: right; }
+.manuscript-page-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.manuscript-page-actions { display: flex; gap: 2px; }
+.manuscript-reader {
+  flex: 1;
+  max-width: 800px;
+  margin: 0 auto;
+  overflow-y: auto;
+  padding: 32px 24px;
+}
+.manuscript-chapter { margin-bottom: 40px; }
+.manuscript-chapter-title { font-size: 28px; margin: 0 0 4px; }
+.manuscript-chapter-summary { color: var(--muted); font-style: italic; margin: 0 0 16px; }
+.manuscript-break { border-color: var(--border-soft); margin: 40px 0; }
+@media print {
+  .manuscript-toolbar, .topbar, .nav-sidebar { display: none !important; }
+  .manuscript-reader { max-width: 100%; padding: 0; }
+  .manuscript-break { break-after: page; border: none; }
+}
+
 /* ---- Import/Export page ---- */
 .import-shell { padding: 20px; }
 .import-panel { max-width: 800px; }

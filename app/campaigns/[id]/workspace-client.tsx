@@ -528,6 +528,9 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
           <Link href={`/campaigns/${campaign.id}/lexicon`} className="nav-link nav-tool-link">Ⓛ Lexicon</Link>
         )}
         {canManage && (
+          <Link href={`/campaigns/${campaign.id}/manuscripts`} className="nav-link nav-tool-link">📜 Manuscripts</Link>
+        )}
+        {canManage && (
           <Link href={`/campaigns/${campaign.id}/tools/import`} className="nav-link nav-tool-link">⬆ Import / Export</Link>
         )}
         {canManage && pendingReviews > 0 && (
