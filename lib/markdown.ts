@@ -893,6 +893,93 @@ function expandDnDSheets(content: string) {
   });
 }
 
+// ══ Inventory block ═══════════════════════════════════════════════════════════
+
+type InventoryItem = { name?: string; qty?: number | string; weight?: number | string; value?: string; notes?: string };
+
+function renderInventoryHtml(inner: string): string {
+  let data: Record<string, unknown>;
+  try { data = yaml.parse(inner.trim()) || {}; } catch { return `<p class="sheet-error">inventory: invalid YAML</p>`; }
+  const items: InventoryItem[] = Array.isArray(data.items) ? data.items as InventoryItem[] : [];
+  const title = data.title ? escapeHtml(String(data.title)) : "Inventory";
+  const hasCols = { qty: items.some(i => i.qty != null), weight: items.some(i => i.weight != null), value: items.some(i => i.value != null), notes: items.some(i => i.notes != null) };
+
+  const rows = items.map(item => {
+    const cells = [
+      `<td>${escapeHtml(String(item.name || ""))}</td>`,
+      hasCols.qty ? `<td class="inv-num">${escapeHtml(String(item.qty ?? ""))}</td>` : "",
+      hasCols.weight ? `<td class="inv-num">${escapeHtml(String(item.weight ?? ""))}</td>` : "",
+      hasCols.value ? `<td>${escapeHtml(String(item.value ?? ""))}</td>` : "",
+      hasCols.notes ? `<td class="inv-notes">${escapeHtml(String(item.notes ?? ""))}</td>` : ""
+    ].join("");
+    return `<tr>${cells}</tr>`;
+  }).join("");
+
+  const headers = [
+    `<th>Item</th>`,
+    hasCols.qty ? `<th class="inv-num">Qty</th>` : "",
+    hasCols.weight ? `<th class="inv-num">Weight</th>` : "",
+    hasCols.value ? `<th>Value</th>` : "",
+    hasCols.notes ? `<th>Notes</th>` : ""
+  ].join("");
+
+  return `<div class="inv-block"><h3>${title}</h3><table class="inv-table"><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function expandInventory(content: string) {
+  return content.replace(/```inventory\s*\n([\s\S]*?)```/g, (_match, inner) => `\n\n${renderInventoryHtml(String(inner))}\n\n`);
+}
+
+// ══ Tracker block ═════════════════════════════════════════════════════════════
+
+type TrackerResource = { name?: string; current?: number | string; max?: number | string; color?: string };
+
+function renderTrackerHtml(inner: string): string {
+  let data: Record<string, unknown>;
+  try { data = yaml.parse(inner.trim()) || {}; } catch { return `<p class="sheet-error">tracker: invalid YAML</p>`; }
+  const resources: TrackerResource[] = Array.isArray(data.resources) ? data.resources as TrackerResource[] : [];
+  const title = data.title ? escapeHtml(String(data.title)) : "Resources";
+
+  const rows = resources.map(r => {
+    const cur = Number(r.current ?? 0);
+    const max = Number(r.max ?? 1);
+    const pct = Math.round(Math.max(0, Math.min(100, (cur / max) * 100)));
+    const color = r.color ? escapeHtml(String(r.color)) : "var(--gold)";
+    return `<div class="tracker-row"><span class="tracker-label">${escapeHtml(String(r.name || ""))}</span><div class="tracker-bar"><div class="tracker-fill" style="width:${pct}%;background:${color}"></div></div><span class="tracker-val">${cur}/${max}</span></div>`;
+  }).join("");
+
+  return `<div class="tracker-block"><h3>${title}</h3>${rows}</div>`;
+}
+
+function expandTrackers(content: string) {
+  return content.replace(/```tracker\s*\n([\s\S]*?)```/g, (_match, inner) => `\n\n${renderTrackerHtml(String(inner))}\n\n`);
+}
+
+// ══ Traits block ══════════════════════════════════════════════════════════════
+
+type TraitEntry = { name?: string; value?: string | number; description?: string; type?: string };
+
+function renderTraitsHtml(inner: string): string {
+  let data: Record<string, unknown>;
+  try { data = yaml.parse(inner.trim()) || {}; } catch { return `<p class="sheet-error">traits: invalid YAML</p>`; }
+  const items: TraitEntry[] = Array.isArray(data.traits) ? data.traits as TraitEntry[] : [];
+  const title = data.title ? escapeHtml(String(data.title)) : "Traits & Abilities";
+
+  const chips = items.map(t => {
+    const name = escapeHtml(String(t.name || ""));
+    const val = t.value != null ? `<span class="trait-val">${escapeHtml(String(t.value))}</span>` : "";
+    const desc = t.description ? ` title="${escapeHtml(String(t.description))}"` : "";
+    const cls = t.type ? ` trait-type-${escapeHtml(t.type)}` : "";
+    return `<span class="trait-chip${cls}"${desc}>${name}${val}</span>`;
+  }).join("");
+
+  return `<div class="traits-block"><h3>${title}</h3><div class="traits-grid">${chips}</div></div>`;
+}
+
+function expandTraits(content: string) {
+  return content.replace(/```traits\s*\n([\s\S]*?)```/g, (_match, inner) => `\n\n${renderTraitsHtml(String(inner))}\n\n`);
+}
+
 /** Expand `![[Page]]` embeds inline (one level) using the include resolver. */
 function expandIncludes(content: string, resolve?: IncludeResolver) {
   if (!resolve) return content;
@@ -919,6 +1006,9 @@ export function renderMarkdown(content: string, mode: RenderMode, resolve?: Wiki
   content = expandTravellerSheets(content);
   content = expandWoDSheets(content);
   content = expandDnDSheets(content);
+  content = expandInventory(content);
+  content = expandTrackers(content);
+  content = expandTraits(content);
   let html: string;
   if (mode !== "gm") {
     html = renderInline(stripGmBlocks(content), resolve, resolveMedia);

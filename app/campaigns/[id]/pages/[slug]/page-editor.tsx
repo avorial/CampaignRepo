@@ -1025,6 +1025,9 @@ notes: ""
           {fieldsEditable && canUseTravellerSheet && <button type="button" onClick={insertTravellerSheetBlock}>Insert character sheet</button>}
           {fieldsEditable && canUseWoDSheet && <button type="button" onClick={insertWoDSheetBlock}>Insert WoD sheet</button>}
           {fieldsEditable && canUseDnDSheet && <button type="button" onClick={insertDnDSheetBlock}>Insert D&amp;D sheet</button>}
+          {fieldsEditable && <button type="button" onClick={() => insertSnippet("```inventory\ntitle: Inventory\nitems:\n  - name: Item name\n    qty: 1\n    weight: 1\n    value: \"\"\n    notes: \"\"\n```\n\n")}>Insert inventory</button>}
+          {fieldsEditable && <button type="button" onClick={() => insertSnippet("```tracker\ntitle: Resources\nresources:\n  - name: Hit Points\n    current: 10\n    max: 10\n    color: \"#e74c3c\"\n  - name: Mana\n    current: 5\n    max: 5\n    color: \"#3498db\"\n```\n\n")}>Insert tracker</button>}
+          {fieldsEditable && <button type="button" onClick={() => insertSnippet("```traits\ntitle: Traits & Abilities\ntraits:\n  - name: Trait name\n    value: \"\"\n    description: Optional tooltip\n    type: \"\"\n```\n\n")}>Insert traits</button>}
           {fieldsEditable && <button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Save"}</button>}
           {fieldsEditable && <button type="button" disabled={isSaving} onClick={() => savePage(true)}>{isSaving ? "Saving..." : "Save and finish"}</button>}
           {canManage && !isEditing && <button type="button" onClick={() => setIsEditing(true)}>Edit page</button>}

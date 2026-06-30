@@ -3561,6 +3561,69 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   .tsheet-band { grid-template-columns: 1fr; }
 }
 
+/* ---- Inventory block ---- */
+.inv-block {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 16px 0;
+  padding: 12px 16px;
+}
+.inv-block h3 { font-size: 14px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gold); }
+.inv-table { border-collapse: collapse; font-size: 13px; width: 100%; }
+.inv-table th { border-bottom: 1px solid var(--border); color: var(--muted); font-size: 11px; font-weight: 600; padding: 4px 8px; text-align: left; text-transform: uppercase; }
+.inv-table td { border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.06)); padding: 5px 8px; }
+.inv-table tr:last-child td { border-bottom: none; }
+.inv-num { text-align: right; width: 60px; }
+.inv-notes { color: var(--muted); font-size: 12px; }
+
+/* ---- Tracker block ---- */
+.tracker-block {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 16px 0;
+  padding: 12px 16px;
+}
+.tracker-block h3 { font-size: 14px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gold); }
+.tracker-row { align-items: center; display: grid; gap: 10px; grid-template-columns: 120px 1fr 56px; margin-bottom: 6px; }
+.tracker-label { font-size: 13px; }
+.tracker-bar { background: var(--bg-panel); border-radius: 4px; height: 8px; overflow: hidden; }
+.tracker-fill { border-radius: 4px; height: 100%; transition: width 0.3s; }
+.tracker-val { color: var(--muted); font-size: 12px; text-align: right; }
+
+/* ---- Traits block ---- */
+.traits-block {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 16px 0;
+  padding: 12px 16px;
+}
+.traits-block h3 { font-size: 14px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gold); }
+.traits-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.trait-chip {
+  background: color-mix(in srgb, var(--gold) 12%, var(--bg-panel));
+  border: 1px solid color-mix(in srgb, var(--gold) 30%, transparent);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: help;
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  gap: 6px;
+  padding: 4px 10px;
+}
+.trait-val {
+  background: color-mix(in srgb, var(--gold) 25%, transparent);
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+}
+.trait-type-flaw .trait-chip, .trait-chip.trait-type-flaw { border-color: color-mix(in srgb, #c0392b 40%, transparent); }
+.trait-type-bonus .trait-chip, .trait-chip.trait-type-bonus { border-color: color-mix(in srgb, #27ae60 40%, transparent); }
+
 /* ---- World of Darkness character sheet ---- */
 .wod-sheet {
   background: var(--bg-overlay, rgba(0, 0, 0, 0.55));
