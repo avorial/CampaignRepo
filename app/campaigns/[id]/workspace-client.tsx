@@ -527,6 +527,9 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
         {canManage && (
           <Link href={`/campaigns/${campaign.id}/lexicon`} className="nav-link nav-tool-link">Ⓛ Lexicon</Link>
         )}
+        {canManage && (
+          <Link href={`/campaigns/${campaign.id}/tools/import`} className="nav-link nav-tool-link">⬆ Import / Export</Link>
+        )}
         {canManage && pendingReviews > 0 && (
           <Link href={`/campaigns/${campaign.id}/admin`} className="review-callout">
             {pendingReviews} review{pendingReviews === 1 ? "" : "s"} waiting

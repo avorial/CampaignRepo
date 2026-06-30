@@ -3105,6 +3105,37 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
 
 .organize-table input[type="checkbox"] { width: auto; }
 
+/* ---- Import/Export page ---- */
+.import-shell { padding: 20px; }
+.import-panel { max-width: 800px; }
+.import-intro p { margin: 0 0 6px; }
+.import-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.import-options label { display: grid; font-size: 13px; gap: 4px; min-width: 150px; }
+.import-options select { margin: 0; }
+.import-textarea {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 10px;
+  resize: vertical;
+  width: 100%;
+}
+.file-upload-row { align-items: center; display: flex; font-size: 13px; gap: 4px; }
+.import-result { margin-top: 12px; }
+.import-result-summary { margin-bottom: 8px; }
+.import-errors { color: var(--danger, #c0392b); font-size: 13px; margin-bottom: 8px; padding-left: 16px; }
+.export-options { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); margin-top: 8px; }
+.export-option { display: flex; flex-direction: column; gap: 8px; }
+.export-option-header { align-items: center; display: flex; gap: 8px; }
+.export-option .button { align-self: flex-start; }
+
 /* ---- Command palette (Cmd/Ctrl+K) ---- */
 .cmdk-overlay {
   position: fixed;
