@@ -384,6 +384,84 @@ notes: ""
     setMessage("WoD sheet block inserted. Edit the values in the markdown, then save.");
   }
 
+  function dndSheetSnippet(name: string) {
+    const isPF2 = campaign.gameType === "Pathfinder";
+    const system = isPF2 ? "pathfinder2" : "dnd5e";
+    return `\n\n\`\`\`dnd-sheet
+system: ${system}
+name: ${JSON.stringify(name || "")}
+race: ""
+class: ""
+subclass: ""
+level: 1
+background: ""
+alignment: ""
+xp: 0
+portrait: ""
+player: ""
+
+ability_scores:
+  str: 10
+  dex: 10
+  con: 10
+  int: 10
+  wis: 10
+  cha: 10
+
+# Abbreviations: str, dex, con, int, wis, cha
+saving_throw_proficiencies: []
+
+# Full skill names — see list below
+skill_proficiencies: []
+skill_expertise: []
+# Skills: Acrobatics, Animal Handling, Arcana, Athletics, Deception,
+#         History, Insight, Intimidation, Investigation, Medicine,
+#         Nature, Perception, Performance, Persuasion, Religion,
+#         Sleight of Hand, Stealth, Survival
+
+ac: 10
+speed: 30
+hp_max: 8
+hp_current: 8
+hp_temp: 0
+hit_dice: "1d8"
+death_saves:
+  successes: 0
+  failures: 0
+
+attacks:
+  - name: ""
+    bonus: "+0"
+    damage: ""
+
+# Delete spellcasting section if not a caster
+spellcasting:
+  ability: int
+  spell_save_dc: 10
+  spell_attack: "+2"
+  spells:
+    - level: 0
+      list: []
+    - level: 1
+      slots: 2
+      list: []
+
+features: []
+languages: [Common]
+proficiencies: []
+equipment:
+  - name: ""
+notes: ""
+\`\`\`\n\n`;
+  }
+
+  function insertDnDSheetBlock() {
+    setMode("gm");
+    setIsEditing(true);
+    insertSnippet(dndSheetSnippet(frontmatter.name));
+    setMessage("D&D sheet block inserted. Edit the values in the markdown, then save.");
+  }
+
   function insertSnippet(snippet: string) {
     const textarea = textareaRef.current;
     if (!textarea) {
@@ -653,6 +731,9 @@ notes: ""
   const isTraveller = campaign.gameType === "Traveller";
   const isEvent = frontmatter.category === "event";
   const canUseTravellerSheet = isTraveller && (frontmatter.category === "character" || frontmatter.category === "npc");
+  const DND_GAME_TYPES: string[] = ["Dungeons & Dragons", "Pathfinder", "Old-School Essentials", "Shadowdark RPG", "Dragonbane", "Fabula Ultima"];
+  const isDnD = DND_GAME_TYPES.includes(campaign.gameType);
+  const canUseDnDSheet = isDnD && (frontmatter.category === "character" || frontmatter.category === "npc");
   const WOD_GAME_TYPES: string[] = [
     "Vampire: The Masquerade", "Dark Ages: Vampire", "Werewolf: The Apocalypse",
     "Dark Ages: Werewolf", "Mage: The Ascension", "Dark Ages: Mage",
@@ -943,6 +1024,7 @@ notes: ""
           <button type="button" className={mode === "handout" ? "active" : ""} onClick={() => setMode("handout")}>Handout</button>
           {fieldsEditable && canUseTravellerSheet && <button type="button" onClick={insertTravellerSheetBlock}>Insert character sheet</button>}
           {fieldsEditable && canUseWoDSheet && <button type="button" onClick={insertWoDSheetBlock}>Insert WoD sheet</button>}
+          {fieldsEditable && canUseDnDSheet && <button type="button" onClick={insertDnDSheetBlock}>Insert D&amp;D sheet</button>}
           {fieldsEditable && <button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Save"}</button>}
           {fieldsEditable && <button type="button" disabled={isSaving} onClick={() => savePage(true)}>{isSaving ? "Saving..." : "Save and finish"}</button>}
           {canManage && !isEditing && <button type="button" onClick={() => setIsEditing(true)}>Edit page</button>}

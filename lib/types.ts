@@ -176,6 +176,47 @@ export type TravellerSheet = {
   notes?: string;
 };
 
+export type DnDAbilityKey = "str" | "dex" | "con" | "int" | "wis" | "cha";
+export type DnDSheet = {
+  system: "dnd5e" | "pathfinder2";
+  name?: string;
+  class?: string;
+  subclass?: string;
+  level?: number;
+  race?: string;
+  background?: string;
+  alignment?: string;
+  xp?: number;
+  player?: string;
+  portrait?: string;
+  ability_scores?: Partial<Record<DnDAbilityKey, number>>;
+  proficiency_bonus?: number;
+  saving_throw_proficiencies?: string[];
+  skill_proficiencies?: string[];
+  skill_expertise?: string[];
+  ac?: number;
+  initiative?: number;
+  speed?: number;
+  hp_max?: number;
+  hp_current?: number;
+  hp_temp?: number;
+  hit_dice?: string;
+  death_saves?: { successes?: number; failures?: number };
+  passive_perception?: number;
+  attacks?: { name: string; bonus?: string; damage?: string; notes?: string }[];
+  spellcasting?: {
+    ability?: string;
+    spell_save_dc?: number;
+    spell_attack?: string;
+    spells?: { level: number; slots?: number; used?: number; list?: string[] }[];
+  };
+  features?: string[];
+  languages?: string[];
+  proficiencies?: string[];
+  equipment?: { name: string; quantity?: number; notes?: string }[];
+  notes?: string;
+};
+
 export type WoDSystem = "vampire-masquerade" | "dark-ages-vampire" | "werewolf-apocalypse" | "mage-ascension" | "generic-wod";
 export type WoDRated = { name: string; score: number; notes?: string };
 export type WoDSheet = {

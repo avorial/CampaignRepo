@@ -658,6 +658,241 @@ function expandWoDSheets(content: string) {
   });
 }
 
+// ---- D&D 5e / Pathfinder 2e character sheet ----
+
+const DND_ABILITIES: { key: string; label: string; short: string }[] = [
+  { key: "str", label: "Strength",     short: "STR" },
+  { key: "dex", label: "Dexterity",    short: "DEX" },
+  { key: "con", label: "Constitution", short: "CON" },
+  { key: "int", label: "Intelligence", short: "INT" },
+  { key: "wis", label: "Wisdom",       short: "WIS" },
+  { key: "cha", label: "Charisma",     short: "CHA" }
+];
+
+const DND_SKILLS: { name: string; ability: string }[] = [
+  { name: "Acrobatics",      ability: "dex" }, { name: "Animal Handling", ability: "wis" },
+  { name: "Arcana",          ability: "int" }, { name: "Athletics",       ability: "str" },
+  { name: "Deception",       ability: "cha" }, { name: "History",         ability: "int" },
+  { name: "Insight",         ability: "wis" }, { name: "Intimidation",    ability: "cha" },
+  { name: "Investigation",   ability: "int" }, { name: "Medicine",        ability: "wis" },
+  { name: "Nature",          ability: "int" }, { name: "Perception",      ability: "wis" },
+  { name: "Performance",     ability: "cha" }, { name: "Persuasion",      ability: "cha" },
+  { name: "Religion",        ability: "int" }, { name: "Sleight of Hand", ability: "dex" },
+  { name: "Stealth",         ability: "dex" }, { name: "Survival",        ability: "wis" }
+];
+
+const SAVE_ABBREV: Record<string, string> = {
+  strength: "str", dexterity: "dex", constitution: "con",
+  intelligence: "int", wisdom: "wis", charisma: "cha"
+};
+
+function dndAbilMod(score: number) { return Math.floor((score - 10) / 2); }
+function dndProfBonus(level: number) { return Math.ceil(level / 4) + 1; }
+function dndFmt(n: number) { return n >= 0 ? `+${n}` : String(n); }
+
+function normalizeDnDSheet(input: unknown) {
+  const raw = input && typeof input === "object" && !Array.isArray(input) ? input as Record<string, unknown> : {};
+  const system = String(raw.system || "") === "pathfinder2" ? "pathfinder2" as const : "dnd5e" as const;
+  const abilRaw = raw.ability_scores && typeof raw.ability_scores === "object" && !Array.isArray(raw.ability_scores)
+    ? raw.ability_scores as Record<string, unknown> : {};
+  const spellRaw = raw.spellcasting && typeof raw.spellcasting === "object" && !Array.isArray(raw.spellcasting)
+    ? raw.spellcasting as Record<string, unknown> : null;
+  const deathRaw = raw.death_saves && typeof raw.death_saves === "object" && !Array.isArray(raw.death_saves)
+    ? raw.death_saves as Record<string, unknown> : {};
+  const level = Math.max(1, asNumber(raw.level, 1));
+  const profBonus = raw.proficiency_bonus != null ? asNumber(raw.proficiency_bonus) : dndProfBonus(level);
+  const savesRaw = asStringArray(raw.saving_throw_proficiencies).map((s) => {
+    const low = s.toLowerCase();
+    return SAVE_ABBREV[low] ?? low;
+  });
+  const attacks = asRecordArray(raw.attacks).map((a) => ({
+    name: String(a.name || ""), bonus: a.bonus ? String(a.bonus) : undefined,
+    damage: a.damage ? String(a.damage) : undefined, notes: a.notes ? String(a.notes) : undefined
+  })).filter((a) => a.name);
+  const spells = spellRaw && Array.isArray(spellRaw.spells)
+    ? spellRaw.spells.flatMap((s: unknown) => {
+        if (!s || typeof s !== "object" || Array.isArray(s)) return [];
+        const sr = s as Record<string, unknown>;
+        return [{ level: Number(sr.level ?? 0), slots: asOptionalNumber(sr.slots), used: asOptionalNumber(sr.used), list: asStringArray(sr.list) }];
+      })
+    : [];
+  const equipment = [
+    ...asRecordArray(raw.equipment).map((e) => ({ name: String(e.name || e.item || ""), quantity: asOptionalNumber(e.quantity), notes: e.notes ? String(e.notes) : undefined })),
+    ...compactRecords(raw.equipment, (name, parts) => ({ name, quantity: parts[0] && Number.isFinite(+parts[0]) ? +parts[0] : undefined, notes: (parts[0] && Number.isFinite(+parts[0]) ? parts.slice(1) : parts).join(", ") || undefined }))
+  ].filter((e) => e.name);
+  const scores: Record<string, number> = {};
+  for (const { key } of DND_ABILITIES) scores[key] = asNumber(abilRaw[key], 10);
+  return {
+    system, name: raw.name ? String(raw.name) : undefined,
+    class: raw.class ? String(raw.class) : undefined, subclass: raw.subclass ? String(raw.subclass) : undefined,
+    level, race: raw.race ? String(raw.race) : undefined,
+    background: raw.background ? String(raw.background) : undefined, alignment: raw.alignment ? String(raw.alignment) : undefined,
+    xp: asOptionalNumber(raw.xp), player: raw.player ? String(raw.player) : undefined,
+    portrait: raw.portrait ? String(raw.portrait) : undefined,
+    scores, profBonus, saveProfSet: new Set(savesRaw),
+    skillProfs: new Set(asStringArray(raw.skill_proficiencies).map((s) => s.toLowerCase())),
+    skillExpert: new Set(asStringArray(raw.skill_expertise).map((s) => s.toLowerCase())),
+    ac: asOptionalNumber(raw.ac), initiative: asOptionalNumber(raw.initiative), speed: asOptionalNumber(raw.speed),
+    hpMax: asOptionalNumber(raw.hp_max), hpCurrent: asOptionalNumber(raw.hp_current ?? raw.hp_max), hpTemp: asOptionalNumber(raw.hp_temp),
+    hitDice: raw.hit_dice ? String(raw.hit_dice) : undefined,
+    deathSuccesses: asNumber(deathRaw.successes, 0), deathFailures: asNumber(deathRaw.failures, 0),
+    passivePerception: asOptionalNumber(raw.passive_perception),
+    attacks, spellcasting: spellRaw ? { ability: spellRaw.ability ? String(spellRaw.ability).toLowerCase() : undefined, saveDC: asOptionalNumber(spellRaw.spell_save_dc), attack: spellRaw.spell_attack ? String(spellRaw.spell_attack) : undefined, spells } : null,
+    features: asStringArray(raw.features), languages: asStringArray(raw.languages),
+    proficiencies: asStringArray(raw.proficiencies), equipment,
+    notes: raw.notes ? String(raw.notes) : undefined
+  };
+}
+
+function renderDnDSheetHtml(rawInput: string) {
+  let parsed: unknown;
+  try { parsed = yaml.parse(rawInput) || {}; }
+  catch (error) {
+    return `<section class="dnd-sheet dnd-sheet-error"><p>D&amp;D sheet data could not be parsed: ${escapeHtml(error instanceof Error ? error.message : "invalid YAML")}</p></section>`;
+  }
+  const s = normalizeDnDSheet(parsed);
+  const abilMod = (key: string) => dndAbilMod(s.scores[key] ?? 10);
+  const profIcon = (prof: boolean, expert = false) =>
+    expert ? `<span class="dnd-prof-icon expert" title="Expertise">★</span>`
+    : prof  ? `<span class="dnd-prof-icon proficient" title="Proficient">●</span>`
+    :          `<span class="dnd-prof-icon" title="Not proficient">○</span>`;
+  const classSub = [s.class, s.subclass].filter(Boolean).join(" / ");
+  const byline = [classSub ? `${classSub} ${s.level}` : null, s.race, s.background].filter((p): p is string => !!p).map(escapeHtml).join(" · ");
+  const portrait = s.portrait
+    ? `<img src="${escapeHtml(mediaPath(s.portrait))}" alt="${escapeHtml(s.name || "portrait")}" loading="lazy" />`
+    : `<div class="dnd-portrait-placeholder"><span>${escapeHtml((s.name || " ").charAt(0).toUpperCase())}</span></div>`;
+  const deathBox = (filled: boolean) => `<span class="dnd-death-box${filled ? " filled" : ""}"></span>`;
+  const deathRow = (count: number, sym: string) => `<span>${sym}</span>${Array.from({ length: 3 }, (_, i) => deathBox(i < count)).join("")}`;
+  const hpMax = s.hpMax ?? 0;
+  const hpCur = s.hpCurrent ?? hpMax;
+  const hpPct = hpMax > 0 ? Math.min(100, Math.round((hpCur / hpMax) * 100)) : 0;
+
+  const abilitiesHtml = DND_ABILITIES.map(({ key, label, short }) => {
+    const score = s.scores[key] ?? 10;
+    const mod = dndAbilMod(score);
+    const saveProf = s.saveProfSet.has(key) || s.saveProfSet.has(short.toLowerCase());
+    const saveBonus = mod + (saveProf ? s.profBonus : 0);
+    return `<div class="dnd-ability-card">
+  <span class="dnd-ability-short">${short}</span>
+  <span class="dnd-ability-score">${score}</span>
+  <span class="dnd-ability-mod">${dndFmt(mod)}</span>
+  <span class="dnd-ability-label">${escapeHtml(label)}</span>
+  <span class="dnd-save-row">${profIcon(saveProf)}Save ${dndFmt(saveBonus)}</span>
+</div>`;
+  }).join("");
+
+  const skillsHtml = DND_SKILLS.map(({ name, ability }) => {
+    const expert = s.skillExpert.has(name.toLowerCase());
+    const prof   = s.skillProfs.has(name.toLowerCase()) || expert;
+    const bonus  = abilMod(ability) + (expert ? s.profBonus * 2 : prof ? s.profBonus : 0);
+    return `<li>${profIcon(prof, expert)}<span>${escapeHtml(name)}</span><span class="dnd-skill-abrev">${ability.toUpperCase()}</span><span class="dnd-skill-bonus">${dndFmt(bonus)}</span></li>`;
+  }).join("");
+
+  const attacksHtml = s.attacks.length ? `
+<div class="dnd-section">
+  <h4>Attacks</h4>
+  <table class="dnd-attacks-table">
+    <thead><tr><th>Name</th><th>Attack</th><th>Damage / Type</th></tr></thead>
+    <tbody>${s.attacks.map((a) => `<tr><td>${escapeHtml(a.name)}</td><td>${escapeHtml(a.bonus || "—")}</td><td>${escapeHtml([a.damage, a.notes].filter(Boolean).join(" · ") || "—")}</td></tr>`).join("")}</tbody>
+  </table>
+</div>` : "";
+
+  let spellsHtml = "";
+  if (s.spellcasting) {
+    const sc = s.spellcasting;
+    const scLine = [sc.ability?.toUpperCase(), sc.saveDC ? `DC ${sc.saveDC}` : null, sc.attack ? `${sc.attack} atk` : null].filter(Boolean).join(" · ");
+    const spellGroupsHtml = sc.spells.map((sl) => {
+      const label = sl.level === 0 ? "Cantrips" : `Level ${sl.level}${sl.slots ? ` (${sl.slots - (sl.used ?? 0)}/${sl.slots} slots)` : ""}`;
+      return `<div class="dnd-spell-group"><span class="dnd-spell-level-label">${escapeHtml(label)}</span><span class="dnd-spell-list">${escapeHtml(sl.list.join(", ") || "—")}</span></div>`;
+    }).join("");
+    spellsHtml = `
+<div class="dnd-section">
+  <h4>Spellcasting <span>${escapeHtml(scLine)}</span></h4>
+  <div class="dnd-spells">${spellGroupsHtml}</div>
+</div>`;
+  }
+
+  const featuresHtml = s.features.length ? `
+<div class="dnd-section">
+  <h4>Features &amp; Traits</h4>
+  <ul class="dnd-feature-list">${s.features.map((f) => `<li>${escapeHtml(f)}</li>`).join("")}</ul>
+</div>` : "";
+
+  const equipHtml = s.equipment.length ? `
+<div class="dnd-section">
+  <h4>Equipment</h4>
+  <p class="dnd-equip-list">${s.equipment.map((e) => {
+    const qty = e.quantity && e.quantity > 1 ? ` ×${e.quantity}` : "";
+    return `<span>${escapeHtml(e.name + qty + (e.notes ? ` (${e.notes})` : ""))}</span>`;
+  }).join(" · ")}</p>
+</div>` : "";
+
+  const miscRows = [
+    s.languages.length && `<div class="dnd-misc-row"><b>Languages</b> ${escapeHtml(s.languages.join(", "))}</div>`,
+    s.proficiencies.length && `<div class="dnd-misc-row"><b>Proficiencies</b> ${escapeHtml(s.proficiencies.join(", "))}</div>`,
+    s.notes && `<div class="dnd-misc-row"><b>Notes</b> ${escapeHtml(s.notes)}</div>`
+  ].filter(Boolean).join("");
+
+  return `
+<section class="dnd-sheet">
+  <div class="dnd-header">
+    ${portrait}
+    <div class="dnd-header-text">
+      <strong class="dnd-name">${escapeHtml(s.name || "Unnamed Character")}</strong>
+      ${byline ? `<span class="dnd-byline">${byline}</span>` : ""}
+      ${s.alignment ? `<span class="dnd-alignment">${escapeHtml(s.alignment)}</span>` : ""}
+      ${s.xp != null ? `<span class="dnd-xp">${s.xp.toLocaleString()} XP</span>` : ""}
+    </div>
+    <div class="dnd-prof-badge">
+      <span class="dnd-prof-val">${dndFmt(s.profBonus)}</span>
+      <span class="dnd-prof-label">Proficiency</span>
+    </div>
+  </div>
+
+  <div class="dnd-abilities">${abilitiesHtml}</div>
+
+  <div class="dnd-main">
+    <div class="dnd-skills-col">
+      <h4>Skills</h4>
+      <ul class="dnd-skills">${skillsHtml}</ul>
+      ${s.passivePerception != null ? `<div class="dnd-passive">Passive Perception ${s.passivePerception}</div>` : ""}
+    </div>
+    <div class="dnd-combat-col">
+      <div class="dnd-combat-stats">
+        <div class="dnd-combat-block"><span class="dnd-combat-val">${s.ac ?? "—"}</span><span class="dnd-combat-label">AC</span></div>
+        <div class="dnd-combat-block"><span class="dnd-combat-val">${dndFmt(s.initiative ?? abilMod("dex"))}</span><span class="dnd-combat-label">Initiative</span></div>
+        <div class="dnd-combat-block"><span class="dnd-combat-val">${s.speed ?? 30}ft</span><span class="dnd-combat-label">Speed</span></div>
+      </div>
+      <div class="dnd-hp-block">
+        <div class="dnd-hp-numbers">
+          <span class="dnd-hp-current">${hpCur}</span>
+          <span class="dnd-hp-sep"> / </span>
+          <span class="dnd-hp-max">${hpMax}</span>
+          ${s.hpTemp ? `<span class="dnd-hp-temp"> +${s.hpTemp} temp</span>` : ""}
+        </div>
+        <div class="dnd-hp-bar"><div class="dnd-hp-fill" style="width:${hpPct}%"></div></div>
+        <span class="dnd-hp-label">Hit Points${s.hitDice ? ` · ${escapeHtml(s.hitDice)}` : ""}</span>
+      </div>
+      <div class="dnd-death-saves">
+        <span class="dnd-death-label">Death Saves</span>
+        <div class="dnd-death-row">${deathRow(s.deathSuccesses, "✓")}</div>
+        <div class="dnd-death-row">${deathRow(s.deathFailures, "✗")}</div>
+      </div>
+    </div>
+  </div>
+
+  ${attacksHtml}${spellsHtml}${featuresHtml}${equipHtml}
+  ${miscRows ? `<div class="dnd-section">${miscRows}</div>` : ""}
+</section>`;
+}
+
+/** Expand fenced `dnd-sheet` YAML blocks into the D&D 5e character sheet. */
+function expandDnDSheets(content: string) {
+  return content.replace(/```dnd-sheet\s*\n([\s\S]*?)```/g, (_match, inner) => {
+    return `\n\n${renderDnDSheetHtml(String(inner))}\n\n`;
+  });
+}
+
 /** Expand `![[Page]]` embeds inline (one level) using the include resolver. */
 function expandIncludes(content: string, resolve?: IncludeResolver) {
   if (!resolve) return content;
@@ -683,6 +918,7 @@ export function renderMarkdown(content: string, mode: RenderMode, resolve?: Wiki
   content = expandGalleries(content, resolveMedia);
   content = expandTravellerSheets(content);
   content = expandWoDSheets(content);
+  content = expandDnDSheets(content);
   let html: string;
   if (mode !== "gm") {
     html = renderInline(stripGmBlocks(content), resolve, resolveMedia);
