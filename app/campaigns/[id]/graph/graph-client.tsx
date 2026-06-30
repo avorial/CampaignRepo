@@ -107,6 +107,8 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
   const [dragNode, setDragNode] = useState<string | null>(null);
   const [filterCats, setFilterCats] = useState<Set<string>>(new Set(Object.keys(CAT_COLORS)));
   const [showRelOnly, setShowRelOnly] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     fetch(`/api/campaigns/${campaignId}/graph`)
@@ -242,6 +244,28 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
   const nodeMap = useMemo(() => new Map(nodes.map((n) => [n.slug, n])), [nodes]);
   const usedCats = useMemo(() => [...new Set(nodes.map((n) => n.category))].sort(), [nodes]);
 
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return visibleNodes.filter((n) => n.name.toLowerCase().includes(q)).slice(0, 12);
+  }, [searchQuery, visibleNodes]);
+
+  const searchMatchSlugs = useMemo(() => {
+    if (!searchQuery.trim()) return null;
+    return new Set(searchResults.map((n) => n.slug));
+  }, [searchQuery, searchResults]);
+
+  function jumpToNode(slug: string) {
+    setSelected(slug);
+    setSearchQuery("");
+    setSearchOpen(false);
+    const pos = positions.get(slug);
+    const svg = svgRef.current;
+    if (!pos || !svg) return;
+    const { width, height } = svg.getBoundingClientRect();
+    setPan({ x: width / 2 - pos.x * scale, y: height / 2 - pos.y * scale });
+  }
+
   function toggleCat(cat: string) {
     setFilterCats((prev) => {
       const next = new Set(prev);
@@ -251,11 +275,37 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
     });
   }
 
-  const dimmed = selected ? (slug: string) => !connectedSlugs.has(slug) : () => false;
+  const dimmed = (slug: string) => {
+    if (searchMatchSlugs) return !searchMatchSlugs.has(slug);
+    if (selected) return !connectedSlugs.has(slug);
+    return false;
+  };
 
   return (
     <div className="graph-shell">
       <aside className="graph-filters panel">
+        <div className="graph-search-wrap">
+          <input
+            className="graph-search-input"
+            placeholder="Search nodes…"
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setSearchOpen(true); }}
+            onFocus={() => setSearchOpen(true)}
+            onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
+          />
+          {searchOpen && searchResults.length > 0 && (
+            <ul className="graph-search-results">
+              {searchResults.map((n) => (
+                <li key={n.slug}>
+                  <button type="button" onMouseDown={() => jumpToNode(n.slug)}>
+                    <span className="cat-dot" style={{ background: catColor(n.category) }} />
+                    {n.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <h4>Categories</h4>
         {usedCats.map((cat) => (
           <label key={cat} className="graph-filter-item">
@@ -342,7 +392,9 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
                 onPointerDown={(e) => onNodePointerDown(e, node.slug)}
                 style={{ cursor: "pointer" }}
               >
-                <circle r={22} fill={color} fillOpacity={isSel ? 1 : isDim ? 0.25 : 0.72} stroke={isSel ? color : "transparent"} strokeWidth={3} />
+                <circle r={22} fill={color} fillOpacity={isSel ? 1 : isDim ? 0.25 : 0.72}
+                  stroke={isSel ? color : (searchMatchSlugs?.has(node.slug) && !isSel) ? "#fff" : "transparent"}
+                  strokeWidth={isSel ? 3 : 2} />
                 <text textAnchor="middle" dominantBaseline="central" className="graph-node-initials" fillOpacity={isDim ? 0.4 : 1}>
                   {initials}
                 </text>

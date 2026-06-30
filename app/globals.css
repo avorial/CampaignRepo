@@ -4164,6 +4164,43 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   margin-top: 10px;
 }
 
+.graph-search-wrap {
+  margin-bottom: 12px;
+  position: relative;
+}
+.graph-search-input {
+  width: 100%;
+}
+.graph-search-results {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+  list-style: none;
+  margin: 2px 0 0;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px;
+  position: absolute;
+  width: 100%;
+  z-index: 50;
+}
+.graph-search-results li button {
+  align-items: center;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  font-size: 13px;
+  gap: 8px;
+  padding: 5px 8px;
+  text-align: left;
+  width: 100%;
+}
+.graph-search-results li button:hover { background: var(--bg-hover); }
+
 .graph-canvas {
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
