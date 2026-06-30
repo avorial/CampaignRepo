@@ -17,8 +17,13 @@ export function parseWikiLinks(content: string): WikiLink[] {
   return links;
 }
 
-export function stripGmBlocks(content: string) {
-  return content.replace(gmBlockPattern, "");
+export function stripGmBlocks(content: string, visibleGroups?: Set<string>) {
+  let out = content.replace(gmBlockPattern, "");
+  out = out.replace(secretBlockPattern, (_match, group, inner) => {
+    if (visibleGroups?.has(group)) return inner;
+    return "";
+  });
+  return out;
 }
 
 export function normalizeFrontmatter(raw: Record<string, unknown>, fallbackName: string): WikiPageFrontmatter {
@@ -73,6 +78,7 @@ export type MediaPathResolver = (path: string) => string;
 export type IncludeResolver = (target: string) => string | null;
 
 const gmBlockSplitter = /:::gm\s*([\s\S]*?):::/g;
+const secretBlockPattern = /:::secret\s+group="([^"]+)"\s*([\s\S]*?):::/g;
 
 function escapeHtml(value: string) {
   return value
@@ -1000,7 +1006,14 @@ function expandIncludes(content: string, resolve?: IncludeResolver) {
  * Output is always passed through DOMPurify, so untrusted page bodies cannot
  * inject script or event-handler attributes.
  */
-export function renderMarkdown(content: string, mode: RenderMode, resolve?: WikiLinkResolver, resolveMedia?: MediaPathResolver, resolveInclude?: IncludeResolver) {
+export function renderMarkdown(
+  content: string,
+  mode: RenderMode,
+  resolve?: WikiLinkResolver,
+  resolveMedia?: MediaPathResolver,
+  resolveInclude?: IncludeResolver,
+  visibleGroups?: Set<string>
+) {
   content = expandIncludes(content, resolveInclude);
   content = expandGalleries(content, resolveMedia);
   content = expandTravellerSheets(content);
@@ -1011,14 +1024,23 @@ export function renderMarkdown(content: string, mode: RenderMode, resolve?: Wiki
   content = expandTraits(content);
   let html: string;
   if (mode !== "gm") {
-    html = renderInline(stripGmBlocks(content), resolve, resolveMedia);
+    html = renderInline(stripGmBlocks(content, visibleGroups), resolve, resolveMedia);
   } else {
+    // GM sees all :::gm blocks highlighted, and :::secret blocks with a group label
     let out = "";
     let last = 0;
-    for (const match of content.matchAll(gmBlockSplitter)) {
+    // Interleave :::gm and :::secret blocks
+    const combined = [...content.matchAll(gmBlockSplitter), ...content.matchAll(secretBlockPattern)]
+      .sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+    for (const match of combined) {
       const index = match.index ?? 0;
       out += renderInline(content.slice(last, index), resolve, resolveMedia);
-      out += `<section class="gm-block"><strong>GM</strong>${renderInline(match[1], resolve, resolveMedia)}</section>`;
+      if (match[0].startsWith(":::gm")) {
+        out += `<section class="gm-block"><strong>GM</strong>${renderInline(match[1], resolve, resolveMedia)}</section>`;
+      } else {
+        // :::secret group="..." — match[1] = group name, match[2] = content
+        out += `<section class="secret-block"><strong class="secret-block-label">Secret: ${escapeHtml(match[1])}</strong>${renderInline(match[2], resolve, resolveMedia)}</section>`;
+      }
       last = index + match[0].length;
     }
     out += renderInline(content.slice(last), resolve, resolveMedia);

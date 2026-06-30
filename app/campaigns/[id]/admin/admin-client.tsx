@@ -15,28 +15,35 @@ type ReviewItem = {
   excerpt: string;
 };
 
+type MemberWithGroups = CampaignMembership & { groups?: string[] };
+
 export default function AdminClient({ campaign, isGlobalAdmin = false }: { campaign: Campaign; isGlobalAdmin?: boolean }) {
   const canTransferOwnership = campaign.role === "owner" || isGlobalAdmin;
-  const [members, setMembers] = useState<CampaignMembership[]>([]);
+  const [members, setMembers] = useState<MemberWithGroups[]>([]);
   const [invites, setInvites] = useState<CampaignInvite[]>([]);
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [message, setMessage] = useState("");
   const [origin, setOrigin] = useState("");
   const [temporaryPassword, setTemporaryPassword] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [campaignGroups, setCampaignGroups] = useState<string[]>([]);
+  const [newGroupName, setNewGroupName] = useState("");
 
   async function load() {
-    const [membersRes, invitesRes, reviewsRes] = await Promise.all([
+    const [membersRes, invitesRes, reviewsRes, groupsRes] = await Promise.all([
       fetch(`/api/campaigns/${campaign.id}/admin/members`),
       fetch(`/api/campaigns/${campaign.id}/admin/invites`),
-      fetch(`/api/campaigns/${campaign.id}/admin/reviews`)
+      fetch(`/api/campaigns/${campaign.id}/admin/reviews`),
+      fetch(`/api/campaigns/${campaign.id}/groups`)
     ]);
     const membersData = await membersRes.json();
     const invitesData = await invitesRes.json();
     const reviewsData = await reviewsRes.json();
+    const groupsData = groupsRes.ok ? await groupsRes.json() : {};
     setMembers(membersData.members || []);
     setInvites(invitesData.invites || []);
     setReviews(reviewsData.reviews || []);
+    setCampaignGroups(groupsData.groups || []);
   }
 
   useEffect(() => {
@@ -197,6 +204,33 @@ export default function AdminClient({ campaign, isGlobalAdmin = false }: { campa
     }
   }
 
+  async function addGroup() {
+    const name = newGroupName.trim().toLowerCase().replace(/[^a-z0-9-_]/g, "");
+    if (!name || campaignGroups.includes(name)) return;
+    const updated = [...campaignGroups, name];
+    await fetch(`/api/campaigns/${campaign.id}/groups`, { method: "PUT", body: JSON.stringify({ groups: updated }) });
+    setCampaignGroups(updated);
+    setNewGroupName("");
+  }
+
+  async function removeGroup(name: string) {
+    const updated = campaignGroups.filter((g) => g !== name);
+    await fetch(`/api/campaigns/${campaign.id}/groups`, { method: "PUT", body: JSON.stringify({ groups: updated }) });
+    setCampaignGroups(updated);
+  }
+
+  async function toggleMemberGroup(userId: number, group: string, currentGroups: string[]) {
+    const next = currentGroups.includes(group)
+      ? currentGroups.filter((g) => g !== group)
+      : [...currentGroups, group];
+    const res = await fetch(`/api/campaigns/${campaign.id}/admin/members`, {
+      method: "PATCH",
+      body: JSON.stringify({ userId, groups: next })
+    });
+    const data = await res.json();
+    if (res.ok) setMembers(data.members || []);
+  }
+
   async function decideAll(decision: "approved" | "rejected") {
     if (!reviews.length || bulkBusy) return;
     const verb = decision === "approved" ? "Approve" : "Reject";
@@ -309,6 +343,58 @@ export default function AdminClient({ campaign, isGlobalAdmin = false }: { campa
           ))}
         </div>
         {message && <p className="toast">{message}</p>}
+      </div>
+
+      <div className="panel admin-wide">
+        <h2>Secret groups</h2>
+        <p className="muted" style={{ fontSize: "13px" }}>
+          Define named groups (e.g. <code>cultists</code>, <code>rangers</code>) and assign players to them.
+          Use <code>:::secret group="cultists"</code> in page content to reveal blocks only to members of that group (GMs always see everything).
+        </p>
+        <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
+          {campaignGroups.map((g) => (
+            <span key={g} className="tag-chip" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              {g}
+              <button type="button" className="linklike" style={{ fontSize: "10px" }} onClick={() => removeGroup(g)}>✕</button>
+            </span>
+          ))}
+          <input
+            value={newGroupName}
+            onChange={(e) => setNewGroupName(e.target.value)}
+            placeholder="new-group"
+            onKeyDown={(e) => e.key === "Enter" && addGroup()}
+            style={{ width: 120 }}
+          />
+          <button type="button" onClick={addGroup} disabled={!newGroupName.trim()}>Add group</button>
+        </div>
+
+        {campaignGroups.length > 0 && (
+          <table className="organize-table" style={{ marginTop: 8 }}>
+            <thead><tr><th>Member</th><th>Role</th>{campaignGroups.map((g) => <th key={g}>{g}</th>)}</tr></thead>
+            <tbody>
+              {members.filter((m) => m.role === "player").map((m) => {
+                const mGroups: string[] = m.groups ? (typeof m.groups === "string" ? JSON.parse(m.groups) : m.groups) : [];
+                return (
+                  <tr key={m.id}>
+                    <td><strong>{m.name}</strong><br /><small className="muted">{m.email}</small></td>
+                    <td><span className="role-badge">{m.role}</span></td>
+                    {campaignGroups.map((g) => (
+                      <td key={g} style={{ textAlign: "center" }}>
+                        <input
+                          type="checkbox"
+                          checked={mGroups.includes(g)}
+                          onChange={() => toggleMemberGroup(m.userId, g, mGroups)}
+                          style={{ width: "auto" }}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+        {campaignGroups.length === 0 && <p className="muted" style={{ fontSize: "13px" }}>No groups defined yet.</p>}
       </div>
 
       <div className="panel admin-wide">

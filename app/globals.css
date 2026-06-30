@@ -2388,6 +2388,23 @@ button.nav-link.active {
   color: var(--purple);
 }
 
+.secret-block {
+  background: rgba(52, 152, 219, 0.10);
+  border-left: 4px solid #3498db;
+  border-radius: 0 6px 6px 0;
+  margin: 12px 0;
+  padding: 12px;
+}
+.secret-block-label {
+  color: #3498db;
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
 .steps {
   display: grid;
   gap: 14px;

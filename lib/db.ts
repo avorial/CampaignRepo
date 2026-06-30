@@ -172,6 +172,9 @@ INSERT OR IGNORE INTO campaign_memberships (campaignId, userId, role)
 SELECT id, userId, 'owner' FROM campaigns;
 `);
 
+// Migrations — safe to run on every start (errors mean column already exists)
+try { db.exec("ALTER TABLE campaign_memberships ADD COLUMN groups TEXT NOT NULL DEFAULT '[]'"); } catch { /* already migrated */ }
+
 export function getDb() {
   return db;
 }
@@ -516,6 +519,16 @@ export function removeCampaignMember(adminUserId: number, campaignId: number, me
   const existing = getCampaignRole(memberUserId, campaignId);
   if (existing === "owner") throw new Error("Owners cannot be removed in the MVP.");
   db.prepare("DELETE FROM campaign_memberships WHERE campaignId = ? AND userId = ?").run(campaignId, memberUserId);
+}
+
+export function getMemberGroups(campaignId: number, userId: number): string[] {
+  const row = db.prepare("SELECT groups FROM campaign_memberships WHERE campaignId = ? AND userId = ?").get(campaignId, userId) as { groups?: string } | undefined;
+  try { return JSON.parse(row?.groups || "[]"); } catch { return []; }
+}
+
+export function setMemberGroups(adminUserId: number, campaignId: number, memberUserId: number, groups: string[]) {
+  if (!canManageCampaign(adminUserId, campaignId)) throw new Error("Forbidden");
+  db.prepare("UPDATE campaign_memberships SET groups = ? WHERE campaignId = ? AND userId = ?").run(JSON.stringify(groups), campaignId, memberUserId);
 }
 
 /**
