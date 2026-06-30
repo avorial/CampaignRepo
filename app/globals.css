@@ -2816,6 +2816,111 @@ button.danger {
   border-color: rgba(255, 101, 85, 0.45);
 }
 
+//* ---- Generators ---- */
+.generate-shell {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+
+.generate-types h2 { margin-bottom: 12px; }
+
+.gen-type-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gen-type-btn {
+  align-items: flex-start;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 120px;
+  padding: 10px 14px;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+.gen-type-btn:hover { border-color: var(--gold); }
+.gen-type-btn.active {
+  background: color-mix(in srgb, var(--gold) 12%, var(--bg-elevated));
+  border-color: var(--gold);
+}
+.gen-type-icon { font-size: 20px; margin-bottom: 4px; }
+.gen-type-btn strong { font-size: 14px; }
+.gen-type-btn .muted { font-size: 11px; white-space: nowrap; }
+
+.generate-main {
+  display: grid;
+  gap: 16px;
+}
+@media (min-width: 900px) {
+  .generate-main { grid-template-columns: 280px 1fr; }
+}
+
+.gen-mode-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.gen-mode-row label {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.context-picker { margin-top: 12px; }
+.context-picker summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+.context-list {
+  display: grid;
+  gap: 2px;
+  margin-top: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.context-item {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  font-size: 13px;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.generate-result-header {
+  align-items: baseline;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.generate-result-header h2 { margin: 0; }
+
+.generate-preview {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-x: auto;
+  padding: 12px 16px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.generate-ai-panel {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+.toast-warn { background: color-mix(in srgb, orange 20%, var(--bg-elevated)); }
+
 /* ---- Bulk organize: pages table + bulk-edit bar ---- */
 .organize {
   display: grid;
