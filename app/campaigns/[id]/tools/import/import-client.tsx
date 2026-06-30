@@ -9,6 +9,22 @@ const CATEGORY_OPTIONS = ["character", "npc", "location", "faction", "item", "lo
 const VISIBILITY_OPTIONS = ["gm", "players"] as const;
 const APPROVAL_OPTIONS = ["unapproved", "approved", "rejected"] as const;
 
+type FileEntry = { name: string; content: string };
+
+function readFileList(files: File[]): Promise<FileEntry[]> {
+  return Promise.all(
+    files.map(
+      (f) =>
+        new Promise<FileEntry>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve({ name: (f as File & { webkitRelativePath?: string }).webkitRelativePath || f.name, content: (e.target?.result as string) || "" });
+          reader.onerror = reject;
+          reader.readAsText(f);
+        })
+    )
+  );
+}
+
 const CSV_EXAMPLE = `name,category,summary,tags,visibility,content
 Aldric Vayne,character,"Former knight turned rogue","human,knight",gm,"Aldric carries a family sword with a broken crossguard."
 The Rustwood Inn,location,"Roadside tavern in Thornmere","inn,tavern",players,`;
@@ -16,7 +32,24 @@ The Rustwood Inn,location,"Roadside tavern in Thornmere","inn,tavern",players,`;
 export default function ImportClient({ campaignId, campaignName }: { campaignId: number; campaignName: string }) {
   const api = `/api/campaigns/${campaignId}`;
 
-  const [activeTab, setActiveTab] = useState<"csv" | "foundry" | "export">("csv");
+  const [activeTab, setActiveTab] = useState<"csv" | "foundry" | "obsidian" | "notion" | "export">("csv");
+
+  // Obsidian vault import state
+  const [obsidianFiles, setObsidianFiles] = useState<FileEntry[]>([]);
+  const [obsidianCategory, setObsidianCategory] = useState("lore");
+  const [obsidianVisibility, setObsidianVisibility] = useState<"gm" | "players">("gm");
+  const [obsidianApproval, setObsidianApproval] = useState<"approved" | "unapproved" | "rejected">("unapproved");
+  const [obsidianFolderCat, setObsidianFolderCat] = useState(true);
+  const [obsidianBusy, setObsidianBusy] = useState(false);
+  const [obsidianResult, setObsidianResult] = useState<ImportResponse | null>(null);
+
+  // Notion export import state
+  const [notionFiles, setNotionFiles] = useState<FileEntry[]>([]);
+  const [notionCategory, setNotionCategory] = useState("lore");
+  const [notionVisibility, setNotionVisibility] = useState<"gm" | "players">("gm");
+  const [notionApproval, setNotionApproval] = useState<"approved" | "unapproved" | "rejected">("unapproved");
+  const [notionBusy, setNotionBusy] = useState(false);
+  const [notionResult, setNotionResult] = useState<ImportResponse | null>(null);
 
   // CSV import state
   const [csvText, setCsvText] = useState("");
@@ -67,6 +100,56 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
     }
   }
 
+  async function loadObsidianFolder(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files) return;
+    const all = Array.from(files);
+    const mdFiles = all.filter((f) => f.name.endsWith(".md"));
+    setObsidianFiles(await readFileList(mdFiles.length ? mdFiles : all));
+    setObsidianResult(null);
+  }
+
+  async function runObsidianImport() {
+    if (!obsidianFiles.length) return;
+    setObsidianBusy(true);
+    setObsidianResult(null);
+    try {
+      const res = await fetch(`${api}/imports/obsidian`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ files: obsidianFiles, defaultCategory: obsidianCategory, visibility: obsidianVisibility, approvalStatus: obsidianApproval, folderAsCategory: obsidianFolderCat })
+      });
+      setObsidianResult(await res.json());
+    } finally {
+      setObsidianBusy(false);
+    }
+  }
+
+  async function loadNotionFolder(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files) return;
+    const all = Array.from(files);
+    const mdFiles = all.filter((f) => f.name.endsWith(".md"));
+    setNotionFiles(await readFileList(mdFiles.length ? mdFiles : all));
+    setNotionResult(null);
+  }
+
+  async function runNotionImport() {
+    if (!notionFiles.length) return;
+    setNotionBusy(true);
+    setNotionResult(null);
+    try {
+      const res = await fetch(`${api}/imports/notion`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ files: notionFiles, defaultCategory: notionCategory, visibility: notionVisibility, approvalStatus: notionApproval })
+      });
+      setNotionResult(await res.json());
+    } finally {
+      setNotionBusy(false);
+    }
+  }
+
   function loadCsvFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -86,8 +169,10 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
   return (
     <div className="import-shell">
       <div className="tab-row">
-        <button className={`tab-btn${activeTab === "csv" ? " active" : ""}`} onClick={() => setActiveTab("csv")}>CSV Bulk Import</button>
-        <button className={`tab-btn${activeTab === "foundry" ? " active" : ""}`} onClick={() => setActiveTab("foundry")}>Foundry Journals</button>
+        <button className={`tab-btn${activeTab === "csv" ? " active" : ""}`} onClick={() => setActiveTab("csv")}>CSV</button>
+        <button className={`tab-btn${activeTab === "foundry" ? " active" : ""}`} onClick={() => setActiveTab("foundry")}>Foundry</button>
+        <button className={`tab-btn${activeTab === "obsidian" ? " active" : ""}`} onClick={() => setActiveTab("obsidian")}>Obsidian</button>
+        <button className={`tab-btn${activeTab === "notion" ? " active" : ""}`} onClick={() => setActiveTab("notion")}>Notion</button>
         <button className={`tab-btn${activeTab === "export" ? " active" : ""}`} onClick={() => setActiveTab("export")}>Export</button>
       </div>
 
@@ -187,6 +272,119 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
           </button>
 
           {journalResult && <ImportResultPanel result={journalResult} api={`/campaigns/${campaignId}`} />}
+        </div>
+      )}
+
+      {activeTab === "obsidian" && (
+        <div className="import-panel stack">
+          <div className="import-intro">
+            <p>Import from an Obsidian vault. Select the vault folder or individual <code>.md</code> files. YAML frontmatter (<code>title</code>, <code>tags</code>, <code>summary</code>) is preserved. <code>[[wikilinks]]</code> pass through as-is.</p>
+            <p className="muted" style={{ fontSize: "12px" }}>
+              Folder names map automatically to categories (e.g. <code>characters/</code> → character). Disable below to use the default category for all files.
+            </p>
+          </div>
+
+          <div className="import-options">
+            <label>Default category
+              <select value={obsidianCategory} onChange={(e) => setObsidianCategory(e.target.value)}>
+                {CATEGORY_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
+            <label>Visibility
+              <select value={obsidianVisibility} onChange={(e) => setObsidianVisibility(e.target.value as "gm" | "players")}>
+                {VISIBILITY_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </label>
+            <label>Approval status
+              <select value={obsidianApproval} onChange={(e) => setObsidianApproval(e.target.value as "approved" | "unapproved" | "rejected")}>
+                {APPROVAL_OPTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </label>
+          </div>
+
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+            <input type="checkbox" checked={obsidianFolderCat} onChange={(e) => setObsidianFolderCat(e.target.checked)} />
+            Infer category from folder name
+          </label>
+
+          <label className="file-upload-row">
+            Select vault folder or .md files
+            <input
+              type="file"
+              accept=".md"
+              multiple
+              // @ts-expect-error webkitdirectory is non-standard but widely supported
+              webkitdirectory=""
+              onChange={loadObsidianFolder}
+              style={{ marginLeft: 8 }}
+            />
+          </label>
+
+          {obsidianFiles.length > 0 && (
+            <p className="muted" style={{ fontSize: 13 }}>
+              {obsidianFiles.length} .md file{obsidianFiles.length !== 1 ? "s" : ""} selected
+            </p>
+          )}
+
+          <button onClick={runObsidianImport} disabled={obsidianBusy || obsidianFiles.length === 0}>
+            {obsidianBusy ? "Importing…" : `Import ${obsidianFiles.length > 0 ? obsidianFiles.length + " files" : "vault"}`}
+          </button>
+
+          {obsidianResult && <ImportResultPanel result={obsidianResult} api={`/campaigns/${campaignId}`} />}
+        </div>
+      )}
+
+      {activeTab === "notion" && (
+        <div className="import-panel stack">
+          <div className="import-intro">
+            <p>Import from a Notion markdown export. In Notion, go to <strong>Settings → Export → Markdown &amp; CSV</strong>, then select the exported <code>.md</code> files here.</p>
+            <p className="muted" style={{ fontSize: "12px" }}>
+              Page titles are inferred from file names (Notion&apos;s trailing IDs are stripped). Property lines at the top of each file are extracted as frontmatter.
+            </p>
+          </div>
+
+          <div className="import-options">
+            <label>Default category
+              <select value={notionCategory} onChange={(e) => setNotionCategory(e.target.value)}>
+                {CATEGORY_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
+            <label>Visibility
+              <select value={notionVisibility} onChange={(e) => setNotionVisibility(e.target.value as "gm" | "players")}>
+                {VISIBILITY_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </label>
+            <label>Approval status
+              <select value={notionApproval} onChange={(e) => setNotionApproval(e.target.value as "approved" | "unapproved" | "rejected")}>
+                {APPROVAL_OPTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </label>
+          </div>
+
+          <label className="file-upload-row">
+            Select Notion export folder or .md files
+            <input
+              type="file"
+              accept=".md"
+              multiple
+              // @ts-expect-error webkitdirectory is non-standard but widely supported
+              webkitdirectory=""
+              onChange={loadNotionFolder}
+              style={{ marginLeft: 8 }}
+            />
+          </label>
+
+          {notionFiles.length > 0 && (
+            <p className="muted" style={{ fontSize: 13 }}>
+              {notionFiles.length} .md file{notionFiles.length !== 1 ? "s" : ""} selected
+            </p>
+          )}
+
+          <button onClick={runNotionImport} disabled={notionBusy || notionFiles.length === 0}>
+            {notionBusy ? "Importing…" : `Import ${notionFiles.length > 0 ? notionFiles.length + " files" : "pages"}`}
+          </button>
+
+          {notionResult && <ImportResultPanel result={notionResult} api={`/campaigns/${campaignId}`} />}
         </div>
       )}
 
