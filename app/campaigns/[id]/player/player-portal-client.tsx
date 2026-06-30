@@ -2,7 +2,7 @@
 
 import { MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { Campaign, WikiPage } from "@/lib/types";
-import { renderMarkdown, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
+import { renderMarkdown, type IncludeResolver, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
 
 export default function PlayerPortalClient({ campaign, categories }: { campaign: Campaign; categories: { id: string; label: string }[] }) {
@@ -56,7 +56,17 @@ export default function PlayerPortalClient({ campaign, categories }: { campaign:
     [campaign.id]
   );
 
-  const preview = useMemo(() => renderMarkdown(selectedPage?.content || "", "handout", resolveLink, resolveMedia), [selectedPage, resolveLink, resolveMedia]);
+  const resolveInclude = useMemo<IncludeResolver>(() => {
+    const bySlug = new Map(pages.map((p) => [p.slug, p]));
+    const aliasMap = buildAliasMap(pages.map((p) => ({ slug: p.slug, name: p.frontmatter.name, aliases: p.frontmatter.aliases || [] })));
+    return (target: string) => {
+      const resolved = aliasMap.get(target.trim().toLowerCase());
+      const page = resolved ? bySlug.get(resolved) : undefined;
+      return page ? page.content : null;
+    };
+  }, [pages]);
+
+  const preview = useMemo(() => renderMarkdown(selectedPage?.content || "", "handout", resolveLink, resolveMedia, resolveInclude), [selectedPage, resolveLink, resolveMedia, resolveInclude]);
 
   const onPreviewClick = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {

@@ -2,7 +2,7 @@
 
 import { CSSProperties, MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { WikiPage } from "@/lib/types";
-import { renderMarkdown, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
+import { renderMarkdown, type IncludeResolver, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
 import { themeToCssVars, type CampaignTheme } from "@/lib/theme";
 import Logo from "@/app/components/logo";
@@ -120,9 +120,19 @@ export default function PublicSiteClient({
     [slug]
   );
 
+  const resolveInclude = useMemo<IncludeResolver>(() => {
+    const bySlug = new Map(pages.map((p) => [p.slug, p]));
+    const aliasMap = buildAliasMap(pages.map((p) => ({ slug: p.slug, name: p.frontmatter.name, aliases: p.frontmatter.aliases || [] })));
+    return (target: string) => {
+      const resolved = aliasMap.get(target.trim().toLowerCase());
+      const page = resolved ? bySlug.get(resolved) : undefined;
+      return page ? page.content : null;
+    };
+  }, [pages]);
+
   const preview = useMemo(
-    () => renderMarkdown(selectedPage?.content || "", "handout", resolveLink, resolveMedia),
-    [selectedPage, resolveLink, resolveMedia]
+    () => renderMarkdown(selectedPage?.content || "", "handout", resolveLink, resolveMedia, resolveInclude),
+    [selectedPage, resolveLink, resolveMedia, resolveInclude]
   );
 
   const onPreviewClick = useCallback(
