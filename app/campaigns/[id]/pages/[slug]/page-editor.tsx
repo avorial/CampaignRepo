@@ -278,6 +278,112 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
     setMessage("Character sheet block inserted in the markdown. Edit the values there, then save.");
   }
 
+  function wodSheetSnippet(name: string) {
+    const g = campaign.gameType;
+    const system =
+      g === "Vampire: The Masquerade" ? "vampire-masquerade" :
+      g === "Dark Ages: Vampire"      ? "dark-ages-vampire" :
+      g === "Werewolf: The Apocalypse" || g === "Dark Ages: Werewolf" ? "werewolf-apocalypse" :
+      g === "Mage: The Ascension" || g === "Dark Ages: Mage"          ? "mage-ascension" :
+      "generic-wod";
+    const isVamp  = system === "vampire-masquerade" || system === "dark-ages-vampire";
+    const isWerewolf = system === "werewolf-apocalypse";
+    const isMage  = system === "mage-ascension";
+    const isDark  = system === "dark-ages-vampire";
+    const groupLine = isVamp ? "clan: " : isWerewolf ? "tribe: " : isMage ? "tradition: " : "group: ";
+    const genLine  = isVamp ? "generation: 10\n" : isWerewolf ? "rank: Cliath\n" : isMage ? "rank: \n" : "";
+    const roadLine = isDark ? "road: \n" : "";
+    const abilities = isDark
+      ? ["Alertness", "Athletics", "Brawl", "Dodge", "Empathy", "Expression", "Intimidation", "Leadership", "Subterfuge",
+         "Animal Ken", "Crafts", "Etiquette", "Melee", "Performance", "Ride", "Stealth", "Survival",
+         "Academics", "Investigation", "Law", "Linguistics", "Medicine", "Occult", "Politics", "Seneschal", "Theology"]
+      : isVamp
+      ? ["Alertness", "Athletics", "Brawl", "Dodge", "Empathy", "Expression", "Intimidation", "Leadership", "Streetwise", "Subterfuge",
+         "Animal Ken", "Crafts", "Drive", "Etiquette", "Firearms", "Melee", "Performance", "Security", "Stealth", "Survival",
+         "Academics", "Computer", "Finance", "Investigation", "Law", "Linguistics", "Medicine", "Occult", "Politics", "Science"]
+      : isWerewolf
+      ? ["Alertness", "Athletics", "Brawl", "Dodge", "Empathy", "Expression", "Intimidation", "Primal-Urge", "Streetwise", "Subterfuge",
+         "Animal Ken", "Crafts", "Drive", "Etiquette", "Firearms", "Melee", "Performance", "Stealth", "Survival",
+         "Academics", "Computer", "Enigmas", "Investigation", "Law", "Linguistics", "Medicine", "Occult", "Rituals", "Science"]
+      : isMage
+      ? ["Alertness", "Athletics", "Awareness", "Brawl", "Dodge", "Empathy", "Expression", "Intimidation", "Leadership", "Streetwise", "Subterfuge",
+         "Animal Ken", "Crafts", "Drive", "Etiquette", "Firearms", "Meditation", "Melee", "Performance", "Stealth", "Survival", "Technology",
+         "Academics", "Computer", "Cosmology", "Enigmas", "Esoterica", "Investigation", "Law", "Linguistics", "Medicine", "Occult", "Politics", "Science"]
+      : ["Alertness", "Athletics", "Brawl", "Dodge", "Empathy", "Leadership", "Stealth", "Subterfuge", "Melee", "Survival", "Occult"];
+    const powerLabel = isVamp ? "disciplines" : isWerewolf ? "gifts" : isMage ? "spheres" : "powers";
+    const examplePowers = isVamp ? ["Auspex: 0", "Dominate: 0", "Presence: 0"] :
+      isWerewolf ? ["Gifts (Rank 1): 0"] : isMage ? ["Correspondence: 0", "Forces: 0", "Life: 0"] : ["Power: 0"];
+    const poolLine = isVamp ? "blood: 10\nblood_current: 10\n" :
+      isWerewolf ? "rage: 5\nrage_current: 5\ngnosis: 5\ngnosis_current: 5\n" :
+      isMage ? "quintessence: 5\nquintessence_current: 5\n" : "";
+    const humanityLabel = isDark ? "humanity: 5 # Road rating\n" : isVamp ? "humanity: 5\n" :
+      isWerewolf ? "renown: 0\n" : isMage ? "arete: 1\n" : "morality: 5\n";
+    return `\n\n\`\`\`wod-sheet
+system: ${system}
+name: ${JSON.stringify(name || "")}
+${groupLine}
+${genLine}${roadLine}nature:
+demeanor:
+concept:
+portrait:
+
+attributes:
+  strength: 1
+  dexterity: 1
+  stamina: 1
+  charisma: 1
+  manipulation: 1
+  appearance: 1
+  perception: 1
+  intelligence: 1
+  wits: 1
+
+abilities:
+${abilities.map((a) => `  - ${a}: 0`).join("\n")}
+
+${powerLabel}:
+${examplePowers.map((p) => `  - ${p}`).join("\n")}
+
+backgrounds:
+  - Generation: 0
+  - Resources: 0
+  - Retainers: 0
+
+virtues:
+  conscience: 1
+  self_control: 1
+  courage: 1
+
+willpower: 3
+willpower_current: 3
+${poolLine}${humanityLabel}
+health:
+  bruised: false
+  hurt: false
+  injured: false
+  wounded: false
+  mauled: false
+  crippled: false
+  incapacitated: false
+
+weapons:
+  - name: ""
+    damage: ""
+equipment:
+  - name: ""
+    notes: ""
+
+notes: ""
+\`\`\`\n\n`;
+  }
+
+  function insertWoDSheetBlock() {
+    setMode("gm");
+    setIsEditing(true);
+    insertSnippet(wodSheetSnippet(frontmatter.name));
+    setMessage("WoD sheet block inserted. Edit the values in the markdown, then save.");
+  }
+
   function insertSnippet(snippet: string) {
     const textarea = textareaRef.current;
     if (!textarea) {
@@ -547,6 +653,14 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
   const isTraveller = campaign.gameType === "Traveller";
   const isEvent = frontmatter.category === "event";
   const canUseTravellerSheet = isTraveller && (frontmatter.category === "character" || frontmatter.category === "npc");
+  const WOD_GAME_TYPES: string[] = [
+    "Vampire: The Masquerade", "Dark Ages: Vampire", "Werewolf: The Apocalypse",
+    "Dark Ages: Werewolf", "Mage: The Ascension", "Dark Ages: Mage",
+    "Changeling: The Dreaming", "Wraith: The Oblivion", "Hunter: The Reckoning",
+    "Demon: The Fallen", "Mummy: The Resurrection"
+  ];
+  const isWoD = WOD_GAME_TYPES.includes(campaign.gameType);
+  const canUseWoDSheet = isWoD && (frontmatter.category === "character" || frontmatter.category === "npc");
 
   // Ancestor chain (breadcrumbs) + cycle-safe parent options.
   const pageBySlug = new Map(knownPages.map((p) => [p.slug, p]));
@@ -828,6 +942,7 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
           <button type="button" className={mode === "player" ? "active" : ""} onClick={() => setMode("player")}>Player preview</button>
           <button type="button" className={mode === "handout" ? "active" : ""} onClick={() => setMode("handout")}>Handout</button>
           {fieldsEditable && canUseTravellerSheet && <button type="button" onClick={insertTravellerSheetBlock}>Insert character sheet</button>}
+          {fieldsEditable && canUseWoDSheet && <button type="button" onClick={insertWoDSheetBlock}>Insert WoD sheet</button>}
           {fieldsEditable && <button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Save"}</button>}
           {fieldsEditable && <button type="button" disabled={isSaving} onClick={() => savePage(true)}>{isSaving ? "Saving..." : "Save and finish"}</button>}
           {canManage && !isEditing && <button type="button" onClick={() => setIsEditing(true)}>Edit page</button>}

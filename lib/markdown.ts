@@ -2,7 +2,7 @@ import matter from "gray-matter";
 import yaml from "yaml";
 import { marked } from "marked";
 import DOMPurify from "isomorphic-dompurify";
-import type { ApprovalStatus, Category, TravellerSheet, Visibility, WikiLink, WikiPage, WikiPageFrontmatter } from "@/lib/types";
+import type { ApprovalStatus, Category, TravellerSheet, WoDRated, WoDSystem, Visibility, WikiLink, WikiPage, WikiPageFrontmatter } from "@/lib/types";
 import { defaultFrontmatter } from "@/lib/templates";
 
 const wikiLinkPattern = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
@@ -417,10 +417,244 @@ function expandGalleries(content: string, resolveMedia?: MediaPathResolver) {
   });
 }
 
+// ---- World of Darkness character sheet ----
+
+const WOD_SYSTEM_INFO: Record<WoDSystem, { powerLabel: string; poolLabel: string; morality: string; virtueNames: [string, string, string] }> = {
+  "dark-ages-vampire":  { powerLabel: "Disciplines", poolLabel: "Blood Pool", morality: "Road",      virtueNames: ["Conscience", "Self-Control", "Courage"] },
+  "vampire-masquerade": { powerLabel: "Disciplines", poolLabel: "Blood Pool", morality: "Humanity",  virtueNames: ["Conscience", "Self-Control", "Courage"] },
+  "werewolf-apocalypse":{ powerLabel: "Gifts",       poolLabel: "Rage",       morality: "Renown",    virtueNames: ["Conscience", "Self-Control", "Courage"] },
+  "mage-ascension":     { powerLabel: "Spheres",     poolLabel: "Quintessence",morality: "Arete",    virtueNames: ["Conscience", "Self-Control", "Courage"] },
+  "generic-wod":        { powerLabel: "Powers",      poolLabel: "Pool",       morality: "Morality",  virtueNames: ["Virtue I",   "Virtue II",   "Courage"] }
+};
+
+function normalizeWoDRated(input: unknown): WoDRated[] {
+  if (!Array.isArray(input)) return [];
+  return input.flatMap((item: unknown) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const rec = item as Record<string, unknown>;
+    if (typeof rec.name === "string") {
+      return [{ name: rec.name, score: Number(rec.score ?? 0) || 0, notes: rec.notes ? String(rec.notes) : undefined }];
+    }
+    // compact: { "Alertness": 2 }
+    return Object.entries(rec)
+      .filter(([k]) => k !== "notes")
+      .map(([name, val]) => ({ name, score: Number(val) || 0, notes: undefined }));
+  }).filter((r) => r.name);
+}
+
+function normalizeWoDSheet(input: unknown) {
+  const raw = input && typeof input === "object" && !Array.isArray(input) ? input as Record<string, unknown> : {};
+  const systemRaw = String(raw.system || "");
+  const SYSTEMS: WoDSystem[] = ["vampire-masquerade", "dark-ages-vampire", "werewolf-apocalypse", "mage-ascension", "generic-wod"];
+  const system: WoDSystem = SYSTEMS.includes(systemRaw as WoDSystem) ? (systemRaw as WoDSystem) : "generic-wod";
+  const attrs = raw.attributes && typeof raw.attributes === "object" && !Array.isArray(raw.attributes)
+    ? raw.attributes as Record<string, unknown> : {};
+  const virt = raw.virtues && typeof raw.virtues === "object" && !Array.isArray(raw.virtues)
+    ? raw.virtues as Record<string, unknown> : {};
+  const health = raw.health && typeof raw.health === "object" && !Array.isArray(raw.health)
+    ? raw.health as Record<string, unknown> : {};
+  const weapons = asRecordArray(raw.weapons).map((w) => ({
+    name: String(w.name || ""),
+    damage: w.damage ? String(w.damage) : undefined,
+    notes: w.notes ? String(w.notes) : undefined
+  })).filter((w) => w.name);
+  const equipment = [
+    ...asRecordArray(raw.equipment).map((e) => ({ name: String(e.name || ""), notes: e.notes ? String(e.notes) : undefined })),
+    ...compactRecords(raw.equipment, (name, parts) => ({ name, notes: parts.join(" - ") || undefined }))
+  ].filter((e) => e.name);
+  return {
+    system,
+    name: raw.name ? String(raw.name) : undefined,
+    clan: raw.clan ? String(raw.clan) : undefined,
+    generation: raw.generation != null ? Number(raw.generation) || undefined : undefined,
+    nature: raw.nature ? String(raw.nature) : undefined,
+    demeanor: raw.demeanor ? String(raw.demeanor) : undefined,
+    concept: raw.concept ? String(raw.concept) : undefined,
+    road: raw.road ? String(raw.road) : undefined,
+    portrait: (raw.portrait || raw.image) ? String(raw.portrait || raw.image) : undefined,
+    attributes: {
+      strength: asOptionalNumber(attrs.strength), dexterity: asOptionalNumber(attrs.dexterity), stamina: asOptionalNumber(attrs.stamina),
+      charisma: asOptionalNumber(attrs.charisma), manipulation: asOptionalNumber(attrs.manipulation), appearance: asOptionalNumber(attrs.appearance),
+      perception: asOptionalNumber(attrs.perception), intelligence: asOptionalNumber(attrs.intelligence), wits: asOptionalNumber(attrs.wits)
+    },
+    abilities: normalizeWoDRated(raw.abilities),
+    powers: normalizeWoDRated(raw.powers),
+    backgrounds: normalizeWoDRated(raw.backgrounds),
+    virtues: {
+      first: asOptionalNumber(virt.first ?? virt.conscience ?? virt.conviction),
+      second: asOptionalNumber(virt.second ?? virt.self_control ?? virt.instinct),
+      third: asOptionalNumber(virt.third ?? virt.courage)
+    },
+    willpower: asOptionalNumber(raw.willpower),
+    willpower_current: asOptionalNumber(raw.willpower_current),
+    blood: asOptionalNumber(raw.blood ?? raw.blood_pool),
+    blood_current: asOptionalNumber(raw.blood_current ?? raw.blood_pool_current),
+    humanity: asOptionalNumber(raw.humanity ?? raw.road_rating),
+    health: {
+      bruised: Boolean(health.bruised), hurt: Boolean(health.hurt), injured: Boolean(health.injured),
+      wounded: Boolean(health.wounded), mauled: Boolean(health.mauled), crippled: Boolean(health.crippled),
+      incapacitated: Boolean(health.incapacitated)
+    },
+    weapons, equipment,
+    notes: raw.notes ? String(raw.notes) : undefined
+  };
+}
+
+function renderWoDSheetHtml(rawInput: string) {
+  let parsed: unknown;
+  try {
+    parsed = yaml.parse(rawInput) || {};
+  } catch (error) {
+    return `<section class="wod-sheet wod-sheet-error"><p>WoD sheet data could not be parsed: ${escapeHtml(error instanceof Error ? error.message : "invalid YAML")}</p></section>`;
+  }
+  const sheet = normalizeWoDSheet(parsed);
+  const info = WOD_SYSTEM_INFO[sheet.system];
+
+  const dot = (filled: boolean) => `<span class="wod-dot${filled ? " filled" : ""}"></span>`;
+  const dots = (score: number | undefined, max = 5) => {
+    const n = Math.min(Math.max(0, score ?? 0), max);
+    return `<span class="wod-dots">${Array.from({ length: max }, (_, i) => dot(i < n)).join("")}</span>`;
+  };
+  const box = (filled: boolean) => `<span class="wod-box${filled ? " filled" : ""}"></span>`;
+  const boxes = (current: number | undefined, max: number) => {
+    const n = Math.min(Math.max(0, current ?? 0), max);
+    return `<span class="wod-boxes">${Array.from({ length: max }, (_, i) => box(i < n)).join("")}</span>`;
+  };
+  const attr = (label: string, score: number | undefined) =>
+    `<div class="wod-attr"><span class="wod-attr-label">${escapeHtml(label)}</span>${dots(score)}</div>`;
+  const rated = (items: WoDRated[]) => items.length
+    ? `<ul class="wod-rated-list">${items.map((r) => `<li><span>${escapeHtml(r.name)}</span><span class="wod-rated-score">${dots(r.score)}</span></li>`).join("")}</ul>`
+    : `<p class="wod-empty">—</p>`;
+
+  const a = sheet.attributes ?? {};
+  const v = sheet.virtues ?? {};
+  const h = sheet.health ?? {};
+  const wp = sheet.willpower ?? 10;
+  const wpc = sheet.willpower_current ?? wp;
+  const bp = sheet.blood ?? 0;
+  const bpc = sheet.blood_current ?? bp;
+  const hum = sheet.humanity ?? 0;
+
+  const morality = sheet.road ? `${escapeHtml(sheet.road)} ${hum}` : `${escapeHtml(info.morality)} ${hum}`;
+  const byline = [sheet.clan, sheet.generation ? `Gen ${sheet.generation}` : undefined]
+    .filter((s): s is string => !!s).map(escapeHtml).join(" · ");
+  const identity = [
+    sheet.nature && `Nature: ${sheet.nature}`,
+    sheet.demeanor && `Demeanor: ${sheet.demeanor}`,
+    sheet.concept && `Concept: ${sheet.concept}`
+  ].filter((s): s is string => !!s).map(escapeHtml).join(" · ");
+
+  const portrait = sheet.portrait
+    ? `<img src="${escapeHtml(mediaPath(sheet.portrait))}" alt="${escapeHtml(sheet.name || "portrait")}" loading="lazy" />`
+    : `<div class="wod-portrait-placeholder"><span>${escapeHtml((sheet.name || " ").charAt(0).toUpperCase())}</span></div>`;
+
+  const healthLevels: [string, string][] = [
+    ["Bruised", "(no penalty)"], ["Hurt", "−1"], ["Injured", "−1"],
+    ["Wounded", "−2"], ["Mauled", "−2"], ["Crippled", "−5"], ["Incapacitated", ""]
+  ];
+  const healthMap: Record<string, boolean> = {
+    Bruised: h.bruised ?? false, Hurt: h.hurt ?? false, Injured: h.injured ?? false,
+    Wounded: h.wounded ?? false, Mauled: h.mauled ?? false, Crippled: h.crippled ?? false,
+    Incapacitated: h.incapacitated ?? false
+  };
+
+  const gearList = (items: { name: string; damage?: string; notes?: string }[]) =>
+    items.length ? `<ul class="wod-rated-list">${items.map((i) => `<li><span>${escapeHtml(i.name)}</span><span class="wod-item-detail">${escapeHtml([i.damage, i.notes].filter(Boolean).join(" · "))}</span></li>`).join("")}</ul>` : "";
+
+  return `
+<section class="wod-sheet">
+  <div class="wod-header">
+    ${portrait}
+    <div class="wod-header-text">
+      <strong class="wod-name">${escapeHtml(sheet.name || "Unnamed")}</strong>
+      ${byline ? `<span class="wod-byline">${byline}</span>` : ""}
+      ${identity ? `<span class="wod-identity">${identity}</span>` : ""}
+    </div>
+    <div class="wod-morality">${morality}</div>
+  </div>
+
+  <div class="wod-attrs-block">
+    <div class="wod-attr-group">
+      <span class="wod-attr-group-label">Physical</span>
+      ${attr("Strength", a.strength)}${attr("Dexterity", a.dexterity)}${attr("Stamina", a.stamina)}
+    </div>
+    <div class="wod-attr-group">
+      <span class="wod-attr-group-label">Social</span>
+      ${attr("Charisma", a.charisma)}${attr("Manipulation", a.manipulation)}${attr("Appearance", a.appearance)}
+    </div>
+    <div class="wod-attr-group">
+      <span class="wod-attr-group-label">Mental</span>
+      ${attr("Perception", a.perception)}${attr("Intelligence", a.intelligence)}${attr("Wits", a.wits)}
+    </div>
+  </div>
+
+  ${sheet.abilities?.length ? `
+  <details class="wod-section wod-abilities">
+    <summary><h4>Abilities</h4></summary>
+    <div class="wod-abilities-cols">${rated(sheet.abilities)}</div>
+  </details>` : ""}
+
+  <div class="wod-advantages">
+    <div class="wod-adv-col">
+      <h4>${escapeHtml(info.powerLabel)}</h4>
+      ${rated(sheet.powers ?? [])}
+    </div>
+    <div class="wod-adv-col">
+      <h4>Backgrounds</h4>
+      ${rated(sheet.backgrounds ?? [])}
+    </div>
+    <div class="wod-adv-col">
+      <h4>Virtues</h4>
+      <ul class="wod-rated-list">
+        <li><span>${escapeHtml(info.virtueNames[0])}</span><span class="wod-rated-score">${dots(v.first)}</span></li>
+        <li><span>${escapeHtml(info.virtueNames[1])}</span><span class="wod-rated-score">${dots(v.second)}</span></li>
+        <li><span>${escapeHtml(info.virtueNames[2])}</span><span class="wod-rated-score">${dots(v.third)}</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="wod-section wod-pools">
+    <div class="wod-pool-row">
+      <span class="wod-pool-label">Willpower</span>
+      ${boxes(wpc, wp)}<span class="wod-pool-count">${wpc} / ${wp}</span>
+    </div>
+    ${bp > 0 ? `<div class="wod-pool-row">
+      <span class="wod-pool-label">${escapeHtml(info.poolLabel)}</span>
+      ${boxes(bpc, bp)}<span class="wod-pool-count">${bpc} / ${bp}</span>
+    </div>` : ""}
+    ${hum > 0 ? `<div class="wod-pool-row">
+      <span class="wod-pool-label">${escapeHtml(sheet.road || info.morality)}</span>
+      ${dots(hum, 10)}<span class="wod-pool-count">${hum}</span>
+    </div>` : ""}
+    <div class="wod-pool-row">
+      <span class="wod-pool-label">Health</span>
+      <div class="wod-health-grid">
+        ${healthLevels.map(([level, penalty]) =>
+          `<div class="wod-health-cell${healthMap[level] ? " marked" : ""}"><span>${escapeHtml(level)}</span>${penalty ? `<span class="wod-health-penalty">${escapeHtml(penalty)}</span>` : ""}</div>`
+        ).join("")}
+      </div>
+    </div>
+  </div>
+
+  ${sheet.weapons?.length || sheet.equipment?.length ? `
+  <div class="wod-section">
+    <h4>Equipment</h4>
+    ${gearList([...(sheet.weapons ?? []), ...(sheet.equipment ?? []).map((e) => ({ name: e.name, notes: e.notes }))])}
+  </div>` : ""}
+</section>`;
+}
+
 /** Expand fenced `traveller-sheet` YAML blocks into the designed sheet. */
 function expandTravellerSheets(content: string) {
   return content.replace(/```traveller-sheet\s*\n([\s\S]*?)```/g, (_match, inner) => {
     return `\n\n${renderTravellerSheetHtml(String(inner))}\n\n`;
+  });
+}
+
+/** Expand fenced `wod-sheet` YAML blocks into the WoD character sheet. */
+function expandWoDSheets(content: string) {
+  return content.replace(/```wod-sheet\s*\n([\s\S]*?)```/g, (_match, inner) => {
+    return `\n\n${renderWoDSheetHtml(String(inner))}\n\n`;
   });
 }
 
@@ -448,6 +682,7 @@ export function renderMarkdown(content: string, mode: RenderMode, resolve?: Wiki
   content = expandIncludes(content, resolveInclude);
   content = expandGalleries(content, resolveMedia);
   content = expandTravellerSheets(content);
+  content = expandWoDSheets(content);
   let html: string;
   if (mode !== "gm") {
     html = renderInline(stripGmBlocks(content), resolve, resolveMedia);

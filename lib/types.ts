@@ -176,6 +176,42 @@ export type TravellerSheet = {
   notes?: string;
 };
 
+export type WoDSystem = "vampire-masquerade" | "dark-ages-vampire" | "werewolf-apocalypse" | "mage-ascension" | "generic-wod";
+export type WoDRated = { name: string; score: number; notes?: string };
+export type WoDSheet = {
+  system: WoDSystem;
+  name?: string;
+  clan?: string;
+  generation?: number;
+  nature?: string;
+  demeanor?: string;
+  concept?: string;
+  road?: string;
+  portrait?: string;
+  attributes?: {
+    strength?: number; dexterity?: number; stamina?: number;
+    charisma?: number; manipulation?: number; appearance?: number;
+    perception?: number; intelligence?: number; wits?: number;
+  };
+  abilities?: WoDRated[];
+  powers?: WoDRated[];
+  backgrounds?: WoDRated[];
+  virtues?: { first?: number; second?: number; third?: number };
+  willpower?: number;
+  willpower_current?: number;
+  blood?: number;
+  blood_current?: number;
+  humanity?: number;
+  health?: {
+    bruised?: boolean; hurt?: boolean; injured?: boolean;
+    wounded?: boolean; mauled?: boolean; crippled?: boolean;
+    incapacitated?: boolean;
+  };
+  weapons?: { name: string; damage?: string; notes?: string }[];
+  equipment?: { name: string; notes?: string }[];
+  notes?: string;
+};
+
 export type WikiPage = {
   slug: string;
   sha?: string;

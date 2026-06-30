@@ -3413,6 +3413,358 @@ button.danger {
   .tsheet-band { grid-template-columns: 1fr; }
 }
 
+/* ---- World of Darkness character sheet ---- */
+.wod-sheet {
+  background: var(--bg-overlay, rgba(0, 0, 0, 0.55));
+  border: 1px solid var(--border-strong, rgba(150, 31, 56, 0.6));
+  border-radius: var(--radius-card, 6px);
+  color: var(--text-primary);
+  display: grid;
+  gap: 1px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.wod-sheet-error {
+  padding: 16px;
+}
+
+.wod-header {
+  align-items: center;
+  background: var(--bg-panel, rgba(0,0,0,0.4));
+  border-bottom: 1px solid var(--border-soft);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 64px 1fr auto;
+  padding: 14px 16px;
+}
+
+.wod-portrait-placeholder {
+  align-items: center;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border-strong, rgba(150,31,56,0.45));
+  border-radius: var(--radius-sm, 3px);
+  display: flex;
+  height: 64px;
+  justify-content: center;
+  width: 64px;
+}
+
+.wod-portrait-placeholder span {
+  color: var(--gold);
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1;
+  opacity: 0.6;
+}
+
+.wod-header img {
+  border-radius: var(--radius-sm, 3px);
+  height: 64px;
+  object-fit: cover;
+  width: 64px;
+}
+
+.wod-header-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.wod-name {
+  color: var(--text-primary);
+  display: block;
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+}
+
+.wod-byline {
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.wod-identity {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.wod-morality {
+  color: var(--gold);
+  font-family: var(--font-display);
+  font-size: 15px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Attributes */
+.wod-attrs-block {
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-soft);
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.wod-attr-group {
+  border-right: 1px solid var(--border-soft);
+  display: grid;
+  gap: 0;
+  padding: 10px 12px;
+}
+
+.wod-attr-group:last-child {
+  border-right: none;
+}
+
+.wod-attr-group-label {
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.wod-attr {
+  align-items: center;
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  gap: 6px;
+  justify-content: space-between;
+  padding: 5px 0;
+}
+
+.wod-attr:last-child {
+  border-bottom: none;
+}
+
+.wod-attr-label {
+  color: var(--text-secondary);
+  font-size: 12px;
+  min-width: 0;
+}
+
+/* Dots + boxes */
+.wod-dots,
+.wod-boxes {
+  display: inline-flex;
+  flex: none;
+  gap: 3px;
+}
+
+.wod-dot {
+  border: 1.5px solid var(--gold, #961f38);
+  border-radius: 50%;
+  height: 10px;
+  width: 10px;
+}
+
+.wod-dot.filled {
+  background: var(--gold, #961f38);
+}
+
+.wod-box {
+  border: 1.5px solid var(--text-tertiary, #666);
+  height: 10px;
+  width: 10px;
+}
+
+.wod-box.filled {
+  background: var(--gold, #961f38);
+  border-color: var(--gold, #961f38);
+}
+
+/* Abilities (collapsible) */
+.wod-abilities {
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.wod-abilities > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 8px 14px;
+}
+
+.wod-abilities > summary::-webkit-details-marker {
+  display: none;
+}
+
+.wod-abilities > summary h4 {
+  margin: 0;
+}
+
+.wod-abilities-cols {
+  column-count: 3;
+  column-gap: 0;
+  padding: 0 14px 10px;
+}
+
+.wod-abilities-cols .wod-rated-list {
+  break-inside: avoid;
+}
+
+/* Advantages (3-col) */
+.wod-advantages {
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-soft);
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.wod-adv-col {
+  border-right: 1px solid var(--border-soft);
+  padding: 10px 12px;
+}
+
+.wod-adv-col:last-child {
+  border-right: none;
+}
+
+.wod-adv-col h4,
+.wod-section h4,
+.wod-abilities summary h4 {
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+/* Rated list (abilities, disciplines, etc.) */
+.wod-rated-list {
+  display: grid;
+  gap: 2px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.wod-rated-list li {
+  align-items: center;
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  font-size: 12px;
+  gap: 6px;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+.wod-rated-list li:last-child {
+  border-bottom: none;
+}
+
+.wod-rated-score {
+  flex: none;
+}
+
+.wod-item-detail {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.wod-empty {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-style: italic;
+  margin: 4px 0;
+}
+
+/* Pools + Health */
+.wod-pools {
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-soft);
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.wod-pool-row {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wod-pool-label {
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  min-width: 100px;
+  padding-top: 1px;
+  text-transform: uppercase;
+}
+
+.wod-pool-count {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  padding-top: 1px;
+}
+
+.wod-health-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.wod-health-cell {
+  background: var(--bg-base);
+  border: 1px solid var(--border-soft);
+  border-radius: 3px;
+  font-size: 10px;
+  padding: 3px 7px;
+  text-align: center;
+}
+
+.wod-health-cell.marked {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--bg-base);
+  text-decoration: line-through;
+}
+
+.wod-health-penalty {
+  color: var(--text-tertiary);
+  display: block;
+  font-size: 9px;
+}
+
+.wod-health-cell.marked .wod-health-penalty {
+  color: rgba(0,0,0,0.5);
+}
+
+/* General section */
+.wod-section {
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-soft);
+  padding: 10px 14px;
+}
+
+.wod-section:last-child {
+  border-bottom: none;
+}
+
+@media (max-width: 680px) {
+  .wod-attrs-block,
+  .wod-advantages { grid-template-columns: 1fr; }
+  .wod-attr-group,
+  .wod-adv-col { border-right: none; border-bottom: 1px solid var(--border-soft); }
+  .wod-abilities-cols { column-count: 1; }
+  .wod-header { grid-template-columns: 48px 1fr; }
+  .wod-morality { grid-column: 1 / -1; text-align: left; }
+}
+
 /* ---- Relationship connections panel ---- */
 .rel-panel {
   border-top: 1px solid var(--border-soft);
