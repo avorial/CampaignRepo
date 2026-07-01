@@ -2637,6 +2637,17 @@ button.nav-link.active {
 .badge-hook { background: color-mix(in srgb, var(--purple) 20%, transparent); border-color: color-mix(in srgb, var(--purple) 40%, transparent); }
 .badge-completed { background: color-mix(in srgb, #2ecc71 15%, transparent); border-color: color-mix(in srgb, #2ecc71 35%, transparent); }
 .badge-failed { background: color-mix(in srgb, var(--error) 15%, transparent); border-color: color-mix(in srgb, var(--error) 35%, transparent); }
+.badge-session { background: color-mix(in srgb, var(--purple) 15%, transparent); border-color: color-mix(in srgb, var(--purple) 35%, transparent); }
+.badge-event { background: color-mix(in srgb, var(--gold) 15%, transparent); border-color: color-mix(in srgb, var(--gold) 35%, transparent); }
+
+.timeline-section-label { font-size: var(--text-sm); color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; margin: 12px 0 4px; }
+.world-timeline-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.world-timeline-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: var(--text-sm); }
+.world-timeline-item a { flex: 1; color: var(--text); }
+.world-timeline-item a:hover { color: var(--gold); }
+.world-timeline-item .muted { font-size: var(--text-xs); white-space: nowrap; }
+.world-timeline-now { display: flex; align-items: center; gap: 8px; margin: 10px 0; font-size: var(--text-sm); font-weight: 600; color: var(--gold); }
+.world-timeline-now::before, .world-timeline-now::after { content: ""; flex: 1; height: 1px; background: color-mix(in srgb, var(--gold) 40%, transparent); }
 
 .wiki-link {
   color: var(--gold);

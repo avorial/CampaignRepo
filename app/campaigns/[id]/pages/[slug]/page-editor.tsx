@@ -1073,6 +1073,21 @@ notes: ""
             <label>Timeline date<input value={frontmatter.timelineDate || ""} onChange={(e) => updateField("timelineDate", e.target.value)} readOnly={!fieldsEditable} /></label>
             <label>Era<input value={frontmatter.era || ""} onChange={(e) => updateField("era", e.target.value || undefined)} readOnly={!fieldsEditable} placeholder="The Long Night, Third Age..." /></label>
             <label>Track<input value={frontmatter.track || ""} onChange={(e) => updateField("track", e.target.value || undefined)} readOnly={!fieldsEditable} placeholder="political, personal, cosmic..." /></label>
+            <p className="muted" style={{ fontSize: "11px", margin: "4px 0 2px" }}>In-world date (shows on calendar)</p>
+            <div className="mapper-grid">
+              <label>Year<input type="number" min={1} value={frontmatter.worldDate?.year ?? ""} readOnly={!fieldsEditable}
+                onChange={(e) => { const y = Number(e.target.value); if (y) updateField("worldDate", { year: y, month: frontmatter.worldDate?.month ?? 1, day: frontmatter.worldDate?.day ?? 1 }); else updateField("worldDate", undefined); }}
+              /></label>
+              <label>Month<input type="number" min={1} value={frontmatter.worldDate?.month ?? ""} readOnly={!fieldsEditable}
+                onChange={(e) => { const m = Number(e.target.value); if (frontmatter.worldDate && m) updateField("worldDate", { ...frontmatter.worldDate, month: m }); }}
+              /></label>
+              <label>Day<input type="number" min={1} value={frontmatter.worldDate?.day ?? ""} readOnly={!fieldsEditable}
+                onChange={(e) => { const d = Number(e.target.value); if (frontmatter.worldDate && d) updateField("worldDate", { ...frontmatter.worldDate, day: d }); }}
+              /></label>
+            </div>
+            {frontmatter.worldDate && fieldsEditable && (
+              <button type="button" className="linklike" style={{ fontSize: "11px" }} onClick={() => updateField("worldDate", undefined)}>Clear in-world date</button>
+            )}
           </div>
         )}
 
