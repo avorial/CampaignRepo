@@ -22,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {children}
         <CommandPalette />
+        <script dangerouslySetInnerHTML={{ __html: `if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{})}` }} />
       </body>
     </html>
   );
