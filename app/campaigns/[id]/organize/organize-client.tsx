@@ -36,6 +36,9 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
   const [setCategory, setSetCategory] = useState("");
   const [setVisibility, setSetVisibility] = useState("");
   const [setApproval, setSetApproval] = useState("");
+  const [setParent, setSetParent] = useState("");
+  const [sortKey, setSortKey] = useState<"name" | "category" | "visibility" | "approval" | "parent">("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -80,13 +83,28 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
   }
 
   // ── Pages filtered ────────────────────────────────────────────────
+  function toggleSort(key: typeof sortKey) {
+    if (sortKey === key) setSortDir((d) => d === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("asc"); }
+  }
+
   const filtered = useMemo(() => {
     const f = filter.trim().toLowerCase();
-    return pages
+    const rows = pages
       .filter((p) => (catFilter === "all" ? true : p.frontmatter.category === catFilter))
-      .filter((p) => (f ? p.frontmatter.name.toLowerCase().includes(f) : true))
-      .sort((a, b) => a.frontmatter.name.localeCompare(b.frontmatter.name));
-  }, [pages, filter, catFilter]);
+      .filter((p) => (f ? p.frontmatter.name.toLowerCase().includes(f) : true));
+    rows.sort((a, b) => {
+      let va = "", vb = "";
+      if (sortKey === "name") { va = a.frontmatter.name; vb = b.frontmatter.name; }
+      if (sortKey === "category") { va = a.frontmatter.category; vb = b.frontmatter.category; }
+      if (sortKey === "visibility") { va = a.frontmatter.visibility; vb = b.frontmatter.visibility; }
+      if (sortKey === "approval") { va = a.frontmatter.approvalStatus; vb = b.frontmatter.approvalStatus; }
+      if (sortKey === "parent") { va = a.frontmatter.parent || ""; vb = b.frontmatter.parent || ""; }
+      const cmp = va.localeCompare(vb);
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return rows;
+  }, [pages, filter, catFilter, sortKey, sortDir]);
 
   const allVisibleSelected = filtered.length > 0 && filtered.every((p) => selected.has(p.slug));
 
@@ -141,12 +159,14 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
     if (setCategory) set.category = setCategory;
     if (setVisibility) set.visibility = setVisibility;
     if (setApproval) set.approvalStatus = setApproval;
+    if (setParent !== undefined && setParent !== "") set.parent = setParent === "__clear__" ? "" : setParent;
     if (!selected.size || !Object.keys(set).length) return;
 
     const parts: string[] = [];
     if (set.category) parts.push(`category → ${catLabel.get(set.category) || set.category}`);
     if (set.visibility) parts.push(`visibility → ${set.visibility === "players" ? "Players" : "GM only"}`);
     if (set.approvalStatus) parts.push(`approval → ${set.approvalStatus}`);
+    if (set.parent !== undefined) parts.push(`parent → ${set.parent || "(none)"}`);
     if (!window.confirm(`Apply ${parts.join(", ")} to ${selected.size} page${selected.size === 1 ? "" : "s"}?\n\nThis writes a single commit.`)) return;
 
     setBusy(true);
@@ -158,7 +178,7 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
     const data = await res.json();
     setBusy(false);
     if (res.ok) {
-      setSetCategory(""); setSetVisibility(""); setSetApproval("");
+      setSetCategory(""); setSetVisibility(""); setSetApproval(""); setSetParent("");
       setMessage(`Updated ${data.updated} page${data.updated === 1 ? "" : "s"} in one commit.`);
       await load();
     } else {
@@ -217,7 +237,7 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
     await loadMedia();
   }
 
-  const pendingChange = Boolean(setCategory || setVisibility || setApproval);
+  const pendingChange = Boolean(setCategory || setVisibility || setApproval || setParent);
 
   return (
     <section className="organize">
@@ -260,6 +280,19 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
                   {APPROVAL.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
                 </select>
               </label>
+              <label>Parent
+                <input
+                  list="organize-page-slugs"
+                  value={setParent}
+                  onChange={(e) => setSetParent(e.target.value)}
+                  placeholder="slug or empty"
+                  style={{ width: "140px" }}
+                />
+                <datalist id="organize-page-slugs">
+                  <option value="__clear__">— clear parent —</option>
+                  {pages.map((p) => <option key={p.slug} value={p.slug}>{p.frontmatter.name}</option>)}
+                </datalist>
+              </label>
               <button type="button" onClick={apply} disabled={busy || !pendingChange}>Apply (1 commit)</button>
               <button type="button" className="secondary" onClick={() => setSelected(new Set())} disabled={busy}>Clear</button>
             </div>
@@ -273,11 +306,11 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
                 <thead>
                   <tr>
                     <th><input type="checkbox" checked={allVisibleSelected} onChange={toggleAll} aria-label="Select all" /></th>
-                    <th>Name</th>
-                    <th>Category</th>
-                    <th>Visibility</th>
-                    <th>Approval</th>
-                    <th>Parent</th>
+                    {(["name", "category", "visibility", "approval", "parent"] as const).map((k) => (
+                      <th key={k} onClick={() => toggleSort(k)} style={{ cursor: "pointer", userSelect: "none" }}>
+                        {k.charAt(0).toUpperCase() + k.slice(1)}{sortKey === k ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
