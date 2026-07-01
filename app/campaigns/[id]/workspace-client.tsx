@@ -547,6 +547,11 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
         {canManage && (
           <Link href={`/campaigns/${campaign.id}/ai`} className="nav-link nav-tool-link" aria-label="AI Assistant"><span aria-hidden="true">🤖</span> AI Assistant</Link>
         )}
+        {canManage && campaign.forkOf && (
+          <Link href={`/campaigns/${campaign.id}/fork-proposal`} className="nav-link nav-tool-link" aria-label="Propose changes to source world">
+            <span aria-hidden="true">↑</span> Propose changes
+          </Link>
+        )}
         {canManage && pendingReviews > 0 && (
           <Link href={`/campaigns/${campaign.id}/admin`} className="review-callout">
             {pendingReviews} review{pendingReviews === 1 ? "" : "s"} waiting

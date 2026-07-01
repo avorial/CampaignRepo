@@ -201,8 +201,27 @@ CREATE TABLE IF NOT EXISTS page_watches (
 );
 `);
 
+// Fork proposals table
+db.exec(`
+CREATE TABLE IF NOT EXISTS fork_proposals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  fromCampaignId INTEGER NOT NULL,
+  toPublicSlug TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  pages TEXT NOT NULL DEFAULT '[]',
+  status TEXT NOT NULL DEFAULT 'pending',
+  createdBy INTEGER NOT NULL,
+  createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  respondedAt TEXT,
+  FOREIGN KEY (fromCampaignId) REFERENCES campaigns(id),
+  FOREIGN KEY (createdBy) REFERENCES users(id)
+);
+`);
+
 // Migrations — safe to run on every start (errors mean column already exists)
 try { db.exec("ALTER TABLE campaign_memberships ADD COLUMN groups TEXT NOT NULL DEFAULT '[]'"); } catch { /* already migrated */ }
+try { db.exec("ALTER TABLE campaigns ADD COLUMN forkOf TEXT"); } catch { /* already migrated */ }
 
 export function getDb() {
   return db;
@@ -305,6 +324,11 @@ export function getPublicSite(campaignId: number): PublicSiteRow | null {
 }
 
 /** Resolve a public share slug to its campaign — only when the site is enabled. */
+export function getPublicSlugForCampaign(campaignId: number): string | null {
+  const row = db.prepare("SELECT slug FROM public_sites WHERE campaignId = ? AND enabled = 1").get(campaignId) as { slug: string } | undefined;
+  return row?.slug ?? null;
+}
+
 export function getPublicSiteCampaign(slug: string): Campaign | null {
   return (
     (db
@@ -742,6 +766,53 @@ export function togglePageWatch(userId: number, campaignId: number, slug: string
 export function getPageWatcherUserIds(campaignId: number, slug: string): number[] {
   const rows = db.prepare("SELECT userId FROM page_watches WHERE campaignId = ? AND slug = ?").all(campaignId, slug) as { userId: number }[];
   return rows.map((r) => r.userId);
+}
+
+export type ForkProposal = {
+  id: number;
+  fromCampaignId: number;
+  fromCampaignName?: string;
+  toPublicSlug: string;
+  title: string;
+  description: string | null;
+  pages: string[];
+  status: "pending" | "accepted" | "rejected";
+  createdBy: number;
+  createdByName?: string;
+  createdAt: string;
+  respondedAt: string | null;
+};
+
+export function createForkProposal(
+  fromCampaignId: number, toPublicSlug: string, title: string, description: string | null, pages: string[], createdBy: number
+): number {
+  const result = db.prepare(
+    "INSERT INTO fork_proposals (fromCampaignId, toPublicSlug, title, description, pages, createdBy) VALUES (?, ?, ?, ?, ?, ?)"
+  ).run(fromCampaignId, toPublicSlug, title, description, JSON.stringify(pages), createdBy);
+  return result.lastInsertRowid as number;
+}
+
+export function getForkProposalsForSource(toPublicSlug: string): ForkProposal[] {
+  const rows = db.prepare(
+    `SELECT fp.*, c.name AS fromCampaignName, u.name AS createdByName
+     FROM fork_proposals fp
+     LEFT JOIN campaigns c ON c.id = fp.fromCampaignId
+     LEFT JOIN users u ON u.id = fp.createdBy
+     WHERE fp.toPublicSlug = ?
+     ORDER BY fp.createdAt DESC`
+  ).all(toPublicSlug) as Array<ForkProposal & { fromCampaignName: string; createdByName: string }>;
+  return rows.map((r) => ({ ...r, pages: JSON.parse(r.pages as unknown as string) }));
+}
+
+export function getForkProposalsFromCampaign(fromCampaignId: number): ForkProposal[] {
+  const rows = db.prepare(
+    "SELECT * FROM fork_proposals WHERE fromCampaignId = ? ORDER BY createdAt DESC"
+  ).all(fromCampaignId) as ForkProposal[];
+  return rows.map((r) => ({ ...r, pages: JSON.parse(r.pages as unknown as string) }));
+}
+
+export function updateForkProposalStatus(id: number, status: "accepted" | "rejected"): void {
+  db.prepare("UPDATE fork_proposals SET status = ?, respondedAt = CURRENT_TIMESTAMP WHERE id = ?").run(status, id);
 }
 
 export function searchDocs(userId: number, query: string, campaignId?: number, mode: "gm" | "player" = "gm") {

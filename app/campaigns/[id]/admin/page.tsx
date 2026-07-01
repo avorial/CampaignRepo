@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
-import { getCampaign } from "@/lib/db";
+import { getCampaign, getForkProposalsForSource, getPublicSlugForCampaign } from "@/lib/db";
 import { loadCampaignTheme } from "@/lib/public-site";
 import { themeToCssVars } from "@/lib/theme";
 import AdminClient from "./admin-client";
@@ -17,6 +17,8 @@ export default async function AdminPage({ params }: { params: Promise<{ id: stri
   if (campaign.role !== "owner" && campaign.role !== "gm") redirect(`/campaigns/${campaign.id}`);
   const theme = await loadCampaignTheme(campaign, user.githubToken);
   const themeVars = themeToCssVars(theme) as CSSProperties;
+  const publicSlug = getPublicSlugForCampaign(campaign.id);
+  const incomingProposals = publicSlug ? getForkProposalsForSource(publicSlug) : [];
 
   return (
     <main className="app-shell" data-theme={theme.preset || undefined} style={themeVars}>
@@ -28,7 +30,7 @@ export default async function AdminPage({ params }: { params: Promise<{ id: stri
         </div>
         <a className="button secondary" href={`https://github.com/${campaign.owner}/${campaign.repo}`}>Open GitHub</a>
       </header>
-      <AdminClient campaign={campaign} isGlobalAdmin={user.isAdmin} />
+      <AdminClient campaign={campaign} isGlobalAdmin={user.isAdmin} publicSlug={publicSlug} incomingProposals={incomingProposals} />
     </main>
   );
 }

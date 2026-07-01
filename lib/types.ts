@@ -75,6 +75,7 @@ export type Campaign = {
   gameType: GameType;
   storageBackend: "github" | "local";
   localPath?: string | null;
+  forkOf?: string | null;
   role?: CampaignRole;
   createdAt: string;
 };

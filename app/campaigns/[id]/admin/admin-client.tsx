@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import type { Campaign, CampaignInvite, CampaignMembership } from "@/lib/types";
+import type { ForkProposal } from "@/lib/db";
 
 type ReviewItem = {
   slug: string;
@@ -17,11 +18,13 @@ type ReviewItem = {
 
 type MemberWithGroups = CampaignMembership & { groups?: string[] };
 
-export default function AdminClient({ campaign, isGlobalAdmin = false }: { campaign: Campaign; isGlobalAdmin?: boolean }) {
+export default function AdminClient({ campaign, isGlobalAdmin = false, publicSlug, incomingProposals: initialProposals }: { campaign: Campaign; isGlobalAdmin?: boolean; publicSlug?: string | null; incomingProposals?: ForkProposal[] }) {
   const canTransferOwnership = campaign.role === "owner" || isGlobalAdmin;
   const [members, setMembers] = useState<MemberWithGroups[]>([]);
   const [invites, setInvites] = useState<CampaignInvite[]>([]);
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const [proposals, setProposals] = useState<ForkProposal[]>(initialProposals || []);
+  const [proposalMsg, setProposalMsg] = useState("");
   const [message, setMessage] = useState("");
   const [origin, setOrigin] = useState("");
   const [temporaryPassword, setTemporaryPassword] = useState("");
@@ -521,6 +524,56 @@ export default function AdminClient({ campaign, isGlobalAdmin = false }: { campa
           {!reviews.length && <p className="muted">No unapproved pages are waiting for review.</p>}
         </div>
       </div>
+
+      {publicSlug && (
+        <div className="panel admin-wide">
+          <div className="section-heading">
+            <div>
+              <h2>Fork proposals</h2>
+              <p className="muted">Changes submitted by people who cloned your public world at <code>/site/{publicSlug}</code>.</p>
+            </div>
+          </div>
+          <div className="review-list">
+            {proposals.map((p) => (
+              <article key={p.id} className="review-row">
+                <div>
+                  <strong>{p.title}</strong>
+                  <span className="tag-chip" style={{ marginLeft: 6 }}>{p.status}</span>
+                  <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>{p.description}</p>
+                  <p style={{ fontSize: 12 }}>
+                    From <strong>{p.fromCampaignName || `Campaign #${p.fromCampaignId}`}</strong> by {p.createdByName} · {new Date(p.createdAt).toLocaleDateString()}
+                  </p>
+                  {p.pages.length > 0 && (
+                    <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 4 }}>
+                      {p.pages.map((slug) => (
+                        <a key={slug} href={`/campaigns/${campaign.id}/pages/${slug}`} className="tag-chip" style={{ fontSize: 11 }}>
+                          {slug}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {p.status === "pending" && (
+                  <div className="member-actions">
+                    <button type="button" onClick={async () => {
+                      await fetch(`/api/campaigns/${campaign.id}/fork-proposals`, { method: "PATCH", body: JSON.stringify({ proposalId: p.id, status: "accepted" }) });
+                      setProposals((ps) => ps.map((x) => x.id === p.id ? { ...x, status: "accepted" } : x));
+                      setProposalMsg("Proposal accepted.");
+                    }}>Accept</button>
+                    <button type="button" className="secondary danger" onClick={async () => {
+                      await fetch(`/api/campaigns/${campaign.id}/fork-proposals`, { method: "PATCH", body: JSON.stringify({ proposalId: p.id, status: "rejected" }) });
+                      setProposals((ps) => ps.map((x) => x.id === p.id ? { ...x, status: "rejected" } : x));
+                      setProposalMsg("Proposal rejected.");
+                    }}>Reject</button>
+                  </div>
+                )}
+              </article>
+            ))}
+            {!proposals.length && <p className="muted">No fork proposals yet.</p>}
+            {proposalMsg && <p style={{ color: "var(--gold)", fontSize: 13 }}>{proposalMsg}</p>}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

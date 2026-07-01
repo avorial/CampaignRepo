@@ -30,8 +30,8 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
     const repoName = `${slugify(source.name) || "campaign"}-${crypto.randomBytes(3).toString("hex")}`;
     const created = await createRepo(user.githubToken, repoName, true);
     const insert = getDb()
-      .prepare("INSERT INTO campaigns (userId, name, owner, repo, branch, gameType, storageBackend) VALUES (?, ?, ?, ?, ?, ?, 'github')")
-      .run(user.id, `${source.name} (clone)`, created.owner.login, created.name, created.default_branch || "main", source.gameType);
+      .prepare("INSERT INTO campaigns (userId, name, owner, repo, branch, gameType, storageBackend, forkOf) VALUES (?, ?, ?, ?, ?, ?, 'github', ?)")
+      .run(user.id, `${source.name} (clone)`, created.owner.login, created.name, created.default_branch || "main", source.gameType, slug);
     getDb().prepare("INSERT OR IGNORE INTO campaign_memberships (campaignId, userId, role) VALUES (?, ?, 'owner')").run(insert.lastInsertRowid, user.id);
     const campaign = getDb().prepare("SELECT * FROM campaigns WHERE id = ?").get(insert.lastInsertRowid) as Campaign;
     await initializeRepo(user.githubToken, campaign);

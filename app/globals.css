@@ -1279,6 +1279,40 @@ button.nav-link.active {
   background: rgba(200,160,50,0.12);
 }
 
+/* Fork proposal page selector */
+.fork-page-grid {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.fork-page-row {
+  align-items: center;
+  border-bottom: 1px solid var(--border-faint);
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.fork-page-row:last-child {
+  border-bottom: none;
+}
+
+.fork-page-row:hover {
+  background: var(--bg-subtle);
+}
+
+.fork-page-row.selected {
+  background: rgba(200,160,50,0.08);
+}
+
+.fork-page-row input[type="checkbox"] {
+  flex-shrink: 0;
+}
+
 .map-overlay-svg {
   position: absolute;
   inset: 0;
