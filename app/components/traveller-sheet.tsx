@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
 import type { TravellerSheet as Sheet } from "@/lib/types";
 
 const CHARS: { key: keyof Sheet["characteristics"]; label: string }[] = [
@@ -32,7 +35,34 @@ function detail(parts: unknown[]) {
   return parts.filter(isFilled).join(" - ");
 }
 
+type Roll = { label: string; d1: number; d2: number; mod: number; total: number };
+
+function DiceToast({ roll, onDismiss }: { roll: Roll; onDismiss: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 5000);
+    return () => clearTimeout(t);
+  }, [roll, onDismiss]);
+
+  const modStr = roll.mod === 0 ? "" : roll.mod > 0 ? ` + ${roll.mod}` : ` − ${Math.abs(roll.mod)}`;
+  return (
+    <div className="dice-toast" onClick={onDismiss} role="status">
+      <span className="dice-toast-label">{roll.label}</span>
+      <span className="dice-toast-sum">{roll.d1} + {roll.d2}{modStr} = <strong>{roll.total}</strong></span>
+      <span className="dice-toast-dice">⚄ {roll.d1} · ⚄ {roll.d2}</span>
+    </div>
+  );
+}
+
 export default function TravellerSheet({ sheet, name }: { sheet: Sheet; name?: string }) {
+  const [roll, setRoll] = useState<Roll | null>(null);
+  const dismiss = useCallback(() => setRoll(null), []);
+
+  function doRoll(label: string, mod: number) {
+    const d1 = Math.floor(Math.random() * 6) + 1;
+    const d2 = Math.floor(Math.random() * 6) + 1;
+    setRoll({ label, d1, d2, mod, total: d1 + d2 + mod });
+  }
+
   const skills = [...(sheet.skills || [])].sort((a, b) => a.name.localeCompare(b.name) || (a.speciality || "").localeCompare(b.speciality || ""));
   const skillColumns = splitColumns(skills, 3);
   const dossier = sheet.dossier || detail([sheet.career, sheet.rank]) || "-";
@@ -50,6 +80,8 @@ export default function TravellerSheet({ sheet, name }: { sheet: Sheet; name?: s
 
   return (
     <section className="tsheet">
+      {roll && <DiceToast roll={roll} onDismiss={dismiss} />}
+
       <header className="tsheet-registry">
         {header.map((part, index) => <span key={index}>{part}</span>)}
       </header>
@@ -79,8 +111,14 @@ export default function TravellerSheet({ sheet, name }: { sheet: Sheet; name?: s
         <div className="tsheet-chars">
           {CHARS.map(({ key, label }) => {
             const value = sheet.characteristics?.[key];
+            const dm = value == null ? null : travellerDM(value);
             return (
-              <div className="tsheet-char" key={key}>
+              <div
+                className={`tsheet-char${value != null ? " tsheet-char-rollable" : ""}`}
+                key={key}
+                onClick={value != null && dm != null ? () => doRoll(`${key} (${label})`, dm) : undefined}
+                title={value != null ? `Roll 2D6 ${fmtMod(dm!)} for ${label}` : undefined}
+              >
                 <span className="tsheet-char-key">{key}</span>
                 <span className="tsheet-char-label">{label}</span>
                 <span className="tsheet-char-val">{value ?? "-"}</span>
@@ -105,7 +143,7 @@ export default function TravellerSheet({ sheet, name }: { sheet: Sheet; name?: s
       </section>
 
       <details className="tsheet-panel tsheet-skill-details">
-        <summary><h4>Skills <span>Total levels: {skills.reduce((sum, skill) => sum + (skill.level ?? 0), 0)}</span></h4></summary>
+        <summary><h4>Skills <span>Total levels: {skills.reduce((sum, skill) => sum + (skill.level ?? 0), 0)} · Click to roll</span></h4></summary>
         {skills.length === 0 ? (
           <p className="tsheet-empty">No skills recorded.</p>
         ) : (
@@ -113,7 +151,12 @@ export default function TravellerSheet({ sheet, name }: { sheet: Sheet; name?: s
             {skillColumns.map((column, columnIndex) => (
               <ul className="tsheet-skills" key={columnIndex}>
                 {column.map((s, i) => (
-                  <li key={`${s.name}-${s.speciality || ""}-${columnIndex}-${i}`}>
+                  <li
+                    key={`${s.name}-${s.speciality || ""}-${columnIndex}-${i}`}
+                    className="tsheet-skill-rollable"
+                    onClick={() => doRoll(`${s.name}${s.speciality ? ` (${s.speciality})` : ""}`, s.level ?? 0)}
+                    title={`Roll 2D6+${s.level ?? 0} for ${s.name}`}
+                  >
                     <span>{s.name}{s.speciality ? ` (${s.speciality})` : ""}</span>
                     <span className="tsheet-skill-lvl">{s.level ?? "−"}</span>
                   </li>

@@ -3992,6 +3992,29 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
 .tsheet-char-val { color: #ffb331; font-family: var(--font-display); font-size: 30px; line-height: 1.05; }
 .tsheet-char-mod { color: #d8ad62; font-family: var(--font-mono); font-size: 10px; }
 
+.tsheet-char-rollable { cursor: pointer; transition: background 0.15s, box-shadow 0.15s; }
+.tsheet-char-rollable:hover { background: rgba(255, 179, 49, 0.12); box-shadow: 0 0 0 1px #ffb33166; }
+.tsheet-skill-rollable { cursor: pointer; }
+.tsheet-skill-rollable:hover { background: rgba(255, 179, 49, 0.08); }
+
+.dice-toast {
+  background: rgba(20, 14, 10, 0.96);
+  border: 1px solid #ffb331;
+  border-radius: 8px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 12px;
+  padding: 10px 16px;
+  position: relative;
+}
+.dice-toast-label { color: #d8ad62; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+.dice-toast-sum { color: #ffb331; font-family: var(--font-display); font-size: 22px; }
+.dice-toast-sum strong { color: #fff; font-size: 28px; }
+.dice-toast-dice { color: #9b7948; font-size: 12px; }
+
 .tsheet-band {
   align-items: center;
   grid-template-columns: minmax(180px, auto) auto 1fr;
