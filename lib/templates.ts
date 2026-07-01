@@ -74,6 +74,9 @@ export const categories: { id: Category; label: string }[] = [
   { id: "species", label: "Species" },
   { id: "location", label: "Locations" },
   { id: "item", label: "Items" },
+  { id: "spell", label: "Spells & Abilities" },
+  { id: "religion", label: "Religions & Cults" },
+  { id: "vehicle", label: "Vehicles & Ships" },
   { id: "event", label: "Events" },
   { id: "lore", label: "Lore" },
   { id: "game", label: "Games" }
@@ -117,6 +120,15 @@ export function starterBody(name: string, category: Category, gameType: GameType
   }
   if (category === "lore") {
     return `${heading}\n\n## Summary\n\n\n## Details\n\n\n## Related\n\n- [[Page Name]]\n\n:::gm\nThe truth behind the myth.\n:::\n`;
+  }
+  if (category === "spell") {
+    return `${heading}\n\n## Effect\n\n\n## Casting Requirements\n\n- **Range:** \n- **Duration:** \n- **Components:** \n\n## Scaling\n\n\n## Source\n\n- [[Location or Tradition]]\n\n:::gm\nSecret effects, ritual misuse, or plot hooks.\n:::\n`;
+  }
+  if (category === "religion") {
+    return `${heading}\n\n## Overview\n\n\n## Core Beliefs\n\n\n## Clergy & Structure\n\n- [[NPC Leader]]\n\n## Holy Days & Rites\n\n\n## Sacred Places\n\n- [[Location]]\n\n:::gm\nCorruption, divine truth, and secret doctrine.\n:::\n`;
+  }
+  if (category === "vehicle") {
+    return `${heading}\n\n## Overview\n\n\n## Specifications\n\n- **Type:** \n- **Crew:** \n- **Capacity:** \n- **Speed:** \n\n## History\n\n\n## Current Status\n\n\n## Crew & Passengers\n\n- [[NPC]]\n\n:::gm\nHidden cargo, defects, and modification secrets.\n:::\n`;
   }
   return `${heading}${common}`;
 }
