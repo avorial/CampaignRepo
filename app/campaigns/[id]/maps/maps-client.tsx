@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import type { Campaign, CampaignMedia, WikiPage } from "@/lib/types";
 
 type Layer = { id: string; name: string; visibility: "gm" | "players" };
-type Pin = { x: number; y: number; label: string; pageSlug?: string; mapSlug?: string; layer?: string; icon?: string; discovered?: boolean };
+type Pin = { x: number; y: number; label: string; pageSlug?: string; mapSlug?: string; layer?: string; icon?: string; discovered?: boolean; image?: string };
 type Region = { x: number; y: number; w: number; h: number; label: string; layer?: string; color?: string };
 type Route = { fromIndex: number; toIndex: number; label?: string; style?: "road" | "river" | "path" | "wall"; layer?: string };
-type CampaignMap = { slug: string; name: string; image: string; pins: Pin[]; layers?: Layer[]; regions?: Region[]; routes?: Route[]; sha?: string };
+type CampaignMap = { slug: string; name: string; image: string; pins: Pin[]; layers?: Layer[]; regions?: Region[]; routes?: Route[]; scale?: { total: number; unit: string }; sha?: string };
 
 const PIN_ICONS = ["📍", "🏰", "🌆", "🌊", "🌲", "🏔️", "⚔️", "☠️", "💎", "❓", "🔒", "⭐", "🚪", "🛖", "⛵"];
 const DEFAULT_LAYER: Layer = { id: "default", name: "Default", visibility: "players" };
@@ -23,7 +23,7 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
   const [pages, setPages] = useState<WikiPage[]>([]);
   const [images, setImages] = useState<string[]>([]);
   const [selected, setSelected] = useState("");
-  const [addMode, setAddMode] = useState<"pin" | "region" | "route" | null>(null);
+  const [addMode, setAddMode] = useState<"pin" | "region" | "route" | "measure" | null>(null);
   const [message, setMessage] = useState("");
   const [editingPin, setEditingPin] = useState<number | null>(null);
   const [editingRoute, setEditingRoute] = useState<number | null>(null);
@@ -31,6 +31,9 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
   const [hiddenLayers, setHiddenLayers] = useState<Set<string>>(new Set());
   const [newLayerName, setNewLayerName] = useState("");
   const [activeLayer, setActiveLayer] = useState<string>("default");
+  const [measurePts, setMeasurePts] = useState<Array<{ x: number; y: number }>>([]);
+  const [measureResult, setMeasureResult] = useState<string | null>(null);
+  const [imageAspect, setImageAspect] = useState(1);
 
   useEffect(() => {
     fetch(`/api/campaigns/${campaign.id}/maps`).then((r) => r.json()).then((d) => {
@@ -100,16 +103,41 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
     if (res.ok) { setMaps(body.maps || []); setSelected((body.maps || [])[0]?.slug || ""); }
   }
 
+  function computeDistance(a: { x: number; y: number }, b: { x: number; y: number }): number {
+    const dx = b.x - a.x;
+    const dy = (b.y - a.y) / imageAspect;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
   function handleCanvasClick(event: MouseEvent<HTMLDivElement>) {
     if (!map || !addMode) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+    const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+
     if (addMode === "pin") {
-      const rect = event.currentTarget.getBoundingClientRect();
-      const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
-      const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
       const newPin: Pin = { x, y, label: "New pin", layer: activeLayer, icon: "📍" };
       patchMap(map.slug, { pins: [...map.pins, newPin] });
       setEditingPin(map.pins.length);
       setAddMode(null);
+    }
+
+    if (addMode === "measure") {
+      if (measurePts.length === 0) {
+        setMeasurePts([{ x, y }]);
+        setMeasureResult(null);
+      } else if (measurePts.length === 1) {
+        const pt2 = { x, y };
+        const frac = computeDistance(measurePts[0], pt2);
+        const scale = map.scale;
+        const dist = scale ? (frac * scale.total).toFixed(1) + " " + scale.unit : (frac * 100).toFixed(1) + "% of map width";
+        setMeasurePts([measurePts[0], pt2]);
+        setMeasureResult(dist);
+      } else {
+        setMeasurePts([]);
+        setMeasureResult(null);
+        setAddMode(null);
+      }
     }
   }
 
@@ -152,7 +180,7 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
         <h2>Maps</h2>
         <div className="results">
           {maps.map((m) => (
-            <button type="button" key={m.slug} className={m.slug === selected ? "nav-link active" : "nav-link"} onClick={() => { setSelected(m.slug); setAddMode(null); setEditingPin(null); }}>
+            <button type="button" key={m.slug} className={m.slug === selected ? "nav-link active" : "nav-link"} onClick={() => { setSelected(m.slug); setAddMode(null); setEditingPin(null); setMeasurePts([]); setMeasureResult(null); }}>
               <strong>{m.name}</strong>
               <span>{m.pins.length} pin{m.pins.length === 1 ? "" : "s"}</span>
             </button>
@@ -174,45 +202,69 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
         </div>
 
         {map && (
-          <div className="field-group">
-            <h3>Layers</h3>
-            {layers.map((layer) => (
-              <div key={layer.id} className="map-layer-row">
-                <button type="button" className="map-layer-eye" title={hiddenLayers.has(layer.id) ? "Show" : "Hide"} onClick={() => toggleLayerHidden(layer.id)}>
-                  {hiddenLayers.has(layer.id) ? "○" : "●"}
-                </button>
-                <span
-                  className={`map-layer-name${activeLayer === layer.id ? " active" : ""}`}
-                  onClick={() => setActiveLayer(layer.id)}
-                  style={{ cursor: "pointer" }}
-                >
-                  {layer.name}
-                </span>
-                <select
-                  value={layer.visibility}
-                  onChange={(e) => toggleLayerVisibility(layer.id, e.target.value as "gm" | "players")}
-                  className="map-layer-vis"
-                  title="Who can see this layer"
-                >
-                  <option value="gm">GM only</option>
-                  <option value="players">Players</option>
-                </select>
+          <>
+            <div className="field-group">
+              <h3>Layers</h3>
+              {layers.map((layer) => (
+                <div key={layer.id} className="map-layer-row">
+                  <button type="button" className="map-layer-eye" title={hiddenLayers.has(layer.id) ? "Show" : "Hide"} onClick={() => toggleLayerHidden(layer.id)}>
+                    {hiddenLayers.has(layer.id) ? "○" : "●"}
+                  </button>
+                  <span
+                    className={`map-layer-name${activeLayer === layer.id ? " active" : ""}`}
+                    onClick={() => setActiveLayer(layer.id)}
+                    style={{ cursor: "pointer" }}
+                  >
+                    {layer.name}
+                  </span>
+                  <select
+                    value={layer.visibility}
+                    onChange={(e) => toggleLayerVisibility(layer.id, e.target.value as "gm" | "players")}
+                    className="map-layer-vis"
+                    title="Who can see this layer"
+                  >
+                    <option value="gm">GM only</option>
+                    <option value="players">Players</option>
+                  </select>
+                </div>
+              ))}
+              <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                <input
+                  placeholder="New layer name…"
+                  value={newLayerName}
+                  onChange={(e) => setNewLayerName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLayer(); } }}
+                  style={{ flex: 1 }}
+                />
+                <button type="button" onClick={addLayer} disabled={!newLayerName.trim()} style={{ whiteSpace: "nowrap" }}>+ Layer</button>
               </div>
-            ))}
-            <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
-              <input
-                placeholder="New layer name…"
-                value={newLayerName}
-                onChange={(e) => setNewLayerName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLayer(); } }}
-                style={{ flex: 1 }}
-              />
-              <button type="button" onClick={addLayer} disabled={!newLayerName.trim()} style={{ whiteSpace: "nowrap" }}>+ Layer</button>
+              <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                Click a layer name to make it active. New pins go on the active layer.
+              </p>
             </div>
-            <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>
-              Click a layer name to make it active. New pins go on the active layer.
-            </p>
-          </div>
+
+            <div className="field-group">
+              <h3>Scale</h3>
+              <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                <span className="muted" style={{ fontSize: 12, whiteSpace: "nowrap" }}>Full width =</span>
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="500"
+                  value={map.scale?.total ?? ""}
+                  onChange={(e) => patchMap(map.slug, { scale: e.target.value ? { total: Number(e.target.value), unit: map.scale?.unit || "miles" } : undefined })}
+                  style={{ width: 70 }}
+                />
+                <input
+                  placeholder="miles"
+                  value={map.scale?.unit ?? ""}
+                  onChange={(e) => patchMap(map.slug, { scale: map.scale ? { ...map.scale, unit: e.target.value } : undefined })}
+                  style={{ width: 60 }}
+                />
+              </div>
+              <p className="muted" style={{ fontSize: 12 }}>Set for the measure tool.</p>
+            </div>
+          </>
         )}
       </aside>
 
@@ -225,27 +277,48 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
                 <button
                   type="button"
                   className={addMode === "pin" ? "active" : "secondary"}
-                  onClick={() => { setAddMode((v) => v === "pin" ? null : "pin"); setEditingPin(null); setRouteFrom(null); }}
+                  onClick={() => { setAddMode((v) => v === "pin" ? null : "pin"); setEditingPin(null); setRouteFrom(null); setMeasurePts([]); setMeasureResult(null); }}
                 >
                   {addMode === "pin" ? `Click map to place pin…` : "Add pin"}
                 </button>
                 <button
                   type="button"
                   className={addMode === "route" ? "active" : "secondary"}
-                  onClick={() => { setAddMode((v) => v === "route" ? null : "route"); setEditingPin(null); setRouteFrom(null); }}
+                  onClick={() => { setAddMode((v) => v === "route" ? null : "route"); setEditingPin(null); setRouteFrom(null); setMeasurePts([]); setMeasureResult(null); }}
                 >
                   {addMode === "route" ? (routeFrom !== null ? "Click second pin…" : "Click first pin…") : "Add route"}
+                </button>
+                <button
+                  type="button"
+                  className={addMode === "measure" ? "active" : "secondary"}
+                  onClick={() => { setAddMode((v) => v === "measure" ? null : "measure"); setMeasurePts([]); setMeasureResult(null); setEditingPin(null); setRouteFrom(null); }}
+                >
+                  {addMode === "measure" ? (measurePts.length === 0 ? "Click start…" : measurePts.length === 1 ? "Click end…" : "Click to clear") : "Measure"}
                 </button>
                 <button type="button" onClick={saveMap}>Save</button>
                 <button type="button" className="danger" onClick={deleteMap}>Delete map</button>
               </div>
             </div>
 
+            {measureResult && (
+              <div style={{ padding: "6px 12px", background: "var(--bg-elevated)", borderBottom: "1px solid var(--border-soft)", fontSize: 13 }}>
+                Distance: <strong>{measureResult}</strong>
+                <button type="button" className="linklike" style={{ marginLeft: 12, fontSize: 12 }} onClick={() => { setMeasurePts([]); setMeasureResult(null); setAddMode(null); }}>Clear</button>
+              </div>
+            )}
+
             <div className={addMode ? "map-canvas placing" : "map-canvas"} onClick={handleCanvasClick}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`/campaign-media/${campaign.id}/${encodeURIComponent(map.image)}`} alt={map.name} />
+              <img
+                src={`/campaign-media/${campaign.id}/${encodeURIComponent(map.image)}`}
+                alt={map.name}
+                onLoad={(e) => {
+                  const img = e.currentTarget;
+                  if (img.naturalWidth && img.naturalHeight) setImageAspect(img.naturalWidth / img.naturalHeight);
+                }}
+              />
 
-              {/* SVG overlay for routes and regions */}
+              {/* SVG overlay for routes, regions, and measure */}
               <svg className="map-overlay-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
                 {(map.regions || []).filter((r) => !hiddenLayers.has(r.layer || "default")).map((region, i) => (
                   <g key={i}>
@@ -287,16 +360,32 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
                     </g>
                   );
                 })}
+                {/* Measure line */}
+                {measurePts.length === 2 && (
+                  <g>
+                    <line
+                      x1={measurePts[0].x * 100} y1={measurePts[0].y * 100}
+                      x2={measurePts[1].x * 100} y2={measurePts[1].y * 100}
+                      stroke="var(--gold)" strokeWidth="0.7" strokeDasharray="2,1" strokeLinecap="round"
+                    />
+                    <circle cx={measurePts[0].x * 100} cy={measurePts[0].y * 100} r="1" fill="var(--gold)" />
+                    <circle cx={measurePts[1].x * 100} cy={measurePts[1].y * 100} r="1" fill="var(--gold)" />
+                  </g>
+                )}
+                {measurePts.length === 1 && (
+                  <circle cx={measurePts[0].x * 100} cy={measurePts[0].y * 100} r="1" fill="var(--gold)" />
+                )}
               </svg>
 
               {visiblePins.map((pin, index) => {
                 const pinIndex = map.pins.indexOf(pin);
                 const isRouteFrom = routeFrom === pinIndex;
+                const imgSrc = pin.image ? `/campaign-media/${campaign.id}/${encodeURIComponent(pin.image)}` : null;
                 return (
                   <button
                     type="button"
                     key={pinIndex}
-                    className={`map-pin${pin.pageSlug || pin.mapSlug ? "" : " unlinked"}${editingPin === pinIndex ? " editing" : ""}${isRouteFrom ? " route-from" : ""}`}
+                    className={`map-pin${pin.pageSlug || pin.mapSlug ? "" : " unlinked"}${editingPin === pinIndex ? " editing" : ""}${isRouteFrom ? " route-from" : ""}${imgSrc ? " map-pin-image" : ""}`}
                     style={{ left: `${pin.x * 100}%`, top: `${pin.y * 100}%` }}
                     title={pin.label}
                     onClick={(e) => {
@@ -308,7 +397,12 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
                       setEditingRoute(null);
                     }}
                   >
-                    <span className="map-pin-icon">{pin.icon || "📍"}</span>
+                    {imgSrc ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={imgSrc} alt={pin.label} className="map-pin-portrait" />
+                    ) : (
+                      <span className="map-pin-icon">{pin.icon || "📍"}</span>
+                    )}
                     <span className="map-pin-label">{pin.label}</span>
                   </button>
                 );
@@ -362,11 +456,17 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
                     <label>Icon
                       <div className="map-icon-grid">
                         {PIN_ICONS.map((icon) => (
-                          <button key={icon} type="button" className={`map-icon-btn${pin.icon === icon ? " active" : ""}`} onClick={() => updatePin(editingPin, { icon })}>
+                          <button key={icon} type="button" className={`map-icon-btn${pin.icon === icon && !pin.image ? " active" : ""}`} onClick={() => updatePin(editingPin, { icon, image: undefined })}>
                             {icon}
                           </button>
                         ))}
                       </div>
+                    </label>
+                    <label>Portrait image
+                      <select value={pin.image || ""} onChange={(e) => updatePin(editingPin, { image: e.target.value || undefined })}>
+                        <option value="">— use icon above —</option>
+                        {images.map((img) => <option key={img} value={img}>{img}</option>)}
+                      </select>
                     </label>
                     <label>Layer
                       <select value={pin.layer || "default"} onChange={(e) => updatePin(editingPin, { layer: e.target.value })}>
@@ -402,7 +502,7 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
                 <div className="map-pin-list">
                   {map.pins.map((pin, index) => (
                     <div key={index} className="map-pin-list-row" onClick={() => setEditingPin(index)}>
-                      <span>{pin.icon || "📍"}</span>
+                      <span>{pin.image ? "🖼" : (pin.icon || "📍")}</span>
                       <span>{pin.label || "Unnamed"}</span>
                       <span className="muted" style={{ fontSize: 12 }}>{layers.find((l) => l.id === (pin.layer || "default"))?.name || pin.layer}</span>
                       {pin.pageSlug && <span className="tag-chip" style={{ fontSize: 11 }}>page</span>}

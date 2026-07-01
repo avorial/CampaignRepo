@@ -1172,6 +1172,28 @@ button.nav-link.active {
   pointer-events: none;
 }
 
+.map-pin.map-pin-image {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid var(--border-strong);
+  background: var(--bg-elevated);
+}
+
+.map-pin.map-pin-image.editing {
+  border-color: var(--gold);
+}
+
+.map-pin-portrait {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+
 .map-pin.editing {
   border-color: var(--gold);
   border-radius: 50%;
