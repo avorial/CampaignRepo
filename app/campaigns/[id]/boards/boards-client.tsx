@@ -2,13 +2,15 @@
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
-type BoardNode = { id: string; type: "page" | "note"; x: number; y: number; w?: number; h?: number; pageSlug?: string; text?: string; color?: string };
+type BoardNode = { id: string; type: "page" | "note" | "image"; x: number; y: number; w?: number; h?: number; pageSlug?: string; text?: string; color?: string; imagePath?: string };
 type BoardEdge = { id: string; from: string; to: string; label?: string };
 type Board = { slug: string; name: string; nodes: BoardNode[]; edges: BoardEdge[]; sha?: string };
 type KnownPage = { slug: string; name: string; category: string };
+type MediaItem = { name: string; path: string; downloadUrl: string; mediaType: string };
 
 const NOTE_COLORS = ["#3a2f10", "#0a2a1f", "#1a1a3a", "#2a1a2a", "#1a2a2a"];
 const GRID = 20;
+const WIKI_CATEGORIES = ["character", "npc", "location", "event", "faction", "item", "lore", "session", "quest"];
 
 function snap(v: number) { return Math.round(v / GRID) * GRID; }
 function uid() { return Math.random().toString(36).slice(2, 9); }
@@ -17,6 +19,7 @@ export default function BoardsClient({ campaignId }: { campaignId: number }) {
   const api = `/api/campaigns/${campaignId}/boards`;
   const [boards, setBoards] = useState<Board[]>([]);
   const [pages, setPages] = useState<KnownPage[]>([]);
+  const [media, setMedia] = useState<MediaItem[]>([]);
   const [selected, setSelected] = useState("");
   const [message, setMessage] = useState("");
   const [dirty, setDirty] = useState(false);
@@ -26,8 +29,15 @@ export default function BoardsClient({ campaignId }: { campaignId: number }) {
   const [edgeStart, setEdgeStart] = useState<string | null>(null);
   const [editingNode, setEditingNode] = useState<string | null>(null);
   const [showPagePicker, setShowPagePicker] = useState(false);
+  const [showImagePicker, setShowImagePicker] = useState(false);
   const [pageFilter, setPageFilter] = useState("");
+  const [imageFilter, setImageFilter] = useState("");
   const [newBoardName, setNewBoardName] = useState("");
+  const [canvasSearch, setCanvasSearch] = useState("");
+
+  // Promote-to-page modal state
+  const [promotingNodeId, setPromotingNodeId] = useState<string | null>(null);
+  const [promoteForm, setPromoteForm] = useState({ name: "", category: "character", visibility: "gm" as "gm" | "players", busy: false });
 
   // Pan/zoom state
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -49,6 +59,9 @@ export default function BoardsClient({ campaignId }: { campaignId: number }) {
     });
     fetch(`/api/campaigns/${campaignId}/pages`).then((r) => r.json()).then((d) =>
       setPages(((d.pages || []) as KnownPage[]).map((p: any) => ({ slug: p.slug, name: p.frontmatter?.name || p.slug, category: p.frontmatter?.category || "" })))
+    );
+    fetch(`/api/campaigns/${campaignId}/media`).then((r) => r.json()).then((d) =>
+      setMedia(((d.media || []) as MediaItem[]).filter((m) => m.mediaType === "image"))
     );
   }, [campaignId]);
 
@@ -119,6 +132,21 @@ export default function BoardsClient({ campaignId }: { campaignId: number }) {
     setTool("select");
   }
 
+  function addImageNode(imagePath: string) {
+    if (!board) return;
+    const img = media.find((m) => m.path === imagePath);
+    if (!img) return;
+    const id = uid();
+    const cx = (-pan.x + 400) / zoom + Math.random() * 60 - 30;
+    const cy = (-pan.y + 300) / zoom + Math.random() * 60 - 30;
+    const node: BoardNode = { id, type: "image", x: snap(cx), y: snap(cy), imagePath, text: img.name, w: 200, h: 150 };
+    patchBoard({ nodes: [...board.nodes, node] });
+    setSelectedNode(id);
+    setShowImagePicker(false);
+    setImageFilter("");
+    setTool("select");
+  }
+
   function deleteNode(id: string) {
     if (!board) return;
     patchBoard({
@@ -142,6 +170,48 @@ export default function BoardsClient({ campaignId }: { campaignId: number }) {
   function deleteEdge(id: string) {
     if (!board) return;
     patchBoard({ edges: board.edges.filter((e) => e.id !== id) });
+  }
+
+  async function promoteToPage() {
+    if (!promotingNodeId || !board) return;
+    const node = board.nodes.find((n) => n.id === promotingNodeId);
+    if (!node || node.type !== "note") return;
+    setPromoteForm((f) => ({ ...f, busy: true }));
+    const res = await fetch(`/api/campaigns/${campaignId}/pages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: promoteForm.name, category: promoteForm.category, visibility: promoteForm.visibility })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setMessage(data.error || "Could not create page.");
+      setPromoteForm((f) => ({ ...f, busy: false }));
+      return;
+    }
+    const slug: string = data.slug;
+    // Write note content into the new page body
+    if (node.text && node.text !== "New note") {
+      const pageRes = await fetch(`/api/campaigns/${campaignId}/pages/${slug}`);
+      if (pageRes.ok) {
+        const pageData = await pageRes.json();
+        await fetch(`/api/campaigns/${campaignId}/pages/${slug}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ body: node.text, sha: pageData.sha })
+        });
+      }
+    }
+    // Convert the note node to a page node
+    const updatedNodes = board.nodes.map((n) =>
+      n.id === promotingNodeId ? { ...n, type: "page" as const, pageSlug: slug, text: promoteForm.name, color: undefined } : n
+    );
+    patchBoard({ nodes: updatedNodes });
+    setPages((ps) => [...ps, { slug, name: promoteForm.name, category: promoteForm.category }]);
+    setSelectedNode(promotingNodeId);
+    setPromotingNodeId(null);
+    setPromoteForm({ name: "", category: "character", visibility: "gm", busy: false });
+    setMessage("Page created.");
+    setTimeout(() => setMessage(""), 2000);
   }
 
   // ── Canvas interactions ─────────────────────────────────────────────────────
@@ -220,6 +290,15 @@ export default function BoardsClient({ campaignId }: { campaignId: number }) {
   }
 
   const filteredPages = pages.filter((p) => !pageFilter || p.name.toLowerCase().includes(pageFilter.toLowerCase()) || p.category.toLowerCase().includes(pageFilter.toLowerCase()));
+  const filteredMedia = media.filter((m) => !imageFilter || m.name.toLowerCase().includes(imageFilter.toLowerCase()));
+
+  const searchLower = canvasSearch.toLowerCase();
+  function nodeMatchesSearch(node: BoardNode) {
+    if (!searchLower) return true;
+    if (node.text?.toLowerCase().includes(searchLower)) return true;
+    if (node.pageSlug?.toLowerCase().includes(searchLower)) return true;
+    return false;
+  }
 
   if (!boards.length && !newBoardName) {
     return (
@@ -253,12 +332,24 @@ export default function BoardsClient({ campaignId }: { campaignId: number }) {
         {board && (
           <>
             <div className="field-group">
+              <label>Search nodes
+                <input placeholder="Filter canvas…" value={canvasSearch} onChange={(e) => setCanvasSearch(e.target.value)} />
+              </label>
+              {canvasSearch && (
+                <p className="muted" style={{ fontSize: 12 }}>
+                  {board.nodes.filter(nodeMatchesSearch).length} of {board.nodes.length} shown
+                </p>
+              )}
+            </div>
+
+            <div className="field-group">
               <h3>Tools</h3>
               <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                 <button type="button" className={tool === "select" ? "active" : "secondary"} onClick={() => { setTool("select"); setEdgeStart(null); }}>Select</button>
                 <button type="button" className={tool === "note" ? "active" : "secondary"} onClick={() => { setTool("note"); setEdgeStart(null); }}>Note</button>
                 <button type="button" className={tool === "edge" ? "active" : "secondary"} onClick={() => { setTool("edge"); setSelectedNode(null); }}>Edge</button>
                 <button type="button" className="secondary" onClick={() => setShowPagePicker(true)}>+ Page</button>
+                <button type="button" className="secondary" onClick={() => setShowImagePicker(true)}>+ Image</button>
               </div>
               {tool === "note" && <p className="muted" style={{ fontSize: 12 }}>Click canvas to place a note.</p>}
               {tool === "edge" && <p className="muted" style={{ fontSize: 12 }}>{edgeStart ? "Click a target node." : "Click source node."}</p>}
@@ -282,11 +373,27 @@ export default function BoardsClient({ campaignId }: { campaignId: number }) {
                           ))}
                         </div>
                       </label>
+                      <button
+                        type="button"
+                        className="secondary"
+                        style={{ marginTop: 4, width: "100%" }}
+                        onClick={() => {
+                          const firstLine = (node.text || "").split("\n")[0].trim() || "New page";
+                          setPromoteForm({ name: firstLine, category: "character", visibility: "gm", busy: false });
+                          setPromotingNodeId(node.id);
+                        }}
+                      >
+                        Promote to page →
+                      </button>
                     </>
                   )}
                   {node.type === "page" && node.pageSlug && (
                     <a href={`/campaigns/${campaignId}/pages/${node.pageSlug}`} target="_blank" rel="noreferrer" style={{ fontSize: 13 }}>Open page →</a>
                   )}
+                  {node.type === "image" && node.imagePath && (() => {
+                    const img = media.find((m) => m.path === node.imagePath);
+                    return img ? <p className="muted" style={{ fontSize: 12 }}>{img.name}</p> : null;
+                  })()}
                   <button type="button" className="danger" style={{ marginTop: 4 }} onClick={() => deleteNode(node.id)}>Delete node</button>
                 </div>
               );
@@ -339,43 +446,60 @@ export default function BoardsClient({ campaignId }: { campaignId: number }) {
               </svg>
 
               {/* Nodes */}
-              {board.nodes.map((node) => (
-                <div
-                  key={node.id}
-                  className={`board-node board-node-${node.type}${selectedNode === node.id ? " selected" : ""}${edgeStart === node.id ? " edge-source" : ""}`}
-                  style={{
-                    position: "absolute",
-                    left: node.x,
-                    top: node.y,
-                    width: node.w || (node.type === "page" ? 180 : 180),
-                    minHeight: node.h || 80,
-                    background: node.type === "note" ? (node.color || NOTE_COLORS[0]) : "var(--bg-elevated)",
-                    cursor: tool === "edge" ? "cell" : "move"
-                  }}
-                  onMouseDown={(e) => onNodeMouseDown(e, node.id)}
-                  onDoubleClick={() => { if (node.type === "note") setEditingNode(node.id); }}
-                >
-                  {node.type === "page" && (
-                    <>
-                      <div className="board-node-label">{node.text || node.pageSlug}</div>
-                      <div className="board-node-hint">{pages.find((p) => p.slug === node.pageSlug)?.category || "page"}</div>
-                    </>
-                  )}
-                  {node.type === "note" && (
-                    editingNode === node.id ? (
-                      <textarea
-                        autoFocus
-                        value={node.text || ""}
-                        onChange={(e) => updateNodeText(node.id, e.target.value)}
-                        onBlur={() => setEditingNode(null)}
-                        style={{ background: "transparent", border: "none", outline: "none", resize: "none", width: "100%", height: "100%", color: "inherit", font: "inherit", padding: 0 }}
-                      />
-                    ) : (
-                      <div className="board-node-text">{node.text || "Note"}</div>
-                    )
-                  )}
-                </div>
-              ))}
+              {board.nodes.map((node) => {
+                const dimmed = searchLower !== "" && !nodeMatchesSearch(node);
+                return (
+                  <div
+                    key={node.id}
+                    className={`board-node board-node-${node.type}${selectedNode === node.id ? " selected" : ""}${edgeStart === node.id ? " edge-source" : ""}`}
+                    style={{
+                      position: "absolute",
+                      left: node.x,
+                      top: node.y,
+                      width: node.w || 180,
+                      minHeight: node.h || 80,
+                      background: node.type === "note" ? (node.color || NOTE_COLORS[0]) : node.type === "image" ? "transparent" : "var(--bg-elevated)",
+                      cursor: tool === "edge" ? "cell" : "move",
+                      opacity: dimmed ? 0.2 : 1,
+                      transition: "opacity 0.15s"
+                    }}
+                    onMouseDown={(e) => onNodeMouseDown(e, node.id)}
+                    onDoubleClick={() => { if (node.type === "note") setEditingNode(node.id); }}
+                  >
+                    {node.type === "page" && (
+                      <>
+                        <div className="board-node-label">{node.text || node.pageSlug}</div>
+                        <div className="board-node-hint">{pages.find((p) => p.slug === node.pageSlug)?.category || "page"}</div>
+                      </>
+                    )}
+                    {node.type === "note" && (
+                      editingNode === node.id ? (
+                        <textarea
+                          autoFocus
+                          value={node.text || ""}
+                          onChange={(e) => updateNodeText(node.id, e.target.value)}
+                          onBlur={() => setEditingNode(null)}
+                          style={{ background: "transparent", border: "none", outline: "none", resize: "none", width: "100%", height: "100%", color: "inherit", font: "inherit", padding: 0 }}
+                        />
+                      ) : (
+                        <div className="board-node-text">{node.text || "Note"}</div>
+                      )
+                    )}
+                    {node.type === "image" && (() => {
+                      const img = media.find((m) => m.path === node.imagePath);
+                      if (!img) return <div className="board-node-hint" style={{ padding: 8 }}>Image not found</div>;
+                      return (
+                        <img
+                          src={img.downloadUrl}
+                          alt={node.text || img.name}
+                          draggable={false}
+                          style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "var(--radius-lg)", display: "block", pointerEvents: "none", userSelect: "none" }}
+                        />
+                      );
+                    })()}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -383,6 +507,7 @@ export default function BoardsClient({ campaignId }: { campaignId: number }) {
         <div className="panel"><p className="muted">Select or create a board.</p></div>
       )}
 
+      {/* Page picker modal */}
       {showPagePicker && (
         <div className="board-page-picker" onClick={(e) => { if (e.target === e.currentTarget) setShowPagePicker(false); }}>
           <div className="panel board-page-picker-inner">
@@ -397,6 +522,60 @@ export default function BoardsClient({ campaignId }: { campaignId: number }) {
               {!filteredPages.length && <p className="muted">No pages match.</p>}
             </div>
             <button type="button" className="secondary" onClick={() => { setShowPagePicker(false); setPageFilter(""); }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Image picker modal */}
+      {showImagePicker && (
+        <div className="board-page-picker" onClick={(e) => { if (e.target === e.currentTarget) setShowImagePicker(false); }}>
+          <div className="panel board-page-picker-inner">
+            <h3>Add image to board</h3>
+            <input autoFocus placeholder="Filter images…" value={imageFilter} onChange={(e) => setImageFilter(e.target.value)} />
+            <div className="results board-page-picker-list" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {filteredMedia.map((m) => (
+                <button
+                  type="button"
+                  key={m.path}
+                  onClick={() => addImageNode(m.path)}
+                  style={{ padding: 6, display: "flex", flexDirection: "column", gap: 4, alignItems: "center", background: "var(--bg-elevated)", border: "1px solid var(--border-soft)", borderRadius: "var(--radius-lg)", cursor: "pointer" }}
+                >
+                  <img src={m.downloadUrl} alt={m.name} style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", borderRadius: "var(--radius-md)" }} />
+                  <span style={{ fontSize: 11, color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>{m.name}</span>
+                </button>
+              ))}
+              {!filteredMedia.length && <p className="muted" style={{ gridColumn: "1/-1" }}>No images uploaded yet.</p>}
+            </div>
+            <button type="button" className="secondary" onClick={() => { setShowImagePicker(false); setImageFilter(""); }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Promote-to-page modal */}
+      {promotingNodeId && (
+        <div className="board-page-picker" onClick={(e) => { if (e.target === e.currentTarget && !promoteForm.busy) setPromotingNodeId(null); }}>
+          <div className="panel board-page-picker-inner">
+            <h3>Promote note to wiki page</h3>
+            <label>Page name
+              <input autoFocus value={promoteForm.name} onChange={(e) => setPromoteForm((f) => ({ ...f, name: e.target.value }))} placeholder="Page name…" />
+            </label>
+            <label>Category
+              <select value={promoteForm.category} onChange={(e) => setPromoteForm((f) => ({ ...f, category: e.target.value }))}>
+                {WIKI_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
+            <label>Visibility
+              <select value={promoteForm.visibility} onChange={(e) => setPromoteForm((f) => ({ ...f, visibility: e.target.value as "gm" | "players" }))}>
+                <option value="gm">GM only</option>
+                <option value="players">Players</option>
+              </select>
+            </label>
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button onClick={promoteToPage} disabled={!promoteForm.name.trim() || promoteForm.busy}>
+                {promoteForm.busy ? "Creating…" : "Create page"}
+              </button>
+              <button type="button" className="secondary" onClick={() => setPromotingNodeId(null)} disabled={promoteForm.busy}>Cancel</button>
+            </div>
           </div>
         </div>
       )}
