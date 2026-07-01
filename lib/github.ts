@@ -169,6 +169,11 @@ export async function getContent(token: string, campaign: Pick<Campaign, "owner"
   return gh<{ content: string; sha: string; type: string }>(token, `/repos/${campaign.owner}/${campaign.repo}/contents/${encoded}?ref=${campaign.branch}`);
 }
 
+export async function getContentAtRef(token: string, campaign: Pick<Campaign, "owner" | "repo">, filePath: string, ref: string) {
+  const encoded = filePath.split("/").map(encodeURIComponent).join("/");
+  return gh<{ content: string; sha: string; type: string }>(token, `/repos/${campaign.owner}/${campaign.repo}/contents/${encoded}?ref=${encodeURIComponent(ref)}`);
+}
+
 export async function getRawFile(token: string, campaign: Pick<Campaign, "owner" | "repo" | "branch">, filePath: string) {
   const encoded = filePath.split("/").map(encodeURIComponent).join("/");
   const authToken = await appInstallationAccessToken(token);

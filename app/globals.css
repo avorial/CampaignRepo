@@ -5091,13 +5091,13 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
 }
 
 .history-commit {
-  align-items: baseline;
+  align-items: center;
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
   display: grid;
-  gap: 3px;
-  grid-template-columns: 1fr auto;
+  gap: 3px 8px;
+  grid-template-columns: 1fr auto auto;
   grid-template-rows: auto auto;
   padding: 10px 12px;
 }
@@ -5126,6 +5126,12 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   font-family: var(--font-mono);
   font-size: var(--text-label-sm);
   grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: center;
+}
+
+.history-commit > button {
+  grid-column: 3;
   grid-row: 1 / 3;
   align-self: center;
 }

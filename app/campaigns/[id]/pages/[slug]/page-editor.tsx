@@ -58,6 +58,7 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
   const [showHistory, setShowHistory] = useState(false);
   const [historyCommits, setHistoryCommits] = useState<{ sha: string; url: string; message: string; author: string; date: string }[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [restoringSha, setRestoringSha] = useState<string | null>(null);
   const [slashMenu, setSlashMenu] = useState<{ query: string; insertStart: number; top: number; left: number } | null>(null);
   const [slashMenuIdx, setSlashMenuIdx] = useState(0);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
@@ -847,6 +848,30 @@ notes: ""
                   <span className="history-meta">{new Date(c.date).toLocaleDateString()} · {c.author}</span>
                   <a href={c.url} target="_blank" rel="noreferrer" className="quiet-link history-message">{c.message}</a>
                   <span className="history-sha">{c.sha.slice(0, 7)}</span>
+                  <button
+                    type="button"
+                    className="secondary"
+                    style={{ fontSize: "11px", padding: "2px 8px" }}
+                    disabled={restoringSha === c.sha}
+                    onClick={async () => {
+                      if (!window.confirm(`Restore page to the version from "${c.message}" (${c.sha.slice(0, 7)})?\n\nThis will load that version into the editor — you can review before saving.`)) return;
+                      setRestoringSha(c.sha);
+                      setMessage("Loading historical version…");
+                      try {
+                        const res = await fetch(`/api/campaigns/${campaign.id}/pages/${slug}/history?sha=${c.sha}`);
+                        const data = await res.json();
+                        if (!res.ok) { setMessage(data.error || "Could not load that version."); return; }
+                        setContent(data.text || "");
+                        setIsEditing(true);
+                        setShowHistory(false);
+                        setMode("gm");
+                        setMessage(`Restored to ${c.sha.slice(0, 7)} — review and save to commit.`);
+                      } catch { setMessage("Failed to load historical version."); }
+                      finally { setRestoringSha(null); }
+                    }}
+                  >
+                    {restoringSha === c.sha ? "Loading…" : "Restore"}
+                  </button>
                 </div>
               ))}
             </div>
