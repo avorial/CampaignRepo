@@ -57,12 +57,8 @@
   --wash-gold: rgba(200, 160, 55, 0.14);
   --wash-purple: rgba(46, 76, 158, 0.10);
 
-  --backdrop:
-    radial-gradient(900px 620px at 82% 8%, rgba(202, 168, 92, 0.20), transparent 60%),
-    radial-gradient(1000px 820px at 14% 92%, rgba(150, 45, 28, 0.10), transparent 62%),
-    radial-gradient(1200px 900px at 50% 50%, rgba(255, 250, 235, 0.55), transparent 70%),
-    linear-gradient(160deg, #e6d7b2 0%, #dccaa0 48%, #d2bd8f 100%); /* @kind other */
-  --backdrop-size: auto, auto, auto, auto;
+  --backdrop: #e9dcbe;
+  --backdrop-size: auto;
 }
 
 /* ============================ HORROR ============================= */

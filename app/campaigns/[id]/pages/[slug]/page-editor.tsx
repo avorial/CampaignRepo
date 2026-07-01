@@ -122,6 +122,8 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
   const blockDragFrom = useRef<number | null>(null);
   const [slashMenu, setSlashMenu] = useState<{ query: string; insertStart: number; top: number; left: number } | null>(null);
   const [slashMenuIdx, setSlashMenuIdx] = useState(0);
+  const [wikiMenu, setWikiMenu] = useState<{ query: string; insertStart: number; top: number; left: number } | null>(null);
+  const [wikiMenuIdx, setWikiMenuIdx] = useState(0);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [coEditors, setCoEditors] = useState<{ userId: number; name: string }[]>([]);
   const [categoryProps, setCategoryProps] = useState<Record<string, { name: string; type: string }[]>>({});
@@ -675,6 +677,27 @@ notes: ""
   }
 
   function onEditorKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (wikiMenu && filteredWikiPages.length > 0) {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setWikiMenuIdx((i) => (i + 1) % filteredWikiPages.length);
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setWikiMenuIdx((i) => (i - 1 + filteredWikiPages.length) % filteredWikiPages.length);
+        return;
+      }
+      if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        onWikiSelect(filteredWikiPages[wikiMenuIdx]);
+        return;
+      }
+      if (event.key === "Escape") {
+        setWikiMenu(null);
+        return;
+      }
+    }
     if (slashMenu && filteredSlashCmds.length > 0) {
       if (event.key === "ArrowDown") {
         event.preventDefault();
@@ -785,6 +808,21 @@ notes: ""
     const currentLine = beforeCursor.slice(lineStart);
     const slashMatch = currentLine.match(/^\/(\w*)$/);
 
+    // Detect [[wikilink typing — look for [[ that hasn't been closed yet
+    const wikiMatch = beforeCursor.match(/\[\[([^\][]*)$/);
+    if (wikiMatch && textareaRef.current) {
+      const query = wikiMatch[1];
+      const insertStart = beforeCursor.lastIndexOf("[[");
+      const linesBeforeCursor = beforeCursor.split("\n").length;
+      const lineHeight = 22;
+      const rect = textareaRef.current.getBoundingClientRect();
+      const menuTop = rect.top + linesBeforeCursor * lineHeight - textareaRef.current.scrollTop + lineHeight + 4;
+      setWikiMenu({ query, insertStart, top: menuTop, left: rect.left + 8 });
+      setWikiMenuIdx(0);
+      setSlashMenu(null);
+    } else {
+      setWikiMenu(null);
+
     if (slashMatch && textareaRef.current) {
       const query = slashMatch[1].toLowerCase();
       const linesBeforeLine = beforeCursor.slice(0, lineStart).split("\n").length;
@@ -796,11 +834,37 @@ notes: ""
     } else {
       setSlashMenu(null);
     }
+    }
   }
 
   const filteredSlashCmds = slashMenu
     ? SLASH_COMMANDS.filter((c) => !slashMenu.query || c.id.startsWith(slashMenu.query) || c.label.toLowerCase().includes(slashMenu.query))
     : [];
+
+  const filteredWikiPages = useMemo(() => {
+    if (!wikiMenu) return [];
+    const q = wikiMenu.query.toLowerCase();
+    return knownPages
+      .filter((p) => !q || (p.frontmatter?.name || p.slug).toLowerCase().includes(q))
+      .slice(0, 10);
+  }, [wikiMenu, knownPages]);
+
+  function onWikiSelect(page: typeof knownPages[0]) {
+    if (!textareaRef.current || !wikiMenu) return;
+    const textarea = textareaRef.current;
+    const name = page.frontmatter?.name || page.slug;
+    const before = content.slice(0, wikiMenu.insertStart);
+    const after = content.slice(textarea.selectionStart);
+    const replacement = `[[${name}]]`;
+    const next = before + replacement + after;
+    setContent(next);
+    setWikiMenu(null);
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const cursor = wikiMenu.insertStart + replacement.length;
+      textarea.setSelectionRange(cursor, cursor);
+    });
+  }
 
   async function compareSourceImport() {
     if (!frontmatter.sourceImport) return;
@@ -1547,6 +1611,20 @@ notes: ""
                     <span>{cmd.id}</span>
                   </li>
                 ))}
+              </ul>
+            )}
+            {wikiMenu && filteredWikiPages.length > 0 && (
+              <ul className="slash-menu wiki-menu" style={{ top: wikiMenu.top, left: wikiMenu.left }}>
+                {filteredWikiPages.map((page, i) => {
+                  const name = page.frontmatter?.name || page.slug;
+                  const cat = page.frontmatter?.category || "";
+                  return (
+                    <li key={page.slug} className={i === wikiMenuIdx ? "slash-menu-item active" : "slash-menu-item"} onMouseEnter={() => setWikiMenuIdx(i)} onMouseDown={(e) => { e.preventDefault(); onWikiSelect(page); }}>
+                      <strong>{name}</strong>
+                      {cat && <span>{cat}</span>}
+                    </li>
+                  );
+                })}
               </ul>
             )}
             <div className="editor-split">

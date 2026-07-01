@@ -31,6 +31,7 @@ export default function DashboardClient({
   const [tokens, setTokens] = useState<ApiToken[]>([]);
   const [newToken, setNewToken] = useState("");
   const [reviewGroups, setReviewGroups] = useState<any[]>([]);
+  const [repoView, setRepoView] = useState<"grid" | "marquee">("grid");
   const [expandedPanels, setExpandedPanels] = useState({
     github: false,
     build: true,
@@ -139,7 +140,42 @@ export default function DashboardClient({
       </section>
 
       <section className="band repos-band">
-        <h2>Connected repos</h2>
+        <div className="repos-band-head">
+          <h2>Connected repos</h2>
+          {repos.length > 0 && (
+            <div className="segmented">
+              <button type="button" className={repoView === "grid" ? "active" : ""} onClick={() => setRepoView("grid")} title="Grid view" aria-pressed={repoView === "grid"}>Grid</button>
+              <button type="button" className={repoView === "marquee" ? "active" : ""} onClick={() => setRepoView("marquee")} title="Marquee view" aria-pressed={repoView === "marquee"}>Marquee</button>
+            </div>
+          )}
+        </div>
+        {repoView === "marquee" && repos.length > 0 ? (
+          <div className="repo-marquee">
+            <div className="repo-marquee-track">
+              {[...repos, ...repos].map((campaign, i) => {
+                const logo = gamePackLogos[campaign.gameType];
+                const plateClass = darkPlatePacks.has(campaign.gameType) ? " repo-logo-plate-dark" : "";
+                return (
+                  <div className="repo-card" key={`${campaign.id}-${i}`}>
+                    <Link className="repo-card-link" href={`/campaigns/${campaign.id}`}>
+                      <div className="repo-head">
+                        {logo ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <span className={`repo-logo-plate${plateClass}`}><img src={logo} alt={campaign.gameType} /></span>
+                        ) : (
+                          <span className="repo-logo-plate repo-logo-initial" aria-hidden>{campaign.gameType.charAt(0).toUpperCase()}</span>
+                        )}
+                        <strong>{campaign.name}</strong>
+                      </div>
+                      <span>{campaign.storageBackend === "local" ? (campaign.localPath || "local folder") : `${campaign.owner}/${campaign.repo}`}</span>
+                      <small>{campaign.gameType}{campaign.storageBackend !== "local" && ` - ${campaign.branch}`} - {campaign.storageBackend === "local" ? "local" : "github"} - {campaign.role}</small>
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
         <div className="repo-grid">
           {repos.map((campaign) => {
             const logo = gamePackLogos[campaign.gameType];
@@ -184,6 +220,7 @@ export default function DashboardClient({
             </div>
           )}
         </div>
+        )}
       </section>
 
       <section className="dashboard-grid">
