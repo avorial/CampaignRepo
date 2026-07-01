@@ -6,7 +6,7 @@ import type { Campaign } from "@/lib/types";
 type Month = { name: string; days: number };
 type WorldDate = { year: number; month: number; day: number };
 type Calendar = { months: Month[]; weekdays: string[]; eraName?: string; currentDate: WorldDate };
-type WorldEvent = { slug: string; title: string; worldDate: WorldDate; kind: "session" | "event"; href: string };
+type WorldEvent = { slug: string; title: string; worldDate: WorldDate; kind: "session" | "event" | "quest"; href: string };
 
 // Pure date helpers (mirror lib/calendar; kept here so the client bundle stays
 // free of the server-only campaign.yaml loaders).
@@ -46,11 +46,12 @@ export default function CalendarClient({ campaign }: { campaign: Campaign }) {
 
   useEffect(() => {
     fetch(`${api}/calendar`).then((r) => (r.ok ? r.json() : null)).then((d) => d && setCal(d.calendar)).catch(() => setMessage("Could not load calendar."));
-    // Fetch sessions and event pages for the world timeline
+    // Fetch sessions, event pages, and quests for the world timeline
     Promise.all([
       fetch(`${api}/sessions`).then((r) => r.ok ? r.json() : { sessions: [] }).catch(() => ({ sessions: [] })),
       fetch(`${api}/pages`).then((r) => r.ok ? r.json() : { pages: [] }).catch(() => ({ pages: [] })),
-    ]).then(([sessData, pageData]) => {
+      fetch(`${api}/quests`).then((r) => r.ok ? r.json() : { quests: [] }).catch(() => ({ quests: [] })),
+    ]).then(([sessData, pageData, questData]) => {
       const evts: WorldEvent[] = [];
       for (const s of (sessData.sessions || [])) {
         if (s.frontmatter?.worldDate) {
@@ -60,6 +61,11 @@ export default function CalendarClient({ campaign }: { campaign: Campaign }) {
       for (const p of (pageData.pages || [])) {
         if (p.frontmatter?.worldDate) {
           evts.push({ slug: p.slug, title: p.frontmatter.name || p.slug, worldDate: p.frontmatter.worldDate, kind: "event", href: `${base}/pages/${p.slug}` });
+        }
+      }
+      for (const q of (questData.quests || [])) {
+        if (q.frontmatter?.worldDate) {
+          evts.push({ slug: q.slug, title: q.frontmatter.title || q.slug, worldDate: q.frontmatter.worldDate, kind: "quest", href: `${base}/quests/${q.slug}` });
         }
       }
       setEvents(evts);
@@ -149,7 +155,7 @@ function WorldTimeline({ cal, events }: { cal: Calendar; events: WorldEvent[] })
   return (
     <div className="panel">
       <h2>World timeline <span className="tsheet-count">{events.length}</span></h2>
-      <p className="muted" style={{ marginBottom: "12px" }}>Sessions and event pages with an in-world date set, sorted chronologically.</p>
+      <p className="muted" style={{ marginBottom: "12px" }}>Sessions, quests, and event pages with an in-world date set, sorted chronologically.</p>
       {past.length > 0 && (
         <>
           <h3 className="timeline-section-label">Past</h3>

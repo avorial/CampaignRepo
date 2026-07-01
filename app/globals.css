@@ -2639,6 +2639,7 @@ button.nav-link.active {
 .badge-failed { background: color-mix(in srgb, var(--error) 15%, transparent); border-color: color-mix(in srgb, var(--error) 35%, transparent); }
 .badge-session { background: color-mix(in srgb, var(--purple) 15%, transparent); border-color: color-mix(in srgb, var(--purple) 35%, transparent); }
 .badge-event { background: color-mix(in srgb, var(--gold) 15%, transparent); border-color: color-mix(in srgb, var(--gold) 35%, transparent); }
+.badge-quest { background: color-mix(in srgb, var(--teal, #2ca5a5) 15%, transparent); border-color: color-mix(in srgb, var(--teal, #2ca5a5) 35%, transparent); }
 
 .faction-clocks-grid { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 12px; }
 .faction-clock { display: flex; flex-direction: column; align-items: center; gap: 6px; }

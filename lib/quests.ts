@@ -5,6 +5,7 @@ import type { Campaign } from "@/lib/types";
 
 export type Objective = { text: string; done: boolean };
 export type Clock = { name: string; segments: number; filled: number };
+export type WorldDate = { year: number; month: number; day: number };
 export const QUEST_STATUSES = ["hook", "active", "completed", "failed"] as const;
 export type QuestStatus = (typeof QUEST_STATUSES)[number];
 
@@ -18,6 +19,7 @@ export type QuestFrontmatter = {
   participants: string[];
   locations: string[];
   clocks: Clock[];
+  worldDate?: WorldDate;
 };
 export type Quest = { slug: string; sha?: string; frontmatter: QuestFrontmatter; description: string };
 
@@ -58,7 +60,10 @@ export function parseQuest(slug: string, text: string, sha?: string): Quest {
       locations: Array.isArray(fm.locations) ? (fm.locations as unknown[]).map(String) : [],
       clocks: Array.isArray(fm.clocks)
         ? (fm.clocks as unknown[]).map((c) => ({ name: String((c as Clock)?.name ?? ""), segments: Number((c as Clock)?.segments ?? 8), filled: Number((c as Clock)?.filled ?? 0) }))
-        : []
+        : [],
+      worldDate: fm.worldDate && typeof fm.worldDate === "object" && !Array.isArray(fm.worldDate)
+        ? { year: Math.max(1, Number((fm.worldDate as Record<string, unknown>).year) || 1), month: Math.max(1, Number((fm.worldDate as Record<string, unknown>).month) || 1), day: Math.max(1, Number((fm.worldDate as Record<string, unknown>).day) || 1) }
+        : undefined
     },
     description
   };

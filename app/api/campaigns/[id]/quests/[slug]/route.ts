@@ -15,7 +15,8 @@ const saveSchema = z.object({
     objectives: z.array(z.object({ text: z.string(), done: z.boolean() })).default([]),
     participants: z.array(z.string()).default([]),
     locations: z.array(z.string()).default([]),
-    clocks: z.array(z.object({ name: z.string(), segments: z.number().int().min(2).max(20), filled: z.number().int().min(0) })).default([])
+    clocks: z.array(z.object({ name: z.string(), segments: z.number().int().min(2).max(20), filled: z.number().int().min(0) })).default([]),
+    worldDate: z.object({ year: z.number().int().min(1), month: z.number().int().min(1), day: z.number().int().min(1) }).optional()
   }),
   description: z.string().default("")
 });

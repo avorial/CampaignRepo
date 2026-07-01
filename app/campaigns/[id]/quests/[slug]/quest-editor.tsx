@@ -5,6 +5,7 @@ import type { Campaign } from "@/lib/types";
 
 type Objective = { text: string; done: boolean };
 type Clock = { name: string; segments: number; filled: number };
+type WorldDate = { year: number; month: number; day: number };
 type Frontmatter = {
   title: string;
   status: "hook" | "active" | "completed" | "failed";
@@ -15,6 +16,7 @@ type Frontmatter = {
   participants: string[];
   locations: string[];
   clocks: Clock[];
+  worldDate?: WorldDate;
 };
 
 function segPath(i: number, total: number, inner = 0.45): string {
@@ -159,6 +161,17 @@ export default function QuestEditor({ campaign, slug }: { campaign: Campaign; sl
             <option value="players">Players</option>
           </select>
         </label>
+
+        <div className="field-group">
+          <h3>In-world date</h3>
+          <p className="muted" style={{ margin: "0 0 6px", fontSize: "12px" }}>Pins this quest to a date on the world timeline.</p>
+          <div className="mapper-grid">
+            <label>Year<input type="number" min={1} value={fm.worldDate?.year ?? ""} placeholder="—" onChange={(e) => patch({ worldDate: e.target.value ? { year: Number(e.target.value), month: fm.worldDate?.month ?? 1, day: fm.worldDate?.day ?? 1 } : undefined })} /></label>
+            <label>Month<input type="number" min={1} value={fm.worldDate?.month ?? ""} placeholder="—" onChange={(e) => fm.worldDate && patch({ worldDate: { ...fm.worldDate, month: Number(e.target.value) } })} /></label>
+            <label>Day<input type="number" min={1} value={fm.worldDate?.day ?? ""} placeholder="—" onChange={(e) => fm.worldDate && patch({ worldDate: { ...fm.worldDate, day: Number(e.target.value) } })} /></label>
+          </div>
+          {fm.worldDate && <button type="button" className="linklike" style={{ fontSize: "12px" }} onClick={() => patch({ worldDate: undefined })}>Clear date</button>}
+        </div>
 
         {linkPicker("participants", addPart, setAddPart, "Participants")}
         {linkPicker("locations", addLoc, setAddLoc, "Locations")}
