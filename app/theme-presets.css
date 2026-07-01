@@ -10,30 +10,30 @@
    generic (system-agnostic). Apply with <html data-theme="scifi"> etc. */
 
 /* ============================ FANTASY ============================ */
-/* Parchment-light, engraved Roman caps, bronze + oxblood. Epic & literary. */
+/* Parchment-light, engraved Roman caps, bronze + ultramarine. Epic & literary. */
 [data-theme="fantasy"] {
-  --bg-base: #e8dbbd;
-  --bg-surface: #f6efdc;
-  --bg-elevated: #e2d4b2;
-  --bg-glass: rgba(246, 239, 220, 0.62);
-  --field-bg: #fcf7e9;
+  --bg-base: #d8c8a0;
+  --bg-surface: #f5edd6;
+  --bg-elevated: #fcf7e6;
+  --bg-glass: rgba(245, 237, 214, 0.76);
+  --field-bg: #fdf9ee;
 
-  --border-faint: rgba(92, 62, 22, 0.10);
-  --border-soft: rgba(92, 62, 22, 0.22);
-  --border-strong: rgba(92, 62, 22, 0.40);
+  --border-faint: rgba(150, 45, 28, 0.18);
+  --border-soft: rgba(150, 45, 28, 0.40);
+  --border-strong: rgba(150, 45, 28, 0.60);
 
-  --gold: #9a6b1f;
-  --gold-bright: #bd8628;
-  --gold-glow: rgba(154, 107, 31, 0.28);
-  --purple: #7c2b2b;        /* repurposed: oxblood secondary */
-  --purple-deep: #581c1c;
-  --purple-glow: rgba(124, 43, 43, 0.30);
+  --gold: #b08420;
+  --gold-bright: #d3ab38;
+  --gold-glow: rgba(200, 160, 55, 0.32);
+  --purple: #2e4c9e;        /* repurposed: ultramarine illumination */
+  --purple-deep: #203674;
+  --purple-glow: rgba(46, 76, 158, 0.30);
 
-  --text-primary: #2e2414;
-  --text-secondary: #6a583a;
-  --text-tertiary: #927c58;
-  --text-muted: #b6a47a;
-  --danger: #9d2b2b;
+  --text-primary: #2a2012;
+  --text-secondary: #63502f;
+  --text-tertiary: #8d7448;
+  --text-muted: #b19c70;
+  --danger: #a5321c;
 
   --font-display: "Cinzel", Georgia, serif;
   --font-body: "EB Garamond", Georgia, serif;
@@ -50,18 +50,19 @@
   --radius-pill: 999px;
   --control-h: 42px;
 
-  --shadow-panel: 0 18px 44px rgba(60, 40, 15, 0.22);
-  --shadow-pop: 0 10px 24px rgba(60, 40, 15, 0.18);
-  --ring-gold: 0 0 0 3px rgba(154, 107, 31, 0.28);
-  --ring-purple: 0 0 0 3px rgba(124, 43, 43, 0.28);
-  --wash-gold: rgba(154, 107, 31, 0.14);
-  --wash-purple: rgba(124, 43, 43, 0.10);
+  --shadow-panel: 0 18px 44px rgba(90, 60, 24, 0.22), 0 1px 4px rgba(90, 60, 24, 0.12);
+  --shadow-pop: 0 10px 24px rgba(90, 60, 24, 0.18);
+  --ring-gold: 0 0 0 3px rgba(200, 160, 55, 0.32);
+  --ring-purple: 0 0 0 3px rgba(46, 76, 158, 0.28);
+  --wash-gold: rgba(200, 160, 55, 0.14);
+  --wash-purple: rgba(46, 76, 158, 0.10);
 
   --backdrop:
-    radial-gradient(1100px 600px at 50% -12%, rgba(154, 107, 31, 0.16), transparent 60%),
-    linear-gradient(0deg, rgba(92, 62, 22, 0.035) 1px, transparent 1px),
-    #e6d8b8; /* @kind other */
-  --backdrop-size: auto, 7px 7px, auto;
+    radial-gradient(900px 620px at 82% 8%, rgba(202, 168, 92, 0.20), transparent 60%),
+    radial-gradient(1000px 820px at 14% 92%, rgba(150, 45, 28, 0.10), transparent 62%),
+    radial-gradient(1200px 900px at 50% 50%, rgba(255, 250, 235, 0.55), transparent 70%),
+    linear-gradient(160deg, #e6d7b2 0%, #dccaa0 48%, #d2bd8f 100%); /* @kind other */
+  --backdrop-size: auto, auto, auto, auto;
 }
 
 /* ============================ HORROR ============================= */
