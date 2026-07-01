@@ -62,6 +62,7 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
   const [slashMenuIdx, setSlashMenuIdx] = useState(0);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [coEditors, setCoEditors] = useState<{ userId: number; name: string }[]>([]);
+  const [categoryProps, setCategoryProps] = useState<Record<string, { name: string; type: string }[]>>({});
 
   useEffect(() => {
     if (!lightboxSrc) return;
@@ -140,6 +141,9 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
       fetch(`/api/campaigns/${campaign.id}/media`)
         .then((res) => res.json())
         .then((data) => setMedia(Array.isArray(data.media) ? data.media : []));
+      fetch(`/api/campaigns/${campaign.id}/category-properties`)
+        .then((res) => res.json())
+        .then((data) => setCategoryProps(data.categoryProperties || {}));
     }
   }, [campaign.id, canManage, loadPage, slug]);
 
@@ -930,6 +934,44 @@ notes: ""
             {filteredParentOptions.map((p) => <option key={p.slug} value={p.slug}>{p.frontmatter.name} · {p.frontmatter.category}</option>)}
           </select></label>
         </div>
+
+        {(categoryProps[frontmatter.category] || []).length > 0 && (
+          <div className="field-group">
+            <h3>Custom fields</h3>
+            {(categoryProps[frontmatter.category] || []).map((prop) => {
+              const customProps = (frontmatter.customProps || {}) as Record<string, unknown>;
+              const val = customProps[prop.name];
+              const update = (v: unknown) => updateField("customProps", { ...customProps, [prop.name]: v });
+              if (prop.type === "checkbox") {
+                return (
+                  <label key={prop.name} className="check">
+                    <input type="checkbox" checked={Boolean(val)} onChange={(e) => update(e.target.checked)} disabled={!fieldsEditable} />
+                    {prop.name}
+                  </label>
+                );
+              }
+              if (prop.type === "number") {
+                return (
+                  <label key={prop.name}>{prop.name}
+                    <input type="number" value={typeof val === "number" ? val : ""} onChange={(e) => update(e.target.valueAsNumber || 0)} readOnly={!fieldsEditable} />
+                  </label>
+                );
+              }
+              if (prop.type === "textarea") {
+                return (
+                  <label key={prop.name}>{prop.name}
+                    <textarea value={typeof val === "string" ? val : ""} onChange={(e) => update(e.target.value)} readOnly={!fieldsEditable} rows={3} />
+                  </label>
+                );
+              }
+              return (
+                <label key={prop.name}>{prop.name}
+                  <input value={typeof val === "string" ? val : ""} onChange={(e) => update(e.target.value)} readOnly={!fieldsEditable} />
+                </label>
+              );
+            })}
+          </div>
+        )}
 
         <div className="field-group">
           <h3>Visibility</h3>

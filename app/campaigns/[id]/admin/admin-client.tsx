@@ -29,21 +29,31 @@ export default function AdminClient({ campaign, isGlobalAdmin = false }: { campa
   const [campaignGroups, setCampaignGroups] = useState<string[]>([]);
   const [newGroupName, setNewGroupName] = useState("");
 
+  type PropDef = { name: string; type: string; options?: string[]; placeholder?: string };
+  const [categoryProperties, setCategoryProperties] = useState<Record<string, PropDef[]>>({});
+  const [editingCatProps, setEditingCatProps] = useState<string>("character");
+  const [newPropName, setNewPropName] = useState("");
+  const [newPropType, setNewPropType] = useState("text");
+  const [catPropsSaved, setCatPropsSaved] = useState(false);
+
   async function load() {
-    const [membersRes, invitesRes, reviewsRes, groupsRes] = await Promise.all([
+    const [membersRes, invitesRes, reviewsRes, groupsRes, catPropsRes] = await Promise.all([
       fetch(`/api/campaigns/${campaign.id}/admin/members`),
       fetch(`/api/campaigns/${campaign.id}/admin/invites`),
       fetch(`/api/campaigns/${campaign.id}/admin/reviews`),
-      fetch(`/api/campaigns/${campaign.id}/groups`)
+      fetch(`/api/campaigns/${campaign.id}/groups`),
+      fetch(`/api/campaigns/${campaign.id}/category-properties`)
     ]);
     const membersData = await membersRes.json();
     const invitesData = await invitesRes.json();
     const reviewsData = await reviewsRes.json();
     const groupsData = groupsRes.ok ? await groupsRes.json() : {};
+    const catPropsData = catPropsRes.ok ? await catPropsRes.json() : {};
     setMembers(membersData.members || []);
     setInvites(invitesData.invites || []);
     setReviews(reviewsData.reviews || []);
     setCampaignGroups(groupsData.groups || []);
+    setCategoryProperties(catPropsData.categoryProperties || {});
   }
 
   useEffect(() => {
@@ -202,6 +212,34 @@ export default function AdminClient({ campaign, isGlobalAdmin = false }: { campa
     } else {
       setMessage(data.error || "Could not update review.");
     }
+  }
+
+  async function saveCategoryProperties(updated: Record<string, PropDef[]>) {
+    await fetch(`/api/campaigns/${campaign.id}/category-properties`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ categoryProperties: updated })
+    });
+    setCatPropsSaved(true);
+    setTimeout(() => setCatPropsSaved(false), 2000);
+  }
+
+  function addCatProp() {
+    const name = newPropName.trim();
+    if (!name) return;
+    const current = categoryProperties[editingCatProps] || [];
+    if (current.some((p) => p.name === name)) return;
+    const updated = { ...categoryProperties, [editingCatProps]: [...current, { name, type: newPropType }] };
+    setCategoryProperties(updated);
+    saveCategoryProperties(updated);
+    setNewPropName("");
+  }
+
+  function removeCatProp(cat: string, propName: string) {
+    const current = (categoryProperties[cat] || []).filter((p) => p.name !== propName);
+    const updated = { ...categoryProperties, [cat]: current };
+    setCategoryProperties(updated);
+    saveCategoryProperties(updated);
   }
 
   async function addGroup() {
@@ -395,6 +433,58 @@ export default function AdminClient({ campaign, isGlobalAdmin = false }: { campa
           </table>
         )}
         {campaignGroups.length === 0 && <p className="muted" style={{ fontSize: "13px" }}>No groups defined yet.</p>}
+      </div>
+
+      <div className="panel admin-wide">
+        <h2>Category properties</h2>
+        <p className="muted" style={{ fontSize: "13px" }}>
+          Define custom fields for each page category. They appear as form inputs in the page editor and are stored in each page&apos;s frontmatter under <code>customProps</code>.
+        </p>
+        <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
+          <label style={{ fontWeight: 600, fontSize: 13 }}>Category:</label>
+          <select value={editingCatProps} onChange={(e) => setEditingCatProps(e.target.value)} style={{ width: "auto" }}>
+            {["character", "npc", "location", "faction", "item", "lore", "event", "session", "quest", "creature"].map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+
+        {(categoryProperties[editingCatProps] || []).length > 0 && (
+          <table className="organize-table" style={{ marginBottom: 12 }}>
+            <thead><tr><th>Field name</th><th>Type</th><th></th></tr></thead>
+            <tbody>
+              {(categoryProperties[editingCatProps] || []).map((p) => (
+                <tr key={p.name}>
+                  <td>{p.name}</td>
+                  <td><span className="tag-chip">{p.type}</span></td>
+                  <td><button type="button" className="linklike danger" onClick={() => removeCatProp(editingCatProps, p.name)}>Remove</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {!(categoryProperties[editingCatProps] || []).length && (
+          <p className="muted" style={{ fontSize: "13px", marginBottom: 12 }}>No custom properties defined for <code>{editingCatProps}</code> yet.</p>
+        )}
+
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <input
+            className="search-input"
+            style={{ width: 200 }}
+            placeholder="Field name (e.g. Motivation)"
+            value={newPropName}
+            onChange={(e) => setNewPropName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCatProp(); } }}
+          />
+          <select value={newPropType} onChange={(e) => setNewPropType(e.target.value)} style={{ width: "auto" }}>
+            <option value="text">Short text</option>
+            <option value="textarea">Long text</option>
+            <option value="number">Number</option>
+            <option value="checkbox">Checkbox</option>
+          </select>
+          <button type="button" onClick={addCatProp} disabled={!newPropName.trim()}>Add field</button>
+          {catPropsSaved && <span style={{ color: "var(--gold)", fontSize: 13 }}>Saved ✓</span>}
+        </div>
       </div>
 
       <div className="panel admin-wide">
