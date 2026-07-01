@@ -14,13 +14,16 @@ const GROUPS: { type: string; label: string }[] = [
   { type: "missing-media", label: "Missing media" },
   { type: "duplicate-alias", label: "Duplicate aliases" },
   { type: "empty-name", label: "Pages without a name" },
-  { type: "unapproved", label: "Unapproved pages" }
+  { type: "unapproved", label: "Unapproved pages" },
+  { type: "orphaned-page", label: "Orphaned pages" }
 ];
 
 export default function HealthClient({ campaign }: { campaign: Campaign }) {
   const [data, setData] = useState<Health | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [repairing, setRepairing] = useState<Set<string>>(new Set());
 
   async function load() {
     setLoading(true);
@@ -33,6 +36,24 @@ export default function HealthClient({ campaign }: { campaign: Campaign }) {
   useEffect(() => {
     load();
   }, []);
+
+  async function bulkRepair(slugs: string[], set: Record<string, string>, label: string) {
+    setRepairing((prev) => new Set([...prev, ...slugs]));
+    setMessage(`${label}…`);
+    const res = await fetch(`/api/campaigns/${campaign.id}/pages/bulk`, {
+      method: "PATCH",
+      body: JSON.stringify({ slugs, set })
+    });
+    setRepairing(new Set());
+    if (res.ok) {
+      const out = await res.json();
+      setMessage(`Fixed ${out.updated} pages. Re-scanning…`);
+      await load();
+      setMessage("");
+    } else {
+      setMessage((await res.json().catch(() => ({})))?.error || "Repair failed.");
+    }
+  }
 
   if (loading) return <p className="muted">Scanning every page…</p>;
   if (error) return <p className="error">{error}</p>;
@@ -51,20 +72,36 @@ export default function HealthClient({ campaign }: { campaign: Campaign }) {
         )}
         <button type="button" className="secondary" onClick={load}>Re-scan</button>
       </div>
+      {message && <p className="toast">{message}</p>}
 
       {groupsWithFindings.map((group) => {
         const items = data.findings.filter((f) => f.type === group.type);
         const severity = items[0]?.severity || "info";
+        const slugsWithParent = items.filter((f) => f.slug).map((f) => f.slug as string);
         return (
           <section className="band" key={group.type}>
             <div className="section-heading">
               <h2>{group.label}</h2>
-              <span className={`health-badge sev-${severity}`}>{items.length}</span>
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                {group.type === "unapproved" && (
+                  <button type="button" className="secondary"
+                    disabled={repairing.size > 0}
+                    onClick={() => bulkRepair(slugsWithParent, { approvalStatus: "approved" }, "Approving all")}>
+                    Approve all
+                  </button>
+                )}
+                {(group.type === "invalid-parent" || group.type === "parent-mismatch") && (
+                  <button type="button" className="secondary"
+                    disabled={repairing.size > 0}
+                    onClick={() => bulkRepair(slugsWithParent, { parent: "" }, "Clearing parents")}>
+                    Clear all parents
+                  </button>
+                )}
+                <span className={`health-badge sev-${severity}`}>{items.length}</span>
+              </div>
             </div>
-            {group.type === "unapproved" && (
-              <p className="muted">
-                Approve these from the <a href={`/campaigns/${campaign.id}/admin`}>review queue</a> (or bulk-set approval in <a href={`/campaigns/${campaign.id}/organize`}>Organize</a>).
-              </p>
+            {group.type === "orphaned-page" && (
+              <p className="muted">These pages have no incoming links and no parent. They can&apos;t be discovered through navigation — add a link or set a parent.</p>
             )}
             <div className="review-list">
               {items.map((f, i) => (
@@ -77,7 +114,17 @@ export default function HealthClient({ campaign }: { campaign: Campaign }) {
                     )}
                     <p>{f.detail}</p>
                   </div>
-                  <span className={`health-badge sev-${f.severity}`}>{f.severity}</span>
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center", flexShrink: 0 }}>
+                    {(group.type === "invalid-parent" || group.type === "parent-mismatch") && f.slug && (
+                      <button type="button" className="secondary"
+                        style={{ fontSize: "11px", padding: "2px 8px" }}
+                        disabled={repairing.has(f.slug)}
+                        onClick={() => bulkRepair([f.slug!], { parent: "" }, "Clearing parent")}>
+                        Clear parent
+                      </button>
+                    )}
+                    <span className={`health-badge sev-${f.severity}`}>{f.severity}</span>
+                  </div>
                 </article>
               ))}
             </div>
