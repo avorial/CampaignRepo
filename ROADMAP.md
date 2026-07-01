@@ -116,11 +116,17 @@ real-time (L).
 Beyond GM vs player: named groups (e.g. "the players who know about the cult")
 with per-block reveals. Generalizes `:::gm` into `:::secret group="..."`.
 
-### 13. Manuscripts / notebooks / long-form  ·  M
+### 13. Manuscripts / notebooks / long-form  ·  M  ·  ✅ SHIPPED
 GM-only notebooks and a "manuscript" mode that stitches pages into chapters for
 session prep or fiction — World Anvil's manuscripts.
 
-### 14. Local & hosted AI generators  ·  M
+Shipped: `/campaigns/[id]/manuscripts` — create named manuscripts (stored as
+`wiki/manuscripts/<slug>.yaml`) that assemble ordered lists of wiki pages.
+Editor has title, description, visibility, page picker with filter, and
+drag-free up/↓ reordering. Read view stitches pages into a linear document
+with chapter titles, summaries, and a Print/PDF action.
+
+### 14. Local & hosted AI generators  ·  M  ·  🚧 CORE SHIPPED
 Add in-app NPC, settlement, faction, rumor, quest, encounter, and relationship
 generators that can use either a local OpenAI-compatible endpoint (for example
 Ollama or LM Studio), a configured hosted model, or the existing MCP workflow.
@@ -130,6 +136,12 @@ without making the destination and selected context clear. Show a structured
 preview with provenance before writing, and create generated pages as unapproved.
 Keep deterministic random-table and lexicon generators available as a fast,
 offline, no-model fallback.
+
+Shipped: `/campaigns/[id]/generate` — random-table generators for NPCs,
+settlements, factions, rumors, quests, and encounters with configurable AI
+expansion via a campaign-configured endpoint. Generated content is previewed
+before writing; pages are created as unapproved drafts. Deterministic tables
+are available offline without any AI model configured.
 
 ### 15. Character sheets / statblocks per system  ·  M  ·  🚧 TRAVELLER SHIPPED
 System-aware structured sheets (Traveller UPP/UWP already partly there; D&D
@@ -278,12 +290,18 @@ current in-world date with weekday-correct formatting and no Earth assumptions
 Overview dashboard. Follow-ups: multiple calendars, leap rules, moons/seasons/
 holidays, linking events/sessions/quests to in-world dates, age calc.
 
-### 27. Infinite boards, diagrams & plot canvases  ·  L
+### 27. Infinite boards, diagrams & plot canvases  ·  L  ·  🚧 CORE SHIPPED
 Add a freeform visual workspace for conspiracy boards, plot flows, magic systems,
 scene order, family trees, and campaign brainstorming. Place page cards, notes,
 images, groups, connectors, and relationship edges on a zoomable canvas. A board
 can promote a note into a wiki page or bind an existing card to one. Save board
 documents as repo JSON with stable node IDs so diagrams remain exportable.
+
+Shipped: `/campaigns/[id]/boards` — create and edit named boards stored as
+`wiki/boards/<slug>.json`. A zoomable (wheel/pinch) and pannable SVG canvas with
+draggable card nodes, text notes, page-link cards, and directed connector arrows.
+Boards support multiple card types; JSON persists node positions and content.
+Follow-ups: grouping, image cards, canvas search, promote-to-page.
 
 ### 28. Quests, story arcs & campaign-state tracking  ·  M  ·  ✅ SHIPPED
 Add structured quests and arcs with status, objectives, participants, locations,
@@ -333,7 +351,7 @@ remote is unavailable. Queue writes locally, show sync state clearly, and requir
 explicit conflict resolution before committing divergent edits. Ship an
 installable PWA first; consider native wrappers only after offline sync is proven.
 
-### 33. Language, lexicon & naming tools  ·  S-M
+### 33. Language, lexicon & naming tools  ·  S-M  ·  ✅ SHIPPED
 Add a language workspace with dictionary entries, translations, pronunciation,
 word classes, etymology, custom glyph images, and links from terms used in pages.
 Include naming patterns and generators that draw from a campaign lexicon. Keep
@@ -341,6 +359,13 @@ full grammar design optional so campaigns can use a simple glossary without
 adopting a complete conlang workflow. These generators are deterministic and
 offline by default, but can feed culturally consistent names into the local or
 hosted AI generators in item 14.
+
+Shipped: `/campaigns/[id]/lexicon` — a per-campaign glossary stored in
+`wiki/lexicon.yaml`. Dictionary table with term, translation, pronunciation,
+word class (12 types), etymology, and notes; inline editing; search + word-class
+filter. Phoneme-based name generator: configure vowel and consonant phoneme sets
+and syllable patterns (CVC, CVCV…) and generate up to 10 culturally consistent
+names per click; click any name to copy it.
 
 ---
 
@@ -467,11 +492,16 @@ public sharing into "GitHub for RPG campaigns":
   sector, a Pendragon county, a Vampire city, a Blades district, an Alien colony).
   World Anvil's public-content volume is the bar — this is the path to it.
 
-### 38. AI campaign Q&A over Markdown  ·  M  ·  extends #14
+### 38. AI campaign Q&A over Markdown  ·  M  ·  ✅ SHIPPED  ·  extends #14
 Because everything is Markdown, an LLM can read the entire campaign. Natural-
 language query + generation: "Who actually knows the Duke is a vampire?", "Show
 every NPC connected to House Silverridge", "Generate a session recap from the last
 five journal entries." Markdown-as-storage is a genuine long-term advantage.
+
+Shipped: `/campaigns/[id]/ai` — a full-campaign Q&A chat interface. Loads the
+campaign's search index, selects relevant pages via embedding-like scoring, and
+streams answers from the configured AI endpoint. GM-only; pages are cited in
+the response. Supports any OpenAI-compatible endpoint configured in AI settings.
 
 ### 39. Hosted / managed option (business)  ·  L
 Self-hosting (Docker) is the core audience but loses the "everyone else" segment
