@@ -6008,3 +6008,115 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   color: var(--purple);
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+   #24 Accessibility: prefers-reduced-motion, skip link, screen-reader utils
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* Screen-reader-only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Skip-to-content link — visible on focus, hidden otherwise */
+.skip-link {
+  position: fixed;
+  top: -100%;
+  left: 1rem;
+  z-index: 9999;
+  padding: 8px 16px;
+  background: var(--gold);
+  color: var(--bg-base);
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: top 0.15s;
+}
+.skip-link:focus {
+  top: 1rem;
+}
+
+/* Extra-small screen breakpoint — 480px */
+@media (max-width: 480px) {
+  .topbar {
+    gap: 8px;
+    padding: 10px 14px;
+  }
+
+  .topbar-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .topbar-actions > button,
+  .topbar-actions > a {
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+
+  .gallery-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .gallery-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .gallery-sort {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .map-canvas {
+    min-height: 50vh;
+  }
+
+  .boards-canvas-wrap {
+    min-height: 50vh;
+  }
+
+  .panel {
+    padding: 14px;
+  }
+
+  .nav-link {
+    padding: 8px 10px;
+  }
+
+  button, .button {
+    padding: 7px 12px;
+  }
+
+  h1 { font-size: clamp(22px, 6vw, 32px); }
+  h2 { font-size: 20px; }
+  h3 { font-size: 16px; }
+}
+
+/* Reduce motion: strip all transitions and animations for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .skip-link {
+    transition: none;
+  }
+}
+

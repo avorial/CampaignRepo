@@ -516,7 +516,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const shortLabel = (value: string) => (value.length > 18 ? `${value.slice(0, 16)}...` : value);
 
   return (
-    <section className="workspace">
+    <section className="workspace" id="main-content">
       <aside className="side-nav">
         <form onSubmit={runSearch} className="stack">
           <input name="q" placeholder="Search this repo" />
