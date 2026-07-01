@@ -1086,6 +1086,51 @@ notes: ""
               </div>
             </section>
           )}
+          {mode !== "handout" && (frontmatter.resources || []).length > 0 && (
+            <section className="prop-panel">
+              <h4>Resources</h4>
+              <div className="resource-tracks">
+                {(frontmatter.resources || []).map((r: any, i: number) => {
+                  const pct = r.max > 0 ? Math.min(100, Math.round((r.current / r.max) * 100)) : 0;
+                  return (
+                    <div key={i} className="resource-track">
+                      <div className="resource-track-label"><span>{r.name}</span><span className="muted">{r.current} / {r.max}</span></div>
+                      <div className="resource-track-bar"><div className="resource-track-fill" style={{ width: `${pct}%` }} /></div>
+                      {r.notes && <span className="muted" style={{ fontSize: "var(--text-sm)" }}>{r.notes}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+          {mode !== "handout" && (frontmatter.abilities || []).length > 0 && (
+            <section className="prop-panel">
+              <h4>Abilities</h4>
+              <div className="ability-list">
+                {(frontmatter.abilities || []).map((a: any, i: number) => (
+                  <div key={i} className="ability-item">
+                    <strong>{a.name}</strong>
+                    {a.type && <span className="badge">{a.type}</span>}
+                    {a.description && <span className="muted">{a.description}</span>}
+                    {a.notes && <span className="muted">{a.notes}</span>}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+          {mode !== "handout" && (frontmatter.inventory || []).length > 0 && (
+            <section className="prop-panel">
+              <h4>Inventory</h4>
+              <table className="prop-table">
+                <thead><tr><th>Item</th><th>Qty</th><th>Notes</th></tr></thead>
+                <tbody>
+                  {(frontmatter.inventory || []).map((item: any, i: number) => (
+                    <tr key={i}><td>{item.name}</td><td className="muted">{item.qty ?? "—"}</td><td className="muted">{item.notes || ""}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
           </>
           )}
         </div>
@@ -1166,6 +1211,55 @@ notes: ""
             })}
           </div>
         )}
+
+        <div className="field-group">
+          <h3>Inventory</h3>
+          {(frontmatter.inventory || []).map((item: any, i: number) => (
+            <div key={i} className="prop-row">
+              <input placeholder="Item name" value={item.name || ""} readOnly={!fieldsEditable}
+                onChange={(e) => { const a = [...(frontmatter.inventory || [])]; a[i] = { ...a[i], name: e.target.value }; updateField("inventory", a); }} />
+              <input type="number" placeholder="Qty" value={item.qty ?? ""} readOnly={!fieldsEditable} style={{ width: 54 }}
+                onChange={(e) => { const a = [...(frontmatter.inventory || [])]; a[i] = { ...a[i], qty: e.target.value === "" ? undefined : Number(e.target.value) }; updateField("inventory", a); }} />
+              <input placeholder="Notes" value={item.notes || ""} readOnly={!fieldsEditable}
+                onChange={(e) => { const a = [...(frontmatter.inventory || [])]; a[i] = { ...a[i], notes: e.target.value }; updateField("inventory", a); }} />
+              {fieldsEditable && <button type="button" className="danger" style={{ padding: "0 8px", minHeight: 28 }} onClick={() => updateField("inventory", (frontmatter.inventory || []).filter((_: any, idx: number) => idx !== i))}>✕</button>}
+            </div>
+          ))}
+          {fieldsEditable && <button type="button" className="secondary" style={{ marginTop: 4 }} onClick={() => updateField("inventory", [...(frontmatter.inventory || []), { name: "" }])}>+ Add item</button>}
+        </div>
+
+        <div className="field-group">
+          <h3>Abilities</h3>
+          {(frontmatter.abilities || []).map((item: any, i: number) => (
+            <div key={i} className="prop-row">
+              <input placeholder="Ability name" value={item.name || ""} readOnly={!fieldsEditable}
+                onChange={(e) => { const a = [...(frontmatter.abilities || [])]; a[i] = { ...a[i], name: e.target.value }; updateField("abilities", a); }} />
+              <input placeholder="Type (passive, active…)" value={item.type || ""} readOnly={!fieldsEditable}
+                onChange={(e) => { const a = [...(frontmatter.abilities || [])]; a[i] = { ...a[i], type: e.target.value }; updateField("abilities", a); }} />
+              <input placeholder="Description" value={item.description || ""} readOnly={!fieldsEditable}
+                onChange={(e) => { const a = [...(frontmatter.abilities || [])]; a[i] = { ...a[i], description: e.target.value }; updateField("abilities", a); }} />
+              {fieldsEditable && <button type="button" className="danger" style={{ padding: "0 8px", minHeight: 28 }} onClick={() => updateField("abilities", (frontmatter.abilities || []).filter((_: any, idx: number) => idx !== i))}>✕</button>}
+            </div>
+          ))}
+          {fieldsEditable && <button type="button" className="secondary" style={{ marginTop: 4 }} onClick={() => updateField("abilities", [...(frontmatter.abilities || []), { name: "" }])}>+ Add ability</button>}
+        </div>
+
+        <div className="field-group">
+          <h3>Resources</h3>
+          {(frontmatter.resources || []).map((item: any, i: number) => (
+            <div key={i} className="prop-row">
+              <input placeholder="Resource name (HP, MP…)" value={item.name || ""} readOnly={!fieldsEditable}
+                onChange={(e) => { const a = [...(frontmatter.resources || [])]; a[i] = { ...a[i], name: e.target.value }; updateField("resources", a); }} />
+              <input type="number" placeholder="Current" value={item.current ?? ""} readOnly={!fieldsEditable} style={{ width: 62 }}
+                onChange={(e) => { const a = [...(frontmatter.resources || [])]; a[i] = { ...a[i], current: Number(e.target.value) }; updateField("resources", a); }} />
+              <span style={{ alignSelf: "center", color: "var(--muted)", fontSize: 12 }}>/</span>
+              <input type="number" placeholder="Max" value={item.max ?? ""} readOnly={!fieldsEditable} style={{ width: 62 }}
+                onChange={(e) => { const a = [...(frontmatter.resources || [])]; a[i] = { ...a[i], max: Number(e.target.value) }; updateField("resources", a); }} />
+              {fieldsEditable && <button type="button" className="danger" style={{ padding: "0 8px", minHeight: 28 }} onClick={() => updateField("resources", (frontmatter.resources || []).filter((_: any, idx: number) => idx !== i))}>✕</button>}
+            </div>
+          ))}
+          {fieldsEditable && <button type="button" className="secondary" style={{ marginTop: 4 }} onClick={() => updateField("resources", [...(frontmatter.resources || []), { name: "", current: 0, max: 0 }])}>+ Add resource</button>}
+        </div>
 
         <div className="field-group">
           <h3>Visibility</h3>

@@ -152,6 +152,9 @@ export type WikiPageFrontmatter = {
   lastEditedBy?: string;
   assignee?: string;
   sheet?: TravellerSheet;
+  inventory?: Array<{ name: string; qty?: number; value?: string; notes?: string }>;
+  abilities?: Array<{ name: string; description?: string; type?: string; notes?: string }>;
+  resources?: Array<{ name: string; current: number; max: number; notes?: string }>;
 };
 
 export type TravellerSkill = { name: string; level?: number; speciality?: string };

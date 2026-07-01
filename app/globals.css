@@ -4797,6 +4797,100 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   gap: 8px;
 }
 
+/* Inventory / Abilities / Resources reader panels */
+.prop-panel {
+  border-top: 1px solid var(--border-soft);
+  margin-top: 0;
+  padding: 20px 36px 28px;
+}
+
+.prop-panel h4 {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  letter-spacing: var(--tracking-label);
+  margin: 0 0 12px;
+  text-transform: uppercase;
+}
+
+.prop-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.prop-table th,
+.prop-table td {
+  border-bottom: 1px solid var(--border-soft);
+  font-size: var(--text-sm);
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.prop-table th {
+  color: var(--text-tertiary);
+  font-weight: 600;
+}
+
+.resource-tracks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.resource-track-label {
+  display: flex;
+  font-size: var(--text-sm);
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.resource-track-bar {
+  background: var(--border-soft);
+  border-radius: 4px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.resource-track-fill {
+  background: var(--gold);
+  border-radius: 4px;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.ability-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ability-item {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+}
+
+.ability-item strong {
+  font-size: var(--text-sm);
+}
+
+.ability-item .badge {
+  align-self: flex-start;
+  font-size: var(--text-label-sm);
+}
+
+/* Prop editor rows in page sidebar */
+.prop-row {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
 .rel-item {
   align-items: center;
   background: var(--bg-elevated);
