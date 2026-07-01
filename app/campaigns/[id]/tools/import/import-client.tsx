@@ -66,6 +66,9 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
   const [csvBusy, setCsvBusy] = useState(false);
   const [csvResult, setCsvResult] = useState<ImportResponse | null>(null);
 
+  // Foundry sub-tab
+  const [foundryTab, setFoundryTab] = useState<"journals" | "actors">("journals");
+
   // Foundry journal import state
   const [journalJson, setJournalJson] = useState("");
   const [journalCategory, setJournalCategory] = useState("lore");
@@ -73,6 +76,13 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
   const [journalApproval, setJournalApproval] = useState<"approved" | "unapproved" | "rejected">("unapproved");
   const [journalBusy, setJournalBusy] = useState(false);
   const [journalResult, setJournalResult] = useState<ImportResponse | null>(null);
+
+  // Foundry actors import state
+  const [actorJson, setActorJson] = useState("");
+  const [actorVisibility, setActorVisibility] = useState<"gm" | "players">("gm");
+  const [actorApproval, setActorApproval] = useState<"approved" | "unapproved" | "rejected">("unapproved");
+  const [actorBusy, setActorBusy] = useState(false);
+  const [actorResult, setActorResult] = useState<ImportResponse | null>(null);
 
   async function runWaImport() {
     let json: unknown;
@@ -130,6 +140,31 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
     } finally {
       setJournalBusy(false);
     }
+  }
+
+  async function runActorImport() {
+    let json: unknown;
+    try { json = JSON.parse(actorJson); } catch { setActorResult({ results: [], created: 0, updated: 0, errors: 0, total: 0, error: "Invalid JSON. Paste Foundry Actor JSON." }); return; }
+    setActorBusy(true);
+    setActorResult(null);
+    try {
+      const res = await fetch(`${api}/imports/foundry-actors`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ json, visibility: actorVisibility, approvalStatus: actorApproval })
+      });
+      setActorResult(await res.json());
+    } finally {
+      setActorBusy(false);
+    }
+  }
+
+  function loadActorFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setActorJson((ev.target?.result as string) || "");
+    reader.readAsText(file);
   }
 
   async function loadObsidianFolder(e: React.ChangeEvent<HTMLInputElement>) {
@@ -264,47 +299,93 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
 
       {activeTab === "foundry" && (
         <div className="import-panel stack">
-          <div className="import-intro">
-            <p>Paste Foundry VTT journal JSON. Accepts a single Journal Entry object, an array of entries, or a world export containing a <code>journals</code> array.</p>
-            <p className="muted" style={{ fontSize: "12px" }}>HTML content is converted to Markdown. Multi-page journals become a single page with <code>##</code> section headings.</p>
+          <div className="segmented" style={{ marginBottom: 12 }}>
+            <button type="button" className={foundryTab === "journals" ? "active" : ""} onClick={() => setFoundryTab("journals")}>Journals</button>
+            <button type="button" className={foundryTab === "actors" ? "active" : ""} onClick={() => setFoundryTab("actors")}>Actors</button>
           </div>
 
-          <div className="import-options">
-            <label>Default category
-              <select value={journalCategory} onChange={(e) => setJournalCategory(e.target.value)}>
-                {CATEGORY_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
+          {foundryTab === "journals" && <>
+            <div className="import-intro">
+              <p>Paste Foundry VTT journal JSON. Accepts a single Journal Entry object, an array of entries, or a world export containing a <code>journals</code> array.</p>
+              <p className="muted" style={{ fontSize: "12px" }}>HTML content is converted to Markdown. Multi-page journals become a single page with <code>##</code> section headings.</p>
+            </div>
+
+            <div className="import-options">
+              <label>Default category
+                <select value={journalCategory} onChange={(e) => setJournalCategory(e.target.value)}>
+                  {CATEGORY_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </label>
+              <label>Visibility
+                <select value={journalVisibility} onChange={(e) => setJournalVisibility(e.target.value as "gm" | "players")}>
+                  {VISIBILITY_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </label>
+              <label>Approval status
+                <select value={journalApproval} onChange={(e) => setJournalApproval(e.target.value as "approved" | "unapproved" | "rejected")}>
+                  {APPROVAL_OPTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </label>
+            </div>
+
+            <label className="file-upload-row">
+              Upload JSON file
+              <input type="file" accept=".json,application/json" onChange={loadJsonFile} style={{ marginLeft: 8 }} />
             </label>
-            <label>Visibility
-              <select value={journalVisibility} onChange={(e) => setJournalVisibility(e.target.value as "gm" | "players")}>
-                {VISIBILITY_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
-              </select>
+
+            <textarea
+              className="import-textarea"
+              placeholder={`Paste Foundry journal JSON here…\n\nExample:\n{"_id":"abc","name":"The Ash Keep","pages":[{"name":"Overview","text":{"content":"<p>A fortress overlooking…</p>"}}]}`}
+              value={journalJson}
+              onChange={(e) => setJournalJson(e.target.value)}
+              rows={12}
+            />
+
+            <button onClick={runJournalImport} disabled={journalBusy || !journalJson.trim()}>
+              {journalBusy ? "Importing…" : "Import journals"}
+            </button>
+
+            {journalResult && <ImportResultPanel result={journalResult} api={`/campaigns/${campaignId}`} />}
+          </>}
+
+          {foundryTab === "actors" && <>
+            <div className="import-intro">
+              <p>Import Foundry VTT actors as wiki pages. In Foundry, right-click actors in the sidebar and choose <strong>Export Data</strong>, or export from a compendium. Accepts a single actor, an array, or a world export with an <code>actors</code> array.</p>
+              <p className="muted" style={{ fontSize: "12px" }}>Actor type maps automatically: <code>character</code> → Character, <code>npc</code> → NPC, <code>vehicle</code> → Item. Biography HTML is converted to Markdown. Foundry ID is stored in frontmatter for deduplication on re-import.</p>
+            </div>
+
+            <div className="import-options">
+              <label>Visibility
+                <select value={actorVisibility} onChange={(e) => setActorVisibility(e.target.value as "gm" | "players")}>
+                  {VISIBILITY_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </label>
+              <label>Approval status
+                <select value={actorApproval} onChange={(e) => setActorApproval(e.target.value as "approved" | "unapproved" | "rejected")}>
+                  {APPROVAL_OPTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </label>
+            </div>
+
+            <label className="file-upload-row">
+              Upload JSON file
+              <input type="file" accept=".json,application/json" onChange={loadActorFile} style={{ marginLeft: 8 }} />
             </label>
-            <label>Approval status
-              <select value={journalApproval} onChange={(e) => setJournalApproval(e.target.value as "approved" | "unapproved" | "rejected")}>
-                {APPROVAL_OPTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
-              </select>
-            </label>
-          </div>
 
-          <label className="file-upload-row">
-            Upload JSON file
-            <input type="file" accept=".json,application/json" onChange={loadJsonFile} style={{ marginLeft: 8 }} />
-          </label>
+            <textarea
+              className="import-textarea"
+              placeholder={`Paste Foundry actor JSON here…\n\nExample:\n[{"_id":"abc123","name":"Captain Vane","type":"npc","system":{"details":{"biography":{"value":"<p>A grizzled pirate captain…</p>"},"race":"Human","cr":"2"}}}]`}
+              value={actorJson}
+              onChange={(e) => setActorJson(e.target.value)}
+              rows={12}
+            />
 
-          <textarea
-            className="import-textarea"
-            placeholder={`Paste Foundry journal JSON here…\n\nExample:\n{"_id":"abc","name":"The Ash Keep","pages":[{"name":"Overview","text":{"content":"<p>A fortress overlooking…</p>"}}]}`}
-            value={journalJson}
-            onChange={(e) => setJournalJson(e.target.value)}
-            rows={12}
-          />
+            <button onClick={runActorImport} disabled={actorBusy || !actorJson.trim()}>
+              {actorBusy ? "Importing…" : "Import actors"}
+            </button>
 
-          <button onClick={runJournalImport} disabled={journalBusy || !journalJson.trim()}>
-            {journalBusy ? "Importing…" : "Import journals"}
-          </button>
-
-          {journalResult && <ImportResultPanel result={journalResult} api={`/campaigns/${campaignId}`} />}
+            {actorResult && <ImportResultPanel result={actorResult} api={`/campaigns/${campaignId}`} />}
+          </>}
         </div>
       )}
 
