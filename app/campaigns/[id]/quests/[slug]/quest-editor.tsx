@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Campaign } from "@/lib/types";
 
 type Objective = { text: string; done: boolean };
+type Clock = { name: string; segments: number; filled: number };
 type Frontmatter = {
   title: string;
   status: "hook" | "active" | "completed" | "failed";
@@ -13,7 +14,57 @@ type Frontmatter = {
   objectives: Objective[];
   participants: string[];
   locations: string[];
+  clocks: Clock[];
 };
+
+function segPath(i: number, total: number, inner = 0.45): string {
+  const gap = 0.04;
+  const a0 = (i / total) * 2 * Math.PI - Math.PI / 2 + gap;
+  const a1 = ((i + 1) / total) * 2 * Math.PI - Math.PI / 2 - gap;
+  const cos0 = Math.cos(a0), sin0 = Math.sin(a0);
+  const cos1 = Math.cos(a1), sin1 = Math.sin(a1);
+  const la = a1 - a0 > Math.PI ? 1 : 0;
+  return [
+    `M ${cos0} ${sin0}`,
+    `A 1 1 0 ${la} 1 ${cos1} ${sin1}`,
+    `L ${inner * cos1} ${inner * sin1}`,
+    `A ${inner} ${inner} 0 ${la} 0 ${inner * cos0} ${inner * sin0}`,
+    "Z"
+  ].join(" ");
+}
+
+function FactionClock({ clock, onChange }: { clock: Clock; onChange: (c: Clock) => void }) {
+  const full = clock.filled >= clock.segments;
+  return (
+    <div className="faction-clock">
+      <svg viewBox="-1.1 -1.1 2.2 2.2" width="72" height="72" style={{ cursor: "pointer", display: "block" }}>
+        {Array.from({ length: clock.segments }, (_, i) => (
+          <path
+            key={i}
+            d={segPath(i, clock.segments)}
+            fill={i < clock.filled ? "var(--gold)" : "var(--bg-elevated, #333)"}
+            stroke="var(--bg-base, #111)"
+            strokeWidth="0.06"
+            onClick={() => onChange({ ...clock, filled: i < clock.filled ? i : i + 1 })}
+          />
+        ))}
+        {full && <circle r="0.3" fill="var(--gold)" opacity="0.6" />}
+      </svg>
+      <div className="faction-clock-meta">
+        <input
+          value={clock.name}
+          placeholder="Clock name…"
+          className="faction-clock-name"
+          onChange={(e) => onChange({ ...clock, name: e.target.value })}
+        />
+        <span className="muted">{clock.filled}/{clock.segments}</span>
+        <select value={clock.segments} onChange={(e) => onChange({ ...clock, segments: Number(e.target.value), filled: Math.min(clock.filled, Number(e.target.value)) })}>
+          {[4, 6, 8, 10, 12].map((n) => <option key={n} value={n}>{n} segments</option>)}
+        </select>
+      </div>
+    </div>
+  );
+}
 type PageRef = { slug: string; name: string };
 
 const STATUSES: Frontmatter["status"][] = ["hook", "active", "completed", "failed"];
@@ -35,7 +86,7 @@ export default function QuestEditor({ campaign, slug }: { campaign: Campaign; sl
       const [qRes, pRes] = await Promise.all([fetch(`${api}/quests/${slug}`), fetch(`${api}/pages`)]);
       if (qRes.ok) {
         const data = await qRes.json();
-        setFm(data.quest.frontmatter);
+        setFm({ ...data.quest.frontmatter, clocks: data.quest.frontmatter.clocks || [] });
         setDescription(data.quest.description || "");
       } else setMessage("Could not load quest.");
       if (pRes.ok) {
@@ -136,6 +187,26 @@ export default function QuestEditor({ campaign, slug }: { campaign: Campaign; sl
             <input value={newObj} onChange={(e) => setNewObj(e.target.value)} placeholder="Add objective…" />
             <button className="secondary">Add</button>
           </form>
+        </div>
+
+        <div className="panel">
+          <h2>Faction clocks</h2>
+          <p className="muted">Countdown timers for faction schemes, deadlines, or world-state progress. Click a segment to fill or clear it.</p>
+          {fm.clocks.length > 0 && (
+            <div className="faction-clocks-grid">
+              {fm.clocks.map((clock, i) => (
+                <div key={i} style={{ position: "relative" }}>
+                  <FactionClock clock={clock} onChange={(c) => patch({ clocks: fm.clocks.map((x, j) => (j === i ? c : x)) })} />
+                  <button type="button" className="linklike" style={{ fontSize: "11px", position: "absolute", top: 0, right: 0 }}
+                    onClick={() => patch({ clocks: fm.clocks.filter((_, j) => j !== i) })}>✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+          <button type="button" className="secondary"
+            onClick={() => patch({ clocks: [...fm.clocks, { name: "New clock", segments: 8, filled: 0 }] })}>
+            Add clock
+          </button>
         </div>
 
         <div className="panel">

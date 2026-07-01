@@ -4,6 +4,7 @@ import { slugify } from "@/lib/slug";
 import type { Campaign } from "@/lib/types";
 
 export type Objective = { text: string; done: boolean };
+export type Clock = { name: string; segments: number; filled: number };
 export const QUEST_STATUSES = ["hook", "active", "completed", "failed"] as const;
 export type QuestStatus = (typeof QUEST_STATUSES)[number];
 
@@ -16,6 +17,7 @@ export type QuestFrontmatter = {
   objectives: Objective[];
   participants: string[];
   locations: string[];
+  clocks: Clock[];
 };
 export type Quest = { slug: string; sha?: string; frontmatter: QuestFrontmatter; description: string };
 
@@ -53,7 +55,10 @@ export function parseQuest(slug: string, text: string, sha?: string): Quest {
       visibility: fm.visibility === "players" ? "players" : "gm",
       objectives,
       participants: Array.isArray(fm.participants) ? (fm.participants as unknown[]).map(String) : [],
-      locations: Array.isArray(fm.locations) ? (fm.locations as unknown[]).map(String) : []
+      locations: Array.isArray(fm.locations) ? (fm.locations as unknown[]).map(String) : [],
+      clocks: Array.isArray(fm.clocks)
+        ? (fm.clocks as unknown[]).map((c) => ({ name: String((c as Clock)?.name ?? ""), segments: Number((c as Clock)?.segments ?? 8), filled: Number((c as Clock)?.filled ?? 0) }))
+        : []
     },
     description
   };
@@ -80,7 +85,7 @@ export async function getQuest(campaign: Campaign, slug: string, userToken?: str
 export async function createQuest(campaign: Campaign, title: string, userToken?: string | null): Promise<Quest> {
   const storage = adapterFor(campaign, userToken);
   const slug = slugify(title) || `quest-${Date.now()}`;
-  const frontmatter: QuestFrontmatter = { title, status: "active", visibility: "gm", objectives: [], participants: [], locations: [] };
+  const frontmatter: QuestFrontmatter = { title, status: "active", visibility: "gm", objectives: [], participants: [], locations: [], clocks: [] };
   await storage.putFile(`${questsDir}/${slug}.md`, serializeQuest(frontmatter, ""), `CampaignRepo: create quest ${title}`);
   return { slug, frontmatter, description: "" };
 }

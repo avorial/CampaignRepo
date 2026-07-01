@@ -14,7 +14,8 @@ const saveSchema = z.object({
     visibility: z.enum(["gm", "players"]),
     objectives: z.array(z.object({ text: z.string(), done: z.boolean() })).default([]),
     participants: z.array(z.string()).default([]),
-    locations: z.array(z.string()).default([])
+    locations: z.array(z.string()).default([]),
+    clocks: z.array(z.object({ name: z.string(), segments: z.number().int().min(2).max(20), filled: z.number().int().min(0) })).default([])
   }),
   description: z.string().default("")
 });
