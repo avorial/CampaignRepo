@@ -3799,6 +3799,22 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   padding: 8px 12px;
 }
 
+.widget-config-row-active {
+  grid-template-columns: auto 1fr auto auto;
+  cursor: grab;
+  user-select: none;
+}
+
+.widget-config-row-active:active { cursor: grabbing; }
+
+.widget-config-row-active.drag-over {
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 8%, var(--bg-elevated));
+}
+
+.drag-handle { color: var(--text-tertiary); font-size: 16px; line-height: 1; }
+.widget-config-label { font-size: var(--text-sm); }
+
 .widget-config-row .member-actions button {
   min-height: 28px;
   padding: 0 9px;

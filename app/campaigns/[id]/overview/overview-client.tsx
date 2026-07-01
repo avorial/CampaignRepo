@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { DragEvent, useEffect, useRef, useState } from "react";
 import type { Campaign } from "@/lib/types";
 
 function SetupGuide({ campaign, pages, canManage }: { campaign: Campaign; pages: any[]; canManage: boolean }) {
@@ -68,6 +68,8 @@ export default function OverviewClient({ campaign, canManage }: { campaign: Camp
   const [data, setData] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const dragFromRef = useRef<WidgetId | null>(null);
+  const [dragOver, setDragOver] = useState<WidgetId | null>(null);
 
   async function load() {
     setLoading(true);
@@ -115,15 +117,31 @@ export default function OverviewClient({ campaign, canManage }: { campaign: Camp
       return list.includes(id) ? list.filter((w) => w !== id) : [...list, id];
     });
   }
-  function move(id: WidgetId, dir: -1 | 1) {
+  function onDragStart(id: WidgetId) {
+    dragFromRef.current = id;
+  }
+  function onDragOverItem(e: DragEvent, id: WidgetId) {
+    e.preventDefault();
+    setDragOver(id);
+  }
+  function onDrop(targetId: WidgetId) {
+    const fromId = dragFromRef.current;
+    dragFromRef.current = null;
+    setDragOver(null);
+    if (!fromId || fromId === targetId) return;
     setDraft((d) => {
       const list = [...(d || widgets)];
-      const i = list.indexOf(id);
-      const j = i + dir;
-      if (i < 0 || j < 0 || j >= list.length) return list;
-      [list[i], list[j]] = [list[j], list[i]];
+      const from = list.indexOf(fromId);
+      const to = list.indexOf(targetId);
+      if (from < 0 || to < 0) return list;
+      list.splice(from, 1);
+      list.splice(to, 0, fromId);
       return list;
     });
+  }
+  function onDragEnd() {
+    dragFromRef.current = null;
+    setDragOver(null);
   }
 
   return (
@@ -144,23 +162,43 @@ export default function OverviewClient({ campaign, canManage }: { campaign: Camp
       {draft && (
         <div className="panel overview-editor">
           <h2>Widgets</h2>
-          <p className="muted">Toggle widgets and reorder them. GM-only widgets are hidden from players.</p>
+          {draft.length > 0 && (
+            <>
+              <p className="muted" style={{ marginBottom: "6px" }}>Drag to reorder active widgets.</p>
+              <div className="widget-config"
+                onDragLeave={() => setDragOver(null)}
+                onDragEnd={onDragEnd}>
+                {draft.map((id) => {
+                  const w = WIDGETS.find((x) => x.id === id);
+                  if (!w) return null;
+                  return (
+                    <div
+                      key={id}
+                      className={`widget-config-row widget-config-row-active${dragOver === id ? " drag-over" : ""}`}
+                      draggable
+                      onDragStart={() => onDragStart(id)}
+                      onDragOver={(e) => onDragOverItem(e, id)}
+                      onDrop={() => onDrop(id)}
+                    >
+                      <span className="drag-handle">⠿</span>
+                      <span className="widget-config-label">{w.label}</span>
+                      {w.gmOnly && <span className="badges"><span>GM only</span></span>}
+                      <button type="button" className="linklike" onClick={() => toggle(id)}>Remove</button>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          <p className="muted" style={{ marginTop: draft.length ? "12px" : 0, marginBottom: "6px" }}>Available widgets:</p>
           <div className="widget-config">
-            {WIDGETS.map((w) => {
-              const on = draft.includes(w.id);
-              return (
-                <div className="widget-config-row" key={w.id}>
-                  <label className="check"><input type="checkbox" checked={on} onChange={() => toggle(w.id)} /> {w.label}</label>
-                  {w.gmOnly && <span className="badges"><span>GM only</span></span>}
-                  {on && (
-                    <span className="member-actions">
-                      <button type="button" className="secondary" onClick={() => move(w.id, -1)}>↑</button>
-                      <button type="button" className="secondary" onClick={() => move(w.id, 1)}>↓</button>
-                    </span>
-                  )}
-                </div>
-              );
-            })}
+            {WIDGETS.filter((w) => !draft.includes(w.id)).map((w) => (
+              <div className="widget-config-row" key={w.id}>
+                <label className="check"><input type="checkbox" checked={false} onChange={() => toggle(w.id)} /> {w.label}</label>
+                {w.gmOnly && <span className="badges"><span>GM only</span></span>}
+              </div>
+            ))}
+            {WIDGETS.filter((w) => !draft.includes(w.id)).length === 0 && <p className="muted">All widgets active.</p>}
           </div>
         </div>
       )}
