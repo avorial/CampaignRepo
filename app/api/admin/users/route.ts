@@ -1,8 +1,10 @@
-import crypto from "node:crypto";
+﻿import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hashPassword, requireUser } from "@/lib/auth";
 import { createManualUser, listAllCampaignsForAdmin, listUsers, resetUserPassword, setUserAdmin, setUserCampaignMembership, setUserDisabled, updateUserIdentity } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 const actionSchema = z.discriminatedUnion("action", [
   z.object({

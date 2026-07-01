@@ -1,9 +1,11 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getStorageAdapter } from "@/lib/storage";
 import { parsePage } from "@/lib/markdown";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
+
+export const dynamic = "force-dynamic";
 
 type Severity = "error" | "warn" | "info";
 type Finding = { type: string; severity: Severity; slug?: string; title: string; detail: string };

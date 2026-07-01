@@ -1,7 +1,9 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getStorageAdapter, isNotFoundError } from "@/lib/storage";
+
+export const dynamic = "force-dynamic";
 
 const expectedPaths = [
   { path: "README.md", type: "file", label: "Campaign README" },

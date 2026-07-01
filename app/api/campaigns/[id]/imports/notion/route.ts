@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
@@ -7,6 +7,8 @@ import { defaultFrontmatter } from "@/lib/templates";
 import { serializePage } from "@/lib/markdown";
 import { slugify } from "@/lib/slug";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
+
+export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
   files: z.array(z.object({ name: z.string(), content: z.string() })).min(1).max(500),

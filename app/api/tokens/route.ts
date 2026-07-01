@@ -1,7 +1,9 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { createApiToken, listApiTokens, revokeApiToken } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 const createSchema = z.object({ name: z.string().max(80).optional() });
 const deleteSchema = z.object({ id: z.number().int().positive() });

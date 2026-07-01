@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { rebuildSearchIndex } from "@/lib/search";
 import { getStorageAdapter } from "@/lib/storage";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();

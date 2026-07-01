@@ -1,7 +1,9 @@
-import crypto from "node:crypto";
+﻿import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { githubAppInstallUrl, isGitHubAppConfigured } from "@/lib/github";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   await requireUser();

@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { getViewer } from "@/lib/github";
+
+export const dynamic = "force-dynamic";
 
 const schema = z.object({ token: z.string().min(20) });
 

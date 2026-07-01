@@ -1,8 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { githubAppConnectionToken, getInstallationRepositories } from "@/lib/github";
 import { publicUrl } from "@/lib/url";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const user = await requireUser();

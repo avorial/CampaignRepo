@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
@@ -6,6 +6,8 @@ import { getStorageAdapter } from "@/lib/storage";
 import { parsePage, serializePage } from "@/lib/markdown";
 import { listReviewPages } from "@/lib/reviews";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
+
+export const dynamic = "force-dynamic";
 
 const decisionSchema = z.object({
   slug: z.string().min(1).optional(),

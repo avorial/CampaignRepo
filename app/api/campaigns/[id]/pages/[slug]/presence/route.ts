@@ -1,7 +1,9 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { getCampaign } from "@/lib/db";
 import { heartbeat, getEditors, clearEditor } from "@/lib/presence";
+
+export const dynamic = "force-dynamic";
 
 async function guard(userId: number, campaignId: number) {
   const campaign = getCampaign(userId, campaignId);

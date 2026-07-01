@@ -1,7 +1,9 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hashPassword, verifyPassword, requireUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 const schema = z.object({
   currentPassword: z.string().min(1),

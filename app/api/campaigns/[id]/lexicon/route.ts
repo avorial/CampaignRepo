@@ -1,9 +1,11 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getLexicon, saveLexicon } from "@/lib/lexicon";
 import { slugify } from "@/lib/slug";
+
+export const dynamic = "force-dynamic";
 
 const entrySchema = z.object({
   id: z.string().optional(),

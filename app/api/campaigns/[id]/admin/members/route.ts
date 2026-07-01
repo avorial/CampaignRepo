@@ -1,8 +1,10 @@
-import crypto from "node:crypto";
+﻿import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hashPassword, requireUser } from "@/lib/auth";
 import { addCampaignMember, createManualUser, getCampaign, listCampaignMembers, removeCampaignMember, setMemberGroups, transferCampaignOwnership, updateCampaignMember } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 const roleSchema = z.enum(["gm", "player"]);
 

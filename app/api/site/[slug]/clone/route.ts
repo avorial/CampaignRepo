@@ -1,4 +1,4 @@
-import crypto from "node:crypto";
+﻿import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { getCampaignRepositoryToken, getDb, getPublicSiteCampaign, incrementCloneCount } from "@/lib/db";
@@ -7,6 +7,8 @@ import { loadCampaignTheme, loadPublicPages, saveCampaignTheme } from "@/lib/pub
 import { serializePage } from "@/lib/markdown";
 import { slugify } from "@/lib/slug";
 import type { Campaign } from "@/lib/types";
+
+export const dynamic = "force-dynamic";
 
 // Clone a published world into a NEW GitHub repo + campaign owned by the viewer.
 // Cloning always targets GitHub (GitHub App access is blocked).

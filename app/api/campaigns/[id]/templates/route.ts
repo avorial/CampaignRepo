@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
@@ -7,6 +7,8 @@ import { parsePage, serializePage } from "@/lib/markdown";
 import { defaultFrontmatter, gameTypes, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
 import type { GameType, WikiTemplate } from "@/lib/types";
+
+export const dynamic = "force-dynamic";
 
 const createSchema = z.object({
   name: z.string().min(1),

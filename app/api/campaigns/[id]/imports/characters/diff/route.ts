@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getStorageAdapter } from "@/lib/storage";
+
+export const dynamic = "force-dynamic";
 
 const schema = z.object({
   sourcePath: z.string().min(1),

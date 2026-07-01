@@ -1,3 +1,5 @@
+export type WorldDate = { year: number; month: number; day: number };
+
 export type GameType =
   // Fantasy
   | "Blades in the Dark"
@@ -145,6 +147,8 @@ export type WikiPageFrontmatter = {
   subsector?: string;
   patron?: string;
   techLevel?: string;
+  worldDate?: WorldDate;
+  birthdate?: WorldDate;
   lastEditedBy?: string;
   assignee?: string;
   sheet?: TravellerSheet;

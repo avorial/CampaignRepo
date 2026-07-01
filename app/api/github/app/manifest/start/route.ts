@@ -1,7 +1,9 @@
-import crypto from "node:crypto";
+﻿import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { isInternalOrigin, publicOrigin } from "@/lib/url";
+
+export const dynamic = "force-dynamic";
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char] || char);

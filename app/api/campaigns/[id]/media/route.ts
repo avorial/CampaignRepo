@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
@@ -6,6 +6,8 @@ import { getStorageAdapter, isNotFoundError, type StorageAdapter } from "@/lib/s
 import { slugify } from "@/lib/slug";
 import type { Campaign, CampaignMedia } from "@/lib/types";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
+
+export const dynamic = "force-dynamic";
 
 type MediaMetadata = { alt?: string; caption?: string; tags?: string[] };
 

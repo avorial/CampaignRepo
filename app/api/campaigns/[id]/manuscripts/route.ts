@@ -1,9 +1,11 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getStorageAdapter } from "@/lib/storage";
 import { listManuscripts, saveManuscript, manuscriptSlug } from "@/lib/manuscripts";
+
+export const dynamic = "force-dynamic";
 
 const createSchema = z.object({
   title: z.string().min(1).max(200),

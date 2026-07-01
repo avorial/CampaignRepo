@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, listCampaigns } from "@/lib/db";
 import { getStorageAdapter } from "@/lib/storage";
 import { listReviewPages } from "@/lib/reviews";
+
+export const dynamic = "force-dynamic";
 
 /** Aggregate unapproved/rejected pages across every campaign the user manages. */
 export async function GET() {

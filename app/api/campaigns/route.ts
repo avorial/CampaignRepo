@@ -1,4 +1,4 @@
-import fs from "node:fs/promises";
+﻿import fs from "node:fs/promises";
 import nodePath from "node:path";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -9,6 +9,8 @@ import { parseRepoInput } from "@/lib/repo";
 import { gameTypes } from "@/lib/templates";
 import { getStorageAdapter } from "@/lib/storage";
 import type { Campaign } from "@/lib/types";
+
+export const dynamic = "force-dynamic";
 
 const createSchema = z.discriminatedUnion("mode", [
   z.object({

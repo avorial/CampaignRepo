@@ -2,8 +2,9 @@ import YAML from "yaml";
 import { getStorageAdapter } from "@/lib/storage";
 import type { Campaign } from "@/lib/types";
 
+import type { WorldDate } from "@/lib/types";
+export type { WorldDate };
 export type CalendarMonth = { name: string; days: number };
-export type WorldDate = { year: number; month: number; day: number }; // month & day are 1-based
 export type Holiday = { name: string; month: number; day: number };
 export type CalendarConfig = {
   months: CalendarMonth[];

@@ -1,7 +1,9 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { createCampaignInvite, getCampaign, listCampaignInvites, revokeCampaignInvite } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 const createSchema = z.object({
   role: z.enum(["gm", "player"])

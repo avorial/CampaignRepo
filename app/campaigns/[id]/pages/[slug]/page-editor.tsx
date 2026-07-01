@@ -126,6 +126,7 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
   const [coEditors, setCoEditors] = useState<{ userId: number; name: string }[]>([]);
   const [categoryProps, setCategoryProps] = useState<Record<string, { name: string; type: string }[]>>({});
   const [members, setMembers] = useState<{ email: string; name: string; role: string }[]>([]);
+  const [pageCalendar, setPageCalendar] = useState<{ months: { name: string; days: number }[]; weekdays: string[]; eraName?: string; currentDate: { year: number; month: number; day: number } } | null>(null);
 
   useEffect(() => {
     if (!lightboxSrc) return;
@@ -212,6 +213,9 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
         .then((res) => res.json())
         .then((data) => setMembers(Array.isArray(data.members) ? data.members : []));
     }
+    fetch(`/api/campaigns/${campaign.id}/calendar`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => data?.calendar && setPageCalendar(data.calendar));
   }, [campaign.id, canManage, loadPage, slug]);
 
   const resolveLink = useMemo<WikiLinkResolver>(() => {
@@ -839,6 +843,20 @@ notes: ""
   const tradeCodes = Array.isArray(frontmatter.tradeCodes) ? frontmatter.tradeCodes : [];
   const isTraveller = campaign.gameType === "Traveller";
   const isEvent = frontmatter.category === "event";
+  const isCharacterOrNpc = frontmatter.category === "character" || frontmatter.category === "npc";
+
+  function calcAge(birthdate: { year: number; month: number; day: number }) {
+    if (!pageCalendar) return null;
+    const cal = pageCalendar;
+    const diy = cal.months.reduce((s: number, m: { days: number }) => s + Math.max(1, m.days), 0);
+    const toAbs = (d: { year: number; month: number; day: number }) => {
+      let days = (d.year - 1) * diy;
+      for (let i = 0; i < d.month - 1 && i < cal.months.length; i++) days += cal.months[i].days;
+      return days + (d.day - 1);
+    };
+    const diff = toAbs(cal.currentDate) - toAbs(birthdate);
+    return diff < 0 ? null : Math.floor(diff / diy);
+  }
   const canUseTravellerSheet = isTraveller && (frontmatter.category === "character" || frontmatter.category === "npc");
   const DND_GAME_TYPES: string[] = ["Dungeons & Dragons", "Pathfinder", "Old-School Essentials", "Shadowdark RPG", "Dragonbane", "Fabula Ultima"];
   const isDnD = DND_GAME_TYPES.includes(campaign.gameType);
@@ -1223,6 +1241,24 @@ notes: ""
             </div>
             {frontmatter.worldDate && fieldsEditable && (
               <button type="button" className="linklike" style={{ fontSize: "11px" }} onClick={() => updateField("worldDate", undefined)}>Clear in-world date</button>
+            )}
+          </div>
+        )}
+
+        {isCharacterOrNpc && pageCalendar && (
+          <div className="field-group">
+            <h3>Birthdate</h3>
+            {frontmatter.birthdate && (() => { const age = calcAge(frontmatter.birthdate); return age !== null ? <p className="muted" style={{ margin: "0 0 6px", fontSize: "12px" }}>Age: {age} years</p> : null; })()}
+            <div className="mapper-grid">
+              <label>Year<input type="number" min={1} value={frontmatter.birthdate?.year ?? ""} placeholder="—" readOnly={!fieldsEditable}
+                onChange={(e) => { const y = Number(e.target.value); y ? updateField("birthdate", { year: y, month: frontmatter.birthdate?.month ?? 1, day: frontmatter.birthdate?.day ?? 1 }) : updateField("birthdate", undefined); }} /></label>
+              <label>Month<input type="number" min={1} max={pageCalendar.months.length} value={frontmatter.birthdate?.month ?? ""} placeholder="—" readOnly={!fieldsEditable}
+                onChange={(e) => { const m = Number(e.target.value); if (frontmatter.birthdate && m) updateField("birthdate", { ...frontmatter.birthdate, month: m }); }} /></label>
+              <label>Day<input type="number" min={1} value={frontmatter.birthdate?.day ?? ""} placeholder="—" readOnly={!fieldsEditable}
+                onChange={(e) => { const d = Number(e.target.value); if (frontmatter.birthdate && d) updateField("birthdate", { ...frontmatter.birthdate, day: d }); }} /></label>
+            </div>
+            {frontmatter.birthdate && fieldsEditable && (
+              <button type="button" className="linklike" style={{ fontSize: "11px" }} onClick={() => updateField("birthdate", undefined)}>Clear birthdate</button>
             )}
           </div>
         )}

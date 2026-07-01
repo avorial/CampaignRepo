@@ -1,10 +1,12 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getStorageAdapter } from "@/lib/storage";
 import { parsePage, serializePage } from "@/lib/markdown";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
+
+export const dynamic = "force-dynamic";
 
 const schema = z.object({
   slugs: z.array(z.string().min(1)).min(1),

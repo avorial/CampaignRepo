@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getStorageAdapter } from "@/lib/storage";
 import { readPageCache } from "@/lib/page-cache";
+
+export const dynamic = "force-dynamic";
 
 // ---------------------------------------------------------------------------
 // Minimal ZIP builder (STORED mode, no compression dependencies)

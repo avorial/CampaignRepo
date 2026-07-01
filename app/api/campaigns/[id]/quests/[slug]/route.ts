@@ -1,9 +1,11 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { deleteQuest, getQuest, QUEST_STATUSES, saveQuest } from "@/lib/quests";
 import { isNotFoundError } from "@/lib/storage";
+
+export const dynamic = "force-dynamic";
 
 const saveSchema = z.object({
   frontmatter: z.object({

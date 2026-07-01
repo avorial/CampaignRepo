@@ -1,8 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { setAppSettings } from "@/lib/db";
 import { convertGitHubAppManifest } from "@/lib/github";
 import { publicUrl } from "@/lib/url";
+
+export const dynamic = "force-dynamic";
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char] || char);

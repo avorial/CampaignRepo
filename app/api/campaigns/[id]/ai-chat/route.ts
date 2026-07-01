@@ -1,9 +1,11 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getStorageAdapter, isNotFoundError } from "@/lib/storage";
 import { readPageCache } from "@/lib/page-cache";
+
+export const dynamic = "force-dynamic";
 
 const CONFIG_PATH = "wiki/.ai-config.json";
 

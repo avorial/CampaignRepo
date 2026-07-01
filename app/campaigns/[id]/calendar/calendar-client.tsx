@@ -7,7 +7,7 @@ type Month = { name: string; days: number };
 type WorldDate = { year: number; month: number; day: number };
 type Holiday = { name: string; month: number; day: number };
 type Calendar = { months: Month[]; weekdays: string[]; eraName?: string; currentDate: WorldDate; holidays?: Holiday[] };
-type WorldEvent = { slug: string; title: string; worldDate: WorldDate; kind: "session" | "event" | "quest" | "holiday"; href: string; recurring?: boolean };
+type WorldEvent = { slug: string; title: string; worldDate: WorldDate; kind: "session" | "event" | "quest" | "holiday" | "born"; href: string; recurring?: boolean };
 
 // Pure date helpers (mirror lib/calendar; kept here so the client bundle stays
 // free of the server-only campaign.yaml loaders).
@@ -62,6 +62,9 @@ export default function CalendarClient({ campaign }: { campaign: Campaign }) {
       for (const p of (pageData.pages || [])) {
         if (p.frontmatter?.worldDate) {
           evts.push({ slug: p.slug, title: p.frontmatter.name || p.slug, worldDate: p.frontmatter.worldDate, kind: "event", href: `${base}/pages/${p.slug}` });
+        }
+        if (p.frontmatter?.birthdate) {
+          evts.push({ slug: `born-${p.slug}`, title: p.frontmatter.name || p.slug, worldDate: p.frontmatter.birthdate, kind: "born", href: `${base}/pages/${p.slug}` });
         }
       }
       for (const q of (questData.quests || [])) {
@@ -188,12 +191,19 @@ function WorldTimeline({ cal, events }: { cal: Calendar; events: WorldEvent[] })
   const holidayCount = cal.holidays?.length ?? 0;
   const totalCount = nonHolidayCount + holidayCount;
 
+  const yd = daysInYear(cal);
   const renderItem = (e: WorldEvent) => {
     const inner = e.recurring ? <span>{e.title} <span className="muted" style={{ fontSize: "11px" }}>↺ yearly</span></span> : (e.href ? <a href={e.href}>{e.title}</a> : <span>{e.title}</span>);
+    const ageSuffix = e.kind === "born" ? (() => {
+      const diff = nowAbs - toAbs(cal, e.worldDate);
+      if (diff < 0) return null;
+      const age = Math.floor(diff / yd);
+      return <span className="muted" style={{ fontSize: "11px" }}> · age {age}</span>;
+    })() : null;
     return (
       <li key={e.slug} className="world-timeline-item">
-        <span className={`badge badge-${e.kind}`}>{e.kind}</span>
-        {inner}
+        <span className={`badge badge-${e.kind}`}>{e.kind === "born" ? "born" : e.kind}</span>
+        {inner}{ageSuffix}
         <span className="muted">{shortDate(cal, e.worldDate)}</span>
       </li>
     );

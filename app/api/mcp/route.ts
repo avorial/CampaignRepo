@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign, listCampaigns, searchDocs } from "@/lib/db";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
@@ -8,6 +8,8 @@ import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
 import { getStorageAdapter, isNotFoundError, type StorageAdapter } from "@/lib/storage";
 import type { Campaign, CampaignGraphEdge, CampaignGraphNode, CampaignMedia, CampaignTimelineItem, Category, GameType, WikiPage, WikiTemplate } from "@/lib/types";
+
+export const dynamic = "force-dynamic";
 
 type RpcRequest = {
   jsonrpc?: "2.0";

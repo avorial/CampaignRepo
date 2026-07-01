@@ -1,9 +1,11 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { z } from "zod";
 import yaml from "yaml";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getStorageAdapter } from "@/lib/storage";
+
+export const dynamic = "force-dynamic";
 
 const CAMPAIGN_YAML = "wiki/campaign.yaml";
 
