@@ -4,11 +4,13 @@ import type { Campaign } from "@/lib/types";
 
 export type CalendarMonth = { name: string; days: number };
 export type WorldDate = { year: number; month: number; day: number }; // month & day are 1-based
+export type Holiday = { name: string; month: number; day: number };
 export type CalendarConfig = {
   months: CalendarMonth[];
   weekdays: string[];
   eraName?: string;
   currentDate: WorldDate;
+  holidays?: Holiday[];
 };
 
 const campaignConfigPath = "wiki/campaign.yaml";
@@ -34,6 +36,16 @@ export function sanitizeCalendar(raw: unknown): CalendarConfig {
     : defaultCalendar().months;
   const weekdays = Array.isArray(r.weekdays) && r.weekdays.length ? r.weekdays.map((w) => String(w)).filter(Boolean) : defaultCalendar().weekdays;
   const cd = (r.currentDate || {}) as Partial<WorldDate>;
+  const holidays: Holiday[] | undefined = Array.isArray(r.holidays)
+    ? (r.holidays as unknown[])
+        .filter((h) => h && typeof h === "object")
+        .map((h) => {
+          const ho = h as Partial<Holiday>;
+          const month = Math.max(1, Math.min(months.length, Math.floor(Number(ho.month) || 1)));
+          return { name: String(ho.name || ""), month, day: Math.max(1, Math.min(months[month - 1]?.days || 30, Math.floor(Number(ho.day) || 1))) };
+        })
+        .filter((h) => h.name)
+    : undefined;
   const cal: CalendarConfig = {
     months,
     weekdays: weekdays.length ? weekdays : defaultCalendar().weekdays,
@@ -42,7 +54,8 @@ export function sanitizeCalendar(raw: unknown): CalendarConfig {
       year: Math.max(1, Math.floor(Number(cd.year) || 1)),
       month: Math.min(months.length, Math.max(1, Math.floor(Number(cd.month) || 1))),
       day: 1
-    }
+    },
+    ...(holidays?.length ? { holidays } : {})
   };
   cal.currentDate.day = Math.min(months[cal.currentDate.month - 1].days, Math.max(1, Math.floor(Number(cd.day) || 1)));
   return cal;

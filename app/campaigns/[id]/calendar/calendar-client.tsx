@@ -5,8 +5,9 @@ import type { Campaign } from "@/lib/types";
 
 type Month = { name: string; days: number };
 type WorldDate = { year: number; month: number; day: number };
-type Calendar = { months: Month[]; weekdays: string[]; eraName?: string; currentDate: WorldDate };
-type WorldEvent = { slug: string; title: string; worldDate: WorldDate; kind: "session" | "event" | "quest"; href: string };
+type Holiday = { name: string; month: number; day: number };
+type Calendar = { months: Month[]; weekdays: string[]; eraName?: string; currentDate: WorldDate; holidays?: Holiday[] };
+type WorldEvent = { slug: string; title: string; worldDate: WorldDate; kind: "session" | "event" | "quest" | "holiday"; href: string; recurring?: boolean };
 
 // Pure date helpers (mirror lib/calendar; kept here so the client bundle stays
 // free of the server-only campaign.yaml loaders).
@@ -70,6 +71,7 @@ export default function CalendarClient({ campaign }: { campaign: Campaign }) {
       }
       setEvents(evts);
     });
+    // Holidays are injected from cal after cal loads — handled in the derived `allEvents` below.
   }, []);
 
   if (!cal) return <p className="muted">{message || "Loading calendar…"}</p>;
@@ -80,6 +82,20 @@ export default function CalendarClient({ campaign }: { campaign: Campaign }) {
     return { year: Math.max(1, d.year), month, day: Math.min(cal!.months[month - 1].days, Math.max(1, d.day)) };
   }
   const monthLen = cal.months[cal.currentDate.month - 1]?.days || 30;
+
+  // Project holidays into current year ±1 for the timeline
+  const holidayEvents: WorldEvent[] = (cal.holidays || []).flatMap((h) => {
+    const y = cal.currentDate.year;
+    return [y - 1, y, y + 1].map((year) => ({
+      slug: `holiday-${h.name}-${year}`,
+      title: h.name,
+      worldDate: { year, month: h.month, day: h.day },
+      kind: "holiday" as const,
+      href: "",
+      recurring: true
+    }));
+  });
+  const allEvents = [...events, ...holidayEvents];
 
   async function save() {
     setBusy(true);
@@ -140,7 +156,23 @@ export default function CalendarClient({ campaign }: { campaign: Campaign }) {
           <button type="button" className="secondary" onClick={() => patch({ months: [...cal.months, { name: `Month ${cal.months.length + 1}`, days: 30 }] })}>Add month</button>
         </div>
 
-        {events.length > 0 && <WorldTimeline cal={cal} events={events} />}
+        <div className="panel">
+          <h2>Holidays <span className="tsheet-count">{(cal.holidays || []).length}</span></h2>
+          <p className="muted" style={{ marginBottom: "8px" }}>Named recurring days — festivals, solstices, holy days. Appear on the world timeline every year.</p>
+          {(cal.holidays || []).map((h, i) => (
+            <div className="tsheet-skill-row" key={i} style={{ gridTemplateColumns: "minmax(0,1fr) 100px 100px auto" }}>
+              <input value={h.name} placeholder="Holiday name…" onChange={(e) => patch({ holidays: (cal.holidays || []).map((x, j) => j === i ? { ...x, name: e.target.value } : x) })} />
+              <select value={h.month} onChange={(e) => { const month = Number(e.target.value); const maxDay = cal.months[month - 1]?.days || 30; patch({ holidays: (cal.holidays || []).map((x, j) => j === i ? { ...x, month, day: Math.min(x.day, maxDay) } : x) }); }}>
+                {cal.months.map((m, mi) => <option key={mi} value={mi + 1}>{m.name}</option>)}
+              </select>
+              <input type="number" min={1} max={cal.months[h.month - 1]?.days || 30} value={h.day} onChange={(e) => patch({ holidays: (cal.holidays || []).map((x, j) => j === i ? { ...x, day: Number(e.target.value) || 1 } : x) })} />
+              <button type="button" className="linklike" onClick={() => patch({ holidays: (cal.holidays || []).filter((_, j) => j !== i) })}>✕</button>
+            </div>
+          ))}
+          <button type="button" className="secondary" onClick={() => patch({ holidays: [...(cal.holidays || []), { name: "New holiday", month: 1, day: 1 }] })}>Add holiday</button>
+        </div>
+
+        {allEvents.length > 0 && <WorldTimeline cal={cal} events={allEvents} />}
       </div>
     </section>
   );
@@ -152,21 +184,30 @@ function WorldTimeline({ cal, events }: { cal: Calendar; events: WorldEvent[] })
   const past = sorted.filter((e) => toAbs(cal, e.worldDate) < nowAbs);
   const future = sorted.filter((e) => toAbs(cal, e.worldDate) >= nowAbs);
 
+  const nonHolidayCount = events.filter((e) => e.kind !== "holiday").length;
+  const holidayCount = cal.holidays?.length ?? 0;
+  const totalCount = nonHolidayCount + holidayCount;
+
+  const renderItem = (e: WorldEvent) => {
+    const inner = e.recurring ? <span>{e.title} <span className="muted" style={{ fontSize: "11px" }}>↺ yearly</span></span> : (e.href ? <a href={e.href}>{e.title}</a> : <span>{e.title}</span>);
+    return (
+      <li key={e.slug} className="world-timeline-item">
+        <span className={`badge badge-${e.kind}`}>{e.kind}</span>
+        {inner}
+        <span className="muted">{shortDate(cal, e.worldDate)}</span>
+      </li>
+    );
+  };
+
   return (
     <div className="panel">
-      <h2>World timeline <span className="tsheet-count">{events.length}</span></h2>
-      <p className="muted" style={{ marginBottom: "12px" }}>Sessions, quests, and event pages with an in-world date set, sorted chronologically.</p>
+      <h2>World timeline <span className="tsheet-count">{totalCount}</span></h2>
+      <p className="muted" style={{ marginBottom: "12px" }}>Sessions, quests, event pages, and holidays sorted chronologically.</p>
       {past.length > 0 && (
         <>
           <h3 className="timeline-section-label">Past</h3>
           <ul className="world-timeline-list">
-            {past.map((e) => (
-              <li key={e.slug} className="world-timeline-item">
-                <span className={`badge badge-${e.kind}`}>{e.kind}</span>
-                <a href={e.href}>{e.title}</a>
-                <span className="muted">{shortDate(cal, e.worldDate)}</span>
-              </li>
-            ))}
+            {past.map(renderItem)}
           </ul>
         </>
       )}
@@ -177,13 +218,7 @@ function WorldTimeline({ cal, events }: { cal: Calendar; events: WorldEvent[] })
         <>
           <h3 className="timeline-section-label">Upcoming</h3>
           <ul className="world-timeline-list">
-            {future.map((e) => (
-              <li key={e.slug} className="world-timeline-item">
-                <span className={`badge badge-${e.kind}`}>{e.kind}</span>
-                <a href={e.href}>{e.title}</a>
-                <span className="muted">{shortDate(cal, e.worldDate)}</span>
-              </li>
-            ))}
+            {future.map(renderItem)}
           </ul>
         </>
       )}
