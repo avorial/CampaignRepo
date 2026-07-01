@@ -32,7 +32,7 @@ The Rustwood Inn,location,"Roadside tavern in Thornmere","inn,tavern",players,`;
 export default function ImportClient({ campaignId, campaignName }: { campaignId: number; campaignName: string }) {
   const api = `/api/campaigns/${campaignId}`;
 
-  const [activeTab, setActiveTab] = useState<"csv" | "foundry" | "obsidian" | "notion" | "export">("csv");
+  const [activeTab, setActiveTab] = useState<"csv" | "foundry" | "obsidian" | "notion" | "worldanvil" | "export">("csv");
 
   // Obsidian vault import state
   const [obsidianFiles, setObsidianFiles] = useState<FileEntry[]>([]);
@@ -51,6 +51,13 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
   const [notionBusy, setNotionBusy] = useState(false);
   const [notionResult, setNotionResult] = useState<ImportResponse | null>(null);
 
+  // World Anvil import state
+  const [waJson, setWaJson] = useState("");
+  const [waVisibility, setWaVisibility] = useState<"gm" | "players">("gm");
+  const [waApproval, setWaApproval] = useState<"approved" | "unapproved" | "rejected">("unapproved");
+  const [waBusy, setWaBusy] = useState(false);
+  const [waResult, setWaResult] = useState<ImportResponse | null>(null);
+
   // CSV import state
   const [csvText, setCsvText] = useState("");
   const [csvCategory, setCsvCategory] = useState("npc");
@@ -66,6 +73,31 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
   const [journalApproval, setJournalApproval] = useState<"approved" | "unapproved" | "rejected">("unapproved");
   const [journalBusy, setJournalBusy] = useState(false);
   const [journalResult, setJournalResult] = useState<ImportResponse | null>(null);
+
+  async function runWaImport() {
+    let json: unknown;
+    try { json = JSON.parse(waJson); } catch { setWaResult({ results: [], created: 0, updated: 0, errors: 0, total: 0, error: "Invalid JSON. Paste the World Anvil export JSON." }); return; }
+    setWaBusy(true);
+    setWaResult(null);
+    try {
+      const res = await fetch(`${api}/imports/worldanvil`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ json, visibility: waVisibility, approvalStatus: waApproval })
+      });
+      setWaResult(await res.json());
+    } finally {
+      setWaBusy(false);
+    }
+  }
+
+  function loadWaFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setWaJson((ev.target?.result as string) || "");
+    reader.readAsText(file);
+  }
 
   async function runCsvImport() {
     if (!csvText.trim()) return;
@@ -173,6 +205,7 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
         <button className={`tab-btn${activeTab === "foundry" ? " active" : ""}`} onClick={() => setActiveTab("foundry")}>Foundry</button>
         <button className={`tab-btn${activeTab === "obsidian" ? " active" : ""}`} onClick={() => setActiveTab("obsidian")}>Obsidian</button>
         <button className={`tab-btn${activeTab === "notion" ? " active" : ""}`} onClick={() => setActiveTab("notion")}>Notion</button>
+        <button className={`tab-btn${activeTab === "worldanvil" ? " active" : ""}`} onClick={() => setActiveTab("worldanvil")}>World Anvil</button>
         <button className={`tab-btn${activeTab === "export" ? " active" : ""}`} onClick={() => setActiveTab("export")}>Export</button>
       </div>
 
@@ -385,6 +418,49 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
           </button>
 
           {notionResult && <ImportResultPanel result={notionResult} api={`/campaigns/${campaignId}`} />}
+        </div>
+      )}
+
+      {activeTab === "worldanvil" && (
+        <div className="import-panel stack">
+          <div className="import-intro">
+            <p>Import from World Anvil. In World Anvil, go to <strong>World → Export World</strong> and download the JSON export. Paste or upload it here.</p>
+            <p className="muted" style={{ fontSize: "12px" }}>
+              Accepts the full world JSON export (with an <code>articles</code> array) or a single article object. HTML is converted to Markdown. Sections marked as secrets are stripped.
+            </p>
+          </div>
+
+          <div className="import-options">
+            <label>Visibility
+              <select value={waVisibility} onChange={(e) => setWaVisibility(e.target.value as "gm" | "players")}>
+                {VISIBILITY_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </label>
+            <label>Approval status
+              <select value={waApproval} onChange={(e) => setWaApproval(e.target.value as "approved" | "unapproved" | "rejected")}>
+                {APPROVAL_OPTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </label>
+          </div>
+
+          <label className="file-upload-row">
+            Upload JSON export
+            <input type="file" accept=".json,application/json" onChange={loadWaFile} style={{ marginLeft: 8 }} />
+          </label>
+
+          <textarea
+            className="import-textarea"
+            placeholder={`Paste World Anvil JSON export here…\n\nExample:\n{"articles":[{"title":"The Dragon Queen","entityClass":"Character","content":"<p>A powerful dragon…</p>","excerpt":"She rules from Ember Throne.","tags":[{"title":"dragon"}]}]}`}
+            value={waJson}
+            onChange={(e) => setWaJson(e.target.value)}
+            rows={12}
+          />
+
+          <button onClick={runWaImport} disabled={waBusy || !waJson.trim()}>
+            {waBusy ? "Importing…" : "Import articles"}
+          </button>
+
+          {waResult && <ImportResultPanel result={waResult} api={`/campaigns/${campaignId}`} />}
         </div>
       )}
 

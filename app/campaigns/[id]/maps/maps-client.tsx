@@ -6,8 +6,9 @@ import type { Campaign, CampaignMedia, WikiPage } from "@/lib/types";
 
 type Layer = { id: string; name: string; visibility: "gm" | "players" };
 type Pin = { x: number; y: number; label: string; pageSlug?: string; mapSlug?: string; layer?: string; icon?: string; discovered?: boolean };
-type Region = { x: number; y: number; w: number; h: number; label: string; layer?: string };
-type CampaignMap = { slug: string; name: string; image: string; pins: Pin[]; layers?: Layer[]; regions?: Region[]; sha?: string };
+type Region = { x: number; y: number; w: number; h: number; label: string; layer?: string; color?: string };
+type Route = { fromIndex: number; toIndex: number; label?: string; style?: "road" | "river" | "path" | "wall"; layer?: string };
+type CampaignMap = { slug: string; name: string; image: string; pins: Pin[]; layers?: Layer[]; regions?: Region[]; routes?: Route[]; sha?: string };
 
 const PIN_ICONS = ["📍", "🏰", "🌆", "🌊", "🌲", "🏔️", "⚔️", "☠️", "💎", "❓", "🔒", "⭐", "🚪", "🛖", "⛵"];
 const DEFAULT_LAYER: Layer = { id: "default", name: "Default", visibility: "players" };
@@ -22,9 +23,11 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
   const [pages, setPages] = useState<WikiPage[]>([]);
   const [images, setImages] = useState<string[]>([]);
   const [selected, setSelected] = useState("");
-  const [addMode, setAddMode] = useState(false);
+  const [addMode, setAddMode] = useState<"pin" | "region" | "route" | null>(null);
   const [message, setMessage] = useState("");
   const [editingPin, setEditingPin] = useState<number | null>(null);
+  const [editingRoute, setEditingRoute] = useState<number | null>(null);
+  const [routeFrom, setRouteFrom] = useState<number | null>(null);
   const [hiddenLayers, setHiddenLayers] = useState<Set<string>>(new Set());
   const [newLayerName, setNewLayerName] = useState("");
   const [activeLayer, setActiveLayer] = useState<string>("default");
@@ -51,6 +54,17 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
   function updatePin(index: number, patch: Partial<Pin>) {
     if (!map) return;
     patchMap(map.slug, { pins: map.pins.map((p, i) => i === index ? { ...p, ...patch } : p) });
+  }
+
+  function updateRoute(index: number, patch: Partial<Route>) {
+    if (!map) return;
+    patchMap(map.slug, { routes: (map.routes || []).map((r, i) => i === index ? { ...r, ...patch } : r) });
+  }
+
+  function deleteRoute(index: number) {
+    if (!map) return;
+    patchMap(map.slug, { routes: (map.routes || []).filter((_, i) => i !== index) });
+    if (editingRoute === index) setEditingRoute(null);
   }
 
   async function createMap(event: FormEvent<HTMLFormElement>) {
@@ -86,15 +100,30 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
     if (res.ok) { setMaps(body.maps || []); setSelected((body.maps || [])[0]?.slug || ""); }
   }
 
-  function placePin(event: MouseEvent<HTMLDivElement>) {
+  function handleCanvasClick(event: MouseEvent<HTMLDivElement>) {
     if (!map || !addMode) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
-    const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
-    const newPin: Pin = { x, y, label: "New pin", layer: activeLayer, icon: "📍" };
-    patchMap(map.slug, { pins: [...map.pins, newPin] });
-    setEditingPin(map.pins.length);
-    setAddMode(false);
+    if (addMode === "pin") {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+      const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+      const newPin: Pin = { x, y, label: "New pin", layer: activeLayer, icon: "📍" };
+      patchMap(map.slug, { pins: [...map.pins, newPin] });
+      setEditingPin(map.pins.length);
+      setAddMode(null);
+    }
+  }
+
+  function handlePinClickInRouteMode(pinIndex: number, event: React.MouseEvent) {
+    event.stopPropagation();
+    if (!map || addMode !== "route") return;
+    if (routeFrom === null) {
+      setRouteFrom(pinIndex);
+    } else if (routeFrom !== pinIndex) {
+      const newRoute: Route = { fromIndex: routeFrom, toIndex: pinIndex, label: "", style: "road", layer: activeLayer };
+      patchMap(map.slug, { routes: [...(map.routes || []), newRoute] });
+      setRouteFrom(null);
+      setAddMode(null);
+    }
   }
 
   function addLayer() {
@@ -123,7 +152,7 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
         <h2>Maps</h2>
         <div className="results">
           {maps.map((m) => (
-            <button type="button" key={m.slug} className={m.slug === selected ? "nav-link active" : "nav-link"} onClick={() => { setSelected(m.slug); setAddMode(false); setEditingPin(null); }}>
+            <button type="button" key={m.slug} className={m.slug === selected ? "nav-link active" : "nav-link"} onClick={() => { setSelected(m.slug); setAddMode(null); setEditingPin(null); }}>
               <strong>{m.name}</strong>
               <span>{m.pins.length} pin{m.pins.length === 1 ? "" : "s"}</span>
             </button>
@@ -193,31 +222,90 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
             <div className="maps-toolbar">
               <strong>{map.name}</strong>
               <div className="topbar-actions">
-                <button type="button" className={addMode ? "active" : "secondary"} onClick={() => { setAddMode((v) => !v); setEditingPin(null); }}>
-                  {addMode ? `Click to place on "${layers.find((l) => l.id === activeLayer)?.name || activeLayer}"…` : "Add pin"}
+                <button
+                  type="button"
+                  className={addMode === "pin" ? "active" : "secondary"}
+                  onClick={() => { setAddMode((v) => v === "pin" ? null : "pin"); setEditingPin(null); setRouteFrom(null); }}
+                >
+                  {addMode === "pin" ? `Click map to place pin…` : "Add pin"}
+                </button>
+                <button
+                  type="button"
+                  className={addMode === "route" ? "active" : "secondary"}
+                  onClick={() => { setAddMode((v) => v === "route" ? null : "route"); setEditingPin(null); setRouteFrom(null); }}
+                >
+                  {addMode === "route" ? (routeFrom !== null ? "Click second pin…" : "Click first pin…") : "Add route"}
                 </button>
                 <button type="button" onClick={saveMap}>Save</button>
                 <button type="button" className="danger" onClick={deleteMap}>Delete map</button>
               </div>
             </div>
 
-            <div className={addMode ? "map-canvas placing" : "map-canvas"} onClick={placePin}>
+            <div className={addMode ? "map-canvas placing" : "map-canvas"} onClick={handleCanvasClick}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`/campaign-media/${campaign.id}/${encodeURIComponent(map.image)}`} alt={map.name} />
+
+              {/* SVG overlay for routes and regions */}
+              <svg className="map-overlay-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                {(map.regions || []).filter((r) => !hiddenLayers.has(r.layer || "default")).map((region, i) => (
+                  <g key={i}>
+                    <rect
+                      x={region.x * 100} y={region.y * 100}
+                      width={region.w * 100} height={region.h * 100}
+                      fill={region.color || "#4a90d9"} fillOpacity="0.18"
+                      stroke={region.color || "#4a90d9"} strokeWidth="0.4" strokeOpacity="0.6"
+                    />
+                    {region.label && (
+                      <text x={(region.x + region.w / 2) * 100} y={(region.y + region.h / 2) * 100}
+                        textAnchor="middle" dominantBaseline="middle"
+                        fontSize="2.5" fill={region.color || "#4a90d9"} fillOpacity="0.9" fontWeight="600">
+                        {region.label}
+                      </text>
+                    )}
+                  </g>
+                ))}
+                {(map.routes || []).filter((r) => !hiddenLayers.has(r.layer || "default")).map((route, i) => {
+                  const from = map.pins[route.fromIndex];
+                  const to = map.pins[route.toIndex];
+                  if (!from || !to) return null;
+                  const strokeStyle = route.style === "river" ? { stroke: "#4a90d9", strokeDasharray: "none" } :
+                                      route.style === "path" ? { stroke: "#c8a96e", strokeDasharray: "1.5,1" } :
+                                      route.style === "wall" ? { stroke: "#888", strokeDasharray: "0.8,0.4" } :
+                                      { stroke: "#c8a96e", strokeDasharray: "none" };
+                  const mx = (from.x + to.x) / 2 * 100;
+                  const my = (from.y + to.y) / 2 * 100;
+                  return (
+                    <g key={i} style={{ cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); setEditingRoute(editingRoute === i ? null : i); }}>
+                      <line x1={from.x * 100} y1={from.y * 100} x2={to.x * 100} y2={to.y * 100}
+                        strokeWidth="0.8" strokeLinecap="round" {...strokeStyle} />
+                      {route.label && (
+                        <text x={mx} y={my} textAnchor="middle" dominantBaseline="middle"
+                          fontSize="2" fill="#c8a96e" stroke="var(--bg-primary)" strokeWidth="0.5" paintOrder="stroke">
+                          {route.label}
+                        </text>
+                      )}
+                    </g>
+                  );
+                })}
+              </svg>
+
               {visiblePins.map((pin, index) => {
                 const pinIndex = map.pins.indexOf(pin);
+                const isRouteFrom = routeFrom === pinIndex;
                 return (
                   <button
                     type="button"
                     key={pinIndex}
-                    className={`map-pin${pin.pageSlug || pin.mapSlug ? "" : " unlinked"}${editingPin === pinIndex ? " editing" : ""}`}
+                    className={`map-pin${pin.pageSlug || pin.mapSlug ? "" : " unlinked"}${editingPin === pinIndex ? " editing" : ""}${isRouteFrom ? " route-from" : ""}`}
                     style={{ left: `${pin.x * 100}%`, top: `${pin.y * 100}%` }}
                     title={pin.label}
                     onClick={(e) => {
+                      if (addMode === "route") { handlePinClickInRouteMode(pinIndex, e); return; }
                       e.stopPropagation();
                       if (addMode) return;
                       if (editingPin === pinIndex) { setEditingPin(null); return; }
                       setEditingPin(pinIndex);
+                      setEditingRoute(null);
                     }}
                   >
                     <span className="map-pin-icon">{pin.icon || "📍"}</span>
@@ -226,6 +314,38 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
                 );
               })}
             </div>
+
+            {editingRoute !== null && (() => {
+              const route = (map.routes || [])[editingRoute];
+              if (!route) return null;
+              const fromPin = map.pins[route.fromIndex];
+              const toPin = map.pins[route.toIndex];
+              return (
+                <div className="field-group">
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <h3>Route: {fromPin?.label || `Pin ${route.fromIndex}`} → {toPin?.label || `Pin ${route.toIndex}`}</h3>
+                    <button type="button" className="linklike" onClick={() => setEditingRoute(null)}>Close</button>
+                  </div>
+                  <div className="map-pin-editor">
+                    <label>Label<input value={route.label || ""} onChange={(e) => updateRoute(editingRoute, { label: e.target.value })} placeholder="(optional)" /></label>
+                    <label>Style
+                      <select value={route.style || "road"} onChange={(e) => updateRoute(editingRoute, { style: e.target.value as Route["style"] })}>
+                        <option value="road">Road</option>
+                        <option value="path">Path / trail</option>
+                        <option value="river">River / water</option>
+                        <option value="wall">Wall / border</option>
+                      </select>
+                    </label>
+                    <label>Layer
+                      <select value={route.layer || "default"} onChange={(e) => updateRoute(editingRoute, { layer: e.target.value })}>
+                        {layers.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                      </select>
+                    </label>
+                    <button type="button" className="danger" onClick={() => deleteRoute(editingRoute)}>Delete route</button>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="field-group">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -293,6 +413,25 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
                 </div>
               )}
             </div>
+
+            {(map.routes || []).length > 0 && (
+              <div className="field-group">
+                <h3>Routes ({(map.routes || []).length})</h3>
+                <div className="map-pin-list">
+                  {(map.routes || []).map((route, i) => {
+                    const fromPin = map.pins[route.fromIndex];
+                    const toPin = map.pins[route.toIndex];
+                    return (
+                      <div key={i} className="map-pin-list-row" onClick={() => { setEditingRoute(i); setEditingPin(null); }}>
+                        <span className="muted" style={{ fontSize: 12 }}>{route.style || "road"}</span>
+                        <span>{fromPin?.label || `Pin ${route.fromIndex}`} → {toPin?.label || `Pin ${route.toIndex}`}</span>
+                        {route.label && <span className="muted" style={{ fontSize: 11 }}>{route.label}</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <p className="muted">Select or create a map.</p>

@@ -1279,6 +1279,37 @@ button.nav-link.active {
   background: rgba(200,160,50,0.12);
 }
 
+.map-overlay-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.map-overlay-svg line,
+.map-overlay-svg rect,
+.map-overlay-svg text {
+  pointer-events: visibleStroke;
+}
+
+.map-overlay-svg g {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.map-pin.route-from {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 4px rgba(200,160,50,0.4);
+  animation: route-pulse 1s ease-in-out infinite;
+}
+
+@keyframes route-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(200,160,50,0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(200,160,50,0.15); }
+}
+
 .map-pin-editor {
   display: grid;
   gap: 10px;
