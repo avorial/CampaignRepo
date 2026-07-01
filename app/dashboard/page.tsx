@@ -2,6 +2,7 @@ import os from "node:os";
 import nodePath from "node:path";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import KineticBackground from "@/app/components/kinetic-background";
 import Logo from "@/app/components/logo";
 import { currentUser } from "@/lib/auth";
 import { listCampaigns } from "@/lib/db";
@@ -17,7 +18,8 @@ export default async function DashboardPage() {
   const suggestedBasePath = nodePath.join(os.homedir(), "Campaigns");
 
   return (
-    <main className="app-shell">
+    <main className="app-shell dashboard-shell">
+      <KineticBackground />
       <header className="topbar">
         <div>
           <Logo href={null} />

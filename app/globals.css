@@ -423,6 +423,15 @@ code {
   color: var(--text-primary);
 }
 
+.dashboard-shell {
+  position: relative;
+  isolation: isolate;
+}
+
+.dashboard-shell .auth-kinetic {
+  opacity: 0.075;
+}
+
 .app-shell[data-theme] {
   position: relative;
   isolation: isolate;

@@ -3,34 +3,8 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useState } from "react";
+import KineticBackground from "@/app/components/kinetic-background";
 import Logo from "@/app/components/logo";
-
-const kineticRows = [
-  ["CAMPAIGNREPO", "LORE", "CANON"],
-  ["MAPS", "NPCS", "SESSIONS"],
-  ["QUESTS", "FACTIONS", "TIMELINE"],
-  ["ARTIFACTS", "REALMS", "SECRETS"],
-  ["ENCOUNTERS", "CHRONICLE", "HEROES"],
-  ["CAMPAIGNREPO", "MAPS", "CANON"]
-];
-
-function KineticAuthBackground() {
-  return (
-    <div className="auth-kinetic" aria-hidden="true">
-      <div className="auth-kinetic-stack">
-        {kineticRows.map((row, rowIndex) => (
-          <div className={`auth-kinetic-row ${rowIndex % 2 ? "auth-kinetic-reverse" : ""}`} key={row.join("-")}>
-            {[...row, ...row].map((word, wordIndex) => (
-              <span className={wordIndex % 2 ? "auth-kinetic-outline" : "auth-kinetic-fill"} key={`${word}-${wordIndex}`}>
-                {word}
-              </span>
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function LoginForm() {
   const router = useRouter();
@@ -57,7 +31,7 @@ function LoginForm() {
 
   return (
     <main className="auth-shell">
-      <KineticAuthBackground />
+      <KineticBackground />
       <section className="auth-panel">
         <div>
           <Logo href={null} size={40} />
