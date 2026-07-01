@@ -35,6 +35,29 @@ function travellerSheetSnippet(name: string) {
   return `\n\n\`\`\`traveller-sheet\nheader:\n  left: \n  center: \n  right: \nportrait: \nname: ${JSON.stringify(name || "")}\nspecies: \nage: \nhomeworld: \ncareer: \nrank: \ndossier: \nstatus: \nconditions: []\nspeciesTraits: []\ncharacteristics:\n  STR: \n  DEX: \n  END: \n  INT: \n  EDU: \n  SOC: \nskills:\n${skills}\nweapons:\n  # Laser Pistol: 3D, Medium, notes\narmour:\n  # Cloth: 8, notes\nitems:\n  # Medkit: 1, notes\nholdings:\n  # Ship Share: notes\npeople:\n  # Contact Name: notes\npsionics:\n  # Telepathy: 1, notes\nnotes: \n\`\`\`\n\n`;
 }
 
+type DiffLine = { tag: "eq" | "add" | "del"; text: string };
+function computeDiff(oldText: string, newText: string): DiffLine[] {
+  const a = oldText.split("\n");
+  const b = newText.split("\n");
+  const MAX = 600;
+  if (a.length > MAX || b.length > MAX) {
+    return [{ tag: "add", text: "(file too large to diff inline)" }];
+  }
+  const m = a.length, n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array<number>(n + 1).fill(0));
+  for (let i = m - 1; i >= 0; i--) for (let j = n - 1; j >= 0; j--) {
+    dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+  }
+  const result: DiffLine[] = [];
+  let i = 0, j = 0;
+  while (i < m || j < n) {
+    if (i < m && j < n && a[i] === b[j]) { result.push({ tag: "eq", text: a[i] }); i++; j++; }
+    else if (j < n && (i >= m || dp[i][j + 1] >= dp[i + 1][j])) { result.push({ tag: "add", text: b[j] }); j++; }
+    else { result.push({ tag: "del", text: a[i] }); i++; }
+  }
+  return result;
+}
+
 export default function PageEditor({ campaign, slug, categories }: { campaign: Campaign; slug: string; categories: { id: string; label: string }[] }) {
   const router = useRouter();
   const [page, setPage] = useState<WikiPage | null>(null);
@@ -59,6 +82,9 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
   const [historyCommits, setHistoryCommits] = useState<{ sha: string; url: string; message: string; author: string; date: string }[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [restoringSha, setRestoringSha] = useState<string | null>(null);
+  const [diffSha, setDiffSha] = useState<string | null>(null);
+  const [diffLines, setDiffLines] = useState<{ tag: "eq" | "add" | "del"; text: string }[] | null>(null);
+  const [diffLoading, setDiffLoading] = useState(false);
   const [slashMenu, setSlashMenu] = useState<{ query: string; insertStart: number; top: number; left: number } | null>(null);
   const [slashMenuIdx, setSlashMenuIdx] = useState(0);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
@@ -844,34 +870,77 @@ notes: ""
               {historyLoading && <p className="muted">Loading…</p>}
               {!historyLoading && historyCommits.length === 0 && <p className="muted">No commits found.</p>}
               {historyCommits.map((c) => (
-                <div className="history-commit" key={c.sha}>
-                  <span className="history-meta">{new Date(c.date).toLocaleDateString()} · {c.author}</span>
-                  <a href={c.url} target="_blank" rel="noreferrer" className="quiet-link history-message">{c.message}</a>
-                  <span className="history-sha">{c.sha.slice(0, 7)}</span>
-                  <button
-                    type="button"
-                    className="secondary"
-                    style={{ fontSize: "11px", padding: "2px 8px" }}
-                    disabled={restoringSha === c.sha}
-                    onClick={async () => {
-                      if (!window.confirm(`Restore page to the version from "${c.message}" (${c.sha.slice(0, 7)})?\n\nThis will load that version into the editor — you can review before saving.`)) return;
-                      setRestoringSha(c.sha);
-                      setMessage("Loading historical version…");
-                      try {
-                        const res = await fetch(`/api/campaigns/${campaign.id}/pages/${slug}/history?sha=${c.sha}`);
-                        const data = await res.json();
-                        if (!res.ok) { setMessage(data.error || "Could not load that version."); return; }
-                        setContent(data.text || "");
-                        setIsEditing(true);
-                        setShowHistory(false);
-                        setMode("gm");
-                        setMessage(`Restored to ${c.sha.slice(0, 7)} — review and save to commit.`);
-                      } catch { setMessage("Failed to load historical version."); }
-                      finally { setRestoringSha(null); }
-                    }}
-                  >
-                    {restoringSha === c.sha ? "Loading…" : "Restore"}
-                  </button>
+                <div key={c.sha}>
+                  <div className="history-commit">
+                    <span className="history-meta">{new Date(c.date).toLocaleDateString()} · {c.author}</span>
+                    <a href={c.url} target="_blank" rel="noreferrer" className="quiet-link history-message">{c.message}</a>
+                    <span className="history-sha">{c.sha.slice(0, 7)}</span>
+                    <div style={{ display: "flex", gap: "4px", gridColumn: 3, gridRow: "1 / 3", alignSelf: "center" }}>
+                      <button
+                        type="button"
+                        className="secondary"
+                        style={{ fontSize: "11px", padding: "2px 8px" }}
+                        disabled={diffLoading && diffSha === c.sha}
+                        onClick={async () => {
+                          if (diffSha === c.sha) { setDiffSha(null); setDiffLines(null); return; }
+                          setDiffSha(c.sha);
+                          setDiffLines(null);
+                          setDiffLoading(true);
+                          try {
+                            const res = await fetch(`/api/campaigns/${campaign.id}/pages/${slug}/history?sha=${c.sha}`);
+                            const data = await res.json();
+                            if (res.ok) setDiffLines(computeDiff(data.text || "", content));
+                            else setDiffLines([{ tag: "add", text: data.error || "Could not load." }]);
+                          } catch { setDiffLines([{ tag: "add", text: "Failed to load." }]); }
+                          finally { setDiffLoading(false); }
+                        }}
+                      >
+                        {diffLoading && diffSha === c.sha ? "…" : diffSha === c.sha ? "Close diff" : "Diff"}
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary"
+                        style={{ fontSize: "11px", padding: "2px 8px" }}
+                        disabled={restoringSha === c.sha}
+                        onClick={async () => {
+                          if (!window.confirm(`Restore page to the version from "${c.message}" (${c.sha.slice(0, 7)})?\n\nThis will load that version into the editor — you can review before saving.`)) return;
+                          setRestoringSha(c.sha);
+                          setMessage("Loading historical version…");
+                          try {
+                            const res = await fetch(`/api/campaigns/${campaign.id}/pages/${slug}/history?sha=${c.sha}`);
+                            const data = await res.json();
+                            if (!res.ok) { setMessage(data.error || "Could not load that version."); return; }
+                            setContent(data.text || "");
+                            setIsEditing(true);
+                            setShowHistory(false);
+                            setMode("gm");
+                            setMessage(`Restored to ${c.sha.slice(0, 7)} — review and save to commit.`);
+                          } catch { setMessage("Failed to load historical version."); }
+                          finally { setRestoringSha(null); }
+                        }}
+                      >
+                        {restoringSha === c.sha ? "Loading…" : "Restore"}
+                      </button>
+                    </div>
+                  </div>
+                  {diffSha === c.sha && diffLines && (
+                    <div className="history-diff">
+                      {diffLines.filter((l, i, arr) => {
+                        if (l.tag !== "eq") return true;
+                        const prev = arr[i - 1];
+                        const next = arr[i + 1];
+                        return (prev && prev.tag !== "eq") || (next && next.tag !== "eq");
+                      }).reduce<(DiffLine | "···")[]>((acc, line, i, src) => {
+                        if (i > 0 && src[i - 1]?.tag === "eq" && line.tag !== "eq") acc.push("···");
+                        acc.push(line);
+                        return acc;
+                      }, []).map((item, i) =>
+                        item === "···"
+                          ? <div key={`sep-${i}`} className="diff-sep">···</div>
+                          : <div key={i} className={`diff-line diff-${(item as DiffLine).tag}`}><span className="diff-mark">{(item as DiffLine).tag === "add" ? "+" : (item as DiffLine).tag === "del" ? "−" : " "}</span><span>{(item as DiffLine).text || " "}</span></div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

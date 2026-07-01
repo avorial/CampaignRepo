@@ -5269,6 +5269,34 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   align-self: center;
 }
 
+.history-diff {
+  background: var(--panel-bg-2, rgba(0,0,0,0.15));
+  border: 1px solid var(--border-soft);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  border-top: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+.diff-line {
+  display: flex;
+  gap: 8px;
+  padding: 0 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.diff-add { background: rgba(80, 190, 120, 0.12); color: #6ed896; }
+.diff-del { background: rgba(220, 80, 80, 0.12); color: #e07070; }
+.diff-eq  { color: var(--text-tertiary); }
+
+.diff-mark { flex-shrink: 0; user-select: none; width: 12px; }
+.diff-sep  { color: var(--text-tertiary); font-family: var(--font-mono); font-size: 11px; padding: 2px 12px; }
+
 /* ---- Campaign activity feed ---- */
 .activity-feed {
   display: grid;
