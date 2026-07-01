@@ -13,7 +13,9 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
-RUN npm run build
+# Use in-memory SQLite during build so parallel Next.js workers don't
+# race to create the same database file (SQLITE_BUSY / database is locked).
+RUN CAMPAIGNREPO_DB=:memory: npm run build
 
 # --- Runner: minimal image running the Next standalone server ---
 FROM node:20-bookworm-slim AS runner
