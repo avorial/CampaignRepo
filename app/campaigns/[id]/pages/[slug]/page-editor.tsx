@@ -114,6 +114,7 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
     { id: "divider",  label: "Divider",      snippet: "\n---\n"                                                       },
     { id: "task",     label: "Task list",    snippet: "\n- [ ] Task\n- [ ] Task\n"                                    },
     { id: "gm",       label: "GM block",     snippet: "\n:::gm\n{{selection}}\n:::"                                   },
+    { id: "secret",   label: "Secret block", snippet: '\n:::secret group="group-name"\n{{selection}}\n:::'             },
     { id: "include",  label: "Include page", snippet: ":::include [[Page Name]]:::"                                   },
   ];
 

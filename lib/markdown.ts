@@ -986,16 +986,24 @@ function expandTraits(content: string) {
   return content.replace(/```traits\s*\n([\s\S]*?)```/g, (_match, inner) => `\n\n${renderTraitsHtml(String(inner))}\n\n`);
 }
 
-/** Expand `![[Page]]` embeds inline (one level) using the include resolver. */
+/** Expand `![[Page]]` or `:::include [[Page]]:::` embeds inline (one level). */
 function expandIncludes(content: string, resolve?: IncludeResolver) {
   if (!resolve) return content;
-  return content.replace(/!\[\[([^\]]+?)\]\]/g, (_match, inner) => {
-    const target = String(inner).split("#")[0].split("|")[0].trim();
-    const included = resolve(target);
-    if (included == null) return `*(missing embed: ${target})*`;
-    // Inline the embedded Markdown so it renders; a rule sets it off visually.
-    return `\n\n---\n\n${included}\n\n---\n\n`;
-  });
+  // Handle both ![[Page]] and :::include [[Page Name]]::: syntaxes.
+  const expanded = content
+    .replace(/!\[\[([^\]]+?)\]\]/g, (_match, inner) => {
+      const target = String(inner).split("#")[0].split("|")[0].trim();
+      const included = resolve(target);
+      if (included == null) return `*(missing embed: ${target})*`;
+      return `\n\n---\n\n${included}\n\n---\n\n`;
+    })
+    .replace(/:::include\s+\[\[([^\]]+?)\]\]\s*:::/g, (_match, inner) => {
+      const target = String(inner).split("#")[0].split("|")[0].trim();
+      const included = resolve(target);
+      if (included == null) return `*(missing embed: ${target})*`;
+      return `\n\n---\n\n${included}\n\n---\n\n`;
+    });
+  return expanded;
 }
 
 /**
