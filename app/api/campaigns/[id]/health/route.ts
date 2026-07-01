@@ -89,9 +89,21 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     }
   }
 
+  // Oversized media files (> 1 MB for images; > 10 MB for any file).
+  const WARN_SIZE = 1 * 1024 * 1024;
+  const ERROR_SIZE = 10 * 1024 * 1024;
+  for (const entry of media) {
+    if (entry.type !== "file" || !entry.size || entry.name === ".gitkeep") continue;
+    if (entry.size >= ERROR_SIZE) {
+      findings.push({ type: "oversized-file", severity: "error", title: entry.name, detail: `${(entry.size / 1024 / 1024).toFixed(1)} MB — exceeds 10 MB hard limit for GitHub API uploads.` });
+    } else if (entry.size >= WARN_SIZE) {
+      findings.push({ type: "oversized-file", severity: "warn", title: entry.name, detail: `${(entry.size / 1024 / 1024).toFixed(1)} MB — consider compressing to keep the repo lean.` });
+    }
+  }
+
   const counts = findings.reduce<Record<string, number>>((acc, f) => {
     acc[f.type] = (acc[f.type] || 0) + 1;
     return acc;
   }, {});
-  return NextResponse.json({ pageCount: pages.length, findings, counts });
+  return NextResponse.json({ pageCount: pages.length, mediaCount: media.filter((e) => e.type === "file").length, findings, counts });
 }

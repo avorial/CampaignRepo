@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { Campaign } from "@/lib/types";
 
 type Finding = { type: string; severity: "error" | "warn" | "info"; slug?: string; title: string; detail: string };
-type Health = { pageCount: number; findings: Finding[]; counts: Record<string, number> };
+type Health = { pageCount: number; mediaCount?: number; findings: Finding[]; counts: Record<string, number> };
 
 // Display order + friendly labels for each finding type.
 const GROUPS: { type: string; label: string }[] = [
@@ -15,7 +15,8 @@ const GROUPS: { type: string; label: string }[] = [
   { type: "duplicate-alias", label: "Duplicate aliases" },
   { type: "empty-name", label: "Pages without a name" },
   { type: "unapproved", label: "Unapproved pages" },
-  { type: "orphaned-page", label: "Orphaned pages" }
+  { type: "orphaned-page", label: "Orphaned pages" },
+  { type: "oversized-file", label: "Oversized media files" }
 ];
 
 export default function HealthClient({ campaign }: { campaign: Campaign }) {
@@ -66,9 +67,9 @@ export default function HealthClient({ campaign }: { campaign: Campaign }) {
     <section className="health">
       <div className="health-summary">
         {total === 0 ? (
-          <p className="health-clean">✓ No issues found across {data.pageCount} pages.</p>
+          <p className="health-clean">✓ No issues found across {data.pageCount} pages{data.mediaCount ? ` and ${data.mediaCount} media files` : ""}.</p>
         ) : (
-          <p className="muted">{total} finding{total === 1 ? "" : "s"} across {data.pageCount} pages.</p>
+          <p className="muted">{total} finding{total === 1 ? "" : "s"} across {data.pageCount} pages{data.mediaCount ? ` and ${data.mediaCount} media files` : ""}.</p>
         )}
         <button type="button" className="secondary" onClick={load}>Re-scan</button>
       </div>
