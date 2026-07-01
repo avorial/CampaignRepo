@@ -241,6 +241,16 @@ button:disabled,
   cursor: not-allowed;
 }
 
+button:focus-visible,
+.button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
 .callout-warn {
   border: 1px solid var(--gold);
   background: var(--wash-gold);
@@ -5475,10 +5485,34 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
 }
 
 .notif-item {
-  padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border-faint);
   cursor: default;
   position: relative;
+}
+
+.notif-item-btn {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  border-radius: 0;
+  min-height: unset;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: inherit;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-primary);
+  transition: background 0.1s;
+}
+
+.notif-item-btn:hover {
+  background: var(--bg-wash);
+  border-color: transparent;
+  color: var(--text-primary);
 }
 
 .notif-item:last-child {
@@ -5501,6 +5535,7 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
 }
 
 .notif-item-title {
+  display: block;
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text-primary);
@@ -5508,6 +5543,7 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
 }
 
 .notif-item-body {
+  display: block;
   font-size: var(--text-sm);
   color: var(--text-secondary);
   margin-bottom: 0.25rem;
@@ -5515,11 +5551,14 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
 }
 
 .notif-item-meta {
+  display: block;
   font-size: var(--text-label-sm);
   color: var(--text-tertiary);
 }
 
 .notif-item-link {
+  display: block;
+  padding: 0 1rem 0.5rem;
   font-size: var(--text-sm);
   color: var(--purple);
   text-decoration: none;

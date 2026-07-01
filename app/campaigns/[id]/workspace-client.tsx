@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, type ReactNode, useEffect, useState } from "react";
+import { FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { Campaign, CampaignGraphEdge, CampaignGraphNode, CampaignMedia, CampaignTimelineItem, WikiPage, WikiTemplate } from "@/lib/types";
 import { gameTypeGroups, gameTypes } from "@/lib/templates";
@@ -53,9 +53,17 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const [message, setMessage] = useState("");
   const [search, setSearch] = useState<any[]>([]);
   const [pageCategory, setPageCategory] = useState(categories[0]?.id || "character");
+  const [navFilterInput, setNavFilterInput] = useState("");
   const [navFilter, setNavFilter] = useState("");
+  const [mediaFilterInput, setMediaFilterInput] = useState("");
   const [mediaFilter, setMediaFilter] = useState("");
+  const [templateFilterInput, setTemplateFilterInput] = useState("");
   const [templateFilter, setTemplateFilter] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounce = useCallback((setter: (v: string) => void, value: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setter(value), 150);
+  }, []);
   const [openNodes, setOpenNodes] = useState<Record<string, boolean>>({});
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({});
   const [publicSite, setPublicSite] = useState<{ slug: string; enabled: boolean } | null>(null);
@@ -519,25 +527,25 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
             {row.title}
           </Link>
         ))}
-        <input className="nav-filter" value={navFilter} onChange={(event) => setNavFilter(event.target.value)} placeholder="Filter pages" />
+        <input className="nav-filter" value={navFilterInput} onChange={(event) => { setNavFilterInput(event.target.value); debounce(setNavFilter, event.target.value); }} placeholder="Filter pages" />
         {navTree}
         {canManage && (
-          <Link href={`/campaigns/${campaign.id}/boards`} className="nav-link nav-tool-link">🗂 Boards</Link>
+          <Link href={`/campaigns/${campaign.id}/boards`} className="nav-link nav-tool-link" aria-label="Boards"><span aria-hidden="true">🗂</span> Boards</Link>
         )}
         {canManage && (
-          <Link href={`/campaigns/${campaign.id}/generate`} className="nav-link nav-tool-link">⚙ Generate</Link>
+          <Link href={`/campaigns/${campaign.id}/generate`} className="nav-link nav-tool-link" aria-label="Generate content"><span aria-hidden="true">⚙</span> Generate</Link>
         )}
         {canManage && (
-          <Link href={`/campaigns/${campaign.id}/lexicon`} className="nav-link nav-tool-link">Ⓛ Lexicon</Link>
+          <Link href={`/campaigns/${campaign.id}/lexicon`} className="nav-link nav-tool-link" aria-label="Lexicon"><span aria-hidden="true">Ⓛ</span> Lexicon</Link>
         )}
         {canManage && (
-          <Link href={`/campaigns/${campaign.id}/manuscripts`} className="nav-link nav-tool-link">📜 Manuscripts</Link>
+          <Link href={`/campaigns/${campaign.id}/manuscripts`} className="nav-link nav-tool-link" aria-label="Manuscripts"><span aria-hidden="true">📜</span> Manuscripts</Link>
         )}
         {canManage && (
-          <Link href={`/campaigns/${campaign.id}/tools/import`} className="nav-link nav-tool-link">⬆ Import / Export</Link>
+          <Link href={`/campaigns/${campaign.id}/tools/import`} className="nav-link nav-tool-link" aria-label="Import and Export"><span aria-hidden="true">⬆</span> Import / Export</Link>
         )}
         {canManage && (
-          <Link href={`/campaigns/${campaign.id}/ai`} className="nav-link nav-tool-link">🤖 AI Assistant</Link>
+          <Link href={`/campaigns/${campaign.id}/ai`} className="nav-link nav-tool-link" aria-label="AI Assistant"><span aria-hidden="true">🤖</span> AI Assistant</Link>
         )}
         {canManage && pendingReviews > 0 && (
           <Link href={`/campaigns/${campaign.id}/admin`} className="review-callout">
@@ -698,12 +706,12 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
 
             <div className="panel media-library">
               <h2>Media Library</h2>
-              <input type="search" className="library-filter" value={mediaFilter} onChange={(event) => setMediaFilter(event.target.value)} placeholder="Filter media by name, type, caption, or tag" />
+              <input type="search" className="library-filter" value={mediaFilterInput} onChange={(event) => { setMediaFilterInput(event.target.value); debounce(setMediaFilter, event.target.value); }} placeholder="Filter media by name, type, caption, or tag" />
               <div className="media-list">
                 {filteredMedia.map((item) => (
                   <article key={item.path} className="media-row">
                     <div className={`media-preview media-preview-${item.mediaType}`}>
-                      {item.downloadUrl && item.mediaType === "image" && <img src={item.downloadUrl} alt={item.alt || item.name} />}
+                      {item.downloadUrl && item.mediaType === "image" && <img src={item.downloadUrl} alt={item.alt || item.name} loading="lazy" decoding="async" />}
                       {item.downloadUrl && item.mediaType === "pdf" && <iframe title={item.alt || item.name} src={item.downloadUrl} />}
                       {item.downloadUrl && item.mediaType === "audio" && <audio controls src={item.downloadUrl} />}
                       {(!item.downloadUrl || item.mediaType === "other") && <span>{item.mediaType}</span>}
@@ -750,7 +758,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
 
             <div className="panel template-library">
               <h2>Template Library</h2>
-              <input type="search" className="library-filter" value={templateFilter} onChange={(event) => setTemplateFilter(event.target.value)} placeholder="Filter templates by name, category, or summary" />
+              <input type="search" className="library-filter" value={templateFilterInput} onChange={(event) => { setTemplateFilterInput(event.target.value); debounce(setTemplateFilter, event.target.value); }} placeholder="Filter templates by name, category, or summary" />
               {visibleTemplateGroups.map((group) => (
                 <div key={group.gameType} className="template-group">
                   <h3>{group.gameType}</h3>

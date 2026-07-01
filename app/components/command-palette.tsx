@@ -175,7 +175,7 @@ export default function CommandPalette() {
 
   return (
     <div className="cmdk-overlay" onClick={() => setOpen(false)} role="presentation">
-      <div className="cmdk" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Command palette">
+      <div className="cmdk" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Command palette" aria-modal="true">
         <input
           ref={inputRef}
           className="cmdk-input"

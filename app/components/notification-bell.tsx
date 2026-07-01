@@ -19,6 +19,7 @@ export default function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
 
   function load() {
     fetch("/api/notifications")
@@ -41,8 +42,18 @@ export default function NotificationBell() {
     function onClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setOpen(false);
+        btnRef.current?.focus();
+      }
+    }
     document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
   function toggle() {
@@ -62,36 +73,56 @@ export default function NotificationBell() {
     setNotifications((prev) => prev.map((item) => item.id === n.id ? { ...item, readAt: new Date().toISOString() } : item));
   }
 
+  const visible = notifications.slice(0, 15);
+
   return (
     <div className="notif-bell-wrap" ref={ref}>
-      <button type="button" className={`notif-bell-btn${unread > 0 ? " has-unread" : ""}`} onClick={toggle} aria-label="Notifications">
-        🔔
-        {unread > 0 && <span className="notif-badge">{unread > 9 ? "9+" : unread}</span>}
+      <button
+        ref={btnRef}
+        type="button"
+        className={`notif-bell-btn${unread > 0 ? " has-unread" : ""}`}
+        onClick={toggle}
+        aria-label={unread > 0 ? `Notifications — ${unread} unread` : "Notifications"}
+        aria-expanded={open}
+        aria-haspopup="true"
+      >
+        <span aria-hidden="true">🔔</span>
+        {unread > 0 && <span className="notif-badge" aria-hidden="true">{unread > 9 ? "9+" : unread}</span>}
       </button>
 
       {open && (
-        <div className="notif-dropdown">
+        <div
+          className="notif-dropdown"
+          role="dialog"
+          aria-label="Notifications"
+          aria-modal="true"
+        >
           <div className="notif-dropdown-header">
             <strong>Notifications</strong>
             {unread > 0 && <button type="button" className="notif-mark-all" onClick={markAllRead}>Mark all read</button>}
           </div>
-          {notifications.length === 0 && <div className="notif-empty">No notifications yet.</div>}
-          {notifications.slice(0, 15).map((n) => (
-            <div
-              key={n.id}
-              className={`notif-item${n.readAt ? " notif-read" : ""}`}
-              onClick={() => markRead(n)}
-            >
-              <div className="notif-item-title">{n.title}</div>
-              {n.body && <div className="notif-item-body">{n.body}</div>}
-              <div className="notif-item-meta">{new Date(n.createdAt).toLocaleDateString()}</div>
-              {n.link && (
-                <Link href={n.link} className="notif-item-link" onClick={() => markRead(n)}>
-                  View →
-                </Link>
-              )}
-            </div>
-          ))}
+          {visible.length === 0 && <div className="notif-empty">No notifications yet.</div>}
+          <ul className="notif-list" role="list" style={{ listStyle: "none", margin: 0, padding: 0 }}>
+            {visible.map((n) => (
+              <li key={n.id} className={`notif-item${n.readAt ? " notif-read" : ""}`}>
+                <button
+                  type="button"
+                  className="notif-item-btn"
+                  onClick={() => markRead(n)}
+                  aria-pressed={Boolean(n.readAt)}
+                >
+                  <span className="notif-item-title">{n.title}</span>
+                  {n.body && <span className="notif-item-body">{n.body}</span>}
+                  <span className="notif-item-meta">{new Date(n.createdAt).toLocaleDateString()}</span>
+                </button>
+                {n.link && (
+                  <Link href={n.link} className="notif-item-link" onClick={() => markRead(n)}>
+                    View →
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>
