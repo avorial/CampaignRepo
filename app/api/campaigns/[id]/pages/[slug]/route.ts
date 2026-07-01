@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { canManageCampaign, createNotifications, getCampaign, getCampaignGmUserIds } from "@/lib/db";
+import { canManageCampaign, createNotifications, getCampaign, getCampaignGmUserIds, getUserIdByEmail } from "@/lib/db";
 import { getStorageAdapter, isConflictError, isNotFoundError } from "@/lib/storage";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
@@ -86,6 +86,21 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           "review_request",
           `Review requested: ${frontmatter.name || slug}`,
           `${user.name} submitted "${frontmatter.name || slug}" for review in ${campaign.name}.`,
+          `/campaigns/${campaign.id}/pages/${slug}`
+        );
+      }
+    }
+
+    // Notify assigned user when a page is assigned to them
+    if (frontmatter.assignee) {
+      const assigneeId = getUserIdByEmail(frontmatter.assignee);
+      if (assigneeId && assigneeId !== user.id) {
+        createNotifications(
+          [assigneeId],
+          campaign.id,
+          "assignment",
+          `Assigned: ${frontmatter.name || slug}`,
+          `${user.name} assigned you to "${frontmatter.name || slug}" in ${campaign.name}.`,
           `/campaigns/${campaign.id}/pages/${slug}`
         );
       }

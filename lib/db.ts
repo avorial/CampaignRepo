@@ -229,6 +229,11 @@ export function getUserById(id: number) {
   return publicUser(db.prepare("SELECT * FROM users WHERE id = ?").get(id));
 }
 
+export function getUserIdByEmail(email: string): number | undefined {
+  const row = db.prepare("SELECT id FROM users WHERE lower(email) = lower(?)").get(email) as { id: number } | undefined;
+  return row?.id;
+}
+
 function hashApiToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }

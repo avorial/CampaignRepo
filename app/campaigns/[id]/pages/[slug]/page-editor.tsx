@@ -125,6 +125,7 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [coEditors, setCoEditors] = useState<{ userId: number; name: string }[]>([]);
   const [categoryProps, setCategoryProps] = useState<Record<string, { name: string; type: string }[]>>({});
+  const [members, setMembers] = useState<{ email: string; name: string; role: string }[]>([]);
 
   useEffect(() => {
     if (!lightboxSrc) return;
@@ -207,6 +208,9 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
       fetch(`/api/campaigns/${campaign.id}/category-properties`)
         .then((res) => res.json())
         .then((data) => setCategoryProps(data.categoryProperties || {}));
+      fetch(`/api/campaigns/${campaign.id}/admin/members`)
+        .then((res) => res.json())
+        .then((data) => setMembers(Array.isArray(data.members) ? data.members : []));
     }
   }, [campaign.id, canManage, loadPage, slug]);
 
@@ -1130,6 +1134,14 @@ notes: ""
           <label>Visibility<select value={frontmatter.visibility} onChange={(e) => updateField("visibility", e.target.value)} disabled={!fieldsEditable}><option value="gm">GM only</option><option value="players">Players</option></select></label>
           <label>Approval<select value={frontmatter.approvalStatus} onChange={(e) => updateField("approvalStatus", e.target.value)} disabled={!fieldsEditable}><option value="approved">Approved</option><option value="unapproved">Unapproved</option><option value="rejected">Rejected</option></select></label>
           <label className="check"><input type="checkbox" checked={Boolean(frontmatter.knownToPlayers)} onChange={(e) => updateField("knownToPlayers", e.target.checked)} disabled={!fieldsEditable} /> Known to players</label>
+          {members.length > 0 && (
+            <label>Assigned to
+              <select value={frontmatter.assignee || ""} onChange={(e) => updateField("assignee", e.target.value || undefined)} disabled={!fieldsEditable}>
+                <option value="">— unassigned —</option>
+                {members.map((m) => <option key={m.email} value={m.email}>{m.name} ({m.role})</option>)}
+              </select>
+            </label>
+          )}
         </div>
 
         <div className="field-group">
