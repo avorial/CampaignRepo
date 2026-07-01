@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 type Campaign = { id: number; name: string; owner: string; repo: string; role: string };
 type SearchResult = { campaignId: number; campaignName?: string; slug: string; title: string; category: string; visibility: string };
+type MediaFile = { name: string; mediaType: string; alt?: string };
 type Item = { id: string; group: string; label: string; hint?: string; run: () => void };
 
 export default function CommandPalette() {
@@ -15,6 +16,7 @@ export default function CommandPalette() {
   const [query, setQuery] = useState("");
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [media, setMedia] = useState<MediaFile[]>([]);
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -42,6 +44,15 @@ export default function CommandPalette() {
       .then((d) => setCampaigns(d.campaigns || []))
       .catch(() => undefined);
   }, [enabled, open]);
+
+  // Load media for the current campaign when the palette opens.
+  useEffect(() => {
+    if (!open || !currentId) return;
+    fetch(`/api/campaigns/${currentId}/media`)
+      .then((r) => (r.ok ? r.json() : { media: [] }))
+      .then((d) => setMedia(d.media || []))
+      .catch(() => undefined);
+  }, [open, currentId]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -93,9 +104,18 @@ export default function CommandPalette() {
     list.push({ id: "nav-dash", group: "Go to", label: "Dashboard", run: go("/dashboard") });
     if (currentId) {
       list.push({ id: "nav-ws", group: "Go to", label: "Campaign workspace", run: go(`/campaigns/${currentId}`) });
+      list.push({ id: "nav-overview", group: "Go to", label: "Overview dashboard", run: go(`/campaigns/${currentId}/overview`) });
+      list.push({ id: "nav-graph", group: "Go to", label: "Relationship graph", run: go(`/campaigns/${currentId}/graph`) });
+      list.push({ id: "nav-calendar", group: "Go to", label: "Calendar", run: go(`/campaigns/${currentId}/calendar`) });
+      list.push({ id: "nav-sessions", group: "Go to", label: "Sessions", run: go(`/campaigns/${currentId}/sessions`) });
+      list.push({ id: "nav-quests", group: "Go to", label: "Quests", run: go(`/campaigns/${currentId}/quests`) });
       if (canManage) {
         list.push({ id: "nav-org", group: "Go to", label: "Organize pages", run: go(`/campaigns/${currentId}/organize`) });
         list.push({ id: "nav-maps", group: "Go to", label: "Maps", run: go(`/campaigns/${currentId}/maps`) });
+        list.push({ id: "nav-health", group: "Go to", label: "Campaign health", run: go(`/campaigns/${currentId}/health`) });
+        list.push({ id: "nav-lexicon", group: "Go to", label: "Lexicon", run: go(`/campaigns/${currentId}/lexicon`) });
+        list.push({ id: "nav-manuscripts", group: "Go to", label: "Manuscripts", run: go(`/campaigns/${currentId}/manuscripts`) });
+        list.push({ id: "nav-boards", group: "Go to", label: "Boards", run: go(`/campaigns/${currentId}/boards`) });
         list.push({ id: "nav-admin", group: "Go to", label: "GM Admin", run: go(`/campaigns/${currentId}/admin`) });
       }
       list.push({ id: "nav-player", group: "Go to", label: "Player portal", run: go(`/campaigns/${currentId}/player`) });
@@ -112,13 +132,26 @@ export default function CommandPalette() {
         run: go(`/campaigns/${r.campaignId}/pages/${r.slug}`)
       });
     }
+    if (currentId && query.trim()) {
+      const q = query.trim().toLowerCase();
+      const matchingMedia = media.filter((m) => m.name.toLowerCase().includes(q) || (m.alt || "").toLowerCase().includes(q));
+      for (const m of matchingMedia.slice(0, 10)) {
+        list.push({
+          id: `media-${currentId}-${m.name}`,
+          group: "Media",
+          label: m.alt || m.name,
+          hint: m.name,
+          run: go(`/campaigns/${currentId}/organize?tab=media`)
+        });
+      }
+    }
     return list;
-  }, [campaigns, results, currentId, canManage, router]);
+  }, [campaigns, results, media, currentId, canManage, router, query]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return items.filter((i) => i.group !== "Pages");
-    return items.filter((i) => i.group === "Pages" || i.label.toLowerCase().includes(q) || i.hint?.toLowerCase().includes(q));
+    if (!q) return items.filter((i) => i.group !== "Pages" && i.group !== "Media");
+    return items.filter((i) => i.group === "Pages" || i.group === "Media" || i.label.toLowerCase().includes(q) || i.hint?.toLowerCase().includes(q));
   }, [items, query]);
 
   useEffect(() => {
