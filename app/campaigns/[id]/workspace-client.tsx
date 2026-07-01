@@ -522,6 +522,9 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
         <input className="nav-filter" value={navFilter} onChange={(event) => setNavFilter(event.target.value)} placeholder="Filter pages" />
         {navTree}
         {canManage && (
+          <Link href={`/campaigns/${campaign.id}/boards`} className="nav-link nav-tool-link">🗂 Boards</Link>
+        )}
+        {canManage && (
           <Link href={`/campaigns/${campaign.id}/generate`} className="nav-link nav-tool-link">⚙ Generate</Link>
         )}
         {canManage && (

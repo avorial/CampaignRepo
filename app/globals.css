@@ -1005,6 +1005,105 @@ button.nav-link.active {
   justify-content: center;
 }
 
+/* Boards (infinite canvas) */
+.boards-shell {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 0;
+  height: calc(100vh - 80px);
+  overflow: hidden;
+}
+
+.boards-sidebar {
+  overflow-y: auto;
+  border-right: 1px solid var(--border-soft);
+  border-radius: 0;
+  padding: 16px;
+}
+
+.boards-canvas-wrap {
+  overflow: hidden;
+  position: relative;
+  background: var(--bg-root);
+  background-image: radial-gradient(var(--border-faint) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.boards-canvas {
+  width: 100%;
+  height: 100%;
+  user-select: none;
+}
+
+.board-node {
+  position: absolute;
+  border: 1.5px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  transition: box-shadow 0.1s, border-color 0.1s;
+}
+
+.board-node.selected {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(200,160,50,0.25);
+}
+
+.board-node.edge-source {
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52,152,219,0.25);
+}
+
+.board-node-page { background: var(--bg-elevated); }
+.board-node-note { }
+
+.board-node-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.board-node-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 3px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.board-node-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  line-height: 1.4;
+}
+
+.board-page-picker {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.board-page-picker-inner {
+  width: 420px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.board-page-picker-list {
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Maps */
 .maps-grid {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
