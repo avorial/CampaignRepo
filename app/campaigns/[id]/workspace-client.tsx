@@ -554,6 +554,19 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
             ))}
           </nav>
         )}
+        {canManage && tab === "pages" && pages.length === 0 && (
+          <div className="onboarding-hero" style={{ margin: "24px 0" }}>
+            <div className="onboarding-hero-icon">🗺️</div>
+            <h3>Your campaign is ready — start building your world</h3>
+            <p>Create your first page below, upload a map, or invite a player. Everything stays in a plain folder you can open in any editor.</p>
+            <ul className="onboarding-feature-list">
+              <li>Create a <strong>Character</strong>, <strong>Location</strong>, or <strong>Event</strong> page from the form below</li>
+              <li>Upload a map image in the <strong>Media</strong> tab, then pin it in <strong>Maps</strong></li>
+              <li>Invite players from the <strong>Admin</strong> tab — they get a spoiler-safe portal</li>
+              <li>Use <code>[[Page Name]]</code> to link pages together as you write</li>
+            </ul>
+          </div>
+        )}
         {canManage && tab === "pages" && (
           <section className="dashboard-grid">
             <div className="panel" id="media">

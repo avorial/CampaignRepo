@@ -1,4 +1,5 @@
 ﻿import fs from "node:fs/promises";
+import os from "node:os";
 import nodePath from "node:path";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -32,7 +33,7 @@ const createSchema = z.discriminatedUnion("mode", [
   z.object({
     mode: z.literal("local"),
     name: z.string().min(1),
-    localPath: z.string().min(1),
+    localPath: z.string().optional(),
     gameType: z.enum(gameTypes as [string, ...string[]])
   })
 ]);
@@ -60,12 +61,10 @@ export async function POST(req: Request) {
   const input = createSchema.parse(await req.json());
 
   if (input.mode === "local") {
-    const absPath = nodePath.resolve(input.localPath);
-    try {
-      await fs.access(absPath);
-    } catch {
-      return NextResponse.json({ error: `Folder not found: ${absPath}` }, { status: 400 });
-    }
+    const safeName = input.name.replace(/[<>:"/\\|?*]/g, "-").trim() || "campaign";
+    const defaultPath = nodePath.join(os.homedir(), "Campaigns", safeName);
+    const absPath = nodePath.resolve(input.localPath || defaultPath);
+    await fs.mkdir(absPath, { recursive: true });
     const basename = nodePath.basename(absPath);
     const db = getDb();
     let result;

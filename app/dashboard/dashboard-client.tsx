@@ -21,7 +21,7 @@ export default function DashboardClient({
 }) {
   const githubConnected = Boolean(user.githubToken);
   const isGitHubApp = Boolean(user.githubToken?.startsWith("github-app:"));
-  const defaultMode = isGitHubApp ? "connect" : githubConnected ? "create" : "local";
+  const defaultMode: "create" | "connect" | "local" = "local";
   const [message, setMessage] = useState("");
   const [repos, setRepos] = useState<Campaign[]>(campaigns);
   const [mode, setMode] = useState<"create" | "connect" | "local">(defaultMode);
@@ -236,63 +236,61 @@ export default function DashboardClient({
         <details className="panel dashboard-toggle-panel" open={expandedPanels.build} onToggle={(event) => setPanelOpen("build", event.currentTarget.open)}>
           <summary>
             <span>New campaign</span>
-            <small>{mode === "create" ? "GitHub (new)" : mode === "local" ? "Local folder" : "GitHub (connect existing)"}</small>
+            <small>{mode === "local" ? "Local folder" : mode === "create" ? "GitHub (new)" : "GitHub (connect)"}</small>
           </summary>
           <div className="dashboard-toggle-body">
-            <div className="segmented">
-              <button type="button" className={mode === "local" ? "active" : ""} onClick={() => { setMode("local"); setBuildError(""); }}>
-                Local folder
-              </button>
-              <button
-                type="button"
-                className={mode === "create" ? "active" : ""}
-                disabled={isGitHubApp}
-                title={isGitHubApp ? "GitHub App access can't create repos — add a manual token to enable this" : undefined}
-                onClick={() => { setMode("create"); setBuildError(""); }}
-              >
-                {isGitHubApp && <Lock size={11} aria-hidden style={{ marginRight: 5 }} />}GitHub (new repo)
-              </button>
-              <button type="button" className={mode === "connect" ? "active" : ""} onClick={() => { setMode("connect"); setBuildError(""); }}>
-                GitHub (connect existing)
-              </button>
-            </div>
-            {mode === "local" && (
-              <p className="muted" style={{ fontSize: "12px", margin: "8px 0 0" }}>
-                Campaign files stay on this machine in a plain folder. Connect GitHub later for version history and multi-device sync.
-              </p>
-            )}
-            {isGitHubApp && mode !== "local" && (
-              <div className="setup-callout callout-warn" style={{ marginTop: 8 }}>
-                <strong><Lock size={13} aria-hidden style={{ marginRight: 6, verticalAlign: "-2px" }} />Creating new repos is locked</strong>
-                <span>You&apos;re connected via the GitHub App, which can connect existing repos but can&apos;t create new ones. Make the repo at <a href="https://github.com/new" target="_blank" rel="noreferrer">github.com/new</a>, then use <button type="button" className="linklike" onClick={() => { setMode("connect"); setBuildError(""); }}>Connect existing</button> — or add a manual token under <em>GitHub connection → troubleshooting</em>.</span>
-              </div>
-            )}
-            {(mode === "create" || mode === "connect") && !githubConnected && (
-              <div className="setup-callout callout-warn" style={{ marginTop: 8 }}>
-                <strong>GitHub not connected</strong>
-                <span>Connect GitHub below, or use <button type="button" className="linklike" onClick={() => { setMode("local"); setBuildError(""); }}>Local folder</button> to get started without any account.</span>
-              </div>
-            )}
-            <form onSubmit={buildRepo} className="stack" style={{ marginTop: 12 }}>
+            <form onSubmit={buildRepo} className="stack" style={{ marginTop: 4 }}>
               <label>Campaign name<input name="name" required placeholder="The Jardin File" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} /></label>
               <label>Game system<select name="gameType">{gameTypeGroups.map((group) => (
                 <optgroup key={group.label} label={group.label}>{group.types.map((type) => <option key={type}>{type}</option>)}</optgroup>
               ))}</select></label>
-              {mode === "local" && (
-                <details>
-                  <summary style={{ cursor: "pointer", fontSize: "12px", color: "var(--muted)" }}>Advanced: choose folder location</summary>
-                  <label style={{ marginTop: 8 }}>
-                    Folder path
-                    <input name="localPath" placeholder={suggestedLocalPath || "Leave blank to use default location"} />
-                    {suggestedLocalPath && <small className="muted">Default: {suggestedLocalPath}</small>}
-                  </label>
-                </details>
-              )}
-              {mode === "connect" && <label>Owner<input name="owner" placeholder="avorial (optional if pasting URL)" /></label>}
-              {mode !== "local" && <label>{mode === "connect" ? "Repo name or URL" : "Repo name"}<input name="repo" required placeholder={mode === "connect" ? "kdwiki or https://github.com/avorial/kdwiki" : "jardin-campaign"} /></label>}
-              {mode !== "local" && <label>Branch<input name="branch" defaultValue="main" /></label>}
-              {mode === "create" && <label className="check"><input type="checkbox" name="private" defaultChecked /> Private repo</label>}
-              <button disabled={isGitHubApp && mode === "create"}>{mode === "create" ? "Create and initialize" : mode === "local" ? "Create campaign" : "Connect and initialize"}</button>
+              <details onToggle={(e) => { if ((e.currentTarget as HTMLDetailsElement).open && mode === "local") setBuildError(""); }}>
+                <summary style={{ cursor: "pointer", fontSize: "12px", color: "var(--muted)", padding: "4px 0" }}>Advanced options</summary>
+                <div className="stack" style={{ marginTop: 8, paddingLeft: 4 }}>
+                  <p className="muted" style={{ fontSize: "12px", margin: "0 0 8px" }}>Storage: choose where campaign files live.</p>
+                  <div className="segmented" style={{ marginBottom: 8 }}>
+                    <button type="button" className={mode === "local" ? "active" : ""} onClick={() => { setMode("local"); setBuildError(""); }}>Local folder</button>
+                    <button
+                      type="button"
+                      className={mode === "create" ? "active" : ""}
+                      disabled={isGitHubApp}
+                      title={isGitHubApp ? "GitHub App can't create repos — add a manual token to enable this" : undefined}
+                      onClick={() => { setMode("create"); setBuildError(""); }}
+                    >
+                      {isGitHubApp && <Lock size={11} aria-hidden style={{ marginRight: 5 }} />}GitHub (new repo)
+                    </button>
+                    <button type="button" className={mode === "connect" ? "active" : ""} onClick={() => { setMode("connect"); setBuildError(""); }}>GitHub (connect)</button>
+                  </div>
+                  {mode === "local" && (
+                    <>
+                      <label>
+                        Folder path <span className="muted" style={{ fontWeight: 400 }}>(optional)</span>
+                        <input name="localPath" placeholder={suggestedLocalPath || "Leave blank for default location"} />
+                        {suggestedLocalPath && <small className="muted">Default: {suggestedLocalPath}</small>}
+                      </label>
+                    </>
+                  )}
+                  {isGitHubApp && mode !== "local" && (
+                    <div className="setup-callout callout-warn">
+                      <strong><Lock size={13} aria-hidden style={{ marginRight: 6, verticalAlign: "-2px" }} />Creating new repos is locked</strong>
+                      <span>GitHub App can connect existing repos but can&apos;t create new ones. Make the repo at <a href="https://github.com/new" target="_blank" rel="noreferrer">github.com/new</a>, then use <button type="button" className="linklike" onClick={() => { setMode("connect"); setBuildError(""); }}>Connect existing</button>.</span>
+                    </div>
+                  )}
+                  {(mode === "create" || mode === "connect") && !githubConnected && (
+                    <div className="setup-callout callout-warn">
+                      <strong>GitHub not connected</strong>
+                      <span>Connect GitHub above, or keep <button type="button" className="linklike" onClick={() => { setMode("local"); setBuildError(""); }}>Local folder</button> to start without any account.</span>
+                    </div>
+                  )}
+                  {mode === "connect" && <label>Owner<input name="owner" placeholder="avorial (optional if pasting URL)" /></label>}
+                  {mode !== "local" && <label>{mode === "connect" ? "Repo name or URL" : "Repo name"}<input name="repo" required placeholder={mode === "connect" ? "kdwiki or https://github.com/avorial/kdwiki" : "jardin-campaign"} /></label>}
+                  {mode !== "local" && <label>Branch<input name="branch" defaultValue="main" /></label>}
+                  {mode === "create" && <label className="check"><input type="checkbox" name="private" defaultChecked /> Private repo</label>}
+                </div>
+              </details>
+              <button disabled={isGitHubApp && mode === "create"}>
+                {mode === "create" ? "Create and initialize" : mode === "local" ? "Create campaign" : "Connect and initialize"}
+              </button>
               {buildError && <p className="error">{buildError}</p>}
             </form>
           </div>
