@@ -3,6 +3,47 @@
 import { useEffect, useState } from "react";
 import type { Campaign } from "@/lib/types";
 
+function SetupGuide({ campaign, pages, canManage }: { campaign: Campaign; pages: any[]; canManage: boolean }) {
+  const key = `setup-guide-dismissed-${campaign.id}`;
+  const [dismissed, setDismissed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(key) === "1";
+  });
+  const hasPages = pages.length > 0;
+  if (!canManage || dismissed || pages.length >= 5) return null;
+  const base = `/campaigns/${campaign.id}`;
+  const steps = [
+    { done: true,     label: "Campaign created",             link: null },
+    { done: hasPages, label: "Create your first wiki page",  link: base },
+    { done: false,    label: "Set your theme & banner",      link: `${base}/admin` },
+    { done: false,    label: "Invite a player",              link: `${base}/admin` },
+    { done: false,    label: "Publish to share your world",  link: `${base}/admin` }
+  ];
+  const doneCnt = steps.filter((s) => s.done).length;
+  return (
+    <div className="panel setup-guide">
+      <div className="setup-guide-header">
+        <div>
+          <h2>Getting started</h2>
+          <p className="muted">Your campaign is ready — here&apos;s what to do next.</p>
+        </div>
+        <button type="button" className="linklike" onClick={() => { localStorage.setItem(key, "1"); setDismissed(true); }}>Dismiss</button>
+      </div>
+      <div className="setup-guide-progress">
+        <div className="setup-guide-bar" style={{ width: `${(doneCnt / steps.length) * 100}%` }} />
+      </div>
+      <ol className="setup-guide-steps">
+        {steps.map((s, i) => (
+          <li key={i} className={`setup-step${s.done ? " done" : ""}`}>
+            <span className="setup-step-icon">{s.done ? "✓" : String(i + 1)}</span>
+            {s.link && !s.done ? <a href={s.link}>{s.label}</a> : <span>{s.label}</span>}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 // Client-safe widget metadata (mirrors lib/dashboard.WIDGETS without its
 // server-only imports). gmOnly widgets never render in the player view.
 type WidgetId = "calendar" | "counts" | "timeline" | "quicklinks" | "quests" | "review" | "health" | "activity";
@@ -123,6 +164,8 @@ export default function OverviewClient({ campaign, canManage }: { campaign: Camp
           </div>
         </div>
       )}
+
+      {!loading && <SetupGuide campaign={campaign} pages={data.pages?.pages || []} canManage={canManage} />}
 
       {loading ? (
         <p className="muted">Loading overview…</p>
