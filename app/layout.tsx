@@ -5,13 +5,17 @@ import CommandPalette from "./components/command-palette";
 
 export const metadata: Metadata = {
   title: "CampaignRepo",
-  description: "GitHub-backed RPG campaign wiki"
+  description: "Git-backed RPG campaign platform for Game Masters",
+  manifest: "/manifest.json",
+  appleWebApp: { capable: true, title: "CampaignRepo", statusBarStyle: "black-translucent" },
+  other: { "mobile-web-app-capable": "yes" }
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
+        <meta name="theme-color" content="#0d0d0f" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

@@ -1,6 +1,6 @@
-﻿// CampaignRepo Service Worker - PWA offline support
-const CACHE = "campaignrepo-v1";
-const SHELL = ["/", "/dashboard", "/login"];
+// CampaignRepo Service Worker - PWA offline support
+const CACHE = "campaignrepo-v2";
+const SHELL = ["/", "/dashboard", "/login", "/offline.html"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -17,12 +17,15 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // Only cache GET requests for same-origin navigation
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
-  // API and media requests: network only
-  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/campaign-media/") || url.pathname.startsWith("/public-media/")) return;
+  // API and media: network only, no cache
+  if (
+    url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith("/campaign-media/") ||
+    url.pathname.startsWith("/public-media/")
+  ) return;
 
   event.respondWith(
     fetch(event.request)
@@ -33,6 +36,15 @@ self.addEventListener("fetch", (event) => {
         }
         return res;
       })
-      .catch(() => caches.match(event.request).then((cached) => cached || Response.error()))
+      .catch(() =>
+        caches.match(event.request).then((cached) => {
+          if (cached) return cached;
+          // For navigation requests return the offline page
+          if (event.request.mode === "navigate") {
+            return caches.match("/offline.html");
+          }
+          return Response.error();
+        })
+      )
   );
 });

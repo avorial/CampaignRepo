@@ -1,0 +1,32 @@
+{
+  "name": "CampaignRepo",
+  "short_name": "CampaignRepo",
+  "description": "Git-backed RPG campaign platform for Game Masters",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0d0d0f",
+  "theme_color": "#0d0d0f",
+  "orientation": "any",
+  "categories": ["games", "productivity"],
+  "icons": [
+    {
+      "src": "/brand/logo-dice.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/logo-dice.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "url": "/dashboard",
+      "description": "Open your campaign dashboard"
+    }
+  ]
+}
