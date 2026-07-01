@@ -70,6 +70,25 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     }
   }
 
+  // Orphaned pages: no incoming links and no parent — they exist but can't be discovered.
+  const linkedSlugs = new Set<string>();
+  for (const page of pages) {
+    for (const link of page.outgoingLinks) {
+      const resolved = resolveTarget(aliasMap, link.target);
+      if (resolved) linkedSlugs.add(resolved);
+    }
+    for (const key of page.frontmatter.keyLinks || []) {
+      const resolved = resolveTarget(aliasMap, key);
+      if (resolved) linkedSlugs.add(resolved);
+    }
+  }
+  for (const page of pages) {
+    if (!linkedSlugs.has(page.slug) && !page.frontmatter.parent) {
+      const name = page.frontmatter.name?.trim() || page.slug;
+      findings.push({ type: "orphaned-page", severity: "info", slug: page.slug, title: name, detail: "No other page links here and no parent is set — this page is undiscoverable." });
+    }
+  }
+
   const counts = findings.reduce<Record<string, number>>((acc, f) => {
     acc[f.type] = (acc[f.type] || 0) + 1;
     return acc;
