@@ -11,3 +11,10 @@ docker-compose.yml
 README.md
 .claude
 tests
+
+# Large dev/runtime directories — not needed in the image
+_foundry_conversion
+wiki
+exports
+scripts
+docs

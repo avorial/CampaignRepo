@@ -10,12 +10,16 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json ./
-RUN npm ci
+# Cache the npm package store between builds so re-installs are fast.
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
 
 COPY . .
-# Use in-memory SQLite during build so parallel Next.js workers don't
-# race to create the same database file (SQLITE_BUSY / database is locked).
-RUN CAMPAIGNREPO_DB=:memory: npm run build
+# Cache the Next.js webpack/turbo build artefacts between builds.
+# Use in-memory SQLite so parallel Next.js workers don't race on the
+# same file and trigger SQLITE_BUSY / "database is locked".
+RUN --mount=type=cache,target=/app/.next/cache \
+    CAMPAIGNREPO_DB=:memory: npm run build
 
 # --- Runner: minimal image running the Next standalone server ---
 FROM node:20-bookworm-slim AS runner
