@@ -4711,19 +4711,47 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
 
 /* Relationship editor row in the page sidebar */
 .rel-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.rel-row > :first-child,
+.rel-row > select,
+.rel-row > input,
+.rel-row > button {
+  /* first row: type + target + remove */
+  display: inline-flex;
+}
+
+.rel-row > :not(.rel-row-extra) {
   align-items: center;
   display: flex;
   gap: 6px;
-  margin-bottom: 6px;
 }
 
-.rel-row select {
-  flex: 0 0 auto;
+/* Wrap the top controls in an implicit flex row */
+.rel-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.rel-row > select { flex: 0 0 auto; font-size: var(--text-sm); }
+.rel-row > input { flex: 1; min-width: 0; }
+
+.rel-row-extra {
+  flex: 0 0 100%;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.rel-row-extra input {
   font-size: var(--text-sm);
-}
-
-.rel-row input {
-  flex: 1;
+  color: var(--text-secondary);
   min-width: 0;
 }
 

@@ -896,13 +896,15 @@ notes: ""
                 {(frontmatter.relationships || []).map((rel: any, i: number) => {
                   const rtDef = REL_TYPE_MAP.get(rel.type);
                   const targetPage = pageBySlug.get(rel.target) ?? knownPages.find(p => p.frontmatter.name.toLowerCase() === (rel.target || "").toLowerCase());
+                  const timeMeta = [rel.since ? `since ${rel.since}` : null, rel.until ? `until ${rel.until}` : null].filter(Boolean).join(", ");
                   return (
                     <div className="rel-item" key={`out-${rel.type}-${rel.target}-${i}`}>
-                      <span className="rel-type">{rtDef?.label ?? rel.type}</span>
+                      <span className="rel-type">{rel.label || rtDef?.label || rel.type}</span>
                       <a href={targetPage ? `/campaigns/${campaign.id}/pages/${targetPage.slug}` : "#"} className="quiet-link">
                         {targetPage?.frontmatter.name ?? rel.target}
                       </a>
-                      {rel.notes && <span className="muted">{rel.notes}</span>}
+                      {timeMeta && <span className="muted rel-time">{timeMeta}</span>}
+                      {rel.notes && <span className="muted rel-notes">{rel.notes}</span>}
                     </div>
                   );
                 })}
@@ -1035,6 +1037,22 @@ notes: ""
                 <button type="button" className="linklike" onClick={() =>
                   updateField("relationships", (frontmatter.relationships || []).filter((_: any, j: number) => j !== i))
                 }>×</button>
+              )}
+              {(rel.label || rel.notes || rel.since || rel.until || fieldsEditable) && (
+                <div className="rel-row-extra">
+                  <input value={rel.label || ""} readOnly={!fieldsEditable} placeholder="Custom label (optional)" style={{ flex: 1 }}
+                    onChange={(e) => { const rels = [...(frontmatter.relationships || [])]; rels[i] = { ...rel, label: e.target.value || undefined }; updateField("relationships", rels); }}
+                  />
+                  <input value={rel.notes || ""} readOnly={!fieldsEditable} placeholder="Notes (optional)" style={{ flex: 2 }}
+                    onChange={(e) => { const rels = [...(frontmatter.relationships || [])]; rels[i] = { ...rel, notes: e.target.value || undefined }; updateField("relationships", rels); }}
+                  />
+                  <input value={rel.since || ""} readOnly={!fieldsEditable} placeholder="Since" style={{ width: "90px" }}
+                    onChange={(e) => { const rels = [...(frontmatter.relationships || [])]; rels[i] = { ...rel, since: e.target.value || undefined }; updateField("relationships", rels); }}
+                  />
+                  <input value={rel.until || ""} readOnly={!fieldsEditable} placeholder="Until" style={{ width: "90px" }}
+                    onChange={(e) => { const rels = [...(frontmatter.relationships || [])]; rels[i] = { ...rel, until: e.target.value || undefined }; updateField("relationships", rels); }}
+                  />
+                </div>
               )}
             </div>
           ))}
