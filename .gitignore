@@ -12,3 +12,7 @@ yarn-error.log*
 
 # Local Foundry VTT conversion assets (not part of the app)
 _foundry_conversion/
+
+# Campaign data — each campaign lives in its own repo, not here
+wiki/
+exports/
