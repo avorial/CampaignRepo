@@ -300,11 +300,11 @@ export function getPublicSiteCampaign(slug: string): Campaign | null {
 }
 
 /** Every enabled public campaign, for the public discovery gallery (no auth). */
-export function listPublicSites(): { slug: string; name: string; gameType: string; clones: number }[] {
+export function listPublicSites(): { slug: string; name: string; gameType: string; clones: number; publishedAt: string }[] {
   return db
     .prepare(
       `SELECT public_sites.slug AS slug, campaigns.name AS name, campaigns.gameType AS gameType,
-              public_sites.clones AS clones
+              public_sites.clones AS clones, public_sites.createdAt AS publishedAt
        FROM public_sites
        JOIN campaigns ON campaigns.id = public_sites.campaignId
        WHERE public_sites.enabled = 1
