@@ -155,20 +155,22 @@ export default function DashboardClient({
               {[...repos, ...repos].map((campaign, i) => {
                 const logo = gamePackLogos[campaign.gameType];
                 const plateClass = darkPlatePacks.has(campaign.gameType) ? " repo-logo-plate-dark" : "";
+                const slug = campaign.storageBackend === "local" ? (campaign.localPath || "local") : `${campaign.owner}/${campaign.repo}`;
+                const meta = [campaign.gameType, campaign.storageBackend !== "local" ? campaign.branch : null, campaign.role].filter(Boolean).join(" · ");
                 return (
-                  <div className="repo-card" key={`${campaign.id}-${i}`}>
-                    <Link className="repo-card-link" href={`/campaigns/${campaign.id}`}>
-                      <div className="repo-head">
+                  <div className="campaign-card" key={`${campaign.id}-${i}`}>
+                    <Link className="campaign-card-link" href={`/campaigns/${campaign.id}`}>
+                      <div className="campaign-card-logo">
                         {logo ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <span className={`repo-logo-plate${plateClass}`}><img src={logo} alt={campaign.gameType} /></span>
                         ) : (
                           <span className="repo-logo-plate repo-logo-initial" aria-hidden>{campaign.gameType.charAt(0).toUpperCase()}</span>
                         )}
-                        <strong>{campaign.name}</strong>
                       </div>
-                      <span>{campaign.storageBackend === "local" ? (campaign.localPath || "local folder") : `${campaign.owner}/${campaign.repo}`}</span>
-                      <small>{campaign.gameType}{campaign.storageBackend !== "local" && ` - ${campaign.branch}`} - {campaign.storageBackend === "local" ? "local" : "github"} - {campaign.role}</small>
+                      <p className="campaign-card-name">{campaign.name}</p>
+                      <span className="campaign-card-slug">{slug}</span>
+                      <small className="campaign-card-meta">{meta}</small>
                     </Link>
                   </div>
                 );
@@ -180,25 +182,25 @@ export default function DashboardClient({
           {repos.map((campaign) => {
             const logo = gamePackLogos[campaign.gameType];
             const plateClass = darkPlatePacks.has(campaign.gameType) ? " repo-logo-plate-dark" : "";
+            const slug = campaign.storageBackend === "local" ? (campaign.localPath || "local") : `${campaign.owner}/${campaign.repo}`;
+            const meta = [campaign.gameType, campaign.storageBackend !== "local" ? campaign.branch : null, campaign.role].filter(Boolean).join(" · ");
             return (
-              <div className="repo-card" key={campaign.id}>
-                <Link className="repo-card-link" href={`/campaigns/${campaign.id}`}>
-                  <div className="repo-head">
+              <div className="campaign-card" key={campaign.id}>
+                <Link className="campaign-card-link" href={`/campaigns/${campaign.id}`}>
+                  <div className="campaign-card-logo">
                     {logo ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <span className={`repo-logo-plate${plateClass}`}><img src={logo} alt={campaign.gameType} /></span>
                     ) : (
                       <span className="repo-logo-plate repo-logo-initial" aria-hidden>{campaign.gameType.charAt(0).toUpperCase()}</span>
                     )}
-                    <strong>{campaign.name}</strong>
                   </div>
-                  <span>{campaign.storageBackend === "local" ? (campaign.localPath || "local folder") : `${campaign.owner}/${campaign.repo}`}</span>
-                  <small>{campaign.gameType}{campaign.storageBackend !== "local" && ` - ${campaign.branch}`} - {campaign.storageBackend === "local" ? "local" : "github"} - {campaign.role}</small>
+                  <p className="campaign-card-name">{campaign.name}</p>
+                  <span className="campaign-card-slug">{slug}</span>
+                  <small className="campaign-card-meta">{meta}</small>
                 </Link>
                 {campaign.role === "owner" && (
-                  <button type="button" className="repo-remove danger" onClick={() => removeRepo(campaign.id, campaign.name)}>
-                    Remove
-                  </button>
+                  <button type="button" className="campaign-card-remove" onClick={() => removeRepo(campaign.id, campaign.name)} aria-label={`Remove ${campaign.name}`}>✕</button>
                 )}
               </div>
             );

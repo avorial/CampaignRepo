@@ -651,85 +651,114 @@ code {
   will-change: transform;
 }
 .repo-marquee:hover .repo-marquee-track { animation-play-state: paused; }
-.repo-marquee .repo-card { flex: 0 0 230px; width: 230px; }
+.repo-marquee .campaign-card { flex: 0 0 230px; width: 230px; }
 @keyframes repoMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
 @media (prefers-reduced-motion: reduce) {
   .repo-marquee-track { animation: none; }
 }
 
-.repo-card {
+/* Campaign card — the big centered tile for each connected repo on the dashboard */
+.campaign-card {
   position: relative;
-  min-height: 120px;
   display: grid;
-  align-content: space-between;
+  justify-items: center;
+  align-content: start;
+  gap: 7px;
+  text-align: center;
   background: var(--bg-surface);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-xl);
-  padding: 16px;
+  padding: 24px 18px 20px;
   color: var(--text-primary);
-  text-decoration: none;
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  box-shadow: var(--shadow-pop);
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.repo-card:hover {
+.campaign-card:hover {
   border-color: var(--border-strong);
-  transform: translateY(-2px);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-panel), 0 0 34px -8px var(--gold-glow);
 }
 
-.repo-card-link {
-  display: grid;
-  gap: 8px;
-  align-content: start;
-  justify-items: center;
-  text-align: center;
-  height: 100%;
-  color: var(--text-primary);
+.campaign-card-link {
+  display: contents;
+  color: inherit;
   text-decoration: none;
 }
 
-.repo-card-link::after {
+.campaign-card-link::after {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
 }
 
-.repo-head {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 2px;
-}
+.campaign-card-logo { margin-bottom: 8px; }
 
-.repo-head strong {
-  color: var(--gold);
-  font-size: 16px;
-  line-height: 1.25;
-}
-
-/* Custom pack has no logo — show its initial on the same light plate.
-   Scoped under .repo-card so it outranks the .repo-card span location rule. */
-.repo-card .repo-logo-initial {
-  color: #1a130a;
+.campaign-card-name {
   font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 32px;
-  line-height: 1;
+  font-weight: 500;
+  font-size: 19px;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--gold-bright);
+  margin: 0;
 }
+
+.campaign-card-slug {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--purple);
+}
+
+.campaign-card-meta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  line-height: 1.5;
+}
+
+.campaign-card-remove {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-tertiary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  opacity: 0;
+  z-index: 2;
+  font-size: 16px;
+  line-height: 1;
+  transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.campaign-card:hover .campaign-card-remove,
+.campaign-card-remove:focus-visible { opacity: 1; }
+
+.campaign-card-remove:hover { color: var(--danger); background: rgba(255, 138, 138, 0.12); }
 
 /* Game template-pack logos ride a light plate (third-party brands, varied bg) */
 .repo-logo-plate {
-  width: 104px;
-  height: 60px;
+  width: 140px;
+  height: 80px;
   border-radius: var(--radius-lg);
   background: var(--logo-plate);
   display: grid;
   place-items: center;
   flex: none;
   overflow: hidden;
-  padding: 8px 12px;
+  padding: 8px 14px;
 }
 
 .repo-logo-plate-dark {
@@ -743,28 +772,12 @@ code {
   object-fit: contain;
 }
 
-.repo-remove {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 2;
-  min-height: 28px;
-  padding: 0 10px;
-  font-size: var(--text-label-sm);
-}
-
-.repo-card span {
-  color: var(--purple);
-  font-family: var(--font-mono);
-  font-size: var(--text-label);
-}
-
-.repo-card small {
-  color: var(--text-tertiary);
-  font-family: var(--font-mono);
-  font-size: var(--text-label-sm);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.repo-logo-initial {
+  color: #1a130a;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 36px;
+  line-height: 1;
 }
 
 .segmented {
