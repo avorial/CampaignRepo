@@ -310,7 +310,7 @@ export function listPublicSites(): { slug: string; name: string; gameType: strin
        WHERE public_sites.enabled = 1
        ORDER BY public_sites.clones DESC, campaigns.name COLLATE NOCASE`
     )
-    .all() as { slug: string; name: string; gameType: string; clones: number }[];
+    .all() as { slug: string; name: string; gameType: string; clones: number; publishedAt: string }[];
 }
 
 /** Bump a published world's clone counter (drives most-cloned discovery). */

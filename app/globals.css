@@ -2799,8 +2799,24 @@ button.nav-link.active {
   .workspace,
   .player-portal,
   .page-grid,
-  .editor-split {
+  .editor-split,
+  .maps-grid,
+  .boards-shell {
     grid-template-columns: 1fr;
+  }
+
+  .boards-shell {
+    height: auto;
+    overflow: visible;
+  }
+
+  .boards-canvas-wrap {
+    min-height: 60vh;
+  }
+
+  .boards-sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border-soft);
   }
 
   .side-nav,
