@@ -75,6 +75,25 @@ function stepOnce(positions: Map<string, Pos>, edges: CampaignGraphEdge[]): Map<
   return next;
 }
 
+// === Relationship category colors ===
+const REL_CAT_COLORS: Record<string, string> = {
+  faction:   "#a075ff",
+  social:    "#6bb8ff",
+  conflict:  "#ff6b6b",
+  location:  "#78c8a0",
+  family:    "#e68cc8",
+  ownership: "#d4a957",
+  political: "#c878a0",
+  religion:  "#78dcd4",
+  session:   "#c0b0e0",
+  generic:   "#888888",
+};
+
+function relCatColor(relType: string): string {
+  const cat = REL_TYPE_MAP.get(relType)?.category;
+  return REL_CAT_COLORS[cat ?? ""] ?? "#888888";
+}
+
 // === Category colors ===
 const CAT_COLORS: Record<string, string> = {
   character: "#d4a957",
@@ -106,6 +125,7 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
   const [panStart, setPanStart] = useState<{ mx: number; my: number; ox: number; oy: number } | null>(null);
   const [dragNode, setDragNode] = useState<string | null>(null);
   const [filterCats, setFilterCats] = useState<Set<string>>(new Set(Object.keys(CAT_COLORS)));
+  const [filterRelCats, setFilterRelCats] = useState<Set<string>>(new Set(Object.keys(REL_CAT_COLORS)));
   const [showRelOnly, setShowRelOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -132,9 +152,10 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
           !e.missing &&
           visibleSlugs.has(e.source) &&
           visibleSlugs.has(e.target) &&
-          (!showRelOnly || Boolean(e.relType))
+          (!showRelOnly || Boolean(e.relType)) &&
+          (!e.relType || filterRelCats.has(REL_TYPE_MAP.get(e.relType)?.category ?? "generic"))
       ),
-    [edges, visibleSlugs, showRelOnly]
+    [edges, visibleSlugs, showRelOnly, filterRelCats]
   );
 
   // Force simulation
@@ -243,6 +264,13 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
   );
   const nodeMap = useMemo(() => new Map(nodes.map((n) => [n.slug, n])), [nodes]);
   const usedCats = useMemo(() => [...new Set(nodes.map((n) => n.category))].sort(), [nodes]);
+  const usedRelCats = useMemo(() => {
+    const cats = new Set<string>();
+    for (const e of edges) {
+      if (e.relType) cats.add(REL_TYPE_MAP.get(e.relType)?.category ?? "generic");
+    }
+    return [...cats].sort();
+  }, [edges]);
 
   const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -268,6 +296,15 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
 
   function toggleCat(cat: string) {
     setFilterCats((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
+  }
+
+  function toggleRelCat(cat: string) {
+    setFilterRelCats((prev) => {
       const next = new Set(prev);
       if (next.has(cat)) next.delete(cat);
       else next.add(cat);
@@ -314,6 +351,19 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
             {cat}
           </label>
         ))}
+        {usedRelCats.length > 0 && (
+          <>
+            <hr />
+            <h4>Relationship types</h4>
+            {usedRelCats.map((cat) => (
+              <label key={cat} className="graph-filter-item">
+                <input type="checkbox" checked={filterRelCats.has(cat)} onChange={() => toggleRelCat(cat)} />
+                <span className="cat-dot" style={{ background: REL_CAT_COLORS[cat] ?? "#888" }} />
+                {cat}
+              </label>
+            ))}
+          </>
+        )}
         <hr />
         <label className="graph-filter-item">
           <input type="checkbox" checked={showRelOnly} onChange={(e) => setShowRelOnly(e.target.checked)} />
@@ -343,6 +393,7 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
             const isRel = Boolean(edge.relType);
             const isActive = selected && (edge.source === selected || edge.target === selected);
             const isDim = selected && !isActive;
+            const edgeColor = isActive ? "var(--gold)" : isRel ? relCatColor(edge.relType!) : undefined;
             return (
               <line
                 key={`e-${i}`}
@@ -350,9 +401,9 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
                 className={[
                   "graph-edge",
                   isRel ? "graph-edge-rel" : "",
-                  isActive ? "graph-edge-active" : "",
                   isDim ? "graph-edge-dim" : "",
                 ].join(" ")}
+                style={edgeColor ? { stroke: edgeColor } : undefined}
               />
             );
           })}

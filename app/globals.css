@@ -5073,8 +5073,8 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
 }
 
 .graph-edge-rel {
-  stroke: rgba(160, 117, 255, 0.55);
   stroke-dasharray: 5 3;
+  stroke-opacity: 0.65;
   stroke-width: 2;
 }
 
