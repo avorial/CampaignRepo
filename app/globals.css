@@ -1043,24 +1043,40 @@ button.nav-link.active {
 .map-pin {
   position: absolute;
   transform: translate(-50%, -50%);
-  width: 16px;
-  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
   min-height: 0;
   padding: 0;
   border-radius: 50%;
-  background: var(--gold);
-  border: 2px solid #1a130a;
+  background: transparent;
+  border: 2px solid transparent;
   cursor: pointer;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.6));
 }
 
-.map-pin.unlinked {
-  background: var(--text-tertiary);
+.map-pin-icon {
+  font-size: 20px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.map-pin.editing {
+  border-color: var(--gold);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(200,160,50,0.35);
+}
+
+.map-pin.unlinked .map-pin-icon {
+  opacity: 0.5;
 }
 
 .map-pin-label {
   position: absolute;
   left: 50%;
-  top: -6px;
+  top: -4px;
   transform: translate(-50%, -100%);
   white-space: nowrap;
   background: var(--bg-elevated);
@@ -1073,6 +1089,7 @@ button.nav-link.active {
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--dur-fast) var(--ease);
+  z-index: 10;
 }
 
 .map-pin:hover .map-pin-label {
@@ -1084,6 +1101,102 @@ button.nav-link.active {
   grid-template-columns: 1fr 1fr auto;
   gap: 6px;
   margin-bottom: 6px;
+}
+
+/* Maps 2.0 */
+.map-layer-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-faint);
+}
+
+.map-layer-eye {
+  background: transparent;
+  border: none;
+  padding: 0 4px;
+  min-height: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.map-layer-name {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  padding: 1px 4px;
+}
+
+.map-layer-name.active {
+  color: var(--text-primary);
+  font-weight: 600;
+  background: var(--bg-subtle);
+}
+
+.map-layer-vis {
+  font-size: 11px;
+  padding: 1px 4px;
+  height: auto;
+  min-height: 0;
+}
+
+.map-icon-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.map-icon-btn {
+  width: 34px;
+  height: 34px;
+  min-height: 0;
+  padding: 0;
+  font-size: 18px;
+  background: var(--bg-subtle);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-icon-btn.active {
+  border-color: var(--gold);
+  background: rgba(200,160,50,0.12);
+}
+
+.map-pin-editor {
+  display: grid;
+  gap: 10px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.map-pin-list {
+  display: grid;
+  gap: 4px;
+}
+
+.map-pin-list-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.map-pin-list-row:hover {
+  background: var(--bg-subtle);
 }
 
 .nav-group h3,

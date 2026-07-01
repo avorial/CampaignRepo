@@ -10,15 +10,26 @@ export const dynamic = "force-dynamic";
 const pinSchema = z.object({
   x: z.number().min(0).max(1),
   y: z.number().min(0).max(1),
+  label: z.string().optional().default(""),
   pageSlug: z.string().optional().default(""),
-  label: z.string().optional().default("")
+  mapSlug: z.string().optional().default(""),
+  layer: z.string().optional().default("default"),
+  icon: z.string().optional().default("📍"),
+  discovered: z.boolean().optional().default(false)
+});
+
+const layerSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  visibility: z.enum(["gm", "players"]).default("players")
 });
 
 const upsertSchema = z.object({
   slug: z.string().optional(),
   name: z.string().min(1),
   image: z.string().min(1),
-  pins: z.array(pinSchema).default([])
+  pins: z.array(pinSchema).default([]),
+  layers: z.array(layerSchema).optional()
 });
 
 const deleteSchema = z.object({ slug: z.string().min(1) });
@@ -31,7 +42,7 @@ async function loadMaps(storage: StorageAdapter) {
       .map(async (entry) => {
         const file = await storage.getTextFile(entry.path);
         const data = JSON.parse(file.text || "{}");
-        return { slug: entry.name.replace(/\.json$/, ""), name: data.name || entry.name, image: data.image || "", pins: Array.isArray(data.pins) ? data.pins : [], sha: file.sha };
+        return { slug: entry.name.replace(/\.json$/, ""), name: data.name || entry.name, image: data.image || "", pins: Array.isArray(data.pins) ? data.pins : [], layers: Array.isArray(data.layers) ? data.layers : undefined, sha: file.sha };
       })
   );
   return maps.sort((a, b) => a.name.localeCompare(b.name));
@@ -66,7 +77,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   } catch (error) {
     if (!isNotFoundError(error)) throw error;
   }
-  const body = JSON.stringify({ name: input.name, image: input.image, pins: input.pins }, null, 2) + "\n";
+  const body = JSON.stringify({ name: input.name, image: input.image, pins: input.pins, layers: input.layers }, null, 2) + "\n";
   await storage.putFile(path, body, `CampaignRepo: save map ${input.name}`, sha);
   return NextResponse.json({ maps: await loadMaps(storage) });
 }

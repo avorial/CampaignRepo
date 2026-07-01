@@ -35,5 +35,24 @@
     "eslint-config-next": "^15.0.3",
     "typescript": "^5.6.3",
     "vitest": "^4.1.9"
-  }
+  },
+  "description": "CampaignRepo is a GitHub-backed campaign wiki for tabletop RPGs. It keeps every campaign in a normal GitHub repository while giving GMs and players a purpose-built web app for pages, media, templates, imports, search, review queues, and AI/MCP-assisted editing.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "lib": "lib",
+    "test": "tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/avorial/CampaignRepo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/avorial/CampaignRepo/issues"
+  },
+  "homepage": "https://github.com/avorial/CampaignRepo#readme"
 }
