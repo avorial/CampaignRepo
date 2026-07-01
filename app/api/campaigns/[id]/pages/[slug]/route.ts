@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { canManageCampaign, getCampaign } from "@/lib/db";
+import { canManageCampaign, createNotifications, getCampaign, getCampaignGmUserIds } from "@/lib/db";
 import { getStorageAdapter, isConflictError, isNotFoundError } from "@/lib/storage";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
@@ -75,6 +75,22 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   try {
     const saved = await storage.putFile(`wiki/pages/${slug}.md`, raw, `CampaignRepo: update ${frontmatter.name || slug}`, sha);
     scheduleSearchIndexRebuild(campaign);
+
+    // Notify GMs when a player-visible page is submitted for review
+    if (frontmatter.approvalStatus === "unapproved" && frontmatter.visibility === "players") {
+      const gmIds = getCampaignGmUserIds(campaign.id).filter((uid) => uid !== user.id);
+      if (gmIds.length > 0) {
+        createNotifications(
+          gmIds,
+          campaign.id,
+          "review_request",
+          `Review requested: ${frontmatter.name || slug}`,
+          `${user.name} submitted "${frontmatter.name || slug}" for review in ${campaign.name}.`,
+          `/campaigns/${campaign.id}/pages/${slug}`
+        );
+      }
+    }
+
     return NextResponse.json({ ok: true, sha: saved.sha });
   } catch (error) {
     if (isConflictError(error)) {

@@ -7,6 +7,7 @@ import { loadCampaignCategories } from "@/lib/categories";
 import { loadCampaignTheme } from "@/lib/public-site";
 import { themeToCssVars } from "@/lib/theme";
 import CampaignClient from "./workspace-client";
+import NotificationBell from "@/app/components/notification-bell";
 
 function themeLogoSrc(campaignId: number, logo?: string) {
   if (!logo) return "";
@@ -48,6 +49,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
           {(campaign.role === "owner" || campaign.role === "gm") && <Link className="button secondary" href={`/campaigns/${campaign.id}/health`}>Health</Link>}
           {(campaign.role === "owner" || campaign.role === "gm") && <Link className="button secondary" href={`/campaigns/${campaign.id}/admin`}>GM Admin</Link>}
           <a className="button secondary" href={`https://github.com/${campaign.owner}/${campaign.repo}`}>Open GitHub</a>
+          <NotificationBell />
         </div>
       </header>
       <CampaignClient campaign={campaign} categories={categories} />

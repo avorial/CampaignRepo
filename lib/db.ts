@@ -172,6 +172,22 @@ INSERT OR IGNORE INTO campaign_memberships (campaignId, userId, role)
 SELECT id, userId, 'owner' FROM campaigns;
 `);
 
+// Notifications table
+db.exec(`
+CREATE TABLE IF NOT EXISTS notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  userId INTEGER NOT NULL,
+  campaignId INTEGER,
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT,
+  link TEXT,
+  readAt TEXT,
+  createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (userId) REFERENCES users(id)
+);
+`);
+
 // Migrations — safe to run on every start (errors mean column already exists)
 try { db.exec("ALTER TABLE campaign_memberships ADD COLUMN groups TEXT NOT NULL DEFAULT '[]'"); } catch { /* already migrated */ }
 
@@ -636,6 +652,52 @@ export function upsertSearchDocuments(campaignId: number, docs: SearchDocument[]
   tx();
 }
 
+export type Notification = {
+  id: number;
+  userId: number;
+  campaignId: number | null;
+  type: string;
+  title: string;
+  body: string | null;
+  link: string | null;
+  readAt: string | null;
+  createdAt: string;
+};
+
+export function createNotifications(userIds: number[], campaignId: number | null, type: string, title: string, body: string, link: string) {
+  const insert = db.prepare("INSERT INTO notifications (userId, campaignId, type, title, body, link) VALUES (?, ?, ?, ?, ?, ?)");
+  const tx = db.transaction((ids: number[]) => {
+    for (const uid of ids) insert.run(uid, campaignId, type, title, body, link);
+  });
+  tx(userIds);
+}
+
+export function listNotifications(userId: number, limit = 30): Notification[] {
+  return db.prepare("SELECT * FROM notifications WHERE userId = ? ORDER BY createdAt DESC LIMIT ?").all(userId, limit) as Notification[];
+}
+
+export function countUnreadNotifications(userId: number): number {
+  const row = db.prepare("SELECT COUNT(*) AS n FROM notifications WHERE userId = ? AND readAt IS NULL").get(userId) as { n: number };
+  return row.n;
+}
+
+export function markNotificationRead(userId: number, notificationId: number) {
+  db.prepare("UPDATE notifications SET readAt = CURRENT_TIMESTAMP WHERE id = ? AND userId = ?").run(notificationId, userId);
+}
+
+export function markAllNotificationsRead(userId: number, campaignId?: number) {
+  if (campaignId !== undefined) {
+    db.prepare("UPDATE notifications SET readAt = CURRENT_TIMESTAMP WHERE userId = ? AND campaignId = ? AND readAt IS NULL").run(userId, campaignId);
+  } else {
+    db.prepare("UPDATE notifications SET readAt = CURRENT_TIMESTAMP WHERE userId = ? AND readAt IS NULL").run(userId);
+  }
+}
+
+export function getCampaignGmUserIds(campaignId: number): number[] {
+  const rows = db.prepare("SELECT userId FROM campaign_memberships WHERE campaignId = ? AND role IN ('owner', 'gm')").all(campaignId) as { userId: number }[];
+  return rows.map((r) => r.userId);
+}
+
 export function searchDocs(userId: number, query: string, campaignId?: number, mode: "gm" | "player" = "gm") {
   const campaigns = listCampaigns(userId);
   const ids = campaignId ? campaigns.filter((c) => c.id === campaignId).map((c) => c.id) : campaigns.map((c) => c.id);
@@ -650,3 +712,4 @@ export function searchDocs(userId: number, query: string, campaignId?: number, m
     return mode === "player" || role === "player" ? playerSafe : true;
   });
 }
+
