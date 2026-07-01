@@ -91,6 +91,7 @@ export type CampaignMembership = {
   role: CampaignRole;
   email: string;
   name: string;
+  groups?: string[];
   createdAt: string;
 };
 
@@ -145,6 +146,7 @@ export type WikiPageFrontmatter = {
   patron?: string;
   techLevel?: string;
   lastEditedBy?: string;
+  assignee?: string;
   sheet?: TravellerSheet;
 };
 

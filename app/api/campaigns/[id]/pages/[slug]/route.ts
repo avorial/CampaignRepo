@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { canManageCampaign, createNotifications, getCampaign, getCampaignGmUserIds, getUserIdByEmail } from "@/lib/db";
+import { canManageCampaign, createNotifications, getCampaign, getCampaignGmUserIds, getMemberGroups, getUserIdByEmail } from "@/lib/db";
 import { getStorageAdapter, isConflictError, isNotFoundError } from "@/lib/storage";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
@@ -16,11 +16,11 @@ const schema = z.object({
   ai: z.boolean().default(false)
 });
 
-function sanitizePlayerPage<T extends ReturnType<typeof parsePage>>(page: T): T {
+function sanitizePlayerPage<T extends ReturnType<typeof parsePage>>(page: T, visibleGroups?: Set<string>): T {
   return {
     ...page,
-    content: stripGmBlocks(page.content),
-    raw: stripGmBlocks(page.raw),
+    content: stripGmBlocks(page.content, visibleGroups),
+    raw: stripGmBlocks(page.raw, visibleGroups),
     frontmatter: { ...page.frontmatter, sourceImport: undefined }
   };
 }
@@ -49,7 +49,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (playerSafeMode && (page.frontmatter.visibility !== "players" || page.frontmatter.approvalStatus !== "approved")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  return NextResponse.json({ page: playerSafeMode ? sanitizePlayerPage(page) : page });
+  if (playerSafeMode) {
+    const groups = getMemberGroups(campaign.id, user.id);
+    const visibleGroups = groups.length ? new Set(groups) : undefined;
+    return NextResponse.json({ page: sanitizePlayerPage(page, visibleGroups) });
+  }
+  return NextResponse.json({ page });
 }
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string; slug: string }> }) {

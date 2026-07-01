@@ -6,11 +6,11 @@ import { parsePage, stripGmBlocks } from "@/lib/markdown";
 import { sanitizeTheme, type CampaignTheme } from "@/lib/theme";
 
 /** Strip GM-only content and internal import metadata from a page before it leaves the server. */
-export function sanitizePlayerPage(page: WikiPage): WikiPage {
+export function sanitizePlayerPage(page: WikiPage, visibleGroups?: Set<string>): WikiPage {
   return {
     ...page,
-    content: stripGmBlocks(page.content),
-    raw: stripGmBlocks(page.raw),
+    content: stripGmBlocks(page.content, visibleGroups),
+    raw: stripGmBlocks(page.raw, visibleGroups),
     frontmatter: { ...page.frontmatter, sourceImport: undefined }
   };
 }
@@ -35,7 +35,7 @@ export async function loadPublicPages(campaign: Campaign, userToken?: string | n
   );
   return pages
     .filter((page) => page.frontmatter.visibility === "players" && page.frontmatter.approvalStatus === "approved")
-    .map(sanitizePlayerPage)
+    .map((page) => sanitizePlayerPage(page))
     .sort((a, b) => a.frontmatter.name.localeCompare(b.frontmatter.name));
 }
 

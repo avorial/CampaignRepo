@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { canManageCampaign, getCampaign } from "@/lib/db";
+import { canManageCampaign, getCampaign, getMemberGroups } from "@/lib/db";
 import { getStorageAdapter, isConflictError } from "@/lib/storage";
 import { parsePage, serializePage } from "@/lib/markdown";
 import { sanitizePlayerPage } from "@/lib/public-site";
@@ -41,12 +41,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!waitForRefresh) refreshPageCacheInBackground(storage, campaign);
   const pages = snapshot.pages;
   const mode = url.searchParams.get("mode");
-  const visiblePages =
-    campaign.role === "player" || mode === "player"
-      ? pages
+  const isPlayerMode = campaign.role === "player" || mode === "player";
+  const visiblePages = isPlayerMode
+    ? (() => {
+        const groups = getMemberGroups(campaign.id, user.id);
+        const visibleGroups = groups.length ? new Set(groups) : undefined;
+        return pages
           .filter((page) => page.frontmatter.visibility === "players" && page.frontmatter.approvalStatus === "approved")
-          .map(sanitizePlayerPage)
-      : pages;
+          .map((page) => sanitizePlayerPage(page, visibleGroups));
+      })()
+    : pages;
   return NextResponse.json({
     pages: visiblePages,
     cache: {

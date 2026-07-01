@@ -112,9 +112,14 @@ editing, warn on conflict — we already detect SHA conflicts), or a CRDT live
 layer that periodically commits. Start with presence/locking (S–M) before true
 real-time (L).
 
-### 12. Visibility tiers / subscriber groups  ·  M
+### 12. Visibility tiers / subscriber groups  ·  M  ·  ✅ SHIPPED
 Beyond GM vs player: named groups (e.g. "the players who know about the cult")
 with per-block reveals. Generalizes `:::gm` into `:::secret group="..."`.
+
+Shipped: named groups defined in `campaign.yaml`; players assigned to groups via
+the Admin panel; `:::secret group="cultists"` blocks rendered for members of that
+group and hidden for others; GMs always see all blocks labelled with their group.
+Page API wires user's group memberships into block stripping.
 
 ### 13. Manuscripts / notebooks / long-form  ·  M  ·  ✅ SHIPPED
 GM-only notebooks and a "manuscript" mode that stitches pages into chapters for
