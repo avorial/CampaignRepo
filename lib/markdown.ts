@@ -338,12 +338,14 @@ function renderTravellerSheetHtml(rawInput: string) {
   <section class="tsheet-panel"><h4>Characteristics <span>Click a value to roll 2D6 + that DM</span></h4><div class="tsheet-chars">
       ${chars.map(([key, label]) => {
         const value = sheet.characteristics[key];
-        return `<div class="tsheet-char"><span class="tsheet-char-key">${key}</span><span class="tsheet-char-label">${escapeHtml(label)}</span><span class="tsheet-char-val">${value ?? "-"}</span><span class="tsheet-char-mod">${value == null ? "Mod -" : `Mod ${fmtMod(travellerDM(value))}`}</span></div>`;
+        const dm = value != null ? travellerDM(value) : null;
+        const rollAttr = dm != null ? ` data-roll="2d6" data-mod="${dm}" data-label="${key} (${label})"` : "";
+        return `<div class="tsheet-char"${rollAttr}><span class="tsheet-char-key">${key}</span><span class="tsheet-char-label">${escapeHtml(label)}</span><span class="tsheet-char-val">${value ?? "-"}</span><span class="tsheet-char-mod">${value == null ? "Mod -" : `Mod ${fmtMod(travellerDM(value))}`}</span></div>`;
       }).join("")}
     </div></section>
   <section class="tsheet-panel tsheet-band"><h4>Status &amp; Conditions <span>Wound status + active conditions</span></h4><strong class="tsheet-status">${escapeHtml(sheet.status || "-")}</strong><span>${escapeHtml(sheet.conditions?.length ? sheet.conditions.join(", ") : "No active conditions")}</span></section>
   <section class="tsheet-panel tsheet-band"><h4>Species <span>${escapeHtml(sheet.species || "-")}</span></h4><div class="badges">${traits.map((trait) => `<span>${escapeHtml(trait)}</span>`).join("")}</div></section>
-  <details class="tsheet-panel tsheet-skill-details"><summary><h4>Skills <span>Total levels: ${skills.reduce((sum, skill) => sum + (skill.level ?? 0), 0)}</span></h4></summary>${skills.length ? `<div class="tsheet-skill-cols">${columns.map((column) => list(column.map((skill) => `<li><span>${escapeHtml(skill.name)}${skill.speciality ? ` (${escapeHtml(skill.speciality)})` : ""}</span><span class="tsheet-skill-lvl">${skill.level ?? "−"}</span></li>`))).join("")}</div>` : `<p class="tsheet-empty">No skills recorded.</p>`}</details>
+  <details class="tsheet-panel tsheet-skill-details"><summary><h4>Skills <span>Total levels: ${skills.reduce((sum, skill) => sum + (skill.level ?? 0), 0)} · Click to roll</span></h4></summary>${skills.length ? `<div class="tsheet-skill-cols">${columns.map((column) => list(column.map((skill) => { const lbl = skill.name + (skill.speciality ? ` (${skill.speciality})` : ""); return `<li data-roll="2d6" data-mod="${skill.level ?? 0}" data-label="${escapeHtml(lbl)}"><span>${escapeHtml(skill.name)}${skill.speciality ? ` (${escapeHtml(skill.speciality)})` : ""}</span><span class="tsheet-skill-lvl">${skill.level ?? "−"}</span></li>`; }))).join("")}</div>` : `<p class="tsheet-empty">No skills recorded.</p>`}</details>
   <section class="tsheet-panel"><div class="tsheet-cols">
     <div><h4>Armour</h4>${armour.length ? list(armour.map((item) => `<li><span>${escapeHtml(item.name)}</span><span>${escapeHtml(detail([item.protection, item.notes]))}</span></li>`)) : `<p class="tsheet-empty">No armour recorded.</p>`}<h4>Weapons</h4>${weapons.length ? list(weapons.map((item) => `<li><span>${escapeHtml(item.name)}</span><span>${escapeHtml(detail([item.damage, item.range, item.notes]))}</span></li>`)) : `<p class="tsheet-empty">No weapons recorded yet.</p>`}</div>
     <div><h4>Items &amp; Holdings</h4>${equipment.length || holdings.length ? list([...equipment.map((item) => `<li><span>${escapeHtml(item.name)}${item.notes ? ` - ${escapeHtml(item.notes)}` : ""}</span>${item.quantity && item.quantity > 1 ? `<span class="tsheet-skill-lvl">x${item.quantity}</span>` : ""}</li>`), ...holdings.map((item) => `<li><span>${escapeHtml(item.name)}</span><span>${escapeHtml(item.notes || "")}</span></li>`)]): `<p class="tsheet-empty">No items recorded.</p>`}<h4>People &amp; Notes</h4>${contacts.length || psionics.length || sheet.notes ? list([...contacts.map((item) => `<li><span>${escapeHtml(item.name)}</span><span>${escapeHtml(item.notes || "")}</span></li>`), ...psionics.map((item) => `<li><span>${escapeHtml(item.name)}</span><span>${escapeHtml(detail([item.level, item.notes]))}</span></li>`), ...(sheet.notes ? [`<li><span>${escapeHtml(sheet.notes)}</span></li>`] : [])]) : `<p class="tsheet-empty">No people or notes recorded.</p>`}${sheet.credits != null ? `<p class="tsheet-credits">${sheet.credits.toLocaleString()} Cr</p>` : ""}</div>
@@ -778,7 +780,7 @@ function renderDnDSheetHtml(rawInput: string) {
     const mod = dndAbilMod(score);
     const saveProf = s.saveProfSet.has(key) || s.saveProfSet.has(short.toLowerCase());
     const saveBonus = mod + (saveProf ? s.profBonus : 0);
-    return `<div class="dnd-ability-card">
+    return `<div class="dnd-ability-card" data-roll="1d20" data-mod="${mod}" data-label="${escapeHtml(label)} check">
   <span class="dnd-ability-short">${short}</span>
   <span class="dnd-ability-score">${score}</span>
   <span class="dnd-ability-mod">${dndFmt(mod)}</span>
@@ -791,7 +793,7 @@ function renderDnDSheetHtml(rawInput: string) {
     const expert = s.skillExpert.has(name.toLowerCase());
     const prof   = s.skillProfs.has(name.toLowerCase()) || expert;
     const bonus  = abilMod(ability) + (expert ? s.profBonus * 2 : prof ? s.profBonus : 0);
-    return `<li>${profIcon(prof, expert)}<span>${escapeHtml(name)}</span><span class="dnd-skill-abrev">${ability.toUpperCase()}</span><span class="dnd-skill-bonus">${dndFmt(bonus)}</span></li>`;
+    return `<li data-roll="1d20" data-mod="${bonus}" data-label="${escapeHtml(name)}">${profIcon(prof, expert)}<span>${escapeHtml(name)}</span><span class="dnd-skill-abrev">${ability.toUpperCase()}</span><span class="dnd-skill-bonus">${dndFmt(bonus)}</span></li>`;
   }).join("");
 
   const attacksHtml = s.attacks.length ? `

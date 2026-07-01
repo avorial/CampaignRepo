@@ -3997,6 +3997,30 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
 .tsheet-skill-rollable { cursor: pointer; }
 .tsheet-skill-rollable:hover { background: rgba(255, 179, 49, 0.08); }
 
+[data-roll] { cursor: pointer; }
+.tsheet-char[data-roll]:hover { background: rgba(255, 179, 49, 0.12); box-shadow: 0 0 0 1px #ffb33166; }
+.dnd-ability-card[data-roll]:hover { background: rgba(212, 169, 87, 0.15); }
+.dnd-skills li[data-roll]:hover { background: rgba(212, 169, 87, 0.08); }
+.tsheet-skills li[data-roll]:hover { background: rgba(255, 179, 49, 0.08); }
+
+.dice-roll-toast {
+  background: rgba(18, 14, 8, 0.96);
+  border: 1px solid var(--gold, #d4a957);
+  border-radius: 8px;
+  bottom: 28px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.55);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 18px;
+  position: fixed;
+  right: 28px;
+  z-index: 300;
+}
+.dice-roll-label { color: var(--text-tertiary); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+.dice-roll-detail { color: var(--gold, #d4a957); font-family: var(--font-display); font-size: 20px; }
+
 .dice-toast {
   background: rgba(20, 14, 10, 0.96);
   border: 1px solid #ffb331;

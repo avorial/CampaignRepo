@@ -85,6 +85,7 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
   const [diffSha, setDiffSha] = useState<string | null>(null);
   const [diffLines, setDiffLines] = useState<{ tag: "eq" | "add" | "del"; text: string }[] | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
+  const [diceRoll, setDiceRoll] = useState<{ label: string; detail: string; total: number } | null>(null);
   const [slashMenu, setSlashMenu] = useState<{ query: string; insertStart: number; top: number; left: number } | null>(null);
   const [slashMenuIdx, setSlashMenuIdx] = useState(0);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
@@ -223,6 +224,26 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
 
   const onPreviewClick = useCallback(
     async (event: MouseEvent<HTMLDivElement>) => {
+      const rollEl = (event.target as HTMLElement).closest("[data-roll]");
+      if (rollEl) {
+        event.preventDefault();
+        const dice = rollEl.getAttribute("data-roll") || "2d6";
+        const mod = parseInt(rollEl.getAttribute("data-mod") || "0", 10);
+        const label = rollEl.getAttribute("data-label") || "Roll";
+        if (dice === "2d6") {
+          const d1 = Math.floor(Math.random() * 6) + 1;
+          const d2 = Math.floor(Math.random() * 6) + 1;
+          const total = d1 + d2 + mod;
+          const modStr = mod === 0 ? "" : mod > 0 ? ` + ${mod}` : ` − ${Math.abs(mod)}`;
+          setDiceRoll({ label, detail: `${d1} + ${d2}${modStr} = ${total}`, total });
+        } else {
+          const d = Math.floor(Math.random() * 20) + 1;
+          const total = d + mod;
+          const modStr = mod === 0 ? "" : mod > 0 ? ` + ${mod}` : ` − ${Math.abs(mod)}`;
+          setDiceRoll({ label, detail: `${d}${modStr} = ${total}`, total });
+        }
+        return;
+      }
       const galleryAnchor = (event.target as HTMLElement).closest("a.gallery-item");
       if (galleryAnchor) {
         event.preventDefault();
@@ -1318,6 +1339,12 @@ notes: ""
       <div className="lightbox-overlay" onClick={() => setLightboxSrc(null)} role="dialog" aria-modal>
         <button className="lightbox-close" onClick={() => setLightboxSrc(null)} aria-label="Close">✕</button>
         <img className="lightbox-img" src={lightboxSrc} alt="" onClick={(e) => e.stopPropagation()} />
+      </div>
+    )}
+    {diceRoll && (
+      <div className="dice-roll-toast" onClick={() => setDiceRoll(null)} role="status">
+        <span className="dice-roll-label">{diceRoll.label}</span>
+        <span className="dice-roll-detail">{diceRoll.detail}</span>
       </div>
     )}
     </>
