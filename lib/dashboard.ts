@@ -2,7 +2,7 @@ import YAML from "yaml";
 import { getStorageAdapter } from "@/lib/storage";
 import type { Campaign } from "@/lib/types";
 
-export type WidgetId = "calendar" | "counts" | "timeline" | "quicklinks" | "quests" | "review" | "health";
+export type WidgetId = "calendar" | "counts" | "timeline" | "quicklinks" | "quests" | "review" | "health" | "activity" | "sessions";
 
 // gmOnly widgets are never rendered for players (the spoiler-safe view).
 export const WIDGETS: { id: WidgetId; label: string; gmOnly: boolean }[] = [
@@ -10,9 +10,11 @@ export const WIDGETS: { id: WidgetId; label: string; gmOnly: boolean }[] = [
   { id: "counts", label: "Page counts", gmOnly: false },
   { id: "timeline", label: "Timeline", gmOnly: false },
   { id: "quicklinks", label: "Quick links", gmOnly: false },
+  { id: "sessions", label: "Next session", gmOnly: true },
   { id: "quests", label: "Active quests", gmOnly: true },
   { id: "review", label: "Review queue", gmOnly: true },
-  { id: "health", label: "Campaign health", gmOnly: true }
+  { id: "health", label: "Campaign health", gmOnly: true },
+  { id: "activity", label: "Recent activity", gmOnly: true }
 ];
 
 export type DashboardConfig = { widgets: WidgetId[] };

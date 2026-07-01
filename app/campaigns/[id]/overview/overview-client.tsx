@@ -46,12 +46,13 @@ function SetupGuide({ campaign, pages, canManage }: { campaign: Campaign; pages:
 
 // Client-safe widget metadata (mirrors lib/dashboard.WIDGETS without its
 // server-only imports). gmOnly widgets never render in the player view.
-type WidgetId = "calendar" | "counts" | "timeline" | "quicklinks" | "quests" | "review" | "health" | "activity";
+type WidgetId = "calendar" | "counts" | "timeline" | "quicklinks" | "quests" | "review" | "health" | "activity" | "sessions";
 const WIDGETS: { id: WidgetId; label: string; gmOnly: boolean }[] = [
   { id: "calendar", label: "Current date", gmOnly: false },
   { id: "counts", label: "Page counts", gmOnly: false },
   { id: "timeline", label: "Timeline", gmOnly: false },
   { id: "quicklinks", label: "Quick links", gmOnly: false },
+  { id: "sessions", label: "Next session", gmOnly: true },
   { id: "quests", label: "Active quests", gmOnly: true },
   { id: "review", label: "Review queue", gmOnly: true },
   { id: "health", label: "Campaign health", gmOnly: true },
@@ -86,6 +87,7 @@ export default function OverviewClient({ campaign, canManage }: { campaign: Camp
       reqs.health = fetch(`${api}/health`).then((r) => (r.ok ? r.json() : { findings: [], counts: {} }));
       reqs.quests = fetch(`${api}/quests`).then((r) => (r.ok ? r.json() : { quests: [] }));
       reqs.activity = fetch(`${api}/activity`).then((r) => (r.ok ? r.json() : []));
+      reqs.sessions = fetch(`${api}/sessions`).then((r) => (r.ok ? r.json() : { sessions: [] }));
     }
     const entries = await Promise.all(Object.entries(reqs).map(async ([k, p]) => [k, await p.catch(() => null)] as const));
     setData(Object.fromEntries(entries));
@@ -229,10 +231,40 @@ function Widget({ id, base, data, canManage }: { id: WidgetId; base: string; dat
       {id === "counts" && <Counts pages={data.pages?.pages || []} />}
       {id === "timeline" && <Timeline items={data.graph?.timeline || []} base={base} />}
       {id === "quicklinks" && <QuickLinks base={base} canManage={canManage} />}
+      {id === "sessions" && <NextSession sessions={data.sessions?.sessions || []} base={base} />}
       {id === "quests" && <Quests quests={data.quests?.quests || []} base={base} />}
       {id === "review" && <Reviews reviews={data.reviews?.reviews || []} base={base} />}
       {id === "health" && <HealthSummary health={data.health} base={base} />}
       {id === "activity" && <ActivityFeed commits={Array.isArray(data.activity) ? data.activity : []} />}
+    </div>
+  );
+}
+
+function NextSession({ sessions, base }: { sessions: any[]; base: string }) {
+  const planned = sessions
+    .filter((s) => s.frontmatter.status === "planned" && s.frontmatter.date)
+    .sort((a, b) => (a.frontmatter.date || "").localeCompare(b.frontmatter.date || ""));
+  const next = planned[0];
+  if (!next) {
+    const noDate = sessions.filter((s) => s.frontmatter.status === "planned");
+    if (noDate.length) {
+      return (
+        <div>
+          <a href={`${base}/sessions/${noDate[0].slug}`} style={{ fontWeight: 600 }}>{noDate[0].frontmatter.title}</a>
+          <p className="muted" style={{ margin: "2px 0 0" }}>No date set · <a href={`${base}/sessions`}>All sessions</a></p>
+        </div>
+      );
+    }
+    return <p className="muted">No planned sessions. <a href={`${base}/sessions`}>Schedule one</a></p>;
+  }
+  const dateStr = new Date(next.frontmatter.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  return (
+    <div>
+      <a href={`${base}/sessions/${next.slug}`} style={{ fontWeight: 600 }}>{next.frontmatter.title}</a>
+      {next.frontmatter.number && <span className="muted" style={{ marginLeft: "6px" }}>#{next.frontmatter.number}</span>}
+      <p className="muted" style={{ margin: "2px 0 0" }}>{dateStr}</p>
+      {next.frontmatter.arc && <p className="muted" style={{ margin: "2px 0 0", fontSize: "var(--text-xs)" }}>{next.frontmatter.arc}</p>}
+      {planned.length > 1 && <p className="muted" style={{ margin: "6px 0 0", fontSize: "var(--text-xs)" }}><a href={`${base}/sessions`}>{planned.length - 1} more planned</a></p>}
     </div>
   );
 }
