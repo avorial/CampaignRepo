@@ -58,6 +58,37 @@ function computeDiff(oldText: string, newText: string): DiffLine[] {
   return result;
 }
 
+function parseBlocks(text: string): string[] {
+  const lines = text.split("\n");
+  const blocks: string[] = [];
+  let current: string[] = [];
+  let inFence = false;
+  for (const line of lines) {
+    if (line.trim().startsWith("```")) {
+      inFence = !inFence;
+      current.push(line);
+      if (!inFence) { blocks.push(current.join("\n")); current = []; }
+      continue;
+    }
+    if (inFence) { current.push(line); continue; }
+    if (line.trim() === "") {
+      if (current.length) { blocks.push(current.join("\n")); current = []; }
+      continue;
+    }
+    current.push(line);
+  }
+  if (current.length) blocks.push(current.join("\n"));
+  return blocks.filter((b) => b.trim());
+}
+
+function blockLabel(block: string): string {
+  const first = block.split("\n").find((l) => l.trim()) || "";
+  if (first.trim().startsWith("```")) return "⌥ code block";
+  if (first.trim().startsWith(":::")) return "⊕ gm block";
+  if (first.startsWith("#")) return first.replace(/^#+\s*/, "").slice(0, 55) || "heading";
+  return first.replace(/^[-*+>]\s*/, "").replace(/^\d+\.\s*/, "").slice(0, 55);
+}
+
 export default function PageEditor({ campaign, slug, categories }: { campaign: Campaign; slug: string; categories: { id: string; label: string }[] }) {
   const router = useRouter();
   const [page, setPage] = useState<WikiPage | null>(null);
@@ -86,6 +117,9 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
   const [diffLines, setDiffLines] = useState<{ tag: "eq" | "add" | "del"; text: string }[] | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
   const [diceRoll, setDiceRoll] = useState<{ label: string; detail: string; total: number } | null>(null);
+  const [showBlockReorder, setShowBlockReorder] = useState(false);
+  const [blockDragOver, setBlockDragOver] = useState<number | null>(null);
+  const blockDragFrom = useRef<number | null>(null);
   const [slashMenu, setSlashMenu] = useState<{ query: string; insertStart: number; top: number; left: number } | null>(null);
   const [slashMenuIdx, setSlashMenuIdx] = useState(0);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
@@ -1220,6 +1254,53 @@ notes: ""
             )}
           </div>
         )}
+        {fieldsEditable && (() => {
+          const blocks = parseBlocks(content);
+          if (blocks.length < 2) return null;
+          return (
+            <div className="field-group">
+              <h3 style={{ cursor: "pointer", userSelect: "none" }} onClick={() => setShowBlockReorder((v) => !v)}>
+                Blocks {showBlockReorder ? "▲" : "▼"}
+              </h3>
+              {showBlockReorder && (
+                <ol className="block-reorder-list">
+                  {blocks.map((block, i) => (
+                    <li
+                      key={i}
+                      draggable
+                      className={`block-reorder-item${blockDragOver === i ? " block-drag-over" : ""}`}
+                      onDragStart={() => { blockDragFrom.current = i; }}
+                      onDragOver={(e) => { e.preventDefault(); setBlockDragOver(i); }}
+                      onDragLeave={() => setBlockDragOver(null)}
+                      onDrop={() => {
+                        const from = blockDragFrom.current;
+                        if (from == null || from === i) { setBlockDragOver(null); return; }
+                        const next = [...blocks];
+                        const [moved] = next.splice(from, 1);
+                        next.splice(i, 0, moved);
+                        setContent(next.join("\n\n"));
+                        blockDragFrom.current = null;
+                        setBlockDragOver(null);
+                      }}
+                      onDragEnd={() => { blockDragFrom.current = null; setBlockDragOver(null); }}
+                    >
+                      <span className="block-drag-handle">⠿</span>
+                      <span className="block-label">{blockLabel(block)}</span>
+                      <span className="block-move-btns">
+                        <button type="button" disabled={i === 0} onClick={() => {
+                          const next = [...blocks]; [next[i - 1], next[i]] = [next[i], next[i - 1]]; setContent(next.join("\n\n"));
+                        }}>↑</button>
+                        <button type="button" disabled={i === blocks.length - 1} onClick={() => {
+                          const next = [...blocks]; [next[i], next[i + 1]] = [next[i + 1], next[i]]; setContent(next.join("\n\n"));
+                        }}>↓</button>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+          );
+        })()}
         <h3>Key links</h3>
         {keyLinks.map((link: string) => <a key={link} className="nav-link" href={`/campaigns/${campaign.id}/pages/${link}`}>{link}</a>)}
         <h3>Backlinks</h3>

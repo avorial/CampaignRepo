@@ -3819,6 +3819,17 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
 }
 
 .drag-handle { color: var(--text-tertiary); font-size: 16px; line-height: 1; }
+
+.block-reorder-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.block-reorder-item { align-items: center; background: var(--bg-elevated); border: 1px solid var(--border-soft); border-radius: 4px; cursor: grab; display: flex; font-size: 12px; gap: 6px; padding: 5px 8px; }
+.block-reorder-item:active { cursor: grabbing; }
+.block-reorder-item.block-drag-over { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
+.block-drag-handle { color: var(--text-tertiary); flex-shrink: 0; font-size: 14px; }
+.block-label { color: var(--text-secondary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.block-move-btns { display: flex; flex-shrink: 0; gap: 2px; }
+.block-move-btns button { background: transparent; border: none; color: var(--text-tertiary); cursor: pointer; font-size: 11px; line-height: 1; padding: 2px 3px; }
+.block-move-btns button:hover:not(:disabled) { color: var(--gold); }
+.block-move-btns button:disabled { opacity: 0.3; }
 .widget-config-label { font-size: var(--text-sm); }
 
 .widget-config-row .member-actions button {
