@@ -2,13 +2,14 @@
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
-type BoardNode = { id: string; type: "page" | "note" | "image"; x: number; y: number; w?: number; h?: number; pageSlug?: string; text?: string; color?: string; imagePath?: string };
+type BoardNode = { id: string; type: "page" | "note" | "image" | "group"; x: number; y: number; w?: number; h?: number; pageSlug?: string; text?: string; color?: string; imagePath?: string };
 type BoardEdge = { id: string; from: string; to: string; label?: string };
 type Board = { slug: string; name: string; nodes: BoardNode[]; edges: BoardEdge[]; sha?: string };
 type KnownPage = { slug: string; name: string; category: string };
 type MediaItem = { name: string; path: string; downloadUrl: string; mediaType: string };
 
 const NOTE_COLORS = ["#3a2f10", "#0a2a1f", "#1a1a3a", "#2a1a2a", "#1a2a2a"];
+const GROUP_COLORS = ["rgba(212,169,87,0.08)", "rgba(160,117,255,0.08)", "rgba(107,184,255,0.06)", "rgba(255,138,138,0.07)", "rgba(100,200,150,0.07)"];
 const GRID = 20;
 const WIKI_CATEGORIES = ["character", "npc", "location", "event", "faction", "item", "lore", "session", "quest"];
 
@@ -34,6 +35,9 @@ export default function BoardsClient({ campaignId }: { campaignId: number }) {
   const [imageFilter, setImageFilter] = useState("");
   const [newBoardName, setNewBoardName] = useState("");
   const [canvasSearch, setCanvasSearch] = useState("");
+
+  // Resize state for group nodes
+  const isResizing = useRef<{ id: string; startX: number; startY: number; startW: number; startH: number } | null>(null);
 
   // Promote-to-page modal state
   const [promotingNodeId, setPromotingNodeId] = useState<string | null>(null);
@@ -114,6 +118,17 @@ export default function BoardsClient({ campaignId }: { campaignId: number }) {
     patchBoard({ nodes: [...board.nodes, node] });
     setSelectedNode(id);
     setEditingNode(id);
+    setTool("select");
+  }
+
+  function addGroup() {
+    if (!board) return;
+    const id = uid();
+    const cx = (-pan.x + 400) / zoom - 200;
+    const cy = (-pan.y + 300) / zoom - 150;
+    const node: BoardNode = { id, type: "group", x: snap(cx), y: snap(cy), text: "Group", color: GROUP_COLORS[0], w: 400, h: 300 };
+    patchBoard({ nodes: [node, ...board.nodes] }); // prepend so groups render behind
+    setSelectedNode(id);
     setTool("select");
   }
 
@@ -240,10 +255,19 @@ export default function BoardsClient({ campaignId }: { campaignId: number }) {
       const ny = snap(oy + (e.clientY - panStart.current.my) / zoomRef.current);
       setBoards((bs) => bs.map((b) => b.slug === selected ? { ...b, nodes: b.nodes.map((n) => n.id === id ? { ...n, x: nx, y: ny } : n) } : b));
     }
+    if (isResizing.current) {
+      const { id, startX, startY, startW, startH } = isResizing.current;
+      const dw = (e.clientX - startX) / zoomRef.current;
+      const dh = (e.clientY - startY) / zoomRef.current;
+      const nw = Math.max(160, snap(startW + dw));
+      const nh = Math.max(100, snap(startH + dh));
+      setBoards((bs) => bs.map((b) => b.slug === selected ? { ...b, nodes: b.nodes.map((n) => n.id === id ? { ...n, w: nw, h: nh } : n) } : b));
+    }
   }, [board, selected]);
 
   const onMouseUp = useCallback(() => {
     if (isDragging.current) { setDirty(true); isDragging.current = null; }
+    if (isResizing.current) { setDirty(true); isResizing.current = null; }
     isPanning.current = false;
   }, []);
 
@@ -350,6 +374,7 @@ export default function BoardsClient({ campaignId }: { campaignId: number }) {
                 <button type="button" className={tool === "edge" ? "active" : "secondary"} onClick={() => { setTool("edge"); setSelectedNode(null); }}>Edge</button>
                 <button type="button" className="secondary" onClick={() => setShowPagePicker(true)}>+ Page</button>
                 <button type="button" className="secondary" onClick={() => setShowImagePicker(true)}>+ Image</button>
+                <button type="button" className="secondary" onClick={addGroup}>+ Group</button>
               </div>
               {tool === "note" && <p className="muted" style={{ fontSize: 12 }}>Click canvas to place a note.</p>}
               {tool === "edge" && <p className="muted" style={{ fontSize: 12 }}>{edgeStart ? "Click a target node." : "Click source node."}</p>}
@@ -385,6 +410,21 @@ export default function BoardsClient({ campaignId }: { campaignId: number }) {
                       >
                         Promote to page →
                       </button>
+                    </>
+                  )}
+                  {node.type === "group" && (
+                    <>
+                      <label>Label
+                        <input value={node.text || ""} onChange={(e) => updateNodeText(node.id, e.target.value)} placeholder="Group label…" />
+                      </label>
+                      <label>Color
+                        <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                          {GROUP_COLORS.map((c, i) => (
+                            <button key={i} type="button" onClick={() => updateNodeColor(node.id, c)} style={{ width: 24, height: 24, background: c, border: node.color === c ? "2px solid var(--gold)" : "2px solid var(--border-soft)", borderRadius: 4, padding: 0, minHeight: 0 }} />
+                          ))}
+                        </div>
+                      </label>
+                      <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>Drag the resize handle (↘) to resize.</p>
                     </>
                   )}
                   {node.type === "page" && node.pageSlug && (
@@ -445,9 +485,9 @@ export default function BoardsClient({ campaignId }: { campaignId: number }) {
                 })}
               </svg>
 
-              {/* Nodes */}
-              {board.nodes.map((node) => {
-                const dimmed = searchLower !== "" && !nodeMatchesSearch(node);
+              {/* Nodes — groups first so they render behind other nodes */}
+              {[...board.nodes].sort((a, b) => (a.type === "group" ? -1 : b.type === "group" ? 1 : 0)).map((node) => {
+                const dimmed = searchLower !== "" && node.type !== "group" && !nodeMatchesSearch(node);
                 return (
                   <div
                     key={node.id}
@@ -457,15 +497,29 @@ export default function BoardsClient({ campaignId }: { campaignId: number }) {
                       left: node.x,
                       top: node.y,
                       width: node.w || 180,
-                      minHeight: node.h || 80,
-                      background: node.type === "note" ? (node.color || NOTE_COLORS[0]) : node.type === "image" ? "transparent" : "var(--bg-elevated)",
+                      minHeight: node.type === "group" ? (node.h || 300) : (node.h || 80),
+                      height: node.type === "group" ? (node.h || 300) : undefined,
+                      background: node.type === "note" ? (node.color || NOTE_COLORS[0]) : node.type === "group" ? (node.color || GROUP_COLORS[0]) : node.type === "image" ? "transparent" : "var(--bg-elevated)",
                       cursor: tool === "edge" ? "cell" : "move",
                       opacity: dimmed ? 0.2 : 1,
-                      transition: "opacity 0.15s"
+                      transition: "opacity 0.15s",
+                      zIndex: node.type === "group" ? 0 : 1
                     }}
                     onMouseDown={(e) => onNodeMouseDown(e, node.id)}
                     onDoubleClick={() => { if (node.type === "note") setEditingNode(node.id); }}
                   >
+                    {node.type === "group" && (
+                      <>
+                        <div className="board-group-label">{node.text || "Group"}</div>
+                        <div
+                          className="board-group-resize"
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            isResizing.current = { id: node.id, startX: e.clientX, startY: e.clientY, startW: node.w || 400, startH: node.h || 300 };
+                          }}
+                        >↘</div>
+                      </>
+                    )}
                     {node.type === "page" && (
                       <>
                         <div className="board-node-label">{node.text || node.pageSlug}</div>

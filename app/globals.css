@@ -1067,6 +1067,48 @@ button.nav-link.active {
 .board-node-page { background: var(--bg-elevated); }
 .board-node-note { }
 
+.board-node-group {
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius-xl);
+  padding: 0;
+  background: transparent;
+  position: relative;
+}
+.board-node-group.selected { border-color: var(--gold); }
+
+.board-group-label {
+  position: absolute;
+  top: -1px;
+  left: 12px;
+  transform: translateY(-50%);
+  background: var(--bg-surface);
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-soft);
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.board-group-resize {
+  position: absolute;
+  bottom: 4px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  color: var(--text-muted);
+  cursor: se-resize;
+  user-select: none;
+}
+
 .board-node-label {
   font-weight: 600;
   font-size: 13px;
