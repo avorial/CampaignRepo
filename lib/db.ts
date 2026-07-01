@@ -188,6 +188,19 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 `);
 
+// Page watches table
+db.exec(`
+CREATE TABLE IF NOT EXISTS page_watches (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  userId INTEGER NOT NULL,
+  campaignId INTEGER NOT NULL,
+  slug TEXT NOT NULL,
+  createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(userId, campaignId, slug),
+  FOREIGN KEY (userId) REFERENCES users(id)
+);
+`);
+
 // Migrations — safe to run on every start (errors mean column already exists)
 try { db.exec("ALTER TABLE campaign_memberships ADD COLUMN groups TEXT NOT NULL DEFAULT '[]'"); } catch { /* already migrated */ }
 
@@ -700,6 +713,34 @@ export function markAllNotificationsRead(userId: number, campaignId?: number) {
 
 export function getCampaignGmUserIds(campaignId: number): number[] {
   const rows = db.prepare("SELECT userId FROM campaign_memberships WHERE campaignId = ? AND role IN ('owner', 'gm')").all(campaignId) as { userId: number }[];
+  return rows.map((r) => r.userId);
+}
+
+export function getCampaignMemberUsers(campaignId: number): { id: number; name: string; email: string }[] {
+  return db.prepare(
+    `SELECT users.id, users.name, users.email
+     FROM campaign_memberships
+     JOIN users ON users.id = campaign_memberships.userId
+     WHERE campaign_memberships.campaignId = ?`
+  ).all(campaignId) as { id: number; name: string; email: string }[];
+}
+
+export function isWatchingPage(userId: number, campaignId: number, slug: string): boolean {
+  return Boolean(db.prepare("SELECT 1 FROM page_watches WHERE userId = ? AND campaignId = ? AND slug = ?").get(userId, campaignId, slug));
+}
+
+export function togglePageWatch(userId: number, campaignId: number, slug: string): boolean {
+  const existing = db.prepare("SELECT 1 FROM page_watches WHERE userId = ? AND campaignId = ? AND slug = ?").get(userId, campaignId, slug);
+  if (existing) {
+    db.prepare("DELETE FROM page_watches WHERE userId = ? AND campaignId = ? AND slug = ?").run(userId, campaignId, slug);
+    return false;
+  }
+  db.prepare("INSERT OR IGNORE INTO page_watches (userId, campaignId, slug) VALUES (?, ?, ?)").run(userId, campaignId, slug);
+  return true;
+}
+
+export function getPageWatcherUserIds(campaignId: number, slug: string): number[] {
+  const rows = db.prepare("SELECT userId FROM page_watches WHERE campaignId = ? AND slug = ?").all(campaignId, slug) as { userId: number }[];
   return rows.map((r) => r.userId);
 }
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { canManageCampaign, createNotifications, getCampaign, getCampaignGmUserIds, getMemberGroups, getUserIdByEmail } from "@/lib/db";
+import { canManageCampaign, createNotifications, getCampaign, getCampaignGmUserIds, getCampaignMemberUsers, getMemberGroups, getPageWatcherUserIds, getUserIdByEmail } from "@/lib/db";
 import { getStorageAdapter, isConflictError, isNotFoundError } from "@/lib/storage";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
@@ -106,6 +106,47 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           "assignment",
           `Assigned: ${frontmatter.name || slug}`,
           `${user.name} assigned you to "${frontmatter.name || slug}" in ${campaign.name}.`,
+          `/campaigns/${campaign.id}/pages/${slug}`
+        );
+      }
+    }
+
+    // Notify page watchers of the change
+    const watcherIds = getPageWatcherUserIds(campaign.id, slug).filter((uid) => uid !== user.id);
+    if (watcherIds.length > 0) {
+      createNotifications(
+        watcherIds,
+        campaign.id,
+        "page_changed",
+        `Page updated: ${frontmatter.name || slug}`,
+        `${user.name} updated "${frontmatter.name || slug}" in ${campaign.name}.`,
+        `/campaigns/${campaign.id}/pages/${slug}`
+      );
+    }
+
+    // Detect @mentions and notify matching campaign members
+    const mentionMatches = [...input.content.matchAll(/@([A-Za-z0-9][A-Za-z0-9._-]*)/g)];
+    if (mentionMatches.length > 0) {
+      const members = getCampaignMemberUsers(campaign.id);
+      const notified = new Set<number>();
+      for (const [, handle] of mentionMatches) {
+        const lc = handle.toLowerCase();
+        const match = members.find((m) =>
+          m.email.split("@")[0].toLowerCase() === lc ||
+          m.name.toLowerCase().replace(/\s+/g, "") === lc.replace(/_/g, "") ||
+          m.name.split(" ")[0].toLowerCase() === lc
+        );
+        if (match && match.id !== user.id && !notified.has(match.id)) {
+          notified.add(match.id);
+        }
+      }
+      if (notified.size > 0) {
+        createNotifications(
+          [...notified],
+          campaign.id,
+          "mention",
+          `Mentioned in: ${frontmatter.name || slug}`,
+          `${user.name} mentioned you in "${frontmatter.name || slug}" in ${campaign.name}.`,
           `/campaigns/${campaign.id}/pages/${slug}`
         );
       }

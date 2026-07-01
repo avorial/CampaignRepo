@@ -127,6 +127,8 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
   const [categoryProps, setCategoryProps] = useState<Record<string, { name: string; type: string }[]>>({});
   const [members, setMembers] = useState<{ email: string; name: string; role: string }[]>([]);
   const [pageCalendar, setPageCalendar] = useState<{ months: { name: string; days: number }[]; weekdays: string[]; eraName?: string; currentDate: { year: number; month: number; day: number } } | null>(null);
+  const [watching, setWatching] = useState(false);
+  const [watchLoading, setWatchLoading] = useState(false);
 
   useEffect(() => {
     if (!lightboxSrc) return;
@@ -157,6 +159,21 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
     setContent(nextPage.content);
     setFrontmatter(nextPage.frontmatter);
   }, []);
+
+  useEffect(() => {
+    fetch(`/api/campaigns/${campaign.id}/pages/${slug}/watch`)
+      .then((r) => r.json())
+      .then((d) => setWatching(Boolean(d.watching)))
+      .catch(() => {});
+  }, [campaign.id, slug]);
+
+  async function toggleWatch() {
+    setWatchLoading(true);
+    const res = await fetch(`/api/campaigns/${campaign.id}/pages/${slug}/watch`, { method: "POST" });
+    const data = await res.json();
+    setWatching(Boolean(data.watching));
+    setWatchLoading(false);
+  }
 
   const openHistory = useCallback(() => {
     setShowHistory(true);
@@ -937,6 +954,9 @@ notes: ""
             <button type="button" className={mode === "player" ? "active" : ""} onClick={() => { setShowHistory(false); setMode("player"); }}>Player preview</button>
             <button type="button" className={mode === "handout" ? "active" : ""} onClick={() => { setShowHistory(false); setMode("handout"); }}>Handout</button>
             {canManage && <button type="button" className={showHistory ? "active" : ""} onClick={showHistory ? () => setShowHistory(false) : openHistory}>History</button>}
+            <button type="button" className={watching ? "active" : "secondary"} disabled={watchLoading} onClick={toggleWatch} title={watching ? "Stop watching this page" : "Watch for changes"}>
+              {watching ? "Watching" : "Watch"}
+            </button>
             {canManage && <button type="button" onClick={() => setIsEditing(true)}>Edit page</button>}
             {canManage && <button type="button" className="danger" disabled={isSaving} onClick={deletePage}>Delete page</button>}
           </div>
