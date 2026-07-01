@@ -36,6 +36,7 @@ type Frontmatter = {
   locations: string[];
   threads: Thread[];
   pinned: string[];
+  handouts: string[];
 };
 type PageRef = { slug: string; name: string };
 
@@ -60,6 +61,8 @@ export default function SessionEditor({ campaign, slug }: { campaign: Campaign; 
   const [addNpc, setAddNpc] = useState("");
   const [addLoc, setAddLoc] = useState("");
   const [addPin, setAddPin] = useState("");
+  const [addHandout, setAddHandout] = useState("");
+  const [copiedHandout, setCopiedHandout] = useState<string | null>(null);
   const [newAssetLabel, setNewAssetLabel] = useState("");
   const [newAssetUrl, setNewAssetUrl] = useState("");
   const [calendar, setCalendar] = useState<CalendarConfig | null>(null);
@@ -90,7 +93,8 @@ export default function SessionEditor({ campaign, slug }: { campaign: Campaign; 
           npcs: s.frontmatter.npcs || [],
           locations: s.frontmatter.locations || [],
           threads: s.frontmatter.threads || [],
-          pinned: s.frontmatter.pinned || []
+          pinned: s.frontmatter.pinned || [],
+          handouts: s.frontmatter.handouts || []
         });
         setNotes(s.notes || "");
       } else {
@@ -504,6 +508,49 @@ export default function SessionEditor({ campaign, slug }: { campaign: Campaign; 
             </select>
             <button type="button" className="secondary" disabled={!addPin}
               onClick={() => { patch({ pinned: [...fm.pinned, addPin] }); setAddPin(""); }}>Link</button>
+          </div>
+        </div>
+
+        {/* Handout queue */}
+        <div className="panel">
+          <h2>Handout queue</h2>
+          <p className="muted">Player-visible pages to reveal during the session. Copy a link to send to players at the right moment.</p>
+          {fm.handouts.length > 0 && (
+            <ul className="handout-queue">
+              {fm.handouts.map((s, i) => (
+                <li key={s} className="handout-queue-item">
+                  <span className="handout-queue-order">{i + 1}</span>
+                  <a href={`${base}/pages/${s}`} className="handout-queue-name">{nameBySlug.get(s) || s}</a>
+                  <span className="member-actions">
+                    <button type="button" className="secondary" disabled={i === 0}
+                      onClick={() => { const h = [...fm.handouts]; [h[i - 1], h[i]] = [h[i], h[i - 1]]; patch({ handouts: h }); }}>↑</button>
+                    <button type="button" className="secondary" disabled={i === fm.handouts.length - 1}
+                      onClick={() => { const h = [...fm.handouts]; [h[i + 1], h[i]] = [h[i], h[i + 1]]; patch({ handouts: h }); }}>↓</button>
+                    <button type="button" className="secondary"
+                      onClick={async () => {
+                        const url = `${window.location.origin}${base}/player#${s}`;
+                        await navigator.clipboard.writeText(url);
+                        setCopiedHandout(s);
+                        setTimeout(() => setCopiedHandout((c) => (c === s ? null : c)), 2000);
+                      }}>
+                      {copiedHandout === s ? "Copied!" : "Copy link"}
+                    </button>
+                    <button type="button" className="linklike"
+                      onClick={() => patch({ handouts: fm.handouts.filter((x) => x !== s) })}>✕</button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {!fm.handouts.length && <p className="muted">No handouts queued.</p>}
+          <div className="inline-form">
+            <select value={addHandout} onChange={(e) => setAddHandout(e.target.value)}>
+              <option value="">Add page to queue…</option>
+              {pages.filter((p) => !fm.handouts.includes(p.slug)).map((p) =>
+                <option key={p.slug} value={p.slug}>{p.name}</option>)}
+            </select>
+            <button type="button" className="secondary" disabled={!addHandout}
+              onClick={() => { patch({ handouts: [...fm.handouts, addHandout] }); setAddHandout(""); }}>Add</button>
           </div>
         </div>
 
