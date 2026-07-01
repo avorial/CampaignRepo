@@ -37,6 +37,8 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
   const [setVisibility, setSetVisibility] = useState("");
   const [setApproval, setSetApproval] = useState("");
   const [setParent, setSetParent] = useState("");
+  const [addTagInput, setAddTagInput] = useState("");
+  const [removeTagInput, setRemoveTagInput] = useState("");
   const [sortKey, setSortKey] = useState<"name" | "category" | "visibility" | "approval" | "parent">("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [busy, setBusy] = useState(false);
@@ -160,25 +162,35 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
     if (setVisibility) set.visibility = setVisibility;
     if (setApproval) set.approvalStatus = setApproval;
     if (setParent !== undefined && setParent !== "") set.parent = setParent === "__clear__" ? "" : setParent;
-    if (!selected.size || !Object.keys(set).length) return;
+    const addTags = addTagInput.trim() ? addTagInput.split(",").map((t) => t.trim()).filter(Boolean) : [];
+    const removeTags = removeTagInput.trim() ? removeTagInput.split(",").map((t) => t.trim()).filter(Boolean) : [];
+    const hasSet = Object.keys(set).length > 0;
+    if (!selected.size || (!hasSet && !addTags.length && !removeTags.length)) return;
 
     const parts: string[] = [];
     if (set.category) parts.push(`category → ${catLabel.get(set.category) || set.category}`);
     if (set.visibility) parts.push(`visibility → ${set.visibility === "players" ? "Players" : "GM only"}`);
     if (set.approvalStatus) parts.push(`approval → ${set.approvalStatus}`);
     if (set.parent !== undefined) parts.push(`parent → ${set.parent || "(none)"}`);
+    if (addTags.length) parts.push(`+tags: ${addTags.join(", ")}`);
+    if (removeTags.length) parts.push(`−tags: ${removeTags.join(", ")}`);
     if (!window.confirm(`Apply ${parts.join(", ")} to ${selected.size} page${selected.size === 1 ? "" : "s"}?\n\nThis writes a single commit.`)) return;
 
     setBusy(true);
     setMessage("Applying…");
+    const body: Record<string, unknown> = { slugs: [...selected] };
+    if (hasSet) body.set = set;
+    if (addTags.length) body.addTags = addTags;
+    if (removeTags.length) body.removeTags = removeTags;
     const res = await fetch(`/api/campaigns/${campaign.id}/pages/bulk`, {
       method: "PATCH",
-      body: JSON.stringify({ slugs: [...selected], set })
+      body: JSON.stringify(body)
     });
     const data = await res.json();
     setBusy(false);
     if (res.ok) {
       setSetCategory(""); setSetVisibility(""); setSetApproval(""); setSetParent("");
+      setAddTagInput(""); setRemoveTagInput("");
       setMessage(`Updated ${data.updated} page${data.updated === 1 ? "" : "s"} in one commit.`);
       await load();
     } else {
@@ -237,7 +249,7 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
     await loadMedia();
   }
 
-  const pendingChange = Boolean(setCategory || setVisibility || setApproval || setParent);
+  const pendingChange = Boolean(setCategory || setVisibility || setApproval || setParent || addTagInput.trim() || removeTagInput.trim());
 
   return (
     <section className="organize">
@@ -292,6 +304,22 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
                   <option value="__clear__">— clear parent —</option>
                   {pages.map((p) => <option key={p.slug} value={p.slug}>{p.frontmatter.name}</option>)}
                 </datalist>
+              </label>
+              <label>Add tags
+                <input
+                  value={addTagInput}
+                  onChange={(e) => setAddTagInput(e.target.value)}
+                  placeholder="tag1, tag2…"
+                  style={{ width: "120px" }}
+                />
+              </label>
+              <label>Remove tags
+                <input
+                  value={removeTagInput}
+                  onChange={(e) => setRemoveTagInput(e.target.value)}
+                  placeholder="tag1, tag2…"
+                  style={{ width: "120px" }}
+                />
               </label>
               <button type="button" onClick={apply} disabled={busy || !pendingChange}>Apply (1 commit)</button>
               <button type="button" className="secondary" onClick={() => setSelected(new Set())} disabled={busy}>Clear</button>

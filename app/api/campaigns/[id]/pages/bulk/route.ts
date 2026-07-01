@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
@@ -17,8 +17,13 @@ const schema = z.object({
       approvalStatus: z.enum(["approved", "unapproved", "rejected"]).optional(),
       parent: z.string().optional()
     })
-    .refine((set) => Object.values(set).some((value) => value !== undefined), { message: "Provide at least one field to change." })
-});
+    .optional(),
+  addTags: z.array(z.string().min(1)).optional(),
+  removeTags: z.array(z.string().min(1)).optional()
+}).refine(
+  (d) => (d.set && Object.values(d.set).some((v) => v !== undefined)) || (d.addTags?.length ?? 0) > 0 || (d.removeTags?.length ?? 0) > 0,
+  { message: "Provide at least one field to change." }
+);
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -39,12 +44,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!wanted.has(slug)) continue;
     const page = parsePage(slug, file.text ?? "", file.sha);
     const fm = { ...page.frontmatter, lastEditedBy: `${user.name} via bulk edit` };
-    if (input.set.category) { fm.category = input.set.category; fm.type = input.set.category; }
-    if (input.set.visibility) { fm.visibility = input.set.visibility; fm.knownToPlayers = input.set.visibility === "players"; }
-    if (input.set.approvalStatus) fm.approvalStatus = input.set.approvalStatus;
-    if (input.set.parent !== undefined) {
+    if (input.set?.category) { fm.category = input.set.category; fm.type = input.set.category; }
+    if (input.set?.visibility) { fm.visibility = input.set.visibility; fm.knownToPlayers = input.set.visibility === "players"; }
+    if (input.set?.approvalStatus) fm.approvalStatus = input.set.approvalStatus;
+    if (input.set?.parent !== undefined) {
       if (input.set.parent === "") delete fm.parent;
       else fm.parent = input.set.parent;
+    }
+    if (input.addTags?.length || input.removeTags?.length) {
+      const existing = new Set(fm.tags || []);
+      for (const tag of input.addTags ?? []) existing.add(tag);
+      for (const tag of input.removeTags ?? []) existing.delete(tag);
+      fm.tags = [...existing].sort();
     }
     updates.push({ path: `wiki/pages/${slug}.md`, content: serializePage(fm, page.content) });
   }
