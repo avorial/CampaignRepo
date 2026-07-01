@@ -32,7 +32,7 @@ The Rustwood Inn,location,"Roadside tavern in Thornmere","inn,tavern",players,`;
 export default function ImportClient({ campaignId, campaignName }: { campaignId: number; campaignName: string }) {
   const api = `/api/campaigns/${campaignId}`;
 
-  const [activeTab, setActiveTab] = useState<"csv" | "foundry" | "obsidian" | "notion" | "worldanvil" | "export">("csv");
+  const [activeTab, setActiveTab] = useState<"csv" | "foundry" | "obsidian" | "notion" | "worldanvil" | "googledocs" | "export">("csv");
 
   // Obsidian vault import state
   const [obsidianFiles, setObsidianFiles] = useState<FileEntry[]>([]);
@@ -65,6 +65,14 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
   const [csvApproval, setCsvApproval] = useState<"approved" | "unapproved" | "rejected">("unapproved");
   const [csvBusy, setCsvBusy] = useState(false);
   const [csvResult, setCsvResult] = useState<ImportResponse | null>(null);
+
+  // Google Docs import state
+  const [gdFiles, setGdFiles] = useState<FileEntry[]>([]);
+  const [gdCategory, setGdCategory] = useState("lore");
+  const [gdVisibility, setGdVisibility] = useState<"gm" | "players">("gm");
+  const [gdApproval, setGdApproval] = useState<"approved" | "unapproved" | "rejected">("unapproved");
+  const [gdBusy, setGdBusy] = useState(false);
+  const [gdResult, setGdResult] = useState<ImportResponse | null>(null);
 
   // Foundry sub-tab
   const [foundryTab, setFoundryTab] = useState<"journals" | "actors">("journals");
@@ -225,6 +233,30 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
     reader.readAsText(file);
   }
 
+  async function loadGdFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files) return;
+    const all = Array.from(files).filter((f) => /\.(html?|txt)$/i.test(f.name));
+    setGdFiles(await readFileList(all.length ? all : Array.from(files)));
+    setGdResult(null);
+  }
+
+  async function runGdImport() {
+    if (!gdFiles.length) return;
+    setGdBusy(true);
+    setGdResult(null);
+    try {
+      const res = await fetch(`${api}/imports/google-docs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ files: gdFiles, category: gdCategory, visibility: gdVisibility, approvalStatus: gdApproval })
+      });
+      setGdResult(await res.json());
+    } finally {
+      setGdBusy(false);
+    }
+  }
+
   function loadJsonFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -241,6 +273,7 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
         <button className={`tab-btn${activeTab === "obsidian" ? " active" : ""}`} onClick={() => setActiveTab("obsidian")}>Obsidian</button>
         <button className={`tab-btn${activeTab === "notion" ? " active" : ""}`} onClick={() => setActiveTab("notion")}>Notion</button>
         <button className={`tab-btn${activeTab === "worldanvil" ? " active" : ""}`} onClick={() => setActiveTab("worldanvil")}>World Anvil</button>
+        <button className={`tab-btn${activeTab === "googledocs" ? " active" : ""}`} onClick={() => setActiveTab("googledocs")}>Google Docs</button>
         <button className={`tab-btn${activeTab === "export" ? " active" : ""}`} onClick={() => setActiveTab("export")}>Export</button>
       </div>
 
@@ -542,6 +575,58 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
           </button>
 
           {waResult && <ImportResultPanel result={waResult} api={`/campaigns/${campaignId}`} />}
+        </div>
+      )}
+
+      {activeTab === "googledocs" && (
+        <div className="import-panel stack">
+          <div className="import-intro">
+            <p>Import Google Docs as wiki pages. In Google Docs, go to <strong>File → Download → Web page (.html, zipped)</strong>, unzip, and select the <code>.html</code> files here. Plain text (<code>.txt</code>) exports also work.</p>
+            <p className="muted" style={{ fontSize: "12px" }}>
+              Document titles come from the Google Docs page title. Headings, bold, italic, and lists are preserved. Images and comments are dropped. Select multiple files to import a batch.
+            </p>
+          </div>
+
+          <div className="import-options">
+            <label>Default category
+              <select value={gdCategory} onChange={(e) => setGdCategory(e.target.value)}>
+                {CATEGORY_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
+            <label>Visibility
+              <select value={gdVisibility} onChange={(e) => setGdVisibility(e.target.value as "gm" | "players")}>
+                {VISIBILITY_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </label>
+            <label>Approval status
+              <select value={gdApproval} onChange={(e) => setGdApproval(e.target.value as "approved" | "unapproved" | "rejected")}>
+                {APPROVAL_OPTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </label>
+          </div>
+
+          <label className="file-upload-row">
+            Select .html or .txt files
+            <input
+              type="file"
+              accept=".html,.htm,.txt"
+              multiple
+              onChange={loadGdFiles}
+              style={{ marginLeft: 8 }}
+            />
+          </label>
+
+          {gdFiles.length > 0 && (
+            <p className="muted" style={{ fontSize: 13 }}>
+              {gdFiles.length} file{gdFiles.length !== 1 ? "s" : ""} selected: {gdFiles.map((f) => f.name).join(", ")}
+            </p>
+          )}
+
+          <button onClick={runGdImport} disabled={gdBusy || gdFiles.length === 0}>
+            {gdBusy ? "Importing…" : `Import ${gdFiles.length > 0 ? gdFiles.length + " document" + (gdFiles.length === 1 ? "" : "s") : "documents"}`}
+          </button>
+
+          {gdResult && <ImportResultPanel result={gdResult} api={`/campaigns/${campaignId}`} />}
         </div>
       )}
 
