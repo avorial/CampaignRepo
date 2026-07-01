@@ -75,6 +75,57 @@ function stepOnce(positions: Map<string, Pos>, edges: CampaignGraphEdge[]): Map<
   return next;
 }
 
+// === Tree layout (genealogy preset) ===
+const TREE_X = 180;
+const TREE_Y = 150;
+
+function computeTreeLayout(slugs: string[], parentOfEdges: CampaignGraphEdge[]): Map<string, Pos> {
+  const children = new Map<string, string[]>();
+  const hasParent = new Set<string>();
+  const slugSet = new Set(slugs);
+
+  for (const e of parentOfEdges) {
+    if (!slugSet.has(e.source) || !slugSet.has(e.target)) continue;
+    if (!children.has(e.source)) children.set(e.source, []);
+    children.get(e.source)!.push(e.target);
+    hasParent.add(e.target);
+  }
+
+  const roots = slugs.filter((s) => !hasParent.has(s));
+  const depth = new Map<string, number>();
+  const queue = [...roots];
+  for (const r of roots) depth.set(r, 0);
+  while (queue.length) {
+    const s = queue.shift()!;
+    for (const child of children.get(s) ?? []) {
+      if (!depth.has(child)) { depth.set(child, (depth.get(s) ?? 0) + 1); queue.push(child); }
+    }
+  }
+
+  const assigned = new Map<string, number>();
+  let leafX = 0;
+  function assignX(s: string): number {
+    if (assigned.has(s)) return assigned.get(s)!;
+    const kids = children.get(s) ?? [];
+    if (kids.length === 0) { const x = leafX++ * TREE_X; assigned.set(s, x); return x; }
+    const xs = kids.map(assignX);
+    const x = (Math.min(...xs) + Math.max(...xs)) / 2;
+    assigned.set(s, x);
+    return x;
+  }
+  for (const r of roots) assignX(r);
+
+  const maxDepth = depth.size > 0 ? Math.max(...depth.values()) : 0;
+  const pos = new Map<string, Pos>();
+  for (const [s, d] of depth) pos.set(s, { x: assigned.get(s) ?? 0, y: d * TREE_Y, vx: 0, vy: 0 });
+
+  let freeX = 0;
+  for (const s of slugs) {
+    if (!pos.has(s)) { pos.set(s, { x: freeX++ * TREE_X, y: (maxDepth + 1.5) * TREE_Y, vx: 0, vy: 0 }); }
+  }
+  return pos;
+}
+
 // === Relationship category colors ===
 const REL_CAT_COLORS: Record<string, string> = {
   faction:   "#a075ff",
@@ -127,6 +178,7 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
   const [filterCats, setFilterCats] = useState<Set<string>>(new Set(Object.keys(CAT_COLORS)));
   const [filterRelCats, setFilterRelCats] = useState<Set<string>>(new Set(Object.keys(REL_CAT_COLORS)));
   const [showRelOnly, setShowRelOnly] = useState(false);
+  const [layout, setLayout] = useState<"force" | "tree">("force");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -158,8 +210,20 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
     [edges, visibleSlugs, showRelOnly, filterRelCats]
   );
 
+  const parentOfEdges = useMemo(
+    () => visibleEdges.filter((e) => e.relType === "parent-of"),
+    [visibleEdges]
+  );
+  const hasParentOfEdges = parentOfEdges.length > 0;
+
+  const treePositions = useMemo(() => {
+    if (layout !== "tree") return null;
+    return computeTreeLayout(visibleNodes.map((n) => n.slug), parentOfEdges);
+  }, [layout, visibleNodes, parentOfEdges]);
+
   // Force simulation
   useEffect(() => {
+    if (layout === "tree") { setSimDone(true); return; }
     if (visibleNodes.length === 0) return;
     setSimDone(false);
     let pos = initPositions(visibleNodes.map((n) => n.slug));
@@ -283,11 +347,13 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
     return new Set(searchResults.map((n) => n.slug));
   }, [searchQuery, searchResults]);
 
+  const activePositions = treePositions ?? positions;
+
   function jumpToNode(slug: string) {
     setSelected(slug);
     setSearchQuery("");
     setSearchOpen(false);
-    const pos = positions.get(slug);
+    const pos = activePositions.get(slug);
     const svg = svgRef.current;
     if (!pos || !svg) return;
     const { width, height } = svg.getBoundingClientRect();
@@ -369,6 +435,20 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
           <input type="checkbox" checked={showRelOnly} onChange={(e) => setShowRelOnly(e.target.checked)} />
           <span>Typed relationships only</span>
         </label>
+        {hasParentOfEdges && (
+          <>
+            <hr />
+            <h4>Layout</h4>
+            <label className="graph-filter-item">
+              <input type="radio" name="layout" checked={layout === "force"} onChange={() => setLayout("force")} />
+              <span>Force-directed</span>
+            </label>
+            <label className="graph-filter-item">
+              <input type="radio" name="layout" checked={layout === "tree"} onChange={() => setLayout("tree")} />
+              <span>Genealogy tree</span>
+            </label>
+          </>
+        )}
         <p className="muted graph-count">
           {visibleNodes.length} nodes · {visibleEdges.length} edges
           {!simDone && !loading && <span> · settling…</span>}
@@ -387,8 +467,8 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
       >
         <g transform={`translate(${pan.x}, ${pan.y}) scale(${scale})`}>
           {visibleEdges.map((edge, i) => {
-            const a = positions.get(edge.source);
-            const b = positions.get(edge.target);
+            const a = activePositions.get(edge.source);
+            const b = activePositions.get(edge.target);
             if (!a || !b) return null;
             const isRel = Boolean(edge.relType);
             const isActive = selected && (edge.source === selected || edge.target === selected);
@@ -412,8 +492,8 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
             visibleEdges
               .filter((e) => (e.source === selected || e.target === selected) && e.relType)
               .map((edge, i) => {
-                const a = positions.get(edge.source);
-                const b = positions.get(edge.target);
+                const a = activePositions.get(edge.source);
+                const b = activePositions.get(edge.target);
                 if (!a || !b) return null;
                 const mx = (a.x + b.x) / 2;
                 const my = (a.y + b.y) / 2;
@@ -429,7 +509,7 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
               })}
 
           {visibleNodes.map((node) => {
-            const pos = positions.get(node.slug);
+            const pos = activePositions.get(node.slug);
             if (!pos) return null;
             const isSel = node.slug === selected;
             const isDim = dimmed(node.slug);
