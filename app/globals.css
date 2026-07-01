@@ -2573,6 +2573,71 @@ button.nav-link.active {
   margin: -6px 0 14px;
 }
 
+.player-tab-row {
+  grid-column: 1 / -1;
+}
+
+.player-quests {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.player-quest-group { display: flex; flex-direction: column; gap: 12px; }
+.player-quest-group-done { opacity: 0.7; }
+.player-quest-group > h3 { font-size: var(--text-md); color: var(--text-secondary); margin: 0 0 4px; }
+
+.player-quest-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.player-quest-card-done { opacity: 0.7; }
+.player-quest-card > h4 { margin: 0; font-size: var(--text-md); }
+
+.player-quest-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.player-quest-objectives { display: flex; flex-direction: column; gap: 4px; }
+.player-quest-progress {
+  background: var(--border-faint);
+  border-radius: 99px;
+  height: 4px;
+  overflow: hidden;
+}
+.player-quest-bar {
+  background: var(--gold);
+  height: 100%;
+  transition: width 0.3s;
+}
+.player-quest-obj-count { font-size: var(--text-label-sm); color: var(--text-tertiary); }
+.player-quest-obj-list {
+  margin: 4px 0 0 0;
+  padding: 0 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: var(--text-sm);
+}
+.player-quest-obj-list li.obj-done {
+  text-decoration: line-through;
+  color: var(--text-tertiary);
+}
+.player-quest-desc {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.badge-active { background: color-mix(in srgb, var(--gold) 20%, transparent); border-color: color-mix(in srgb, var(--gold) 40%, transparent); }
+.badge-hook { background: color-mix(in srgb, var(--purple) 20%, transparent); border-color: color-mix(in srgb, var(--purple) 40%, transparent); }
+.badge-completed { background: color-mix(in srgb, #2ecc71 15%, transparent); border-color: color-mix(in srgb, #2ecc71 35%, transparent); }
+.badge-failed { background: color-mix(in srgb, var(--error) 15%, transparent); border-color: color-mix(in srgb, var(--error) 35%, transparent); }
+
 .wiki-link {
   color: var(--gold);
   font-weight: 600;

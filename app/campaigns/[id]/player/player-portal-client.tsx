@@ -5,11 +5,20 @@ import type { Campaign, WikiPage } from "@/lib/types";
 import { renderMarkdown, type IncludeResolver, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
 
+type PlayerQuest = {
+  slug: string;
+  frontmatter: { title: string; status: string; arc?: string; reward?: string; objectives: { text: string; done: boolean }[] };
+  description: string;
+};
+
 export default function PlayerPortalClient({ campaign, categories }: { campaign: Campaign; categories: { id: string; label: string }[] }) {
+  const [tab, setTab] = useState<"lore" | "quests">("lore");
   const [pages, setPages] = useState<WikiPage[]>([]);
   const [selectedSlug, setSelectedSlug] = useState("");
   const [query, setQuery] = useState("");
   const [message, setMessage] = useState("");
+  const [quests, setQuests] = useState<PlayerQuest[]>([]);
+  const [questsLoaded, setQuestsLoaded] = useState(false);
 
   useEffect(() => {
     fetch(`/api/campaigns/${campaign.id}/pages?mode=player`)
@@ -83,6 +92,16 @@ export default function PlayerPortalClient({ campaign, categories }: { campaign:
     [pages]
   );
 
+  function switchTab(t: "lore" | "quests") {
+    setTab(t);
+    if (t === "quests" && !questsLoaded) {
+      fetch(`/api/campaigns/${campaign.id}/quests?mode=player`)
+        .then((r) => r.json())
+        .then((d) => { setQuests(d.quests || []); setQuestsLoaded(true); })
+        .catch(() => setQuestsLoaded(true));
+    }
+  }
+
   async function copyHandoutLink() {
     if (!selectedPage) return;
     window.history.replaceState(null, "", `#${selectedPage.slug}`);
@@ -90,50 +109,117 @@ export default function PlayerPortalClient({ campaign, categories }: { campaign:
     setMessage("Copied player portal link.");
   }
 
+  const activeQuests = quests.filter((q) => q.frontmatter.status === "active" || q.frontmatter.status === "hook");
+  const doneQuests = quests.filter((q) => q.frontmatter.status === "completed" || q.frontmatter.status === "failed");
+
   return (
     <section className="player-portal">
-      <aside className="player-library">
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search player lore" />
-        <div className="nav-group">
-          <h3>Player Pages</h3>
-          {filteredPages.map((page) => (
-            <button
-              type="button"
-              key={page.slug}
-              className={page.slug === selectedPage?.slug ? "nav-link active" : "nav-link"}
-              onClick={() => {
-                setSelectedSlug(page.slug);
-                window.history.replaceState(null, "", `#${page.slug}`);
-              }}
-            >
-              <strong>{page.frontmatter.name}</strong>
-              <span>{categoryLabels.get(page.frontmatter.category) || page.frontmatter.category}</span>
-            </button>
-          ))}
-          {!filteredPages.length && <p className="muted">No approved player-visible pages match.</p>}
-        </div>
-      </aside>
+      <div className="tab-row player-tab-row">
+        <button type="button" className={tab === "lore" ? "tab-btn active" : "tab-btn"} onClick={() => switchTab("lore")}>Lore</button>
+        <button type="button" className={tab === "quests" ? "tab-btn active" : "tab-btn"} onClick={() => switchTab("quests")}>Quests</button>
+      </div>
 
-      <article className="player-reader panel">
-        {selectedPage ? (
-          <>
-            <header className="handout-header">
-              <p>{categoryLabels.get(selectedPage.frontmatter.category) || selectedPage.frontmatter.category}</p>
-              <h1>{selectedPage.frontmatter.name}</h1>
-              {selectedPage.frontmatter.summary && <span>{selectedPage.frontmatter.summary}</span>}
-              <div className="badges">
-                {(selectedPage.frontmatter.tags || []).map((tag) => <span key={tag}>{tag}</span>)}
-              </div>
-            </header>
-            <div className="player-reader-actions">
-              <button type="button" className="secondary" onClick={copyHandoutLink}>Copy Link</button>
+      {tab === "lore" && (
+        <>
+          <aside className="player-library">
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search player lore" />
+            <div className="nav-group">
+              <h3>Player Pages</h3>
+              {filteredPages.map((page) => (
+                <button
+                  type="button"
+                  key={page.slug}
+                  className={page.slug === selectedPage?.slug ? "nav-link active" : "nav-link"}
+                  onClick={() => {
+                    setSelectedSlug(page.slug);
+                    window.history.replaceState(null, "", `#${page.slug}`);
+                  }}
+                >
+                  <strong>{page.frontmatter.name}</strong>
+                  <span>{categoryLabels.get(page.frontmatter.category) || page.frontmatter.category}</span>
+                </button>
+              ))}
+              {!filteredPages.length && <p className="muted">No approved player-visible pages match.</p>}
             </div>
-            <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
-          </>
-        ) : (
-          <p className="muted">No approved player-visible pages yet.</p>
-        )}
-      </article>
+          </aside>
+
+          <article className="player-reader panel">
+            {selectedPage ? (
+              <>
+                <header className="handout-header">
+                  <p>{categoryLabels.get(selectedPage.frontmatter.category) || selectedPage.frontmatter.category}</p>
+                  <h1>{selectedPage.frontmatter.name}</h1>
+                  {selectedPage.frontmatter.summary && <span>{selectedPage.frontmatter.summary}</span>}
+                  <div className="badges">
+                    {(selectedPage.frontmatter.tags || []).map((tag) => <span key={tag}>{tag}</span>)}
+                  </div>
+                </header>
+                <div className="player-reader-actions">
+                  <button type="button" className="secondary" onClick={copyHandoutLink}>Copy Link</button>
+                </div>
+                <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
+              </>
+            ) : (
+              <p className="muted">No approved player-visible pages yet.</p>
+            )}
+          </article>
+        </>
+      )}
+
+      {tab === "quests" && (
+        <div className="player-quests">
+          {!questsLoaded && <p className="muted">Loading quests…</p>}
+          {questsLoaded && quests.length === 0 && <p className="muted">No player-visible quests yet.</p>}
+          {activeQuests.length > 0 && (
+            <section className="player-quest-group">
+              <h3>Active &amp; Hooks</h3>
+              {activeQuests.map((q) => {
+                const done = q.frontmatter.objectives.filter((o) => o.done).length;
+                const total = q.frontmatter.objectives.length;
+                return (
+                  <article className="player-quest-card" key={q.slug}>
+                    <h4>{q.frontmatter.title}</h4>
+                    <div className="player-quest-meta">
+                      {q.frontmatter.arc && <span className="badge">{q.frontmatter.arc}</span>}
+                      <span className={`badge badge-${q.frontmatter.status}`}>{q.frontmatter.status}</span>
+                      {q.frontmatter.reward && <span className="badge">Reward: {q.frontmatter.reward}</span>}
+                    </div>
+                    {total > 0 && (
+                      <div className="player-quest-objectives">
+                        <div className="player-quest-progress">
+                          <div className="player-quest-bar" style={{ width: `${total ? (done / total) * 100 : 0}%` }} />
+                        </div>
+                        <span className="player-quest-obj-count">{done}/{total} objectives</span>
+                        <ul className="player-quest-obj-list">
+                          {q.frontmatter.objectives.map((o, i) => (
+                            <li key={i} className={o.done ? "obj-done" : ""}>{o.text}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {q.description.trim() && <p className="player-quest-desc">{q.description.trim().slice(0, 300)}{q.description.length > 300 ? "…" : ""}</p>}
+                  </article>
+                );
+              })}
+            </section>
+          )}
+          {doneQuests.length > 0 && (
+            <section className="player-quest-group player-quest-group-done">
+              <h3>Completed / Failed</h3>
+              {doneQuests.map((q) => (
+                <article className="player-quest-card player-quest-card-done" key={q.slug}>
+                  <h4>{q.frontmatter.title}</h4>
+                  <div className="player-quest-meta">
+                    {q.frontmatter.arc && <span className="badge">{q.frontmatter.arc}</span>}
+                    <span className={`badge badge-${q.frontmatter.status}`}>{q.frontmatter.status}</span>
+                  </div>
+                </article>
+              ))}
+            </section>
+          )}
+        </div>
+      )}
+
       {message && <p className="toast">{message}</p>}
     </section>
   );

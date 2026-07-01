@@ -14,12 +14,20 @@ async function guard(id: string) {
   return { user, campaign };
 }
 
-export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const guarded = await guard(id);
-  if ("error" in guarded) return guarded.error;
-  const { user, campaign } = guarded;
-  return NextResponse.json({ quests: await listQuests(campaign, user.githubToken) });
+  const user = await requireUser().catch(() => null);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const campaign = getCampaign(user.id, Number(id));
+  if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const url = new URL(req.url);
+  const playerMode = url.searchParams.get("mode") === "player";
+  if (!canManageCampaign(user.id, campaign.id) && !playerMode) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  const all = await listQuests(campaign, user.githubToken);
+  const quests = playerMode ? all.filter((q) => q.frontmatter.visibility === "players") : all;
+  return NextResponse.json({ quests });
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
