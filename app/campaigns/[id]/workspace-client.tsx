@@ -66,8 +66,9 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   }, []);
   const [openNodes, setOpenNodes] = useState<Record<string, boolean>>({});
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({});
-  const [publicSite, setPublicSite] = useState<{ slug: string; enabled: boolean } | null>(null);
+  const [publicSite, setPublicSite] = useState<{ slug: string; enabled: boolean; description?: string | null } | null>(null);
   const [publicLinkName, setPublicLinkName] = useState(publicLinkInput(campaign.name));
+  const [publicDescription, setPublicDescription] = useState("");
   const [theme, setTheme] = useState<CampaignTheme>({});
   const [tab, setTab] = useState(campaign.role === "owner" || campaign.role === "gm" ? "pages" : "world");
   const pendingReviews = pages.filter((page) => page.frontmatter.approvalStatus !== "approved").length;
@@ -103,6 +104,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     setValidation(validationData);
     setPublicSite(publicData.site || null);
     setPublicLinkName(publicData.site?.slug || publicLinkInput(campaign.name));
+    setPublicDescription(publicData.site?.description || "");
     setTheme(themeData.theme || {});
     if (categoriesData.categories?.length) {
       setCampaignCategories(categoriesData.categories);
@@ -158,6 +160,19 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   async function savePublicLink(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await setPublic("publish", publicLinkName);
+  }
+
+  async function savePublicDescription(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const res = await fetch(`/api/campaigns/${campaign.id}/public`, {
+      method: "POST",
+      body: JSON.stringify({ action: "description", description: publicDescription })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setPublicSite((prev) => prev ? { ...prev, description: data.site?.description } : prev);
+      setMessage("Gallery description saved.");
+    }
   }
 
   async function saveCategories(event: FormEvent<HTMLFormElement>) {
@@ -816,15 +831,30 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
               <p className="muted">Use letters, numbers, and hyphens. Changing this updates the public URL.</p>
             </form>
             {publicSite?.enabled ? (
-              <div className="public-share">
-                <label>Shareable link</label>
-                <div className="public-share-row">
-                  <code>{`/site/${publicSite.slug}`}</code>
-                  <button type="button" className="secondary" onClick={() => copyText(`${window.location.origin}/site/${publicSite.slug}`)}>Copy link</button>
-                  <button type="button" className="secondary" onClick={() => { if (window.confirm("Rotate the link? The current public URL will stop working.")) setPublic("rotate"); }}>Rotate link</button>
+              <>
+                <div className="public-share">
+                  <label>Shareable link</label>
+                  <div className="public-share-row">
+                    <code>{`/site/${publicSite.slug}`}</code>
+                    <button type="button" className="secondary" onClick={() => copyText(`${window.location.origin}/site/${publicSite.slug}`)}>Copy link</button>
+                    <button type="button" className="secondary" onClick={() => { if (window.confirm("Rotate the link? The current public URL will stop working.")) setPublic("rotate"); }}>Rotate link</button>
+                  </div>
+                  <p className="muted">Anyone with this link can read player-visible pages — no account needed. GM-only blocks and unapproved pages are never exposed.</p>
                 </div>
-                <p className="muted">Anyone with this link can read player-visible pages — no account needed. GM-only blocks and unapproved pages are never exposed.</p>
-              </div>
+                <form onSubmit={savePublicDescription} className="stack" style={{ marginTop: 12 }}>
+                  <label>Gallery description
+                    <textarea
+                      value={publicDescription}
+                      onChange={(e) => setPublicDescription(e.target.value)}
+                      placeholder="A brief description shown in the public gallery (1–2 sentences)."
+                      rows={2}
+                      maxLength={280}
+                      style={{ resize: "vertical" }}
+                    />
+                  </label>
+                  <button type="submit" className="secondary">Save description</button>
+                </form>
+              </>
             ) : (
               <p className="muted">{publicSite ? "This world is currently offline. Re-publish to bring it back at its existing link." : "Not published yet."}</p>
             )}

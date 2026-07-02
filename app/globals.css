@@ -5446,6 +5446,19 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   font-size: var(--text-label);
 }
 
+.gallery-card-description {
+  color: var(--text-secondary) !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  font-family: var(--font-body) !important;
+  font-size: var(--text-sm) !important;
+  letter-spacing: 0 !important;
+  line-height: 1.5;
+  overflow: hidden;
+  text-transform: none !important;
+}
+
 .gallery-card-cta {
   color: var(--gold) !important;
   margin-top: 6px;

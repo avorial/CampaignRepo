@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import Logo from "@/app/components/logo";
 
-type Site = { slug: string; name: string; gameType: string; clones: number; publishedAt: string };
+type Site = { slug: string; name: string; gameType: string; clones: number; publishedAt: string; description: string | null };
 type SortKey = "clones" | "az" | "newest";
 
 export default function PublicGalleryClient({ sites }: { sites: Site[] }) {
@@ -92,6 +92,7 @@ export default function PublicGalleryClient({ sites }: { sites: Site[] }) {
               <Link key={s.slug} className="gallery-card" href={`/site/${s.slug}`}>
                 <strong>{s.name}</strong>
                 <span className="gallery-card-system">{s.gameType}</span>
+                {s.description && <span className="gallery-card-description">{s.description}</span>}
                 <span className="gallery-card-meta">{s.clones > 0 ? `${s.clones} clone${s.clones === 1 ? "" : "s"}` : "Be the first to clone"}</span>
                 <span className="gallery-card-cta">View world →</span>
               </Link>

@@ -159,6 +159,9 @@ const publicSiteColumns = db.prepare("PRAGMA table_info(public_sites)").all() as
 if (!publicSiteColumns.some((column) => column.name === "clones")) {
   db.exec("ALTER TABLE public_sites ADD COLUMN clones INTEGER NOT NULL DEFAULT 0");
 }
+if (!publicSiteColumns.some((column) => column.name === "description")) {
+  db.exec("ALTER TABLE public_sites ADD COLUMN description TEXT");
+}
 
 const adminHash = bcrypt.hashSync("admin", 12);
 db.prepare(
@@ -342,17 +345,23 @@ export function getPublicSiteCampaign(slug: string): Campaign | null {
 }
 
 /** Every enabled public campaign, for the public discovery gallery (no auth). */
-export function listPublicSites(): { slug: string; name: string; gameType: string; clones: number; publishedAt: string }[] {
+export function listPublicSites(): { slug: string; name: string; gameType: string; clones: number; publishedAt: string; description: string | null }[] {
   return db
     .prepare(
       `SELECT public_sites.slug AS slug, campaigns.name AS name, campaigns.gameType AS gameType,
-              public_sites.clones AS clones, public_sites.createdAt AS publishedAt
+              public_sites.clones AS clones, public_sites.createdAt AS publishedAt,
+              public_sites.description AS description
        FROM public_sites
        JOIN campaigns ON campaigns.id = public_sites.campaignId
        WHERE public_sites.enabled = 1
        ORDER BY public_sites.clones DESC, campaigns.name COLLATE NOCASE`
     )
-    .all() as { slug: string; name: string; gameType: string; clones: number; publishedAt: string }[];
+    .all() as { slug: string; name: string; gameType: string; clones: number; publishedAt: string; description: string | null }[];
+}
+
+export function updatePublicSiteDescription(userId: number, campaignId: number, description: string | null) {
+  if (!canManageCampaign(userId, campaignId)) throw new Error("Forbidden");
+  db.prepare("UPDATE public_sites SET description = ? WHERE campaignId = ?").run(description || null, campaignId);
 }
 
 /** Bump a published world's clone counter (drives most-cloned discovery). */
