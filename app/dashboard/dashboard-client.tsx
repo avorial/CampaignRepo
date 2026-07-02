@@ -7,6 +7,32 @@ import type { AiConfig, ApiToken, Campaign, User } from "@/lib/types";
 import { gameTypeGroups } from "@/lib/templates";
 import { darkPlatePacks, gamePackLogos } from "@/lib/game-pack-branding";
 
+type DashboardPanelState = {
+  github: boolean;
+  build: boolean;
+  ai: boolean;
+  mcp: boolean;
+};
+
+function defaultPanelState(githubConnected: boolean, repoCount: number): DashboardPanelState {
+  return {
+    github: false,
+    build: !githubConnected && repoCount === 0,
+    ai: false,
+    mcp: false
+  };
+}
+
+function orderCampaigns(campaigns: Campaign[], savedOrder: number[]): Campaign[] {
+  if (!savedOrder.length) return campaigns;
+  const rank = new Map(savedOrder.map((id, index) => [id, index]));
+  return [...campaigns].sort((a, b) => {
+    const aRank = rank.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+    const bRank = rank.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+    return aRank - bRank;
+  });
+}
+
 export default function DashboardClient({
   user,
   campaigns,
@@ -22,8 +48,18 @@ export default function DashboardClient({
   const githubConnected = Boolean(user.githubToken);
   const isGitHubApp = Boolean(user.githubToken?.startsWith("github-app:"));
   const defaultMode: "create" | "connect" | "local" = "local";
+  const repoOrderStorageKey = `campaignrepo.dashboard.repoOrder.${user.id}`;
+  const panelStorageKey = `campaignrepo.dashboard.panels.${user.id}`;
   const [message, setMessage] = useState("");
-  const [repos, setRepos] = useState<Campaign[]>(campaigns);
+  const [repos, setRepos] = useState<Campaign[]>(() => {
+    if (typeof window === "undefined") return campaigns;
+    try {
+      const saved = JSON.parse(localStorage.getItem(repoOrderStorageKey) || "[]") as number[];
+      return orderCampaigns(campaigns, saved);
+    } catch {
+      return campaigns;
+    }
+  });
   const [mode, setMode] = useState<"create" | "connect" | "local">(defaultMode);
   const [campaignName, setCampaignName] = useState("");
   const [buildError, setBuildError] = useState("");
@@ -39,11 +75,17 @@ export default function DashboardClient({
   const [aiSaving, setAiSaving] = useState(false);
   const [aiDiscovering, setAiDiscovering] = useState(false);
   const [aiModels, setAiModels] = useState<string[]>([]);
-  const [expandedPanels, setExpandedPanels] = useState({
-    github: false,
-    build: true,
-    ai: false,
-    mcp: false
+  const [draggedRepoId, setDraggedRepoId] = useState<number | null>(null);
+  const [dragOverRepoId, setDragOverRepoId] = useState<number | null>(null);
+  const [expandedPanels, setExpandedPanels] = useState<DashboardPanelState>(() => {
+    const fallback = defaultPanelState(githubConnected, campaigns.length);
+    if (typeof window === "undefined") return fallback;
+    try {
+      const saved = JSON.parse(localStorage.getItem(panelStorageKey) || "{}") as Partial<DashboardPanelState>;
+      return { ...fallback, ...saved };
+    } catch {
+      return fallback;
+    }
   });
   const mcpUrl = typeof window !== "undefined" ? `${window.location.origin}/api/mcp` : "/api/mcp";
   const githubConnection = user.githubToken?.startsWith("github-app:") ? "GitHub App" : user.githubToken ? "Manual token" : "Not connected";
@@ -53,7 +95,29 @@ export default function DashboardClient({
     : suggestedBasePath || "";
 
   const setPanelOpen = (panel: keyof typeof expandedPanels, open: boolean) => {
-    setExpandedPanels((current) => ({ ...current, [panel]: open }));
+    setExpandedPanels((current) => {
+      const next = { ...current, [panel]: open };
+      try { localStorage.setItem(panelStorageKey, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
+
+  const persistRepoOrder = (nextRepos: Campaign[]) => {
+    try { localStorage.setItem(repoOrderStorageKey, JSON.stringify(nextRepos.map((campaign) => campaign.id))); } catch { /* ignore */ }
+  };
+
+  const reorderRepo = (draggedId: number, targetId: number) => {
+    if (!draggedId || draggedId === targetId) return;
+    setRepos((current) => {
+      const from = current.findIndex((campaign) => campaign.id === draggedId);
+      const to = current.findIndex((campaign) => campaign.id === targetId);
+      if (from < 0 || to < 0) return current;
+      const next = [...current];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      persistRepoOrder(next);
+      return next;
+    });
   };
 
   useEffect(() => {
@@ -123,7 +187,11 @@ export default function DashboardClient({
     const res = await fetch("/api/campaigns", { method: "DELETE", body: JSON.stringify({ id }) });
     const data = await res.json();
     if (res.ok) {
-      setRepos((current) => current.filter((campaign) => campaign.id !== id));
+      setRepos((current) => {
+        const next = current.filter((campaign) => campaign.id !== id);
+        persistRepoOrder(next);
+        return next;
+      });
       setMessage(`Removed ${name}.`);
     } else {
       setMessage(data.error || "Could not remove campaign.");
@@ -243,7 +311,32 @@ export default function DashboardClient({
             const slug = campaign.storageBackend === "local" ? (campaign.localPath || "local") : `${campaign.owner}/${campaign.repo}`;
             const meta = [campaign.gameType, campaign.storageBackend !== "local" ? campaign.branch : null, campaign.role].filter(Boolean).join(" · ");
             return (
-              <div className="campaign-card" key={campaign.id}>
+              <div
+                className={`campaign-card${draggedRepoId === campaign.id ? " dragging" : ""}${dragOverRepoId === campaign.id ? " drag-over" : ""}`}
+                key={campaign.id}
+                draggable
+                onDragStart={(event) => {
+                  setDraggedRepoId(campaign.id);
+                  event.dataTransfer.effectAllowed = "move";
+                  event.dataTransfer.setData("text/plain", String(campaign.id));
+                }}
+                onDragEnter={() => setDragOverRepoId(campaign.id)}
+                onDragOver={(event) => {
+                  if (draggedRepoId !== campaign.id) event.preventDefault();
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  const draggedId = Number(event.dataTransfer.getData("text/plain") || draggedRepoId);
+                  reorderRepo(draggedId, campaign.id);
+                  setDraggedRepoId(null);
+                  setDragOverRepoId(null);
+                }}
+                onDragEnd={() => {
+                  setDraggedRepoId(null);
+                  setDragOverRepoId(null);
+                }}
+                title="Drag to reorder"
+              >
                 <Link className="campaign-card-link" href={`/campaigns/${campaign.id}`}>
                   <div className="campaign-card-logo">
                     {logo ? (

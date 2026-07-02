@@ -781,6 +781,21 @@ code {
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.repo-grid .campaign-card {
+  cursor: grab;
+}
+
+.repo-grid .campaign-card.dragging {
+  cursor: grabbing;
+  opacity: 0.55;
+  transform: scale(0.98);
+}
+
+.repo-grid .campaign-card.drag-over {
+  border-color: var(--gold);
+  box-shadow: var(--shadow-panel), 0 0 0 2px var(--gold-glow);
+}
+
 .campaign-card:hover {
   border-color: var(--border-strong);
   transform: translateY(-4px);
