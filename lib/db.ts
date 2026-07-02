@@ -242,6 +242,7 @@ CREATE TABLE IF NOT EXISTS page_shares (
 
 // Migrations — safe to run on every start (errors mean column already exists)
 try { db.exec("ALTER TABLE campaign_memberships ADD COLUMN groups TEXT NOT NULL DEFAULT '[]'"); } catch { /* already migrated */ }
+try { db.exec("ALTER TABLE page_shares ADD COLUMN kind TEXT NOT NULL DEFAULT 'page'"); } catch { /* already migrated */ }
 try { db.exec("ALTER TABLE campaigns ADD COLUMN forkOf TEXT"); } catch { /* already migrated */ }
 
 export function getDb() {
@@ -871,14 +872,15 @@ export function searchDocs(userId: number, query: string, campaignId?: number, m
 
 // === Page share links ===
 
-export type PageShare = { id: number; token: string; campaignId: number; slug: string; createdBy: number; expiresAt: string | null; createdAt: string };
+export type ShareKind = "page" | "quest";
+export type PageShare = { id: number; token: string; campaignId: number; slug: string; kind: ShareKind; createdBy: number; expiresAt: string | null; createdAt: string };
 
-export function createPageShare(userId: number, campaignId: number, slug: string, expiresAt?: string | null): PageShare {
+export function createPageShare(userId: number, campaignId: number, slug: string, expiresAt?: string | null, kind: ShareKind = "page"): PageShare {
   if (!canManageCampaign(userId, campaignId)) throw new Error("Forbidden");
   const token = crypto.randomBytes(18).toString("base64url");
   db.prepare(
-    "INSERT INTO page_shares (token, campaignId, slug, createdBy, expiresAt) VALUES (?, ?, ?, ?, ?)"
-  ).run(token, campaignId, slug, userId, expiresAt ?? null);
+    "INSERT INTO page_shares (token, campaignId, slug, kind, createdBy, expiresAt) VALUES (?, ?, ?, ?, ?, ?)"
+  ).run(token, campaignId, slug, kind, userId, expiresAt ?? null);
   return db.prepare("SELECT * FROM page_shares WHERE token = ?").get(token) as PageShare;
 }
 
@@ -889,9 +891,9 @@ export function getPageShare(token: string): PageShare | null {
   return row;
 }
 
-export function listPageShares(userId: number, campaignId: number, slug: string): PageShare[] {
+export function listPageShares(userId: number, campaignId: number, slug: string, kind: ShareKind = "page"): PageShare[] {
   if (!canManageCampaign(userId, campaignId)) return [];
-  return db.prepare("SELECT * FROM page_shares WHERE campaignId = ? AND slug = ? ORDER BY createdAt DESC").all(campaignId, slug) as PageShare[];
+  return db.prepare("SELECT * FROM page_shares WHERE campaignId = ? AND slug = ? AND kind = ? ORDER BY createdAt DESC").all(campaignId, slug, kind) as PageShare[];
 }
 
 export function revokePageShare(userId: number, token: string): void {

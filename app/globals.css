@@ -4022,6 +4022,29 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   padding-top: 12px;
 }
 
+.share-quest-section {
+  margin: 18px 0;
+}
+.share-quest-section h3 {
+  color: var(--text-tertiary);
+  font-size: var(--text-label-sm);
+  letter-spacing: var(--tracking-label);
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+.share-quest-objectives {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.share-quest-objectives li {
+  padding: 3px 0;
+}
+.share-quest-objectives li.done {
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+}
+
 /* ---- Command palette (Cmd/Ctrl+K) ---- */
 .cmdk-overlay {
   position: fixed;

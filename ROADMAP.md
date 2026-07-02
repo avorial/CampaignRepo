@@ -218,12 +218,12 @@ feature still needs:
 
 ### 30. Publishing ecosystem - M-L
 
-Public sites, gallery, custom slugs, quests, and clone flow are live. Still
-needed:
+Public sites, gallery, custom slugs, quests, clone flow, fork/pull-request
+workflow, token-based single-page and quest share links (with OpenGraph
+preview metadata), and gallery filters for system, sort, and tags are live.
+Still needed:
 
-- Fork/pull-request workflow between published worlds.
-- Share links for a single page or quest with better preview metadata.
-- Gallery filters for system, recently updated, rating, and tags.
+- Rating/recently-updated gallery signals.
 - Community template/campaign library conventions.
 
 ## Still Open

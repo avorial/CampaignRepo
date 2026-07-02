@@ -82,6 +82,9 @@ export default function QuestEditor({ campaign, slug }: { campaign: Campaign; sl
   const [addLoc, setAddLoc] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareLinks, setShareLinks] = useState<{ token: string }[]>([]);
+  const [shareCopied, setShareCopied] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -114,6 +117,30 @@ export default function QuestEditor({ campaign, slug }: { campaign: Campaign; sl
     const res = await fetch(`${api}/quests/${slug}`, { method: "DELETE" });
     if (res.ok) window.location.href = `${base}/quests`;
     else setMessage("Could not delete quest.");
+  }
+
+  async function openShare() {
+    setShareOpen(true);
+    if (shareLinks.length === 0) {
+      const res = await fetch(`${api}/quests/${slug}/share`);
+      const data = await res.json();
+      setShareLinks(data.shares || []);
+    }
+  }
+  async function createShare() {
+    const res = await fetch(`${api}/quests/${slug}/share`, { method: "POST" });
+    const data = await res.json();
+    if (data.share) setShareLinks((prev) => [data.share, ...prev]);
+  }
+  async function revokeShare(token: string) {
+    await fetch(`${api}/quests/${slug}/share`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) });
+    setShareLinks((prev) => prev.filter((s) => s.token !== token));
+  }
+  function copyShare(token: string) {
+    navigator.clipboard.writeText(`${window.location.origin}/share/${token}`).then(() => {
+      setShareCopied(token);
+      setTimeout(() => setShareCopied(null), 2000);
+    });
   }
 
   if (!fm) return <p className="muted">{message || "Loading quest…"}</p>;
@@ -178,8 +205,29 @@ export default function QuestEditor({ campaign, slug }: { campaign: Campaign; sl
 
         <div className="field-group">
           <button type="button" onClick={save} disabled={busy}>Save quest</button>
+          <button type="button" className={shareOpen ? "" : "secondary"} onClick={shareOpen ? () => setShareOpen(false) : openShare}>Share</button>
           <button type="button" className="secondary danger" onClick={remove}>Delete</button>
         </div>
+        {shareOpen && (
+          <div className="page-share-panel">
+            <div className="page-share-header">
+              <strong>Quest share link</strong>
+              <span className="muted" style={{ fontSize: 12 }}>Anyone with the link can view this quest — no login required. GM blocks are stripped.</span>
+            </div>
+            {shareLinks.length === 0 && <p className="muted" style={{ fontSize: 13 }}>No active links. Create one below.</p>}
+            {shareLinks.map((s) => {
+              const url = typeof window !== "undefined" ? `${window.location.origin}/share/${s.token}` : `/share/${s.token}`;
+              return (
+                <div key={s.token} className="page-share-link-row">
+                  <input readOnly value={url} className="page-share-url" onClick={(e) => (e.target as HTMLInputElement).select()} />
+                  <button type="button" className="secondary" onClick={() => copyShare(s.token)}>{shareCopied === s.token ? "Copied!" : "Copy"}</button>
+                  <button type="button" className="danger" onClick={() => revokeShare(s.token)}>Revoke</button>
+                </div>
+              );
+            })}
+            <button type="button" onClick={createShare} style={{ marginTop: 6 }}>+ New share link</button>
+          </div>
+        )}
         {message && <p className="toast">{message}</p>}
       </div>
 
