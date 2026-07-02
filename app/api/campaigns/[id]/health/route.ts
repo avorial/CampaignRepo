@@ -127,26 +127,41 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   // Maps: validate pins pointing at non-existent pages or missing media, and routes with invalid pin indices.
   try {
     const mapFiles = await storage.listDirectoryTextFiles("wiki/maps", ".json");
-    for (const mf of mapFiles) {
-      if (!mf.name.endsWith(".json")) continue;
-      const mapName = mf.name.replace(/\.json$/, "");
-      let mapData: Record<string, unknown>;
-      try { mapData = JSON.parse(mf.text ?? "{}"); } catch { continue; }
+    const parsedMaps = mapFiles
+      .filter((mf) => mf.name.endsWith(".json"))
+      .map((mf) => {
+        const slug = mf.name.replace(/\.json$/, "");
+        try { return { slug, data: JSON.parse(mf.text ?? "{}") as Record<string, unknown> }; } catch { return null; }
+      })
+      .filter((m): m is { slug: string; data: Record<string, unknown> } => m !== null);
+    const mapSlugs = new Set(parsedMaps.map((m) => m.slug));
+
+    for (const { slug: mapName, data: mapData } of parsedMaps) {
+      const title = mapData.name ? String(mapData.name) : mapName;
       const pins = Array.isArray(mapData.pins) ? mapData.pins as Array<Record<string, unknown>> : [];
       const routes = Array.isArray(mapData.routes) ? mapData.routes as Array<Record<string, unknown>> : [];
+
+      // Base map image
+      if (typeof mapData.image === "string" && mapData.image && !mediaNames.has(mapData.image.split("/").pop() || "")) {
+        findings.push({ type: "broken-map-image", severity: "error", title, detail: `Map background image "${mapData.image}" is missing from media.` });
+      }
+
       for (const [i, pin] of pins.entries()) {
         if (typeof pin.pageSlug === "string" && pin.pageSlug && !bySlug.has(pin.pageSlug)) {
-          findings.push({ type: "broken-map-pin", severity: "warn", title: mapData.name ? String(mapData.name) : mapName, detail: `Pin ${i + 1} "${pin.label || pin.pageSlug}" links to page "${pin.pageSlug}" which does not exist.` });
+          findings.push({ type: "broken-map-pin", severity: "warn", title, detail: `Pin ${i + 1} "${pin.label || pin.pageSlug}" links to page "${pin.pageSlug}" which does not exist.` });
+        }
+        if (typeof pin.mapSlug === "string" && pin.mapSlug && !mapSlugs.has(pin.mapSlug)) {
+          findings.push({ type: "broken-map-pin", severity: "warn", title, detail: `Pin ${i + 1} "${pin.label || pin.mapSlug}" links to nested map "${pin.mapSlug}" which does not exist.` });
         }
         if (typeof pin.image === "string" && pin.image && !mediaNames.has(pin.image.split("/").pop() || "")) {
-          findings.push({ type: "broken-map-pin", severity: "warn", title: mapData.name ? String(mapData.name) : mapName, detail: `Pin ${i + 1} "${pin.label || ""}" references missing image "${pin.image}".` });
+          findings.push({ type: "broken-map-pin", severity: "warn", title, detail: `Pin ${i + 1} "${pin.label || ""}" references missing image "${pin.image}".` });
         }
       }
       for (const [i, route] of routes.entries()) {
         const from = Number(route.fromIndex ?? -1);
         const to = Number(route.toIndex ?? -1);
         if (from < 0 || from >= pins.length || to < 0 || to >= pins.length) {
-          findings.push({ type: "broken-map-route", severity: "warn", title: mapData.name ? String(mapData.name) : mapName, detail: `Route ${i + 1} "${route.label || ""}" references an out-of-bounds pin index.` });
+          findings.push({ type: "broken-map-route", severity: "warn", title, detail: `Route ${i + 1} "${route.label || ""}" references an out-of-bounds pin index.` });
         }
       }
     }

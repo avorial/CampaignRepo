@@ -19,7 +19,8 @@ const GROUPS: { type: string; label: string }[] = [
   { type: "oversized-file", label: "Oversized media files" },
   { type: "unused-media", label: "Unused media files" },
   { type: "broken-map-pin", label: "Broken map pins" },
-  { type: "broken-map-route", label: "Broken map routes" }
+  { type: "broken-map-route", label: "Broken map routes" },
+  { type: "broken-map-image", label: "Missing map backgrounds" }
 ];
 
 export default function HealthClient({ campaign }: { campaign: Campaign }) {

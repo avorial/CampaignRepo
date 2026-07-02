@@ -228,11 +228,12 @@ needed:
 
 ## Still Open
 
-### 31. Maps 2.0 - M-L
+### 31. Maps 2.0 - shipped
 
-Layers, nested maps, regions, labels, routes, measuring, journey playback, and
-discovered/undiscovered locations (with a GM "player view" fog-of-war preview)
-are shipped. Remaining: validation for broken pins/media/routes.
+Layers, nested maps, regions, labels, routes, measuring, journey playback,
+discovered/undiscovered locations (with a GM "player view" fog-of-war preview),
+and health-center validation for broken pins, nested-map links, missing pin
+images, missing map backgrounds, and out-of-bounds routes are all shipped.
 
 ### 32. Responsive, accessible, and fast at scale - M
 
