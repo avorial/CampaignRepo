@@ -2,6 +2,7 @@
 
 import { CSSProperties, MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { WikiPage } from "@/lib/types";
+import type { Quest } from "@/lib/quests";
 import { renderMarkdown, type IncludeResolver, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
 import { themeToCssVars, type CampaignTheme } from "@/lib/theme";
@@ -12,6 +13,7 @@ export default function PublicSiteClient({
   campaignName,
   gameType,
   pages,
+  quests,
   theme,
   categories
 }: {
@@ -19,10 +21,12 @@ export default function PublicSiteClient({
   campaignName: string;
   gameType: string;
   pages: WikiPage[];
+  quests: Quest[];
   theme: CampaignTheme;
   categories: { id: string; label: string }[];
 }) {
   const [selectedSlug, setSelectedSlug] = useState(pages[0]?.slug || "");
+  const [selectedQuestSlug, setSelectedQuestSlug] = useState(pages[0] ? "" : quests[0]?.slug || "");
   const [query, setQuery] = useState("");
   const [cloning, setCloning] = useState(false);
   const [cloneMsg, setCloneMsg] = useState("");
@@ -57,8 +61,19 @@ export default function PublicSiteClient({
 
   useEffect(() => {
     const hashSlug = window.location.hash.replace(/^#/, "");
-    if (hashSlug && pages.some((page) => page.slug === hashSlug)) setSelectedSlug(hashSlug);
-  }, [pages]);
+    if (hashSlug.startsWith("quest:")) {
+      const questSlug = hashSlug.replace(/^quest:/, "");
+      if (quests.some((quest) => quest.slug === questSlug)) {
+        setSelectedSlug("");
+        setSelectedQuestSlug(questSlug);
+      }
+      return;
+    }
+    if (hashSlug && pages.some((page) => page.slug === hashSlug)) {
+      setSelectedQuestSlug("");
+      setSelectedSlug(hashSlug);
+    }
+  }, [pages, quests]);
 
   const filteredPages = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -78,6 +93,26 @@ export default function PublicSiteClient({
   }, [pages, query]);
 
   const selectedPage = pages.find((page) => page.slug === selectedSlug) || filteredPages[0] || pages[0];
+  const filteredQuests = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return quests;
+    return quests.filter((quest) => {
+      const haystack = [
+        quest.frontmatter.title,
+        quest.frontmatter.status,
+        quest.frontmatter.arc,
+        quest.frontmatter.reward,
+        ...quest.frontmatter.objectives.map((objective) => objective.text),
+        ...quest.frontmatter.participants,
+        ...quest.frontmatter.locations
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(needle);
+    });
+  }, [quests, query]);
+  const selectedQuest = quests.find((quest) => quest.slug === selectedQuestSlug);
 
   const categoryOrder = categories.map((category) => category.id);
   const categoryLabels = Object.fromEntries(categories.map((category) => [category.id, category.label]));
@@ -135,6 +170,10 @@ export default function PublicSiteClient({
     () => renderMarkdown(selectedPage?.content || "", "handout", resolveLink, resolveMedia, resolveInclude),
     [selectedPage, resolveLink, resolveMedia, resolveInclude]
   );
+  const questPreview = useMemo(
+    () => renderMarkdown(selectedQuest?.description || "", "handout", resolveLink, resolveMedia, resolveInclude),
+    [selectedQuest, resolveLink, resolveMedia, resolveInclude]
+  );
 
   const onPreviewClick = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
@@ -182,7 +221,14 @@ export default function PublicSiteClient({
   const themeVars = useMemo(() => themeToCssVars(theme) as CSSProperties, [theme]);
   const selectPublicPage = (page: WikiPage) => {
     setSelectedSlug(page.slug);
+    setSelectedQuestSlug("");
     window.history.replaceState(null, "", `#${page.slug}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const selectPublicQuest = (quest: Quest) => {
+    setSelectedSlug("");
+    setSelectedQuestSlug(quest.slug);
+    window.history.replaceState(null, "", `#quest:${quest.slug}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   const renderTree = (page: WikiPage, depth = 0) => {
@@ -265,12 +311,91 @@ export default function PublicSiteClient({
                     .map((page) => renderTree(page)))}
             </div>
           ))}
-          {!filteredPages.length && <p className="muted">No public pages match.</p>}
+          {quests.length > 0 && (
+            <div className="nav-group">
+              <button type="button" className="nav-group-header" aria-expanded={openCats.__quests ?? true} onClick={() => setOpenCats((state) => ({ ...state, __quests: !(state.__quests ?? true) }))}>
+                <span className="nav-group-title">
+                  {(openCats.__quests ?? true) ? "v" : ">"} Quests
+                </span>
+                <span className="nav-count">{filteredQuests.length}</span>
+              </button>
+              {(openCats.__quests ?? true) && filteredQuests.map((quest) => (
+                <button
+                  type="button"
+                  key={quest.slug}
+                  className={quest.slug === selectedQuest?.slug ? "nav-link nav-tree-link public-quest-link active" : "nav-link nav-tree-link public-quest-link"}
+                  onClick={() => selectPublicQuest(quest)}
+                >
+                  <span className={`badge badge-${quest.frontmatter.status}`}>{quest.frontmatter.status}</span>
+                  <span className="nav-tree-name">{quest.frontmatter.title}</span>
+                </button>
+              ))}
+              {(openCats.__quests ?? true) && !filteredQuests.length && <p className="muted">No public quests match.</p>}
+            </div>
+          )}
+          {!filteredPages.length && !filteredQuests.length && <p className="muted">No public content matches.</p>}
         </aside>
 
         <div className="reader-shell">
           <article className="preview page-reader">
-            {selectedPage ? (
+            {selectedQuest ? (
+              <>
+                <header className="handout-header">
+                  <p>Quest</p>
+                  <h1>{selectedQuest.frontmatter.title}</h1>
+                  <div className="badges">
+                    <span className={`badge badge-${selectedQuest.frontmatter.status}`}>{selectedQuest.frontmatter.status}</span>
+                    {selectedQuest.frontmatter.arc && <span>{selectedQuest.frontmatter.arc}</span>}
+                    {selectedQuest.frontmatter.reward && <span>Reward: {selectedQuest.frontmatter.reward}</span>}
+                  </div>
+                </header>
+                <section className="public-quest-detail">
+                  {selectedQuest.frontmatter.objectives.length > 0 && (
+                    <div className="player-quest-objectives">
+                      <h2>Objectives</h2>
+                      <ul className="player-quest-obj-list">
+                        {selectedQuest.frontmatter.objectives.map((objective, index) => (
+                          <li key={`${objective.text}-${index}`} className={objective.done ? "obj-done" : ""}>{objective.text}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {selectedQuest.frontmatter.clocks.length > 0 && (
+                    <div className="public-quest-clocks">
+                      <h2>Clocks</h2>
+                      {selectedQuest.frontmatter.clocks.map((clock) => (
+                        <div className="player-quest-objectives" key={clock.name}>
+                          <div className="player-quest-meta">
+                            <strong>{clock.name}</strong>
+                            <span className="player-quest-obj-count">{clock.filled}/{clock.segments}</span>
+                          </div>
+                          <div className="player-quest-progress">
+                            <div className="player-quest-bar" style={{ width: `${clock.segments ? (clock.filled / clock.segments) * 100 : 0}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {(selectedQuest.frontmatter.participants.length > 0 || selectedQuest.frontmatter.locations.length > 0) && (
+                    <div className="public-quest-meta-grid">
+                      {selectedQuest.frontmatter.participants.length > 0 && (
+                        <div>
+                          <h2>Participants</h2>
+                          <p>{selectedQuest.frontmatter.participants.join(", ")}</p>
+                        </div>
+                      )}
+                      {selectedQuest.frontmatter.locations.length > 0 && (
+                        <div>
+                          <h2>Locations</h2>
+                          <p>{selectedQuest.frontmatter.locations.join(", ")}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {questPreview && <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: questPreview }} />}
+                </section>
+              </>
+            ) : selectedPage ? (
               <>
                 {cover && <img className="page-cover page-cover-clickable" src={cover} alt={selectedPage.frontmatter.name} onClick={() => setLightboxSrc(cover)} />}
                 <header className="handout-header">

@@ -2930,6 +2930,39 @@ button.nav-link.active {
   margin: 0;
 }
 
+.public-quest-link {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 0;
+}
+
+.public-quest-detail {
+  display: grid;
+  gap: 22px;
+}
+
+.public-quest-detail h2 {
+  color: var(--text-primary);
+  font-size: var(--text-lg);
+  margin: 0 0 8px;
+}
+
+.public-quest-clocks {
+  display: grid;
+  gap: 14px;
+}
+
+.public-quest-meta-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.public-quest-meta-grid p {
+  margin: 0;
+}
+
 .badge-active { background: color-mix(in srgb, var(--gold) 20%, transparent); border-color: color-mix(in srgb, var(--gold) 40%, transparent); }
 .badge-hook { background: color-mix(in srgb, var(--purple) 20%, transparent); border-color: color-mix(in srgb, var(--purple) 40%, transparent); }
 .badge-completed { background: color-mix(in srgb, #2ecc71 15%, transparent); border-color: color-mix(in srgb, #2ecc71 35%, transparent); }

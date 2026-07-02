@@ -3,6 +3,7 @@ import type { Campaign, WikiPage } from "@/lib/types";
 import { themePresetForGame, categoryPresetForGame } from "@/lib/game-pack-branding";
 import { getStorageAdapter } from "@/lib/storage";
 import { parsePage, stripGmBlocks } from "@/lib/markdown";
+import { parseQuest, type Quest } from "@/lib/quests";
 import { sanitizeTheme, type CampaignTheme } from "@/lib/theme";
 
 /** Strip GM-only content and internal import metadata from a page before it leaves the server. */
@@ -37,6 +38,22 @@ export async function loadPublicPages(campaign: Campaign, userToken?: string | n
     .filter((page) => page.frontmatter.visibility === "players" && page.frontmatter.approvalStatus === "approved")
     .map((page) => sanitizePlayerPage(page))
     .sort((a, b) => a.frontmatter.name.localeCompare(b.frontmatter.name));
+}
+
+/** Load public-safe quests for a published world. GM-only quest descriptions are never exposed. */
+export async function loadPublicQuests(campaign: Campaign, userToken?: string | null): Promise<Quest[]> {
+  const storage = getStorageAdapter(campaign, userToken);
+  if (!storage) return [];
+  try {
+    const files = await storage.listDirectoryTextFiles("wiki/quests");
+    return files
+      .map((file) => parseQuest(file.name.replace(/\.md$/, ""), file.text ?? "", file.sha))
+      .filter((quest) => quest.frontmatter.visibility === "players")
+      .map((quest) => ({ ...quest, description: stripGmBlocks(quest.description) }))
+      .sort((a, b) => a.frontmatter.title.localeCompare(b.frontmatter.title));
+  } catch {
+    return [];
+  }
 }
 
 const campaignConfigPath = "wiki/campaign.yaml";
