@@ -55,6 +55,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const [pageCategory, setPageCategory] = useState(categories[0]?.id || "character");
   const [navFilterInput, setNavFilterInput] = useState("");
   const [navFilter, setNavFilter] = useState("");
+  const [navOpen, setNavOpen] = useState(false);
   const [mediaFilterInput, setMediaFilterInput] = useState("");
   const [mediaFilter, setMediaFilter] = useState("");
   const [templateFilterInput, setTemplateFilterInput] = useState("");
@@ -532,7 +533,16 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
 
   return (
     <section className="workspace" id="main-content">
-      <aside className="side-nav">
+      <button
+        type="button"
+        className="mobile-nav-toggle"
+        aria-label={navOpen ? "Close navigation" : "Open navigation"}
+        aria-expanded={navOpen}
+        onClick={() => setNavOpen((v) => !v)}
+      >
+        {navOpen ? "✕" : "☰"}
+      </button>
+      <aside className={`side-nav${navOpen ? " nav-open" : ""}`}>
         <form onSubmit={runSearch} className="stack">
           <input name="q" placeholder="Search this repo" />
           <button>Search</button>

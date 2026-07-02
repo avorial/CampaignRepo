@@ -952,6 +952,10 @@ button.nav-link.active {
   gap: 18px;
 }
 
+.mobile-nav-toggle {
+  display: none;
+}
+
 .side-nav,
 .page-sidebar {
   background: var(--bg-elevated);
@@ -3265,10 +3269,38 @@ button.nav-link.active {
     border-bottom: 1px solid var(--border-soft);
   }
 
+  .mobile-nav-toggle {
+    align-items: center;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    font-size: 18px;
+    grid-column: 1;
+    justify-content: center;
+    line-height: 1;
+    padding: 6px 12px;
+    place-self: start;
+    width: 40px;
+    z-index: 20;
+  }
+
+  .mobile-nav-toggle:hover {
+    background: var(--bg-soft);
+    color: var(--text-primary);
+  }
+
   .side-nav,
   .player-library,
   .page-sidebar {
+    display: none;
     position: static;
+  }
+
+  .side-nav.nav-open {
+    display: block;
   }
 
   .topbar {
