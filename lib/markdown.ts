@@ -441,12 +441,13 @@ function normalizeWoDRated(input: unknown): WoDRated[] {
     if (!item || typeof item !== "object" || Array.isArray(item)) return [];
     const rec = item as Record<string, unknown>;
     if (typeof rec.name === "string") {
-      return [{ name: rec.name, score: Number(rec.score ?? 0) || 0, notes: rec.notes ? String(rec.notes) : undefined }];
+      const descriptions = Array.isArray(rec.descriptions) ? rec.descriptions.map(String).filter(Boolean) : undefined;
+      return [{ name: rec.name, score: Number(rec.score ?? 0) || 0, notes: rec.notes ? String(rec.notes) : undefined, descriptions }];
     }
     // compact: { "Alertness": 2 }
     return Object.entries(rec)
-      .filter(([k]) => k !== "notes")
-      .map(([name, val]) => ({ name, score: Number(val) || 0, notes: undefined }));
+      .filter(([k]) => !["notes", "descriptions"].includes(k))
+      .map(([name, val]) => ({ name, score: Number(val) || 0, notes: undefined, descriptions: undefined }));
   }).filter((r) => r.name);
 }
 
@@ -474,10 +475,15 @@ function normalizeWoDSheet(input: unknown) {
     system,
     name: raw.name ? String(raw.name) : undefined,
     clan: raw.clan ? String(raw.clan) : undefined,
+    chronicle: raw.chronicle ? String(raw.chronicle) : undefined,
     generation: raw.generation != null ? Number(raw.generation) || undefined : undefined,
+    sire: raw.sire ? String(raw.sire) : undefined,
     nature: raw.nature ? String(raw.nature) : undefined,
     demeanor: raw.demeanor ? String(raw.demeanor) : undefined,
     concept: raw.concept ? String(raw.concept) : undefined,
+    sect: raw.sect ? String(raw.sect) : undefined,
+    real_age: raw.real_age ? String(raw.real_age) : undefined,
+    apparent_age: raw.apparent_age ? String(raw.apparent_age) : undefined,
     road: raw.road ? String(raw.road) : undefined,
     portrait: (raw.portrait || raw.image) ? String(raw.portrait || raw.image) : undefined,
     attributes: {
@@ -486,8 +492,10 @@ function normalizeWoDSheet(input: unknown) {
       perception: asOptionalNumber(attrs.perception), intelligence: asOptionalNumber(attrs.intelligence), wits: asOptionalNumber(attrs.wits)
     },
     abilities: normalizeWoDRated(raw.abilities),
-    powers: normalizeWoDRated(raw.powers),
+    powers: normalizeWoDRated(raw.powers ?? raw.disciplines ?? raw.gifts ?? raw.spheres),
     backgrounds: normalizeWoDRated(raw.backgrounds),
+    merits: normalizeWoDRated(raw.merits),
+    flaws: normalizeWoDRated(raw.flaws),
     virtues: {
       first: asOptionalNumber(virt.first ?? virt.conscience ?? virt.conviction),
       second: asOptionalNumber(virt.second ?? virt.self_control ?? virt.instinct),
@@ -513,143 +521,171 @@ function renderWoDSheetHtml(rawInput: string) {
   try {
     parsed = yaml.parse(rawInput) || {};
   } catch (error) {
-    return `<section class="wod-sheet wod-sheet-error"><p>WoD sheet data could not be parsed: ${escapeHtml(error instanceof Error ? error.message : "invalid YAML")}</p></section>`;
+    return `<div style="border:1px solid rgba(160,170,180,.28);padding:16px;color:#d8d1c4;font-family:Georgia,serif;"><strong style="color:#ff3834;">Sheet error:</strong> ${escapeHtml(error instanceof Error ? error.message : "invalid YAML")}</div>`;
   }
   const sheet = normalizeWoDSheet(parsed);
   const info = WOD_SYSTEM_INFO[sheet.system];
+  const isVampire = sheet.system === "vampire-masquerade" || sheet.system === "dark-ages-vampire";
 
-  const dot = (filled: boolean) => `<span class="wod-dot${filled ? " filled" : ""}"></span>`;
-  const dots = (score: number | undefined, max = 5) => {
+  const sS = "border:1px solid rgba(160,170,180,.28);background:linear-gradient(145deg,rgba(8,10,12,.94),rgba(14,18,20,.88));padding:16px 18px;";
+  const hS = "margin:0 0 12px;color:#ff3834;font-size:13px;letter-spacing:.18em;text-transform:uppercase;border-bottom:1px solid rgba(160,170,180,.22);padding-bottom:8px;";
+  const shS = "color:#8794a5;border-bottom:1px solid rgba(90,112,135,.45);font-size:10px;text-transform:uppercase;letter-spacing:.14em;padding-bottom:5px;margin:0 0 8px;";
+
+  const dF = `<span style="display:inline-block;width:10px;height:10px;border:1px solid #ff3b38;background:#b92424;transform:rotate(45deg);"></span>`;
+  const dE = `<span style="display:inline-block;width:10px;height:10px;border:1px solid #24445d;background:transparent;transform:rotate(45deg);"></span>`;
+  const bF = `<span style="display:inline-block;width:8px;height:8px;border:1px solid #ff3b38;background:#b92424;"></span>`;
+  const bE = `<span style="display:inline-block;width:8px;height:8px;border:1px solid #24445d;background:transparent;"></span>`;
+
+  const diamonds = (score: number | undefined, max = 5) => {
     const n = Math.min(Math.max(0, score ?? 0), max);
-    return `<span class="wod-dots">${Array.from({ length: max }, (_, i) => dot(i < n)).join("")}</span>`;
+    return `<span style="display:inline-flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end;min-width:${Math.max(80, max * 15)}px">${Array.from({ length: max }, (_, i) => i < n ? dF : dE).join("")}</span>`;
   };
-  const box = (filled: boolean) => `<span class="wod-box${filled ? " filled" : ""}"></span>`;
-  const boxes = (current: number | undefined, max: number) => {
+  const boxRow = (current: number | undefined, max: number) => {
     const n = Math.min(Math.max(0, current ?? 0), max);
-    return `<span class="wod-boxes">${Array.from({ length: max }, (_, i) => box(i < n)).join("")}</span>`;
+    return `<span style="display:inline-flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end;min-width:${Math.max(80, max * 13)}px">${Array.from({ length: max }, (_, i) => i < n ? bF : bE).join("")}</span>`;
   };
-  const attr = (label: string, score: number | undefined) =>
-    `<div class="wod-attr"><span class="wod-attr-label">${escapeHtml(label)}</span>${dots(score)}</div>`;
-  const rated = (items: WoDRated[]) => items.length
-    ? `<ul class="wod-rated-list">${items.map((r) => `<li><span>${escapeHtml(r.name)}</span><span class="wod-rated-score">${dots(r.score)}</span></li>`).join("")}</ul>`
-    : `<p class="wod-empty">—</p>`;
+  const attrRow = (label: string, score: number | undefined, note?: string) =>
+    `<div style="display:grid;grid-template-columns:minmax(96px,1fr) auto;gap:12px;align-items:center;margin:10px 0;"><div><span style="color:#c6c1b5;text-transform:uppercase;letter-spacing:.04em;font-size:12px;">${escapeHtml(label)}</span>${note ? `<span style="color:#607083;font-size:9px;margin-left:8px;text-transform:uppercase;">${escapeHtml(note)}</span>` : ""}</div>${diamonds(score)}</div>`;
 
   const a = sheet.attributes ?? {};
   const v = sheet.virtues ?? {};
-  const h = sheet.health ?? {};
   const wp = sheet.willpower ?? 10;
   const wpc = sheet.willpower_current ?? wp;
   const bp = sheet.blood ?? 0;
   const bpc = sheet.blood_current ?? bp;
   const hum = sheet.humanity ?? 0;
+  const morality = sheet.road || info.morality;
 
-  const morality = sheet.road ? `${escapeHtml(sheet.road)} ${hum}` : `${escapeHtml(info.morality)} ${hum}`;
-  const byline = [sheet.clan, sheet.generation ? `Gen ${sheet.generation}` : undefined]
-    .filter((s): s is string => !!s).map(escapeHtml).join(" · ");
-  const identity = [
-    sheet.nature && `Nature: ${sheet.nature}`,
-    sheet.demeanor && `Demeanor: ${sheet.demeanor}`,
-    sheet.concept && `Concept: ${sheet.concept}`
-  ].filter((s): s is string => !!s).map(escapeHtml).join(" · ");
+  // Categorise abilities into VtM columns
+  const VTM_TALENTS = new Set(["Alertness","Athletics","Awareness","Brawl","Dodge","Empathy","Expression","Intimidation","Leadership","Primal-Urge","Streetwise","Subterfuge"]);
+  const VTM_SKILLS  = new Set(["Animal Ken","Crafts","Drive","Etiquette","Firearms","Larceny","Meditation","Melee","Performance","Ride","Security","Stealth","Survival","Technology"]);
+  const talents: WoDRated[] = [], skills: WoDRated[] = [], knowledges: WoDRated[] = [];
+  for (const ab of sheet.abilities ?? []) {
+    if (VTM_TALENTS.has(ab.name)) talents.push(ab);
+    else if (VTM_SKILLS.has(ab.name)) skills.push(ab);
+    else knowledges.push(ab);
+  }
+  const [colA, labelA, colB, labelB, colC, labelC] = isVampire
+    ? [talents, "Talents", skills, "Skills", knowledges, "Knowledges"]
+    : [(sheet.abilities ?? []).slice(0, 10), "Abilities I",
+       (sheet.abilities ?? []).slice(10, 20), "Abilities II",
+       (sheet.abilities ?? []).slice(20), "Abilities III"];
 
+  const abilRows = (items: WoDRated[]) => items.map(ab => attrRow(ab.name, ab.score, ab.notes)).join("");
+
+  // Portrait
   const portrait = sheet.portrait
-    ? `<img src="${escapeHtml(mediaPath(sheet.portrait))}" alt="${escapeHtml(sheet.name || "portrait")}" loading="lazy" />`
-    : `<div class="wod-portrait-placeholder"><span>${escapeHtml((sheet.name || " ").charAt(0).toUpperCase())}</span></div>`;
+    ? `<img src="${escapeHtml(mediaPath(sheet.portrait))}" alt="${escapeHtml(sheet.name || "portrait")}" style="width:70px;height:70px;object-fit:cover;border:1px solid rgba(255,60,60,.45);filter:saturate(.92) contrast(1.08);" />`
+    : `<div style="width:70px;height:70px;border:1px solid rgba(255,60,60,.45);display:flex;align-items:center;justify-content:center;font-size:24px;color:#ff3834;">${escapeHtml((sheet.name || " ").charAt(0).toUpperCase())}</div>`;
 
-  const healthLevels: [string, string][] = [
-    ["Bruised", "(no penalty)"], ["Hurt", "−1"], ["Injured", "−1"],
-    ["Wounded", "−2"], ["Mauled", "−2"], ["Crippled", "−5"], ["Incapacitated", ""]
-  ];
-  const healthMap: Record<string, boolean> = {
-    Bruised: h.bruised ?? false, Hurt: h.hurt ?? false, Injured: h.injured ?? false,
-    Wounded: h.wounded ?? false, Mauled: h.mauled ?? false, Crippled: h.crippled ?? false,
-    Incapacitated: h.incapacitated ?? false
-  };
+  // Header info grid
+  const hFields = [
+    { label: "Chronicle",            value: sheet.chronicle },
+    { label: "Generation",           value: sheet.generation ? `${sheet.generation}th` : undefined },
+    { label: "Sire",                 value: sheet.sire },
+    { label: "Nature",               value: sheet.nature },
+    { label: "Demeanor",             value: sheet.demeanor },
+    { label: "Real Age / Date of Birth", value: sheet.real_age },
+    { label: "Apparent Age",         value: sheet.apparent_age },
+    { label: "Sect",                 value: sheet.sect },
+  ].filter(f => f.value != null && f.value !== "");
+  if (!hFields.length && sheet.concept) hFields.push({ label: "Concept", value: sheet.concept });
+  if (!hFields.length) hFields.push({ label: "Name", value: sheet.name });
+  const hFieldsHtml = hFields.map(f =>
+    `<div style="border-bottom:1px solid rgba(90,112,135,.45);padding:8px 4px;"><div style="color:#66707e;font-size:9px;text-transform:uppercase;letter-spacing:.16em;">${escapeHtml(f.label)}</div><div style="color:#f1eadb;font-family:Consolas,monospace;font-size:12px;margin-top:6px;">${escapeHtml(String(f.value ?? "-"))}</div></div>`
+  ).join("");
 
-  const gearList = (items: { name: string; damage?: string; notes?: string }[]) =>
-    items.length ? `<ul class="wod-rated-list">${items.map((i) => `<li><span>${escapeHtml(i.name)}</span><span class="wod-item-detail">${escapeHtml([i.damage, i.notes].filter(Boolean).join(" · "))}</span></li>`).join("")}</ul>` : "";
+  // Disciplines/Powers
+  const dotPfx = ["•","••","•••","••••","•••••"];
+  const powersHtml = (sheet.powers ?? []).map(p => {
+    const descs = p.descriptions ?? [];
+    const descHtml = descs.length ? `<ul style="margin:8px 0 0 16px;padding:0;color:#cfc7b8;line-height:1.55;font-family:Consolas,monospace;font-size:12px;">${descs.map((d, i) => `<li>${dotPfx[i] ?? "•"} ${escapeHtml(d)}</li>`).join("")}</ul>` : "";
+    return `<div style="border-bottom:1px solid rgba(90,112,135,.35);padding:8px 0;"><div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;"><strong style="color:#e8dfcf;text-transform:uppercase;letter-spacing:.06em;font-size:12px;">${escapeHtml(p.name)}</strong>${diamonds(p.score)}</div>${descHtml}</div>`;
+  }).join("");
+
+  // Merits / Flaws / Backgrounds
+  const ratedList = (items: WoDRated[], label: string) => items.length
+    ? `<div><h4 style="${shS}">${escapeHtml(label)}</h4><ul style="margin:0;padding-left:16px;color:#cfc7b8;line-height:1.65;">${items.map(m => `<li>${escapeHtml(m.name)} ${diamonds(m.score)}</li>`).join("")}</ul></div>`
+    : "";
+  const bgHtml = (sheet.backgrounds ?? []).length
+    ? `<h4 style="${shS}">Backgrounds</h4><ul style="margin:0;padding-left:16px;color:#cfc7b8;line-height:1.65;">${(sheet.backgrounds ?? []).map(b => `<li>${escapeHtml(b.name)} ${diamonds(b.score)}</li>`).join("")}</ul>`
+    : "";
+
+  // Equipment
+  const gearItems = [...(sheet.weapons ?? []), ...(sheet.equipment ?? [])].filter(i => i.name);
+  const gearHtml = gearItems.length
+    ? `<div style="margin-top:18px;border:1px solid rgba(160,170,180,.28);padding:14px 18px;background:rgba(0,0,0,.3);"><h3 style="${hS}">Equipment</h3><ul style="margin:0;padding-left:16px;color:#cfc7b8;line-height:1.65;">${gearItems.map(i => { const detail = [("damage" in i ? i.damage : undefined), i.notes].filter(Boolean).join(" · "); return `<li>${escapeHtml(i.name)}${detail ? ` <span style="color:#607083;font-size:11px;">(${escapeHtml(detail)})</span>` : ""}</li>`; }).join("")}</ul></div>`
+    : "";
+
+  const notesHtml = sheet.notes
+    ? `<div style="margin-top:18px;border:1px solid rgba(160,170,180,.28);padding:14px 18px;background:rgba(0,0,0,.3);"><h3 style="${hS}">Notes</h3><p style="color:#cfc7b8;line-height:1.6;white-space:pre-wrap;margin:0;">${escapeHtml(sheet.notes)}</p></div>`
+    : "";
 
   return `
-<section class="wod-sheet">
-  <div class="wod-header">
-    ${portrait}
-    <div class="wod-header-text">
-      <strong class="wod-name">${escapeHtml(sheet.name || "Unnamed")}</strong>
-      ${byline ? `<span class="wod-byline">${byline}</span>` : ""}
-      ${identity ? `<span class="wod-identity">${identity}</span>` : ""}
-    </div>
-    <div class="wod-morality">${morality}</div>
-  </div>
-
-  <div class="wod-attrs-block">
-    <div class="wod-attr-group">
-      <span class="wod-attr-group-label">Physical</span>
-      ${attr("Strength", a.strength)}${attr("Dexterity", a.dexterity)}${attr("Stamina", a.stamina)}
-    </div>
-    <div class="wod-attr-group">
-      <span class="wod-attr-group-label">Social</span>
-      ${attr("Charisma", a.charisma)}${attr("Manipulation", a.manipulation)}${attr("Appearance", a.appearance)}
-    </div>
-    <div class="wod-attr-group">
-      <span class="wod-attr-group-label">Mental</span>
-      ${attr("Perception", a.perception)}${attr("Intelligence", a.intelligence)}${attr("Wits", a.wits)}
-    </div>
-  </div>
-
-  ${sheet.abilities?.length ? `
-  <details class="wod-section wod-abilities">
-    <summary><h4>Abilities</h4></summary>
-    <div class="wod-abilities-cols">${rated(sheet.abilities)}</div>
-  </details>` : ""}
-
-  <div class="wod-advantages">
-    <div class="wod-adv-col">
-      <h4>${escapeHtml(info.powerLabel)}</h4>
-      ${rated(sheet.powers ?? [])}
-    </div>
-    <div class="wod-adv-col">
-      <h4>Backgrounds</h4>
-      ${rated(sheet.backgrounds ?? [])}
-    </div>
-    <div class="wod-adv-col">
-      <h4>Virtues</h4>
-      <ul class="wod-rated-list">
-        <li><span>${escapeHtml(info.virtueNames[0])}</span><span class="wod-rated-score">${dots(v.first)}</span></li>
-        <li><span>${escapeHtml(info.virtueNames[1])}</span><span class="wod-rated-score">${dots(v.second)}</span></li>
-        <li><span>${escapeHtml(info.virtueNames[2])}</span><span class="wod-rated-score">${dots(v.third)}</span></li>
-      </ul>
-    </div>
-  </div>
-
-  <div class="wod-section wod-pools">
-    <div class="wod-pool-row">
-      <span class="wod-pool-label">Willpower</span>
-      ${boxes(wpc, wp)}<span class="wod-pool-count">${wpc} / ${wp}</span>
-    </div>
-    ${bp > 0 ? `<div class="wod-pool-row">
-      <span class="wod-pool-label">${escapeHtml(info.poolLabel)}</span>
-      ${boxes(bpc, bp)}<span class="wod-pool-count">${bpc} / ${bp}</span>
-    </div>` : ""}
-    ${hum > 0 ? `<div class="wod-pool-row">
-      <span class="wod-pool-label">${escapeHtml(sheet.road || info.morality)}</span>
-      ${dots(hum, 10)}<span class="wod-pool-count">${hum}</span>
-    </div>` : ""}
-    <div class="wod-pool-row">
-      <span class="wod-pool-label">Health</span>
-      <div class="wod-health-grid">
-        ${healthLevels.map(([level, penalty]) =>
-          `<div class="wod-health-cell${healthMap[level] ? " marked" : ""}"><span>${escapeHtml(level)}</span>${penalty ? `<span class="wod-health-penalty">${escapeHtml(penalty)}</span>` : ""}</div>`
-        ).join("")}
+<div style="background:#080b0d;color:#d8d1c4;border:1px solid rgba(160,170,180,.24);padding:18px;margin:20px 0;font-family:Georgia,'Times New Roman',serif;box-shadow:0 0 28px rgba(0,0,0,.42) inset;">
+  <section style="border:1px solid rgba(160,170,180,.28);background:linear-gradient(135deg,rgba(8,10,12,.98),rgba(18,22,25,.9));padding:18px;margin-bottom:18px;">
+    <div style="display:grid;grid-template-columns:220px 1fr;gap:22px;align-items:center;">
+      <div>
+        <h3 style="margin:0 0 14px;color:#ff3834;font-size:13px;letter-spacing:.18em;text-transform:uppercase;">Visage</h3>
+        <div style="display:grid;grid-template-columns:74px 1fr;gap:14px;align-items:center;">
+          ${portrait}
+          <div>
+            <div style="color:#6f7782;font-size:9px;text-transform:uppercase;letter-spacing:.14em;">${sheet.clan ? "Clan" : "Type"}</div>
+            <div style="color:#f1eadb;font-size:18px;font-variant:small-caps;">${escapeHtml(sheet.clan || sheet.concept || info.powerLabel)}</div>
+            <div style="color:#6f7782;font-size:9px;text-transform:uppercase;letter-spacing:.14em;margin-top:8px;">Archetype / Concept</div>
+            <div style="color:#cfc7b8;font-size:12px;text-transform:uppercase;letter-spacing:.08em;">${escapeHtml([sheet.nature, sheet.concept].filter(Boolean).join("/") || "-")}</div>
+          </div>
+        </div>
       </div>
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:16px;text-align:center;">${hFieldsHtml}</div>
     </div>
+  </section>
+
+  <div style="display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:18px;margin-bottom:18px;">
+    <section style="${sS}"><h3 style="${hS}">Physical Attributes</h3>${attrRow("Strength", a.strength)}${attrRow("Dexterity", a.dexterity)}${attrRow("Stamina", a.stamina)}</section>
+    <section style="${sS}"><h3 style="${hS}">Social Attributes</h3>${attrRow("Charisma", a.charisma)}${attrRow("Manipulation", a.manipulation)}${attrRow("Appearance", a.appearance)}</section>
+    <section style="${sS}"><h3 style="${hS}">Mental Attributes</h3>${attrRow("Perception", a.perception)}${attrRow("Intelligence", a.intelligence)}${attrRow("Wits", a.wits)}</section>
   </div>
 
-  ${sheet.weapons?.length || sheet.equipment?.length ? `
-  <div class="wod-section">
-    <h4>Equipment</h4>
-    ${gearList([...(sheet.weapons ?? []), ...(sheet.equipment ?? []).map((e) => ({ name: e.name, notes: e.notes }))])}
-  </div>` : ""}
-</section>`;
+  <div style="display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:18px;margin-bottom:18px;">
+    <section style="${sS}min-height:300px;"><h3 style="${hS}">${escapeHtml(labelA)}</h3>${abilRows(colA as WoDRated[])}</section>
+    <section style="${sS}min-height:300px;"><h3 style="${hS}">${escapeHtml(labelB)}</h3>${abilRows(colB as WoDRated[])}</section>
+    <section style="${sS}min-height:300px;"><h3 style="${hS}">${escapeHtml(labelC)}</h3>${abilRows(colC as WoDRated[])}</section>
+  </div>
+
+  <div style="display:grid;grid-template-columns:minmax(280px,1fr) minmax(280px,1fr);gap:18px;margin-bottom:18px;">
+    <section style="${sS}">
+      <h3 style="${hS}">${escapeHtml(info.powerLabel)}</h3>
+      ${powersHtml || `<div style="color:#4a5562;font-size:11px;padding:8px 0;">No ${escapeHtml(info.powerLabel.toLowerCase())} recorded.</div>`}
+    </section>
+    <section style="${sS}">
+      <h3 style="${hS}">Merits &amp; Flaws</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:16px;">${ratedList(sheet.merits ?? [], "Merits")}${ratedList(sheet.flaws ?? [], "Flaws")}</div>
+      ${bgHtml}
+    </section>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:18px;">
+    <section style="${sS}">
+      <h3 style="${hS}">Health</h3>
+      <div style="text-align:center;">${boxRow(0, 7)}<div style="color:#7e8793;font-family:Consolas,monospace;font-size:10px;margin-top:10px;">Tracked in play</div></div>
+    </section>
+    <section style="${sS}">
+      <h3 style="${hS}">Willpower</h3>
+      <div style="text-align:center;">${boxRow(wpc, wp)}<div style="color:#ff3834;font-size:22px;margin-top:10px;">${wpc}</div></div>
+    </section>
+    ${bp > 0 ? `<section style="${sS}"><h3 style="${hS}">${escapeHtml(info.poolLabel)}</h3><div style="text-align:center;">${boxRow(bpc, bp)}<div style="color:#ff3834;font-family:Consolas,monospace;font-size:12px;margin-top:10px;">${bpc} / ${bp}</div></div></section>` : `<section style="${sS}"><h3 style="${hS}">${escapeHtml(info.poolLabel)}</h3><div style="text-align:center;color:#4a5562;font-size:11px;">Track in play</div></section>`}
+    <section style="${sS}">
+      <h3 style="${hS}">${escapeHtml(morality)}</h3>
+      <div style="text-align:center;">${hum > 0 ? `<div style="color:#ff3834;font-size:28px;">${hum}</div>${diamonds(hum, 10)}` : `<div style="color:#4a5562;font-size:11px;">Set value</div>`}</div>
+    </section>
+    <section style="${sS}">
+      <h3 style="${hS}">Virtues</h3>
+      <div style="display:grid;gap:8px;color:#cfc7b8;font-size:11px;"><div>${escapeHtml(info.virtueNames[0])} ${diamonds(v.first)}</div><div>${escapeHtml(info.virtueNames[1])} ${diamonds(v.second)}</div><div>${escapeHtml(info.virtueNames[2])} ${diamonds(v.third)}</div></div>
+    </section>
+  </div>
+  ${gearHtml}${notesHtml}
+</div>`;
 }
 
 /** Expand fenced `traveller-sheet` YAML blocks into the designed sheet. */
@@ -1056,5 +1092,5 @@ export function renderMarkdown(
     out += renderInline(content.slice(last), resolve, resolveMedia);
     html = out;
   }
-  return DOMPurify.sanitize(html, { ADD_ATTR: ["data-label", "data-missing", "data-target"] });
+  return DOMPurify.sanitize(html, { ADD_ATTR: ["data-label", "data-missing", "data-target", "data-roll", "data-mod", "style"] });
 }

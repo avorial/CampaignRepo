@@ -228,15 +228,20 @@ export type DnDSheet = {
 };
 
 export type WoDSystem = "vampire-masquerade" | "dark-ages-vampire" | "werewolf-apocalypse" | "mage-ascension" | "generic-wod";
-export type WoDRated = { name: string; score: number; notes?: string };
+export type WoDRated = { name: string; score: number; notes?: string; descriptions?: string[] };
 export type WoDSheet = {
   system: WoDSystem;
   name?: string;
   clan?: string;
+  chronicle?: string;
   generation?: number;
+  sire?: string;
   nature?: string;
   demeanor?: string;
   concept?: string;
+  sect?: string;
+  real_age?: string;
+  apparent_age?: string;
   road?: string;
   portrait?: string;
   attributes?: {
@@ -247,6 +252,8 @@ export type WoDSheet = {
   abilities?: WoDRated[];
   powers?: WoDRated[];
   backgrounds?: WoDRated[];
+  merits?: WoDRated[];
+  flaws?: WoDRated[];
   virtues?: { first?: number; second?: number; third?: number };
   willpower?: number;
   willpower_current?: number;

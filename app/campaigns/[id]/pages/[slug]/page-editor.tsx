@@ -443,21 +443,31 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
          "Academics", "Computer", "Cosmology", "Enigmas", "Esoterica", "Investigation", "Law", "Linguistics", "Medicine", "Occult", "Politics", "Science"]
       : ["Alertness", "Athletics", "Brawl", "Dodge", "Empathy", "Leadership", "Stealth", "Subterfuge", "Melee", "Survival", "Occult"];
     const powerLabel = isVamp ? "disciplines" : isWerewolf ? "gifts" : isMage ? "spheres" : "powers";
-    const examplePowers = isVamp ? ["Auspex: 0", "Dominate: 0", "Presence: 0"] :
-      isWerewolf ? ["Gifts (Rank 1): 0"] : isMage ? ["Correspondence: 0", "Forces: 0", "Life: 0"] : ["Power: 0"];
+    const examplePowers = isVamp
+      ? `  - name: Auspex\n    score: 0\n    descriptions:\n      - "Heightened Senses"\n  - name: Dominate\n    score: 0\n    descriptions:\n      - "Command"\n  - name: Presence\n    score: 0\n    descriptions:\n      - "Awe"`
+      : isWerewolf
+      ? `  - name: "Gifts (Rank 1)"\n    score: 0`
+      : isMage
+      ? `  - name: Correspondence\n    score: 0\n  - name: Forces\n    score: 0\n  - name: Life\n    score: 0`
+      : `  - name: Power\n    score: 0`;
     const poolLine = isVamp ? "blood: 10\nblood_current: 10\n" :
       isWerewolf ? "rage: 5\nrage_current: 5\ngnosis: 5\ngnosis_current: 5\n" :
       isMage ? "quintessence: 5\nquintessence_current: 5\n" : "";
     const humanityLabel = isDark ? "humanity: 5 # Road rating\n" : isVamp ? "humanity: 5\n" :
       isWerewolf ? "renown: 0\n" : isMage ? "arete: 1\n" : "morality: 5\n";
+    const sectLine = isVamp ? "sect: Camarilla # Camarilla, Sabbat, Anarch, Independent\n" : "";
     return `\n\n\`\`\`wod-sheet
 system: ${system}
 name: ${JSON.stringify(name || "")}
 ${groupLine}
-${genLine}${roadLine}nature:
+${genLine}chronicle:
+sire:
+${sectLine}${roadLine}nature:
 demeanor:
 concept:
 portrait:
+real_age:
+apparent_age:
 
 attributes:
   strength: 1
@@ -474,12 +484,23 @@ abilities:
 ${abilities.map((a) => `  - ${a}: 0`).join("\n")}
 
 ${powerLabel}:
-${examplePowers.map((p) => `  - ${p}`).join("\n")}
+${examplePowers}
 
 backgrounds:
-  - Generation: 0
-  - Resources: 0
-  - Retainers: 0
+  - name: Resources
+    score: 0
+  - name: Contacts
+    score: 0
+  - name: Retainers
+    score: 0
+
+merits:
+  - name: ""
+    score: 1
+
+flaws:
+  - name: ""
+    score: 1
 
 virtues:
   conscience: 1
@@ -489,15 +510,6 @@ virtues:
 willpower: 3
 willpower_current: 3
 ${poolLine}${humanityLabel}
-health:
-  bruised: false
-  hurt: false
-  injured: false
-  wounded: false
-  mauled: false
-  crippled: false
-  incapacitated: false
-
 weapons:
   - name: ""
     damage: ""
