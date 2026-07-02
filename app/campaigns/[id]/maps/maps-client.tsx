@@ -8,7 +8,8 @@ type Layer = { id: string; name: string; visibility: "gm" | "players" };
 type Pin = { x: number; y: number; label: string; pageSlug?: string; mapSlug?: string; layer?: string; icon?: string; discovered?: boolean; image?: string };
 type Region = { x: number; y: number; w: number; h: number; label: string; layer?: string; color?: string };
 type Route = { fromIndex: number; toIndex: number; label?: string; style?: "road" | "river" | "path" | "wall"; layer?: string };
-type CampaignMap = { slug: string; name: string; image: string; pins: Pin[]; layers?: Layer[]; regions?: Region[]; routes?: Route[]; scale?: { total: number; unit: string }; sha?: string };
+type Journey = { id: string; name: string; steps: number[] };
+type CampaignMap = { slug: string; name: string; image: string; pins: Pin[]; layers?: Layer[]; regions?: Region[]; routes?: Route[]; journeys?: Journey[]; scale?: { total: number; unit: string }; sha?: string };
 
 const PIN_ICONS = ["📍", "🏰", "🌆", "🌊", "🌲", "🏔️", "⚔️", "☠️", "💎", "❓", "🔒", "⭐", "🚪", "🛖", "⛵"];
 const DEFAULT_LAYER: Layer = { id: "default", name: "Default", visibility: "players" };
@@ -34,6 +35,11 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
   const [measurePts, setMeasurePts] = useState<Array<{ x: number; y: number }>>([]);
   const [measureResult, setMeasureResult] = useState<string | null>(null);
   const [imageAspect, setImageAspect] = useState(1);
+  const [activeJourneyId, setActiveJourneyId] = useState<string | null>(null);
+  const [journeyStep, setJourneyStep] = useState(0);
+  const [journeyAddMode, setJourneyAddMode] = useState(false);
+  const [newJourneyName, setNewJourneyName] = useState("");
+  const [editingJourneyId, setEditingJourneyId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/campaigns/${campaign.id}/maps`).then((r) => r.json()).then((d) => {
@@ -68,6 +74,53 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
     if (!map) return;
     patchMap(map.slug, { routes: (map.routes || []).filter((_, i) => i !== index) });
     if (editingRoute === index) setEditingRoute(null);
+  }
+
+  function createJourney() {
+    if (!map || !newJourneyName.trim()) return;
+    const id = `j${Date.now()}`;
+    const journey: Journey = { id, name: newJourneyName.trim(), steps: [] };
+    patchMap(map.slug, { journeys: [...(map.journeys || []), journey] });
+    setNewJourneyName("");
+    setEditingJourneyId(id);
+    setJourneyAddMode(true);
+  }
+
+  function deleteJourney(id: string) {
+    if (!map) return;
+    patchMap(map.slug, { journeys: (map.journeys || []).filter((j) => j.id !== id) });
+    if (activeJourneyId === id) { setActiveJourneyId(null); setJourneyStep(0); }
+    if (editingJourneyId === id) { setEditingJourneyId(null); setJourneyAddMode(false); }
+  }
+
+  function journeyAddPin(pinIndex: number) {
+    if (!map || !editingJourneyId) return;
+    patchMap(map.slug, {
+      journeys: (map.journeys || []).map((j) => j.id === editingJourneyId
+        ? { ...j, steps: [...j.steps, pinIndex] }
+        : j
+      )
+    });
+  }
+
+  function journeyRemoveLastPin() {
+    if (!map || !editingJourneyId) return;
+    patchMap(map.slug, {
+      journeys: (map.journeys || []).map((j) => j.id === editingJourneyId
+        ? { ...j, steps: j.steps.slice(0, -1) }
+        : j
+      )
+    });
+  }
+
+  function startPlayback(id: string) {
+    setActiveJourneyId(id);
+    setJourneyStep(0);
+    setEditingJourneyId(null);
+    setJourneyAddMode(false);
+    setAddMode(null);
+    setEditingPin(null);
+    setEditingRoute(null);
   }
 
   async function createMap(event: FormEvent<HTMLFormElement>) {
@@ -306,8 +359,34 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
                 <button type="button" className="linklike" style={{ marginLeft: 12, fontSize: 12 }} onClick={() => { setMeasurePts([]); setMeasureResult(null); setAddMode(null); }}>Clear</button>
               </div>
             )}
+            {activeJourneyId && (() => {
+              const journey = (map.journeys || []).find((j) => j.id === activeJourneyId);
+              if (!journey) return null;
+              const currentPin = journey.steps[journeyStep] != null ? map.pins[journey.steps[journeyStep]] : null;
+              return (
+                <div style={{ padding: "6px 12px", background: "var(--bg-elevated)", borderBottom: "1px solid var(--border-soft)", fontSize: 13, display: "flex", alignItems: "center", gap: 10 }}>
+                  <strong style={{ color: "#4a90d9" }}>Journey: {journey.name}</strong>
+                  <span className="muted">Stop {journeyStep + 1}/{journey.steps.length}{currentPin ? ` — ${currentPin.label}` : ""}</span>
+                  <button type="button" className="secondary" style={{ minHeight: 26, padding: "0 8px", fontSize: 12 }} disabled={journeyStep === 0} onClick={() => setJourneyStep((s) => s - 1)}>← Back</button>
+                  <button type="button" className="secondary" style={{ minHeight: 26, padding: "0 8px", fontSize: 12 }} disabled={journeyStep >= journey.steps.length - 1} onClick={() => setJourneyStep((s) => s + 1)}>Next →</button>
+                  <button type="button" className="linklike" style={{ fontSize: 12, marginLeft: "auto" }} onClick={() => { setActiveJourneyId(null); setJourneyStep(0); }}>End journey</button>
+                </div>
+              );
+            })()}
+            {journeyAddMode && editingJourneyId && (() => {
+              const journey = (map.journeys || []).find((j) => j.id === editingJourneyId);
+              if (!journey) return null;
+              return (
+                <div style={{ padding: "6px 12px", background: "var(--bg-elevated)", borderBottom: "1px solid var(--border-soft)", fontSize: 13, display: "flex", alignItems: "center", gap: 10 }}>
+                  <strong style={{ color: "var(--gold)" }}>Adding stops to: {journey.name}</strong>
+                  <span className="muted">{journey.steps.length} stop{journey.steps.length !== 1 ? "s" : ""} — click pins on map to add</span>
+                  <button type="button" className="secondary" style={{ minHeight: 26, padding: "0 8px", fontSize: 12 }} disabled={!journey.steps.length} onClick={journeyRemoveLastPin}>Undo last</button>
+                  <button type="button" className="linklike" style={{ fontSize: 12, marginLeft: "auto" }} onClick={() => setJourneyAddMode(false)}>Done</button>
+                </div>
+              );
+            })()}
 
-            <div className={addMode ? "map-canvas placing" : "map-canvas"} onClick={handleCanvasClick}>
+            <div className={`map-canvas${addMode ? " placing" : ""}${journeyAddMode ? " placing" : ""}`} onClick={handleCanvasClick}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={`/campaign-media/${campaign.id}/${encodeURIComponent(map.image)}`}
@@ -375,38 +454,73 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
                 {measurePts.length === 1 && (
                   <circle cx={measurePts[0].x * 100} cy={measurePts[0].y * 100} r="1" fill="var(--gold)" />
                 )}
+                {/* Journey path overlay */}
+                {activeJourneyId && (() => {
+                  const journey = (map.journeys || []).find((j) => j.id === activeJourneyId);
+                  if (!journey || !journey.steps.length) return null;
+                  const visitedSteps = journey.steps.slice(0, journeyStep + 1);
+                  const pathParts: string[] = [];
+                  for (let i = 0; i < visitedSteps.length - 1; i++) {
+                    const from = map.pins[visitedSteps[i]];
+                    const to = map.pins[visitedSteps[i + 1]];
+                    if (from && to) pathParts.push(`M ${from.x * 100} ${from.y * 100} L ${to.x * 100} ${to.y * 100}`);
+                  }
+                  const currentPin = map.pins[journey.steps[journeyStep]];
+                  return (
+                    <>
+                      {pathParts.length > 0 && (
+                        <path d={pathParts.join(" ")} fill="none" stroke="#4a90d9" strokeWidth="1.2" strokeDasharray="2,1" strokeLinecap="round" opacity="0.7" />
+                      )}
+                      {currentPin && (
+                        <circle cx={currentPin.x * 100} cy={currentPin.y * 100} r="3" fill="none" stroke="#4a90d9" strokeWidth="1" opacity="0.9">
+                          <animate attributeName="r" values="2.5;4;2.5" dur="1.8s" repeatCount="indefinite" />
+                          <animate attributeName="opacity" values="0.9;0.4;0.9" dur="1.8s" repeatCount="indefinite" />
+                        </circle>
+                      )}
+                    </>
+                  );
+                })()}
               </svg>
 
-              {visiblePins.map((pin, index) => {
-                const pinIndex = map.pins.indexOf(pin);
-                const isRouteFrom = routeFrom === pinIndex;
-                const imgSrc = pin.image ? `/campaign-media/${campaign.id}/${encodeURIComponent(pin.image)}` : null;
-                return (
-                  <button
-                    type="button"
-                    key={pinIndex}
-                    className={`map-pin${pin.pageSlug || pin.mapSlug ? "" : " unlinked"}${editingPin === pinIndex ? " editing" : ""}${isRouteFrom ? " route-from" : ""}${imgSrc ? " map-pin-image" : ""}`}
-                    style={{ left: `${pin.x * 100}%`, top: `${pin.y * 100}%` }}
-                    title={pin.label}
-                    onClick={(e) => {
-                      if (addMode === "route") { handlePinClickInRouteMode(pinIndex, e); return; }
-                      e.stopPropagation();
-                      if (addMode) return;
-                      if (editingPin === pinIndex) { setEditingPin(null); return; }
-                      setEditingPin(pinIndex);
-                      setEditingRoute(null);
-                    }}
-                  >
-                    {imgSrc ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={imgSrc} alt={pin.label} className="map-pin-portrait" />
-                    ) : (
-                      <span className="map-pin-icon">{pin.icon || "📍"}</span>
-                    )}
-                    <span className="map-pin-label">{pin.label}</span>
-                  </button>
-                );
-              })}
+              {(() => {
+                const activeJourney = activeJourneyId ? (map.journeys || []).find((j) => j.id === activeJourneyId) : null;
+                const currentPinIndex = activeJourney ? activeJourney.steps[journeyStep] : null;
+                const visitedPins = activeJourney ? new Set(activeJourney.steps.slice(0, journeyStep + 1)) : null;
+                return visiblePins.map((pin) => {
+                  const pinIndex = map.pins.indexOf(pin);
+                  const isRouteFrom = routeFrom === pinIndex;
+                  const imgSrc = pin.image ? `/campaign-media/${campaign.id}/${encodeURIComponent(pin.image)}` : null;
+                  const isJourneyCurrent = currentPinIndex === pinIndex;
+                  const isJourneyVisited = visitedPins?.has(pinIndex) && !isJourneyCurrent;
+                  return (
+                    <button
+                      type="button"
+                      key={pinIndex}
+                      className={`map-pin${pin.pageSlug || pin.mapSlug ? "" : " unlinked"}${editingPin === pinIndex ? " editing" : ""}${isRouteFrom ? " route-from" : ""}${imgSrc ? " map-pin-image" : ""}${isJourneyCurrent ? " journey-current" : ""}${isJourneyVisited ? " journey-visited" : ""}`}
+                      style={{ left: `${pin.x * 100}%`, top: `${pin.y * 100}%` }}
+                      title={pin.label}
+                      onClick={(e) => {
+                        if (addMode === "route") { handlePinClickInRouteMode(pinIndex, e); return; }
+                        if (journeyAddMode) { e.stopPropagation(); journeyAddPin(pinIndex); return; }
+                        e.stopPropagation();
+                        if (addMode) return;
+                        if (activeJourneyId) return;
+                        if (editingPin === pinIndex) { setEditingPin(null); return; }
+                        setEditingPin(pinIndex);
+                        setEditingRoute(null);
+                      }}
+                    >
+                      {imgSrc ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={imgSrc} alt={pin.label} className="map-pin-portrait" />
+                      ) : (
+                        <span className="map-pin-icon">{pin.icon || "📍"}</span>
+                      )}
+                      <span className="map-pin-label">{pin.label}</span>
+                    </button>
+                  );
+                });
+              })()}
             </div>
 
             {editingRoute !== null && (() => {
@@ -532,6 +646,32 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
                 </div>
               </div>
             )}
+
+            <div className="field-group">
+              <h3>Journeys</h3>
+              <div className="map-pin-list">
+                {(map.journeys || []).map((journey) => (
+                  <div key={journey.id} className="map-pin-list-row">
+                    <span>{journey.steps.length} stop{journey.steps.length !== 1 ? "s" : ""}</span>
+                    <span style={{ flex: 1 }}>{journey.name}</span>
+                    <button type="button" className="secondary" style={{ minHeight: 24, padding: "0 6px", fontSize: 11 }} onClick={() => { setEditingJourneyId(journey.id); setJourneyAddMode(true); setActiveJourneyId(null); setAddMode(null); }}>Edit</button>
+                    <button type="button" className="secondary" style={{ minHeight: 24, padding: "0 6px", fontSize: 11 }} disabled={!journey.steps.length} onClick={() => startPlayback(journey.id)}>▶ Play</button>
+                    <button type="button" className="danger" style={{ minHeight: 24, padding: "0 6px", fontSize: 11 }} onClick={() => deleteJourney(journey.id)}>✕</button>
+                  </div>
+                ))}
+                {!(map.journeys || []).length && <p className="muted" style={{ fontSize: 12 }}>No journeys yet. Create one to track the party&apos;s route.</p>}
+              </div>
+              <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                <input
+                  placeholder="Journey name…"
+                  value={newJourneyName}
+                  onChange={(e) => setNewJourneyName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); createJourney(); } }}
+                  style={{ flex: 1 }}
+                />
+                <button type="button" onClick={createJourney} disabled={!newJourneyName.trim()} style={{ whiteSpace: "nowrap" }}>+ Journey</button>
+              </div>
+            </div>
           </>
         ) : (
           <p className="muted">Select or create a map.</p>

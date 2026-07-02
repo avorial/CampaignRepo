@@ -1574,6 +1574,22 @@ button.nav-link.active {
   50% { box-shadow: 0 0 0 8px rgba(200,160,50,0.15); }
 }
 
+.map-pin.journey-visited {
+  border-color: #4a90d9;
+  opacity: 0.75;
+}
+
+.map-pin.journey-current {
+  border-color: #4a90d9;
+  box-shadow: 0 0 0 5px rgba(74, 144, 217, 0.35);
+  animation: journey-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes journey-pulse {
+  0%, 100% { box-shadow: 0 0 0 5px rgba(74,144,217,0.35); }
+  50% { box-shadow: 0 0 0 10px rgba(74,144,217,0.1); }
+}
+
 .map-pin-editor {
   display: grid;
   gap: 10px;

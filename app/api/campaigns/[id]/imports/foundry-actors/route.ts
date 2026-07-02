@@ -214,7 +214,8 @@ function buildDnDSheetBlock(actor: FoundryActor, name: string): string | null {
       if (typeof sp.name === "string") levels.get(lvl)!.push(sp.name);
     }
     const spellLines = [...levels.entries()].sort((a, b) => a[0] - b[0]).map(([lvl, list]) => {
-      const slots = (attrs as SysObj)?.spells ? strNum(((attrs as SysObj).spells as SysObj)[`spell${lvl}`]?.slots, 0) : 0;
+      const spellSlotEntry = (attrs as SysObj)?.spells ? ((attrs as SysObj).spells as SysObj)[`spell${lvl}`] as SysObj | undefined : undefined;
+      const slots = spellSlotEntry ? strNum(spellSlotEntry.slots, 0) : 0;
       return `    - level: ${lvl}\n      list:\n${list.slice(0, 10).map(n => `        - "${n}"`).join("\n")}${slots ? `\n      slots: ${slots}` : ""}`;
     }).join("\n");
     spellsBlock = `\nspellcasting:\n  ability: ${spellAbility.toUpperCase()}${saveDc ? `\n  spell_save_dc: ${saveDc}` : ""}\n  spells:\n${spellLines}`;
