@@ -133,6 +133,58 @@ export function starterBody(name: string, category: Category, gameType: GameType
   return `${heading}${common}`;
 }
 
+/** Seed body for a campaign's pinned "Campaign" data page — the shared home page. */
+export function campaignDataBody(name: string, gameType: GameType) {
+  return `# ${name}
+
+The home page for this campaign — who's playing, what it's about, and how to plug in. Edit it like any other page.
+
+## The Concept
+
+_A paragraph on the setting, the premise, the stakes, and where the story stands right now._
+
+## System & Tone
+
+- **Game system:** ${gameType}
+- **Tone:**
+- **Safety tools:**
+
+## The Table
+
+_The players and the characters they run._
+
+| Player | Character | Role |
+| --- | --- | --- |
+|  | [[Character]] |  |
+
+## How to Connect
+
+- **Web app:** this site — sign in and open this campaign.
+- **GitHub:** the campaign repo (see the "Open GitHub" button in the header).
+- **AI / MCP:** mint a token under **GM Admin → tokens**, then point your MCP client at this campaign.
+
+## Key NPCs & Factions
+
+- [[NPC]] —
+
+## House Rules
+
+-
+
+## Where We Are Now
+
+_Current location, active goals, and looming threats._
+
+## Timeline
+
+-
+
+:::gm
+GM-only campaign notes: the truth behind the concept, secret clocks, and long-game plans.
+:::
+`;
+}
+
 export function campaignYaml(name: string, gameType: GameType) {
   const cats = categories.map((category) => `  - id: ${category.id}\n    label: ${JSON.stringify(category.label)}`).join("\n");
   return `name: ${JSON.stringify(name)}\ngameType: ${JSON.stringify(gameType)}\ncategories:\n${cats}\nvisibility:\n  default: gm\napprovals:\n  aiDefault: unapproved\ntheme:\n  preset: ${JSON.stringify(themePresetForGame(gameType))}\n  accent: "#d4a957"\n  accent2: "#a075ff"\n  displayFont: "Fraunces"\n  banner: ""\n`;

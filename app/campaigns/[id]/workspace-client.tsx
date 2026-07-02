@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { Campaign, CampaignGraphEdge, CampaignGraphNode, CampaignMedia, CampaignTimelineItem, WikiPage, WikiTemplate } from "@/lib/types";
-import { gameTypeGroups, gameTypes } from "@/lib/templates";
+import { gameTypeGroups, gameTypes, campaignDataBody } from "@/lib/templates";
 import { defaultAccent, defaultAccent2, themeFontNames, type CampaignTheme } from "@/lib/theme";
 import { themePresetForGame, themePresetLabels, themePresetNames } from "@/lib/game-pack-branding";
 
@@ -42,6 +42,9 @@ function categoryIdInput(value: string) {
     .toLowerCase();
 }
 
+// Reserved slug for the pinned "Campaign" home page, kept out of the category tree.
+const CAMPAIGN_PAGE_SLUG = "campaign";
+
 export default function CampaignClient({ campaign, categories }: { campaign: Campaign; categories: { id: string; label: string }[] }) {
   const [campaignCategories, setCampaignCategories] = useState(categories);
   const [pages, setPages] = useState<WikiPage[]>([]);
@@ -53,6 +56,8 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const [message, setMessage] = useState("");
   const [search, setSearch] = useState<any[]>([]);
   const [pageCategory, setPageCategory] = useState(categories[0]?.id || "character");
+  const [createVisibility, setCreateVisibility] = useState<"gm" | "players">("gm");
+  const [createTemplatePath, setCreateTemplatePath] = useState("");
   const [navFilterInput, setNavFilterInput] = useState("");
   const [navFilter, setNavFilter] = useState("");
   const [navOpen, setNavOpen] = useState(false);
@@ -213,13 +218,29 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
 
   useEffect(() => { load(); }, []);
 
+  // Remember the last category/template/visibility used to create a page, per
+  // campaign — most pages are created in runs of the same kind, so prefill them.
+  const createDefaultsKey = `cr-create-defaults-${campaign.id}`;
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(createDefaultsKey) || "{}");
+      if (saved.category) setPageCategory(saved.category);
+      if (saved.visibility === "gm" || saved.visibility === "players") setCreateVisibility(saved.visibility);
+      if (typeof saved.templatePath === "string") setCreateTemplatePath(saved.templatePath);
+    } catch { /* ignore malformed storage */ }
+  }, [createDefaultsKey]);
+
   async function createPage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("Creating page...");
     const form = new FormData(event.currentTarget);
+    const category = String(form.get("category") || "");
+    const visibility = String(form.get("visibility") || "gm");
+    const templatePath = String(form.get("templatePath") || "");
+    try { localStorage.setItem(createDefaultsKey, JSON.stringify({ category, visibility, templatePath })); } catch { /* ignore */ }
     const res = await fetch(`/api/campaigns/${campaign.id}/pages`, {
       method: "POST",
-      body: JSON.stringify({ name: form.get("name"), category: form.get("category"), visibility: form.get("visibility"), templatePath: form.get("templatePath") || undefined })
+      body: JSON.stringify({ name: form.get("name"), category, visibility, templatePath: templatePath || undefined })
     });
     const data = await res.json();
     if ((res.ok || res.status === 409) && data.slug) {
@@ -229,36 +250,18 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     else setMessage(data.error || "Could not create page.");
   }
 
-  async function importCharacter(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    let sourceJson: unknown;
-    try {
-      sourceJson = JSON.parse(String(form.get("json") || "{}"));
-    } catch {
-      setMessage("Import JSON is invalid.");
-      return;
-    }
-    const res = await fetch(`/api/campaigns/${campaign.id}/imports/characters`, {
+  // Provision the pinned "Campaign" home page on first use, then open it in the editor.
+  async function createCampaignPage() {
+    setMessage("Setting up the campaign page...");
+    const res = await fetch(`/api/campaigns/${campaign.id}/pages`, {
       method: "POST",
-      body: JSON.stringify({
-        source: form.get("source"),
-        visibility: form.get("visibility"),
-        approvalStatus: form.get("approvalStatus"),
-        mapping: {
-          name: form.get("mapName"),
-          biography: form.get("mapBiography"),
-          items: form.get("mapItems"),
-          category: form.get("mapCategory"),
-          summary: form.get("mapSummary"),
-          tags: form.get("mapTags")
-        },
-        sourceJson
-      })
+      body: JSON.stringify({ name: "Campaign", category: "lore", visibility: "gm", content: campaignDataBody(campaign.name, campaign.gameType) })
     });
     const data = await res.json();
-    if (res.ok) window.location.href = `/campaigns/${campaign.id}/pages/${data.slug}`;
-    else setMessage(data.error || "Import failed.");
+    if ((res.ok || res.status === 409) && data.slug) {
+      const editQuery = res.status === 409 ? "" : "?edit=1";
+      window.location.href = `/campaigns/${campaign.id}/pages/${data.slug}${editQuery}`;
+    } else setMessage(data.error || "Could not create the campaign page.");
   }
 
   async function createTemplate(event: FormEvent<HTMLFormElement>) {
@@ -477,8 +480,9 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
       </div>
     );
   };
+  const campaignPage = pages.find((page) => page.slug === CAMPAIGN_PAGE_SLUG);
   const navTree: ReactNode = navCategories.map((cat) => {
-    const catPages = sortedPages.filter((page) => page.frontmatter.category === cat.id);
+    const catPages = sortedPages.filter((page) => page.frontmatter.category === cat.id && page.slug !== CAMPAIGN_PAGE_SLUG);
     const visible = navFilterLc ? catPages.filter((page) => page.frontmatter.name.toLowerCase().includes(navFilterLc)) : catPages;
     if (navFilterLc && visible.length === 0) return null;
     const open = navFilterLc ? true : (openCats[cat.id] ?? catPages.length > 0);
@@ -572,6 +576,18 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
           </Link>
         ))}
         <input className="nav-filter" value={navFilterInput} onChange={(event) => { setNavFilterInput(event.target.value); debounce(setNavFilter, event.target.value); }} placeholder="Filter pages" />
+        {campaignPage ? (
+          <Link href={`/campaigns/${campaign.id}/pages/${campaignPage.slug}`} className="nav-link nav-tree-link nav-pinned">
+            <span aria-hidden="true">📖</span>
+            <span className="nav-tree-name">{campaignPage.frontmatter.name || "Campaign"}</span>
+          </Link>
+        ) : canManage ? (
+          <button type="button" onClick={createCampaignPage} className="nav-link nav-tree-link nav-pinned" title="Create the campaign home page">
+            <span aria-hidden="true">📖</span>
+            <span className="nav-tree-name">Campaign</span>
+            <span className="nav-pinned-add" aria-hidden="true">＋</span>
+          </button>
+        ) : null}
         {navTree}
         {canManage && (
           <Link href={`/campaigns/${campaign.id}/boards`} className="nav-link nav-tool-link" aria-label="Boards"><span aria-hidden="true">🗂</span> Boards</Link>
@@ -625,36 +641,19 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
           </div>
         )}
         {canManage && tab === "pages" && (
-          <section className="dashboard-grid">
-            <div className="panel" id="media">
-              <h2>Create page</h2>
-              <form onSubmit={createPage} className="stack">
-                <label>Name<input name="name" required placeholder="Victor Mendes" /></label>
+          <section className="panel create-page-panel" id="media">
+            <h2>Create page</h2>
+            <p className="muted create-page-hint">Your last category, template, and visibility are remembered for the next page.</p>
+            <form onSubmit={createPage} className="stack">
+              <label>Name<input name="name" required placeholder="Victor Mendes" autoFocus /></label>
+              <div className="create-page-grid">
                 <label>Category<select name="category" value={pageCategory} onChange={(event) => setPageCategory(event.target.value)}>{campaignCategories.map((cat) => <option key={cat.id} value={cat.id}>{cat.label}</option>)}</select></label>
-                <label>Template<select name="templatePath"><option value="">Starter default</option>{pageTemplates.map((template) => <option key={template.path} value={template.path}>{template.gameType} - {template.category} - {template.name}</option>)}</select></label>
-                <label>Visibility<select name="visibility"><option value="gm">GM only</option><option value="players">Player visible</option></select></label>
-                <button>Create page</button>
-              </form>
-            </div>
-
-            <div className="panel">
-              <h2>Import character JSON</h2>
-              <form onSubmit={importCharacter} className="stack">
-                <label>Source<select name="source"><option value="foundry">Foundry Actor JSON</option><option value="generic">Generic JSON</option></select></label>
-                <label>Visibility<select name="visibility"><option value="gm">GM only</option><option value="players">Player visible</option></select></label>
-                <label>Approval<select name="approvalStatus"><option value="approved">Approved</option><option value="unapproved">Unapproved</option></select></label>
-                <div className="mapper-grid">
-                  <label>Name path<input name="mapName" placeholder="name" /></label>
-                  <label>Biography path<input name="mapBiography" placeholder="bio or system.biography.value" /></label>
-                  <label>Items path<input name="mapItems" placeholder="items" /></label>
-                  <label>Category path<input name="mapCategory" placeholder="type" /></label>
-                  <label>Summary path<input name="mapSummary" placeholder="summary" /></label>
-                  <label>Tags path<input name="mapTags" placeholder="tags" /></label>
-                </div>
-                <textarea name="json" rows={8} placeholder='{"name":"Victor Mendes","type":"npc"}' />
-                <button>Import character</button>
-              </form>
-            </div>
+                <label>Template<select name="templatePath" value={pageTemplates.some((t) => t.path === createTemplatePath) ? createTemplatePath : ""} onChange={(event) => setCreateTemplatePath(event.target.value)}><option value="">Starter default</option>{pageTemplates.map((template) => <option key={template.path} value={template.path}>{template.gameType} - {template.category} - {template.name}</option>)}</select></label>
+                <label>Visibility<select name="visibility" value={createVisibility} onChange={(event) => setCreateVisibility(event.target.value as "gm" | "players")}><option value="gm">GM only</option><option value="players">Player visible</option></select></label>
+              </div>
+              <button>Create page</button>
+            </form>
+            <p className="muted create-page-hint">Importing a character sheet or actor JSON? Use <Link href={`/campaigns/${campaign.id}/tools/import`} className="quiet-link">Import &amp; Export</Link>.</p>
           </section>
         )}
 

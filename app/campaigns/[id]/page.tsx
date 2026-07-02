@@ -6,6 +6,7 @@ import { getCampaign } from "@/lib/db";
 import { loadCampaignCategories } from "@/lib/categories";
 import { loadCampaignTheme } from "@/lib/public-site";
 import { themeToCssVars } from "@/lib/theme";
+import { gamePackLogos, darkPlatePacks } from "@/lib/game-pack-branding";
 import CampaignClient from "./workspace-client";
 import NotificationBell from "@/app/components/notification-bell";
 
@@ -29,13 +30,21 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
   ]);
   const themeVars = themeToCssVars(theme) as CSSProperties;
   const logoSrc = themeLogoSrc(campaign.id, theme.logo);
+  const packLogo = gamePackLogos[campaign.gameType];
+  const packPlateClass = darkPlatePacks.has(campaign.gameType) ? " repo-logo-plate-dark" : "";
   return (
     <main className="app-shell" data-theme={theme.preset || undefined} style={themeVars}>
       <header className="topbar">
         <div>
           <Link href="/dashboard" className="quiet-link">Dashboard</Link>
           {logoSrc ? <img className="campaign-title-logo" src={logoSrc} alt={campaign.name} /> : <h1>{campaign.name}</h1>}
-          <p className="muted">{campaign.owner}/{campaign.repo} · {campaign.gameType}</p>
+          <div className="campaign-meta-row">
+            {packLogo && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <span className={`repo-logo-plate campaign-pack-mark${packPlateClass}`} title={campaign.gameType}><img src={packLogo} alt={campaign.gameType} /></span>
+            )}
+            <p className="muted">{campaign.owner}/{campaign.repo} · {campaign.gameType}</p>
+          </div>
         </div>
         <div className="topbar-actions">
           <Link className="button secondary" href={`/campaigns/${campaign.id}/overview`}>Overview</Link>

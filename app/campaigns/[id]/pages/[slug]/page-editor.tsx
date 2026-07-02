@@ -99,6 +99,7 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const canManage = campaign.role === "owner" || campaign.role === "gm";
   const [mode, setMode] = useState<"gm" | "player" | "handout">(canManage ? "gm" : "player");
+  const [mobilePane, setMobilePane] = useState<"write" | "preview">("write");
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -1752,7 +1753,11 @@ notes: ""
                 })}
               </ul>
             )}
-            <div className="editor-split">
+            <div className="editor-split-toggle" role="tablist" aria-label="Editor view">
+              <button type="button" role="tab" aria-selected={mobilePane === "write"} className={mobilePane === "write" ? "active" : ""} onClick={() => setMobilePane("write")}>Write</button>
+              <button type="button" role="tab" aria-selected={mobilePane === "preview"} className={mobilePane === "preview" ? "active" : ""} onClick={() => setMobilePane("preview")}>Preview</button>
+            </div>
+            <div className="editor-split" data-pane={mobilePane}>
               <textarea ref={textareaRef} value={content} onChange={onContentChange} onKeyDown={onEditorKeyDown} onPaste={onPaste} spellCheck={false} readOnly={!fieldsEditable} />
               <article className={mode === "handout" ? "preview handout-preview" : "preview"}>
                 {mode === "handout" && (

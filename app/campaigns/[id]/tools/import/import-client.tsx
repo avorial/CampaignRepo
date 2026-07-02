@@ -34,7 +34,16 @@ The Rustwood Inn,location,"Roadside tavern in Thornmere","inn,tavern",players,`;
 export default function ImportClient({ campaignId, campaignName }: { campaignId: number; campaignName: string }) {
   const api = `/api/campaigns/${campaignId}`;
 
-  const [activeTab, setActiveTab] = useState<"csv" | "foundry" | "obsidian" | "notion" | "worldanvil" | "googledocs" | "roll20" | "legendkeeper" | "export">("csv");
+  const [activeTab, setActiveTab] = useState<"csv" | "characters" | "foundry" | "obsidian" | "notion" | "worldanvil" | "googledocs" | "roll20" | "legendkeeper" | "export">("csv");
+
+  // Single character JSON import state (custom field-path mapping)
+  const [charSource, setCharSource] = useState<"foundry" | "generic">("foundry");
+  const [charVisibility, setCharVisibility] = useState<"gm" | "players">("gm");
+  const [charApproval, setCharApproval] = useState<"approved" | "unapproved" | "rejected">("approved");
+  const [charMap, setCharMap] = useState({ name: "", biography: "", items: "", category: "", summary: "", tags: "" });
+  const [charJson, setCharJson] = useState("");
+  const [charBusy, setCharBusy] = useState(false);
+  const [charError, setCharError] = useState("");
 
   // Obsidian vault import state
   const [obsidianFiles, setObsidianFiles] = useState<FileEntry[]>([]);
@@ -109,6 +118,37 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
   const [actorBusy, setActorBusy] = useState(false);
   const [actorResult, setActorResult] = useState<ImportResponse | null>(null);
   const [actorPreviews, setActorPreviews] = useState<ActorPreviewEntry[] | null>(null);
+
+  async function runCharImport() {
+    let sourceJson: unknown;
+    try { sourceJson = JSON.parse(charJson || "{}"); } catch { setCharError("Import JSON is invalid."); return; }
+    if (!sourceJson || typeof sourceJson !== "object" || Array.isArray(sourceJson)) {
+      setCharError("Paste a single character object (not an array). For batches, use the Foundry or CSV tabs.");
+      return;
+    }
+    setCharBusy(true);
+    setCharError("");
+    try {
+      const res = await fetch(`${api}/imports/characters`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: charSource, visibility: charVisibility, approvalStatus: charApproval, mapping: charMap, sourceJson })
+      });
+      const data = await res.json();
+      if (res.ok && data.slug) { window.location.href = `/campaigns/${campaignId}/pages/${data.slug}`; return; }
+      setCharError(data.error || "Import failed.");
+    } finally {
+      setCharBusy(false);
+    }
+  }
+
+  function loadCharFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setCharJson((ev.target?.result as string) || "");
+    reader.readAsText(file);
+  }
 
   async function runWaImport() {
     let json: unknown;
@@ -358,6 +398,7 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
     <div className="import-shell">
       <div className="tab-row">
         <button className={`tab-btn${activeTab === "csv" ? " active" : ""}`} onClick={() => setActiveTab("csv")}>CSV</button>
+        <button className={`tab-btn${activeTab === "characters" ? " active" : ""}`} onClick={() => setActiveTab("characters")}>Character JSON</button>
         <button className={`tab-btn${activeTab === "foundry" ? " active" : ""}`} onClick={() => setActiveTab("foundry")}>Foundry</button>
         <button className={`tab-btn${activeTab === "obsidian" ? " active" : ""}`} onClick={() => setActiveTab("obsidian")}>Obsidian</button>
         <button className={`tab-btn${activeTab === "notion" ? " active" : ""}`} onClick={() => setActiveTab("notion")}>Notion</button>
@@ -418,6 +459,68 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
           </div>
 
           {csvResult && <ImportResultPanel result={csvResult} api={`/campaigns/${campaignId}`} />}
+        </div>
+      )}
+
+      {activeTab === "characters" && (
+        <div className="import-panel stack">
+          <div className="import-intro">
+            <p>Import a <strong>single character</strong> from raw JSON, creating one wiki page. Pick a source, then optionally map fields with dot-paths (e.g. <code>system.biography.value</code>) if the defaults miss anything.</p>
+            <p className="muted" style={{ fontSize: "12px" }}>
+              Leave path fields blank to use sensible defaults. For bulk actor/journal imports use the <strong>Foundry</strong> tab; for spreadsheets use <strong>CSV</strong>.
+            </p>
+            <p className="callout-warn" style={{ fontSize: "13px" }}>
+              <strong>One character at a time.</strong>
+              <span>Bulk uploads exceed the MCP upload limit — to add many characters at once, commit the pages directly to the campaign&apos;s Git repository instead.</span>
+            </p>
+          </div>
+
+          <div className="import-options">
+            <label>Source
+              <select value={charSource} onChange={(e) => setCharSource(e.target.value as "foundry" | "generic")}>
+                <option value="foundry">Foundry Actor JSON</option>
+                <option value="generic">Generic JSON</option>
+              </select>
+            </label>
+            <label>Visibility
+              <select value={charVisibility} onChange={(e) => setCharVisibility(e.target.value as "gm" | "players")}>
+                {VISIBILITY_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </label>
+            <label>Approval status
+              <select value={charApproval} onChange={(e) => setCharApproval(e.target.value as "approved" | "unapproved" | "rejected")}>
+                {APPROVAL_OPTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </label>
+          </div>
+
+          <div className="mapper-grid">
+            <label>Name path<input value={charMap.name} onChange={(e) => setCharMap({ ...charMap, name: e.target.value })} placeholder="name" /></label>
+            <label>Biography path<input value={charMap.biography} onChange={(e) => setCharMap({ ...charMap, biography: e.target.value })} placeholder="bio or system.biography.value" /></label>
+            <label>Items path<input value={charMap.items} onChange={(e) => setCharMap({ ...charMap, items: e.target.value })} placeholder="items" /></label>
+            <label>Category path<input value={charMap.category} onChange={(e) => setCharMap({ ...charMap, category: e.target.value })} placeholder="type" /></label>
+            <label>Summary path<input value={charMap.summary} onChange={(e) => setCharMap({ ...charMap, summary: e.target.value })} placeholder="summary" /></label>
+            <label>Tags path<input value={charMap.tags} onChange={(e) => setCharMap({ ...charMap, tags: e.target.value })} placeholder="tags" /></label>
+          </div>
+
+          <label className="file-upload-row">
+            Upload JSON file
+            <input type="file" accept=".json,application/json" onChange={loadCharFile} style={{ marginLeft: 8 }} />
+          </label>
+
+          <textarea
+            className="import-textarea"
+            placeholder={'{"name":"Victor Mendes","type":"npc","system":{"biography":{"value":"<p>A dockside fixer…</p>"}}}'}
+            value={charJson}
+            onChange={(e) => setCharJson(e.target.value)}
+            rows={10}
+          />
+
+          <button onClick={runCharImport} disabled={charBusy || !charJson.trim()}>
+            {charBusy ? "Importing…" : "Import character"}
+          </button>
+
+          {charError && <p className="error">{charError}</p>}
         </div>
       )}
 

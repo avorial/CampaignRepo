@@ -16,7 +16,8 @@ const schema = z.object({
   name: z.string().min(1),
   category: z.string().min(1).max(40).regex(/^[a-z0-9_/-]+$/),
   visibility: z.enum(["gm", "players"]).default("gm"),
-  templatePath: z.string().optional()
+  templatePath: z.string().optional(),
+  content: z.string().max(100_000).optional()
 });
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -83,7 +84,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (!isConflictError(error) && (error as any)?.status !== 404) throw error;
     }
     let frontmatter = defaultFrontmatter(input.name, input.category, input.visibility);
-    let content = starterBody(input.name, input.category, campaign.gameType as any);
+    let content = input.content?.trim() ? input.content : starterBody(input.name, input.category, campaign.gameType as any);
     if (input.templatePath?.startsWith("wiki/templates/") && input.templatePath.endsWith(".md")) {
       const template = await storage.getTextFile(input.templatePath);
       const parsedTemplate = parsePage(slug, template.text, template.sha);
