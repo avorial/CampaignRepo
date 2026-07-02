@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getStorageAdapter } from "@/lib/storage";
 import { defaultFrontmatter } from "@/lib/templates";
-import { serializePage } from "@/lib/markdown";
+import { serializePage, parsePage } from "@/lib/markdown";
 import { slugify } from "@/lib/slug";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
 
@@ -13,7 +13,8 @@ export const dynamic = "force-dynamic";
 const schema = z.object({
   json: z.unknown(),
   visibility: z.enum(["gm", "players"]).default("gm"),
-  approvalStatus: z.enum(["approved", "unapproved", "rejected"]).default("unapproved")
+  approvalStatus: z.enum(["approved", "unapproved", "rejected"]).default("unapproved"),
+  preview: z.boolean().optional()
 });
 
 type FoundryActor = Record<string, unknown>;
@@ -306,7 +307,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const actors = extractActors(input.json);
   if (!actors.length) return NextResponse.json({ error: "No actors found. Paste a Foundry Actor JSON export or an array of actor objects." }, { status: 400 });
 
-  const results: { slug: string; name: string; created: boolean; error?: string }[] = [];
+  type FieldChange = { field: string; before: string; after: string };
+  type PreviewEntry = { slug: string; name: string; isNew: boolean; bodyChanged: boolean; bodyBefore: number; bodyAfter: number; changes: FieldChange[] };
+  type ImportResult = { slug: string; name: string; created: boolean; error?: string };
+
+  const previews: PreviewEntry[] = [];
+  const results: ImportResult[] = [];
 
   for (const actor of actors) {
     const name = typeof actor.name === "string" ? actor.name.trim() : "";
@@ -333,28 +339,50 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       ...(foundryId ? { foundryId } : {})
     };
 
-    try {
-      let existingPath = path;
-      let existingSha: string | undefined;
+    let existingPath = path;
+    let existingSha: string | undefined;
+    let existingContent: string | undefined;
 
-      // Prefer matching by foundryId to update across renames
-      if (foundryId) {
-        const existing = await findExistingByFoundryId(storage, foundryId);
-        if (existing) {
-          existingPath = existing.path;
-          existingSha = existing.sha;
-        } else {
-          try { const ex = await storage.getTextFile(path); existingSha = ex.sha; } catch { /* new */ }
-        }
+    if (foundryId) {
+      const existing = await findExistingByFoundryId(storage, foundryId);
+      if (existing) {
+        existingPath = existing.path;
+        existingSha = existing.sha;
       } else {
-        try { const ex = await storage.getTextFile(path); existingSha = ex.sha; } catch { /* new */ }
+        try { const ex = await storage.getTextFile(path); existingSha = ex.sha; existingContent = ex.text; } catch { /* new */ }
       }
-
-      await storage.putFile(existingPath, serializePage(frontmatter, body), `CampaignRepo: Foundry Actor import — ${name}`, existingSha);
-      results.push({ slug, name, created: !existingSha });
-    } catch (e) {
-      results.push({ slug, name, created: false, error: e instanceof Error ? e.message : "Unknown error" });
+    } else {
+      try { const ex = await storage.getTextFile(path); existingSha = ex.sha; existingContent = ex.text; } catch { /* new */ }
     }
+
+    if (input.preview) {
+      const isNew = !existingSha;
+      const changes: FieldChange[] = [];
+      let bodyBefore = 0;
+      if (!isNew && existingContent) {
+        const parsed = parsePage(slug, existingContent);
+        const prev = parsed.frontmatter as Record<string, unknown>;
+        const next = frontmatter as Record<string, unknown>;
+        for (const key of ["name", "summary", "category", "visibility", "approvalStatus"] as const) {
+          const b = String(prev[key] ?? "");
+          const a = String(next[key] ?? "");
+          if (b !== a) changes.push({ field: key, before: b, after: a });
+        }
+        bodyBefore = parsed.content.length;
+      }
+      previews.push({ slug, name, isNew, bodyChanged: !isNew && existingContent ? existingContent.length !== body.length : false, bodyBefore, bodyAfter: body.length, changes });
+    } else {
+      try {
+        await storage.putFile(existingPath, serializePage(frontmatter, body), `CampaignRepo: Foundry Actor import — ${name}`, existingSha);
+        results.push({ slug, name, created: !existingSha });
+      } catch (e) {
+        results.push({ slug, name, created: false, error: e instanceof Error ? e.message : "Unknown error" });
+      }
+    }
+  }
+
+  if (input.preview) {
+    return NextResponse.json({ previews });
   }
 
   scheduleSearchIndexRebuild(campaign);

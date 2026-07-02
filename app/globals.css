@@ -3886,6 +3886,35 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
 .export-option-header { align-items: center; display: flex; gap: 8px; }
 .export-option .button { align-self: flex-start; }
 
+.import-preview-header { font-size: 13px; margin: 0 0 8px; }
+.actor-preview-list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.actor-preview-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--border-soft);
+  border-radius: var(--radius);
+  font-size: 12px;
+  padding: 8px 10px;
+}
+.actor-preview-card.is-new { border-left-color: #6bb8ff; }
+.actor-preview-card.is-changed { border-left-color: var(--gold); }
+.actor-preview-card.is-same { opacity: 0.55; }
+.actor-preview-name { align-items: center; display: flex; font-size: 13px; font-weight: 500; gap: 6px; margin-bottom: 4px; }
+.actor-preview-badge {
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 1px 5px;
+}
+.actor-preview-badge.new { background: rgba(107,184,255,0.2); color: #6bb8ff; }
+.actor-preview-badge.changed { background: rgba(212,169,87,0.2); color: var(--gold); }
+.actor-preview-badge.same { background: var(--bg-soft); color: var(--text-tertiary); }
+.actor-preview-field { align-items: baseline; color: var(--text-secondary); display: flex; font-size: 11px; gap: 6px; padding: 2px 0; }
+.actor-preview-field-name { color: var(--text-tertiary); font-family: var(--font-mono); min-width: 80px; }
+.actor-preview-before { color: var(--danger); text-decoration: line-through; }
+.actor-preview-arrow { color: var(--text-tertiary); }
+.actor-preview-after { color: #78c8a0; }
+
 /* ---- Command palette (Cmd/Ctrl+K) ---- */
 .cmdk-overlay {
   position: fixed;

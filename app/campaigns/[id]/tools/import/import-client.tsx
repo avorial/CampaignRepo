@@ -4,6 +4,8 @@ import { useState } from "react";
 
 type ImportResult = { slug: string; name: string; created: boolean; error?: string };
 type ImportResponse = { results: ImportResult[]; created: number; updated: number; errors: number; total: number; error?: string };
+type ActorFieldChange = { field: string; before: string; after: string };
+type ActorPreviewEntry = { slug: string; name: string; isNew: boolean; bodyChanged: boolean; bodyBefore: number; bodyAfter: number; changes: ActorFieldChange[] };
 
 const CATEGORY_OPTIONS = ["character", "npc", "location", "faction", "item", "lore", "event", "session", "quest", "creature"];
 const VISIBILITY_OPTIONS = ["gm", "players"] as const;
@@ -106,6 +108,7 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
   const [actorApproval, setActorApproval] = useState<"approved" | "unapproved" | "rejected">("unapproved");
   const [actorBusy, setActorBusy] = useState(false);
   const [actorResult, setActorResult] = useState<ImportResponse | null>(null);
+  const [actorPreviews, setActorPreviews] = useState<ActorPreviewEntry[] | null>(null);
 
   async function runWaImport() {
     let json: unknown;
@@ -165,11 +168,32 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
     }
   }
 
+  async function previewActorImport() {
+    let json: unknown;
+    try { json = JSON.parse(actorJson); } catch { setActorResult({ results: [], created: 0, updated: 0, errors: 0, total: 0, error: "Invalid JSON. Paste Foundry Actor JSON." }); return; }
+    setActorBusy(true);
+    setActorResult(null);
+    setActorPreviews(null);
+    try {
+      const res = await fetch(`${api}/imports/foundry-actors`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ json, visibility: actorVisibility, approvalStatus: actorApproval, preview: true })
+      });
+      const data = await res.json();
+      if (data.previews) setActorPreviews(data.previews);
+      else setActorResult(data);
+    } finally {
+      setActorBusy(false);
+    }
+  }
+
   async function runActorImport() {
     let json: unknown;
     try { json = JSON.parse(actorJson); } catch { setActorResult({ results: [], created: 0, updated: 0, errors: 0, total: 0, error: "Invalid JSON. Paste Foundry Actor JSON." }); return; }
     setActorBusy(true);
     setActorResult(null);
+    setActorPreviews(null);
     try {
       const res = await fetch(`${api}/imports/foundry-actors`, {
         method: "POST",
@@ -480,9 +504,56 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
               rows={12}
             />
 
-            <button onClick={runActorImport} disabled={actorBusy || !actorJson.trim()}>
-              {actorBusy ? "Importing…" : "Import actors"}
-            </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="secondary" onClick={previewActorImport} disabled={actorBusy || !actorJson.trim()}>
+                {actorBusy ? "Checking…" : "Preview changes"}
+              </button>
+              <button onClick={runActorImport} disabled={actorBusy || !actorJson.trim()}>
+                {actorBusy ? "Importing…" : "Import actors"}
+              </button>
+            </div>
+
+            {actorPreviews && !actorResult && (
+              <div className="actor-preview-list">
+                <p className="import-preview-header">
+                  <strong>{actorPreviews.length} actor{actorPreviews.length === 1 ? "" : "s"} found</strong>
+                  {" — "}
+                  {actorPreviews.filter((p) => p.isNew).length} new,{" "}
+                  {actorPreviews.filter((p) => !p.isNew && (p.changes.length > 0 || p.bodyChanged)).length} changed,{" "}
+                  {actorPreviews.filter((p) => !p.isNew && p.changes.length === 0 && !p.bodyChanged).length} unchanged
+                </p>
+                {actorPreviews.map((entry) => (
+                  <div key={entry.slug} className={`actor-preview-card${entry.isNew ? " is-new" : entry.changes.length === 0 && !entry.bodyChanged ? " is-same" : " is-changed"}`}>
+                    <div className="actor-preview-name">
+                      <span className={`actor-preview-badge${entry.isNew ? " new" : entry.changes.length === 0 && !entry.bodyChanged ? " same" : " changed"}`}>
+                        {entry.isNew ? "new" : entry.changes.length === 0 && !entry.bodyChanged ? "same" : "changed"}
+                      </span>
+                      {entry.name}
+                      <span className="muted" style={{ fontSize: 11, marginLeft: 6 }}>/{entry.slug}</span>
+                    </div>
+                    {entry.changes.map((c) => (
+                      <div key={c.field} className="actor-preview-field">
+                        <span className="actor-preview-field-name">{c.field}</span>
+                        <span className="actor-preview-before">{c.before || "(empty)"}</span>
+                        <span className="actor-preview-arrow">→</span>
+                        <span className="actor-preview-after">{c.after || "(empty)"}</span>
+                      </div>
+                    ))}
+                    {entry.bodyChanged && (
+                      <div className="actor-preview-field">
+                        <span className="actor-preview-field-name">body</span>
+                        <span className="actor-preview-before">{entry.bodyBefore} chars</span>
+                        <span className="actor-preview-arrow">→</span>
+                        <span className="actor-preview-after">{entry.bodyAfter} chars</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <button style={{ marginTop: 8 }} onClick={runActorImport} disabled={actorBusy}>
+                  {actorBusy ? "Importing…" : `Confirm import (${actorPreviews.length})`}
+                </button>
+              </div>
+            )}
 
             {actorResult && <ImportResultPanel result={actorResult} api={`/campaigns/${campaignId}`} />}
           </>}
