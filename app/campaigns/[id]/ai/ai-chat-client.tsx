@@ -118,7 +118,7 @@ export default function AIChatClient({ campaign, pages }: { campaign: Campaign; 
               <div className="ai-message-content ai-thinking">Thinking…</div>
             </div>
           )}
-          {error && <div className="ai-error">{error} — <Link href={`/campaigns/${campaign.id}/settings`} className="link">AI Settings</Link></div>}
+          {error && <div className="ai-error">{error} — <Link href={`/campaigns/${campaign.id}/generate`} className="link">AI Settings</Link></div>}
           <div ref={bottomRef} />
         </div>
 

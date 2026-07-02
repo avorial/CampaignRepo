@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
-import { CAMPAIGN_AI_CONFIG_PATH, maskAiConfig, readCampaignAiConfig } from "@/lib/ai-config";
+import { CAMPAIGN_AI_CONFIG_PATH, getEffectiveAiConfig, maskAiConfig } from "@/lib/ai-config";
 import { getStorageAdapter } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +29,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const storage = getStorageAdapter(campaign, user.githubToken);
   if (!storage) return NextResponse.json({ config: {} });
   try {
-    const config = await readCampaignAiConfig(storage);
+    const config = await getEffectiveAiConfig(user.id, storage);
     return NextResponse.json({ config: maskAiConfig(config) });
   } catch (error) {
     throw error;

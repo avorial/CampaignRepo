@@ -49,6 +49,8 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
         <div className="topbar-actions">
           <Link className="button secondary" href={`/campaigns/${campaign.id}/overview`}>Overview</Link>
           <Link className="button secondary" href={`/campaigns/${campaign.id}/player`}>Player Portal</Link>
+          {(campaign.role === "owner" || campaign.role === "gm") && <Link className="button secondary" href={`/campaigns/${campaign.id}/ai`}>AI Assistant</Link>}
+          {(campaign.role === "owner" || campaign.role === "gm") && <Link className="button secondary" href={`/campaigns/${campaign.id}/generate`}>Generate</Link>}
           {(campaign.role === "owner" || campaign.role === "gm") && <Link className="button secondary" href={`/campaigns/${campaign.id}/sessions`}>Sessions</Link>}
           {(campaign.role === "owner" || campaign.role === "gm") && <Link className="button secondary" href={`/campaigns/${campaign.id}/quests`}>Quests</Link>}
           {(campaign.role === "owner" || campaign.role === "gm") && <Link className="button secondary" href={`/campaigns/${campaign.id}/calendar`}>Calendar</Link>}
