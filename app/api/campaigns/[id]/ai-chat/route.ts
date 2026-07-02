@@ -2,12 +2,11 @@
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
-import { getStorageAdapter, isNotFoundError } from "@/lib/storage";
+import { chatCompletionsUrl, getEffectiveAiConfig } from "@/lib/ai-config";
+import { getStorageAdapter } from "@/lib/storage";
 import { readPageCache } from "@/lib/page-cache";
 
 export const dynamic = "force-dynamic";
-
-const CONFIG_PATH = "wiki/.ai-config.json";
 
 const messageSchema = z.object({
   role: z.enum(["user", "assistant"]),
@@ -18,16 +17,6 @@ const bodySchema = z.object({
   messages: z.array(messageSchema).min(1).max(40),
   contextSlugs: z.array(z.string()).default([])
 });
-
-async function readAIConfig(storage: NonNullable<ReturnType<typeof getStorageAdapter>>) {
-  try {
-    const file = await storage.getTextFile(CONFIG_PATH);
-    return JSON.parse(file.text) as { endpoint?: string; model?: string; apiKey?: string };
-  } catch (e) {
-    if (isNotFoundError(e)) return {};
-    throw e;
-  }
-}
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -41,9 +30,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const input = bodySchema.parse(await req.json());
 
-  const aiConfig = await readAIConfig(storage);
+  const aiConfig = await getEffectiveAiConfig(user.id, storage);
   if (!aiConfig.endpoint) {
-    return NextResponse.json({ error: "AI endpoint not configured. Set it up in Campaign Settings → AI." }, { status: 400 });
+    return NextResponse.json({ error: "AI endpoint not configured. Set it up on the dashboard or override it in campaign AI settings." }, { status: 400 });
   }
 
   // Build context from page cache
@@ -79,7 +68,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (aiConfig.apiKey) headers["Authorization"] = `Bearer ${aiConfig.apiKey}`;
 
-  const res = await fetch(`${endpoint}/v1/chat/completions`, {
+  const res = await fetch(chatCompletionsUrl(endpoint), {
     method: "POST",
     headers,
     body: JSON.stringify({

@@ -4,7 +4,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { slugify } from "@/lib/slug";
-import type { ApiToken, Campaign, CampaignInvite, CampaignMembership, CampaignRole, SearchDocument, User } from "@/lib/types";
+import type { AiConfig, ApiToken, Campaign, CampaignInvite, CampaignMembership, CampaignRole, SearchDocument, User } from "@/lib/types";
 
 const dataDir = path.join(process.cwd(), "data");
 // CAMPAIGNREPO_DB lets tests point at an in-memory (":memory:") database.
@@ -86,6 +86,14 @@ CREATE TABLE IF NOT EXISTS api_tokens (
   tokenHash TEXT NOT NULL UNIQUE,
   createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   lastUsedAt TEXT,
+  FOREIGN KEY (userId) REFERENCES users(id)
+);
+CREATE TABLE IF NOT EXISTS user_ai_settings (
+  userId INTEGER PRIMARY KEY,
+  endpoint TEXT,
+  model TEXT,
+  apiKey TEXT,
+  updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (userId) REFERENCES users(id)
 );
 CREATE TABLE IF NOT EXISTS app_settings (
@@ -314,6 +322,30 @@ export function getUserByApiToken(token: string): User | null {
   if (!row) return null;
   db.prepare("UPDATE api_tokens SET lastUsedAt = CURRENT_TIMESTAMP WHERE tokenHash = ?").run(hash);
   return publicUser(row);
+}
+
+export function getUserAiSettings(userId: number): AiConfig {
+  const row = db.prepare("SELECT endpoint, model, apiKey FROM user_ai_settings WHERE userId = ?").get(userId) as AiConfig | undefined;
+  return row || {};
+}
+
+export function setUserAiSettings(userId: number, config: AiConfig): AiConfig {
+  const existing = getUserAiSettings(userId);
+  const next = {
+    endpoint: config.endpoint ?? existing.endpoint ?? "",
+    model: config.model ?? existing.model ?? "",
+    apiKey: config.apiKey !== undefined ? (config.apiKey.startsWith("••") ? (existing.apiKey || "") : config.apiKey) : (existing.apiKey || "")
+  };
+  db.prepare(
+    `INSERT INTO user_ai_settings (userId, endpoint, model, apiKey, updatedAt)
+     VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+     ON CONFLICT(userId) DO UPDATE SET
+       endpoint = excluded.endpoint,
+       model = excluded.model,
+       apiKey = excluded.apiKey,
+       updatedAt = CURRENT_TIMESTAMP`
+  ).run(userId, next.endpoint, next.model, next.apiKey);
+  return next;
 }
 
 export type PublicSiteRow = { campaignId: number; slug: string; enabled: boolean; createdAt: string };

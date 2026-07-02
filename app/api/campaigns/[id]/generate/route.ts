@@ -2,7 +2,8 @@
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
-import { getStorageAdapter, isNotFoundError } from "@/lib/storage";
+import { chatCompletionsUrl, getEffectiveAiConfig } from "@/lib/ai-config";
+import { getStorageAdapter } from "@/lib/storage";
 import { readPageCache } from "@/lib/page-cache";
 import {
   generateNPC, generateSettlement, generateFaction, generateRumor, generateEncounter,
@@ -11,24 +12,12 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const CONFIG_PATH = "wiki/.ai-config.json";
-
 const schema = z.object({
   type: z.enum(["npc", "settlement", "faction", "rumor", "encounter"]),
   mode: z.enum(["random", "ai"]).default("random"),
   contextSlugs: z.array(z.string()).default([]),
   seed: z.number().int().optional()
 });
-
-async function readAIConfig(storage: NonNullable<ReturnType<typeof getStorageAdapter>>) {
-  try {
-    const file = await storage.getTextFile(CONFIG_PATH);
-    return JSON.parse(file.text) as { endpoint?: string; model?: string; apiKey?: string };
-  } catch (e) {
-    if (isNotFoundError(e)) return {};
-    throw e;
-  }
-}
 
 async function callAI(config: { endpoint?: string; model?: string; apiKey?: string }, prompt: string, systemPrompt: string): Promise<string> {
   const endpoint = (config.endpoint || "").replace(/\/$/, "");
@@ -37,7 +26,7 @@ async function callAI(config: { endpoint?: string; model?: string; apiKey?: stri
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (config.apiKey) headers["Authorization"] = `Bearer ${config.apiKey}`;
 
-  const res = await fetch(`${endpoint}/v1/chat/completions`, {
+  const res = await fetch(chatCompletionsUrl(endpoint), {
     method: "POST",
     headers,
     body: JSON.stringify({
@@ -88,7 +77,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   // AI mode
-  const aiConfig = await readAIConfig(storage);
+  const aiConfig = await getEffectiveAiConfig(user.id, storage);
   if (!aiConfig.endpoint) {
     return NextResponse.json({ result: randomResult(), mode: "random", warning: "AI endpoint not configured — falling back to random tables." });
   }

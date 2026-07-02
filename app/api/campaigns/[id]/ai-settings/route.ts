@@ -2,11 +2,10 @@
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
-import { getStorageAdapter, isNotFoundError } from "@/lib/storage";
+import { CAMPAIGN_AI_CONFIG_PATH, maskAiConfig, readCampaignAiConfig } from "@/lib/ai-config";
+import { getStorageAdapter } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
-
-const CONFIG_PATH = "wiki/.ai-config.json";
 
 const schema = z.object({
   endpoint: z.string().url().or(z.literal("")).optional(),
@@ -30,12 +29,10 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const storage = getStorageAdapter(campaign, user.githubToken);
   if (!storage) return NextResponse.json({ config: {} });
   try {
-    const file = await storage.getTextFile(CONFIG_PATH);
-    const config = JSON.parse(file.text) as Record<string, string>;
-    return NextResponse.json({ config: { endpoint: config.endpoint || "", model: config.model || "", apiKey: config.apiKey ? "••••••••" : "" } });
-  } catch (e) {
-    if (isNotFoundError(e)) return NextResponse.json({ config: {} });
-    throw e;
+    const config = await readCampaignAiConfig(storage);
+    return NextResponse.json({ config: maskAiConfig(config) });
+  } catch (error) {
+    throw error;
   }
 }
 
@@ -51,7 +48,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   let existing: { endpoint?: string; model?: string; apiKey?: string } = {};
   let sha: string | undefined;
   try {
-    const file = await storage.getTextFile(CONFIG_PATH);
+    const file = await storage.getTextFile(CAMPAIGN_AI_CONFIG_PATH);
     existing = JSON.parse(file.text);
     sha = file.sha;
   } catch { /* new file */ }
@@ -62,6 +59,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     apiKey: input.apiKey !== undefined ? (input.apiKey.startsWith("••") ? (existing.apiKey || "") : input.apiKey) : (existing.apiKey || "")
   };
 
-  await storage.putFile(CONFIG_PATH, JSON.stringify(config, null, 2), "CampaignRepo: update AI config", sha);
-  return NextResponse.json({ config: { endpoint: config.endpoint, model: config.model, apiKey: config.apiKey ? "••••••••" : "" } });
+  await storage.putFile(CAMPAIGN_AI_CONFIG_PATH, JSON.stringify(config, null, 2), "CampaignRepo: update AI config", sha);
+  return NextResponse.json({ config: maskAiConfig(config) });
 }

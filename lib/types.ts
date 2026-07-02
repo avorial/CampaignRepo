@@ -87,6 +87,12 @@ export type ApiToken = {
   lastUsedAt: string | null;
 };
 
+export type AiConfig = {
+  endpoint?: string;
+  model?: string;
+  apiKey?: string;
+};
+
 export type CampaignMembership = {
   id: number;
   campaignId: number;

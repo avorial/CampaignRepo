@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { Lock } from "lucide-react";
-import type { ApiToken, Campaign, User } from "@/lib/types";
+import type { AiConfig, ApiToken, Campaign, User } from "@/lib/types";
 import { gameTypeGroups } from "@/lib/templates";
 import { darkPlatePacks, gamePackLogos } from "@/lib/game-pack-branding";
 
@@ -32,9 +32,15 @@ export default function DashboardClient({
   const [newToken, setNewToken] = useState("");
   const [reviewGroups, setReviewGroups] = useState<any[]>([]);
   const [repoView, setRepoView] = useState<"grid" | "marquee">("grid");
+  const [personalAi, setPersonalAi] = useState<AiConfig>({});
+  const [aiEndpoint, setAiEndpoint] = useState("");
+  const [aiModel, setAiModel] = useState("");
+  const [aiKey, setAiKey] = useState("");
+  const [aiSaving, setAiSaving] = useState(false);
   const [expandedPanels, setExpandedPanels] = useState({
     github: false,
     build: true,
+    ai: false,
     mcp: false
   });
   const mcpUrl = typeof window !== "undefined" ? `${window.location.origin}/api/mcp` : "/api/mcp";
@@ -55,6 +61,15 @@ export default function DashboardClient({
     fetch("/api/reviews")
       .then((res) => res.json())
       .then((data) => setReviewGroups(data.campaigns || []));
+    fetch("/api/ai-settings")
+      .then((res) => res.json())
+      .then((data) => {
+        const config = data.config || {};
+        setPersonalAi(config);
+        setAiEndpoint(config.endpoint || "");
+        setAiModel(config.model || "");
+        setAiKey(config.apiKey || "");
+      });
   }, []);
 
   async function mintToken(event: FormEvent<HTMLFormElement>) {
@@ -119,6 +134,25 @@ export default function DashboardClient({
     const res = await fetch(`/api/search?q=${encodeURIComponent(String(q || ""))}`);
     const data = await res.json();
     setSearch(data.results || []);
+  }
+
+  async function savePersonalAi(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAiSaving(true);
+    const res = await fetch("/api/ai-settings", {
+      method: "PUT",
+      body: JSON.stringify({ endpoint: aiEndpoint, model: aiModel, apiKey: aiKey })
+    });
+    const data = await res.json();
+    setAiSaving(false);
+    if (res.ok) {
+      setPersonalAi(data.config || {});
+      setAiKey(data.config?.apiKey || "");
+      setMessage("Personal AI endpoint saved.");
+      setPanelOpen("ai", false);
+    } else {
+      setMessage(data.error || "Could not save personal AI endpoint.");
+    }
   }
 
   return (
@@ -331,6 +365,37 @@ export default function DashboardClient({
                 {mode === "create" ? "Create and initialize" : mode === "local" ? "Create campaign" : "Connect and initialize"}
               </button>
               {buildError && <p className="error">{buildError}</p>}
+            </form>
+          </div>
+        </details>
+
+        <details className="panel dashboard-toggle-panel" open={expandedPanels.ai} onToggle={(event) => setPanelOpen("ai", event.currentTarget.open)}>
+          <summary>
+            <span>Personal AI</span>
+            <small>{personalAi.endpoint ? `Local AI ready · ${personalAi.model || "llama3.2"}` : "Local project AI"}</small>
+          </summary>
+          <div className="dashboard-toggle-body">
+            <p className="muted">
+              Set your default OpenAI-compatible endpoint for every project. Campaign-specific AI settings can still override this.
+            </p>
+            <form onSubmit={savePersonalAi} className="stack" style={{ marginTop: 4 }}>
+              <label>
+                Endpoint
+                <input value={aiEndpoint} onChange={(e) => setAiEndpoint(e.target.value)} placeholder="http://localhost:11434/v1" />
+              </label>
+              <label>
+                Model
+                <input value={aiModel} onChange={(e) => setAiModel(e.target.value)} placeholder="llama3.2" />
+              </label>
+              <label>
+                API key <span className="muted" style={{ fontWeight: 400 }}>(leave blank for Ollama / local endpoints)</span>
+                <input value={aiKey} onChange={(e) => setAiKey(e.target.value)} type="password" placeholder="optional" />
+              </label>
+              <div className="setup-callout">
+                <strong>Local AI examples</strong>
+                <span>Ollama: <code>http://localhost:11434/v1</code>. LM Studio: use its OpenAI-compatible server URL.</span>
+              </div>
+              <button disabled={aiSaving}>{aiSaving ? "Saving..." : "Save personal AI"}</button>
             </form>
           </div>
         </details>
