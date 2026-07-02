@@ -4,7 +4,7 @@ import crypto from "node:crypto";
 import type { Campaign, GameType } from "@/lib/types";
 import type { StorageAdapter, StorageCommit, StorageDirEntry, StorageTextEntry } from "@/lib/storage";
 import { StorageError } from "@/lib/storage";
-import { campaignYaml, repoReadme } from "@/lib/templates";
+import { campaignYaml, repoReadme, starterPages } from "@/lib/templates";
 import { packFor } from "@/lib/template-packs";
 import { serializePage } from "@/lib/markdown";
 
@@ -202,6 +202,13 @@ export class LocalFolderAdapter implements StorageAdapter {
       await this.ensureFile(
         `wiki/templates/${campaign.gameType}/${def.slug}.md`,
         serializePage(def.frontmatter, def.body),
+        ""
+      );
+    }
+    for (const page of starterPages(campaign.name)) {
+      await this.ensureFile(
+        `wiki/pages/${page.slug}.md`,
+        serializePage(page.frontmatter, page.body),
         ""
       );
     }
