@@ -1,8 +1,22 @@
 # CampaignRepo
 
-CampaignRepo is a Git-backed campaign platform for tabletop RPG game masters. Every campaign lives in a normal repository — GitHub or a local folder — and a purpose-built web app turns that repository into a wiki, map viewer, session workspace, relationship graph, calendar, and more. The Markdown files stay portable; nothing requires CampaignRepo to read them.
+CampaignRepo is a Git-backed campaign platform for tabletop RPG game masters. Every campaign lives in a normal repository - GitHub or a local folder - and a purpose-built web app turns that repository into a wiki, map viewer, session workspace, relationship graph, calendar, and more. The Markdown files stay portable; nothing requires CampaignRepo to read them.
 
-GMs get version history, private notes, a review queue, and full control over what players see. Players get a clean portal that only exposes approved, player-safe lore — no GitHub account needed.
+GMs get version history, private notes, a review queue, and full control over what players see. Players get a clean portal that only exposes approved, player-safe lore - no GitHub account needed.
+
+## Where We Are Now
+
+CampaignRepo is now a usable campaign management app, not just a wiki prototype.
+The current app supports local-folder and GitHub-backed campaigns; private GM
+workspaces; player-safe portals; public published worlds; public campaign
+discovery and cloning; session planning; quest tracking; fantasy calendars;
+maps; relationship graphs; manuscripts; boards; lexicons; AI tools; MCP access;
+and Docker/GHCR deployment.
+
+The biggest remaining product gaps are broader character sheets beyond
+Traveller, a unified migration/export workflow, Maps 2.0, mobile/accessibility
+polish, offline/PWA support, and the public-world fork/pull-request ecosystem.
+See [ROADMAP.md](ROADMAP.md) for the cleaned-up shipped/partial/open status.
 
 ## Product Tour
 
@@ -44,9 +58,12 @@ Players see only pages that are both approved and marked player-visible. GM-only
 - Shows a force-directed relationship graph with typed edges, category filters, and a detail panel.
 - Tracks quests with objectives, faction clocks, participant links, and arc grouping.
 - Runs a session workspace with agenda checklists, pinned pages, GM notes, handout queues, and session-to-event report generation.
-- Manages a custom fantasy calendar with configurable months, weekdays, and eras — and a world timeline across sessions and events.
-- Keeps a version history for every page with a diff viewer and one-click restore.
-- Publishes a no-login public site for approved, player-visible lore — shareable and cloneable.
+- Manages a custom fantasy calendar with configurable months, weekdays, and eras - and a world timeline across sessions and events.
+- Keeps a version history for every page with diff and restore-to-editor workflows.
+- Publishes a no-login public site for approved, player-visible lore and quests - shareable and cloneable.
+- Sends in-app notifications for review requests, assignments, mentions, and watched page changes.
+- Imports from Foundry actors, character JSON, Obsidian, Notion, Google Docs, CSV, and other world/journal exports.
+- Offers AI page generation and full-campaign Q&A over Markdown with citations.
 - Exposes an MCP JSON-RPC API for AI tools and external clients.
 
 ## Core Features
@@ -61,8 +78,8 @@ Players see only pages that are both approved and marked player-visible. GM-only
 
 ### Storage Backends
 
-- **Local folder** — no GitHub account required; works offline; compatible with Dropbox, Syncthing, Nextcloud, or OneDrive for optional sync.
-- **GitHub** (recommended) — version history, free offsite backup, collaboration, multi-machine access via GitHub App or personal token.
+- **Local folder** - no GitHub account required; works offline; compatible with Dropbox, Syncthing, Nextcloud, or OneDrive for optional sync.
+- **GitHub** (recommended) - version history, free offsite backup, collaboration, multi-machine access via GitHub App or personal token.
 
 ### Wiki and Editor
 
@@ -102,6 +119,7 @@ Players see only pages that are both approved and marked player-visible. GM-only
 - Quests stored as `wiki/quests/<slug>.md` with status, arc, reward, visibility, objectives, and participant/location links.
 - Faction clocks: SVG ring segments with click-to-fill and configurable segment count.
 - Active quests widget on the campaign overview dashboard.
+- Player-visible quests appear in the player portal and public `/site/<slug>` view.
 
 ### Calendar and World Timeline
 
@@ -142,6 +160,8 @@ Players see only pages that are both approved and marked player-visible. GM-only
 ### Public Site and Discovery
 
 - GMs publish a no-login public site for any campaign at a stable `/site/<slug>` URL.
+- Public link names can be customized from campaign settings.
+- Public sites include approved player-visible pages, media, covers, galleries, wiki links, and player-visible quests.
 - Public gallery at `/site` lists all published worlds, sorted by most-cloned, with name and system search.
 - "Clone this world" copies a published campaign into the viewer's own GitHub repo as a new campaign.
 
@@ -152,9 +172,23 @@ Players see only pages that are both approved and marked player-visible. GM-only
 ### Imports and MCP
 
 - Foundry Actor JSON and generic character JSON import with optional field mapping and source diffing for re-import.
+- Obsidian, Notion, Google Docs, CSV, journal, and world export import routes.
 - Media upload, rename, delete, captions, alt text, tags, and repo-persisted metadata.
 - SQLite full-text search and portable `/wiki/search/index.json` snapshots.
 - MCP JSON-RPC endpoint at `/api/mcp` with tools for search, page reads/creates/updates, templates, media, graph data, review queues, and setup instructions.
+
+### AI Tools
+
+- Random-table generators for NPCs, settlements, factions, rumors, quests, and encounters.
+- Optional OpenAI-compatible endpoint expansion with generated drafts kept unapproved until reviewed.
+- Full-campaign Q&A chat over the search index with page citations.
+
+### Collaboration and Workflow
+
+- Review queue for player-visible drafts.
+- In-app notifications for review requests, assignments, mentions, and watched page changes.
+- Page watches and assignee frontmatter.
+- Presence endpoint foundation for future soft locks and live collaboration.
 
 ### Theming
 
@@ -321,7 +355,8 @@ Recommended stack settings:
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the full feature roadmap and build sequence.
+See [ROADMAP.md](ROADMAP.md) for the current shipped/partial/open feature status
+and the recommended next release sequence.
 
 ## License
 
