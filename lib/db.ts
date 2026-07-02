@@ -162,6 +162,9 @@ if (!publicSiteColumns.some((column) => column.name === "clones")) {
 if (!publicSiteColumns.some((column) => column.name === "description")) {
   db.exec("ALTER TABLE public_sites ADD COLUMN description TEXT");
 }
+if (!publicSiteColumns.some((column) => column.name === "tags")) {
+  db.exec("ALTER TABLE public_sites ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'");
+}
 
 const adminHash = bcrypt.hashSync("admin", 12);
 db.prepare(
@@ -364,23 +367,31 @@ export function getPublicSiteCampaign(slug: string): Campaign | null {
 }
 
 /** Every enabled public campaign, for the public discovery gallery (no auth). */
-export function listPublicSites(): { slug: string; name: string; gameType: string; clones: number; publishedAt: string; description: string | null }[] {
-  return db
+export function listPublicSites(): { slug: string; name: string; gameType: string; clones: number; publishedAt: string; description: string | null; tags: string[] }[] {
+  const rows = db
     .prepare(
       `SELECT public_sites.slug AS slug, campaigns.name AS name, campaigns.gameType AS gameType,
               public_sites.clones AS clones, public_sites.createdAt AS publishedAt,
-              public_sites.description AS description
+              public_sites.description AS description,
+              public_sites.tags AS tags
        FROM public_sites
        JOIN campaigns ON campaigns.id = public_sites.campaignId
        WHERE public_sites.enabled = 1
        ORDER BY public_sites.clones DESC, campaigns.name COLLATE NOCASE`
     )
-    .all() as { slug: string; name: string; gameType: string; clones: number; publishedAt: string; description: string | null }[];
+    .all() as { slug: string; name: string; gameType: string; clones: number; publishedAt: string; description: string | null; tags: string }[];
+  return rows.map((r) => ({ ...r, tags: JSON.parse(r.tags || "[]") as string[] }));
 }
 
 export function updatePublicSiteDescription(userId: number, campaignId: number, description: string | null) {
   if (!canManageCampaign(userId, campaignId)) throw new Error("Forbidden");
   db.prepare("UPDATE public_sites SET description = ? WHERE campaignId = ?").run(description || null, campaignId);
+}
+
+export function updatePublicSiteTags(userId: number, campaignId: number, tags: string[]) {
+  if (!canManageCampaign(userId, campaignId)) throw new Error("Forbidden");
+  const clean = tags.map((t) => t.trim().toLowerCase()).filter(Boolean).slice(0, 10);
+  db.prepare("UPDATE public_sites SET tags = ? WHERE campaignId = ?").run(JSON.stringify(clean), campaignId);
 }
 
 /** Bump a published world's clone counter (drives most-cloned discovery). */

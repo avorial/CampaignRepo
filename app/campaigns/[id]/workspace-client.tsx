@@ -70,6 +70,8 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const [publicSite, setPublicSite] = useState<{ slug: string; enabled: boolean; description?: string | null } | null>(null);
   const [publicLinkName, setPublicLinkName] = useState(publicLinkInput(campaign.name));
   const [publicDescription, setPublicDescription] = useState("");
+  const [publicTagInput, setPublicTagInput] = useState("");
+  const [publicTags, setPublicTags] = useState<string[]>([]);
   const [theme, setTheme] = useState<CampaignTheme>({});
   const [tab, setTab] = useState(campaign.role === "owner" || campaign.role === "gm" ? "pages" : "world");
   const pendingReviews = pages.filter((page) => page.frontmatter.approvalStatus !== "approved").length;
@@ -106,6 +108,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     setPublicSite(publicData.site || null);
     setPublicLinkName(publicData.site?.slug || publicLinkInput(campaign.name));
     setPublicDescription(publicData.site?.description || "");
+    setPublicTags(publicData.site?.tags || []);
     setTheme(themeData.theme || {});
     if (categoriesData.categories?.length) {
       setCampaignCategories(categoriesData.categories);
@@ -174,6 +177,22 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
       setPublicSite((prev) => prev ? { ...prev, description: data.site?.description } : prev);
       setMessage("Gallery description saved.");
     }
+  }
+
+  function addPublicTag() {
+    const tag = publicTagInput.trim().toLowerCase();
+    if (!tag) return;
+    setPublicTags((prev) => (prev.includes(tag) || prev.length >= 10 ? prev : [...prev, tag]));
+    setPublicTagInput("");
+  }
+
+  async function savePublicTags(nextTags: string[]) {
+    setPublicTags(nextTags);
+    const res = await fetch(`/api/campaigns/${campaign.id}/public`, {
+      method: "POST",
+      body: JSON.stringify({ action: "tags", tags: nextTags })
+    });
+    if (res.ok) setMessage("Gallery tags saved.");
   }
 
   async function saveCategories(event: FormEvent<HTMLFormElement>) {
@@ -864,6 +883,32 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
                   </label>
                   <button type="submit" className="secondary">Save description</button>
                 </form>
+                <div className="stack" style={{ marginTop: 12 }}>
+                  <label htmlFor="public-tag-input">Gallery tags <span className="muted" style={{ fontWeight: 400 }}>(genre / tone — help players discover your world)</span></label>
+                  {publicTags.length > 0 && (
+                    <div className="public-tag-list">
+                      {publicTags.map((tag) => (
+                        <span key={tag} className="public-tag-chip">
+                          {tag}
+                          <button type="button" aria-label={`Remove ${tag}`} onClick={() => savePublicTags(publicTags.filter((t) => t !== tag))}>✕</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="public-tag-add">
+                    <input
+                      id="public-tag-input"
+                      value={publicTagInput}
+                      onChange={(e) => setPublicTagInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addPublicTag(); } }}
+                      placeholder="e.g. dark-fantasy, sci-fi, horror"
+                      maxLength={24}
+                      disabled={publicTags.length >= 10}
+                    />
+                    <button type="button" className="secondary" onClick={addPublicTag} disabled={!publicTagInput.trim() || publicTags.length >= 10}>Add tag</button>
+                    <button type="button" onClick={() => savePublicTags(publicTags)}>Save tags</button>
+                  </div>
+                </div>
               </>
             ) : (
               <p className="muted">{publicSite ? "This world is currently offline. Re-publish to bring it back at its existing link." : "Not published yet."}</p>

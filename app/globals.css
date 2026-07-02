@@ -5582,6 +5582,92 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   margin-top: 6px;
 }
 
+.gallery-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.gallery-tag-chip {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-faint);
+  border-radius: 20px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: var(--text-label-sm);
+  padding: 0.2rem 0.6rem;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.gallery-tag-chip:hover,
+.gallery-tag-chip.active {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.gallery-card-tags {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.gallery-card-tag {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-faint);
+  border-radius: 12px;
+  color: var(--text-tertiary) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 10px !important;
+  letter-spacing: 0 !important;
+  padding: 1px 7px;
+  text-transform: none !important;
+}
+
+/* ---- Public site tag editor ---- */
+.public-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.public-tag-chip {
+  align-items: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  color: var(--text-secondary);
+  display: inline-flex;
+  font-size: var(--text-sm);
+  gap: 6px;
+  padding: 0.2rem 0.5rem 0.2rem 0.7rem;
+}
+
+.public-tag-chip button {
+  background: none;
+  border: 0;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0;
+}
+
+.public-tag-chip button:hover {
+  color: var(--danger);
+}
+
+.public-tag-add {
+  display: flex;
+  gap: 6px;
+}
+
+.public-tag-add input {
+  flex: 1;
+  min-width: 0;
+}
+
 /* ---- Relationship graph explorer ---- */
 .graph-shell {
   display: grid;
