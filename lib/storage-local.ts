@@ -65,7 +65,8 @@ export class LocalFolderAdapter implements StorageAdapter {
     const full = this.resolve(filePath);
     try {
       const buffer = await fs.readFile(full);
-      return { bytes: buffer.buffer as ArrayBuffer, contentType: mimeFromPath(filePath) };
+      const bytes = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
+      return { bytes, contentType: mimeFromPath(filePath) };
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code === "ENOENT") throw new StorageError(`Not found: ${filePath}`, 404);
       throw e;

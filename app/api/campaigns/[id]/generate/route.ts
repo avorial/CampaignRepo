@@ -16,7 +16,8 @@ const schema = z.object({
   type: z.enum(["npc", "settlement", "faction", "rumor", "encounter"]),
   mode: z.enum(["random", "ai"]).default("random"),
   contextSlugs: z.array(z.string()).default([]),
-  seed: z.number().int().optional()
+  seed: z.number().int().optional(),
+  promptBrief: z.string().trim().max(4000).optional()
 });
 
 async function callAI(config: { endpoint?: string; model?: string; apiKey?: string }, prompt: string, systemPrompt: string): Promise<string> {
@@ -103,7 +104,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   };
   const systemPrompt = `You are a tabletop RPG game master assistant helping create campaign content for a ${campaign.gameType} campaign called "${campaign.name}". Generate evocative, specific, and usable content. Respond with plain prose — no preamble, no explanation, just the generated content.`;
   const randomBase = randomResult();
-  const prompt = `Generate ${TYPE_LABELS[input.type]} for my campaign. Use this as a starting point, but make it your own:\n\n${randomBase.content}${contextText}\n\nWrite a short but specific description (3-5 sentences) that could be dropped directly into a campaign wiki. Give the ${input.type} a name if it needs one. Be concrete and evocative.`;
+  const promptHelp = input.promptBrief ? `\n\nGM direction:\n${input.promptBrief}` : "";
+  const prompt = `Generate ${TYPE_LABELS[input.type]} for my campaign. Use this as a starting point, but make it your own:\n\n${randomBase.content}${contextText}${promptHelp}\n\nWrite a short but specific description (3-5 sentences) that could be dropped directly into a campaign wiki. Give the ${input.type} a name if it needs one. Be concrete and evocative.`;
 
   try {
     const aiContent = await callAI(aiConfig, prompt, systemPrompt);

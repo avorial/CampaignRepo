@@ -7,6 +7,7 @@ type GenType = "npc" | "settlement" | "faction" | "rumor" | "encounter";
 type GenMode = "random" | "ai";
 type GenResult = { name: string; category: string; content: string };
 type AIConfig = { endpoint?: string; model?: string; apiKey?: string };
+type PromptPreset = "mystery" | "political" | "danger" | "wonder" | "quiet";
 
 const GEN_TYPES: { id: GenType; label: string; icon: string; hint: string }[] = [
   { id: "npc", label: "NPC", icon: "👤", hint: "Name, occupation, trait, secret, goal" },
@@ -14,6 +15,14 @@ const GEN_TYPES: { id: GenType; label: string; icon: string; hint: string }[] = 
   { id: "faction", label: "Faction", icon: "⚔️", hint: "Name, goal, method, resource" },
   { id: "rumor", label: "Rumor", icon: "🗣️", hint: "Overheard gossip with a twist" },
   { id: "encounter", label: "Encounter", icon: "🎲", hint: "Type, terrain, actor, complication" }
+];
+
+const PROMPT_PRESETS: { id: PromptPreset; label: string; direction: string }[] = [
+  { id: "mystery", label: "Mystery", direction: "seed clues, unanswered questions, and one detail that is not what it first appears to be" },
+  { id: "political", label: "Political", direction: "emphasize factions, leverage, public motives, and private agendas" },
+  { id: "danger", label: "Danger", direction: "make the threat immediate, costly, and tied to a hard choice" },
+  { id: "wonder", label: "Wonder", direction: "lean into strange sensory details, discovery, and setting texture" },
+  { id: "quiet", label: "Quiet", direction: "keep it grounded, intimate, and useful at the table without melodrama" }
 ];
 
 export default function GenerateClient({ campaign }: { campaign: Campaign }) {
@@ -29,6 +38,11 @@ export default function GenerateClient({ campaign }: { campaign: Campaign }) {
   const [message, setMessage] = useState("");
   const [creating, setCreating] = useState(false);
   const [createdSlug, setCreatedSlug] = useState("");
+  const [promptPreset, setPromptPreset] = useState<PromptPreset>("mystery");
+  const [promptMustInclude, setPromptMustInclude] = useState("");
+  const [promptAvoid, setPromptAvoid] = useState("");
+  const [promptTone, setPromptTone] = useState("");
+  const [promptShape, setPromptShape] = useState("wiki-ready prose with clear hooks and concrete table-use details");
 
   // Pages for context
   const [pages, setPages] = useState<WikiPage[]>([]);
@@ -63,6 +77,17 @@ export default function GenerateClient({ campaign }: { campaign: Campaign }) {
     setContextSlugs((prev) => { const next = new Set(prev); next.has(slug) ? next.delete(slug) : next.add(slug); return next; });
   }
 
+  const promptBrief = useMemo(() => {
+    const preset = PROMPT_PRESETS.find((item) => item.id === promptPreset);
+    return [
+      preset ? `Direction: ${preset.direction}.` : "",
+      promptTone.trim() ? `Tone: ${promptTone.trim()}.` : "",
+      promptMustInclude.trim() ? `Must include: ${promptMustInclude.trim()}.` : "",
+      promptAvoid.trim() ? `Avoid: ${promptAvoid.trim()}.` : "",
+      promptShape.trim() ? `Output shape: ${promptShape.trim()}.` : ""
+    ].filter(Boolean).join("\n");
+  }, [promptAvoid, promptMustInclude, promptPreset, promptShape, promptTone]);
+
   async function generate() {
     setGenerating(true);
     setResult(null);
@@ -71,7 +96,13 @@ export default function GenerateClient({ campaign }: { campaign: Campaign }) {
     setMessage("");
     const res = await fetch(`${api}/generate`, {
       method: "POST",
-      body: JSON.stringify({ type: genType, mode, contextSlugs: [...contextSlugs], seed: Math.floor(Math.random() * 2 ** 31) })
+      body: JSON.stringify({
+        type: genType,
+        mode,
+        contextSlugs: [...contextSlugs],
+        promptBrief,
+        seed: Math.floor(Math.random() * 2 ** 31)
+      })
     });
     const data = await res.json();
     setGenerating(false);
@@ -179,6 +210,39 @@ export default function GenerateClient({ campaign }: { campaign: Campaign }) {
               </div>
             </details>
           )}
+
+          <details className="prompt-helper" open={mode === "ai"}>
+            <summary>Prompt helper</summary>
+            <div className="prompt-helper-presets">
+              {PROMPT_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  className={promptPreset === preset.id ? "active" : ""}
+                  onClick={() => setPromptPreset(preset.id)}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+            <label>
+              Tone
+              <input value={promptTone} onChange={(e) => setPromptTone(e.target.value)} placeholder="noir, hopeful, courtly, grimy frontier..." />
+            </label>
+            <label>
+              Must include
+              <textarea value={promptMustInclude} onChange={(e) => setPromptMustInclude(e.target.value)} placeholder="Names, places, constraints, secrets, table facts..." rows={4} />
+            </label>
+            <label>
+              Avoid
+              <input value={promptAvoid} onChange={(e) => setPromptAvoid(e.target.value)} placeholder="Tropes, topics, names, power levels..." />
+            </label>
+            <label>
+              Output shape
+              <input value={promptShape} onChange={(e) => setPromptShape(e.target.value)} />
+            </label>
+            {promptBrief && <pre className="prompt-helper-brief">{promptBrief}</pre>}
+          </details>
 
           <button onClick={generate} disabled={generating} style={{ marginTop: "12px" }}>
             {generating ? "Generating…" : `Generate ${GEN_TYPES.find((t) => t.id === genType)?.label}`}

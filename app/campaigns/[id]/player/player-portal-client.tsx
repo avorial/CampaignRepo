@@ -1,6 +1,6 @@
 "use client";
 
-import { MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { Campaign, WikiPage } from "@/lib/types";
 import { renderMarkdown, type IncludeResolver, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
@@ -17,6 +17,11 @@ export default function PlayerPortalClient({ campaign, categories }: { campaign:
   const [selectedSlug, setSelectedSlug] = useState("");
   const [query, setQuery] = useState("");
   const [message, setMessage] = useState("");
+  const [suggestTitle, setSuggestTitle] = useState("");
+  const [suggestCategory, setSuggestCategory] = useState(categories[0]?.id || "lore");
+  const [suggestSummary, setSuggestSummary] = useState("");
+  const [suggestContent, setSuggestContent] = useState("");
+  const [suggestSubmitting, setSuggestSubmitting] = useState(false);
   const [quests, setQuests] = useState<PlayerQuest[]>([]);
   const [questsLoaded, setQuestsLoaded] = useState(false);
 
@@ -109,6 +114,34 @@ export default function PlayerPortalClient({ campaign, categories }: { campaign:
     setMessage("Copied player portal link.");
   }
 
+  async function submitSuggestion(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSuggestSubmitting(true);
+    setMessage("");
+    try {
+      const response = await fetch(`/api/campaigns/${campaign.id}/suggestions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: suggestTitle,
+          category: suggestCategory,
+          summary: suggestSummary,
+          content: suggestContent
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not submit suggestion.");
+      setSuggestTitle("");
+      setSuggestSummary("");
+      setSuggestContent("");
+      setMessage("Suggestion submitted for GM review.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not submit suggestion.");
+    } finally {
+      setSuggestSubmitting(false);
+    }
+  }
+
   const activeQuests = quests.filter((q) => q.frontmatter.status === "active" || q.frontmatter.status === "hook");
   const doneQuests = quests.filter((q) => q.frontmatter.status === "completed" || q.frontmatter.status === "failed");
 
@@ -141,6 +174,30 @@ export default function PlayerPortalClient({ campaign, categories }: { campaign:
               ))}
               {!filteredPages.length && <p className="muted">No approved player-visible pages match.</p>}
             </div>
+            <form className="player-suggestion-form" onSubmit={submitSuggestion}>
+              <h3>Suggest an Addition</h3>
+              <label>
+                Title
+                <input value={suggestTitle} onChange={(event) => setSuggestTitle(event.target.value)} placeholder="Name or topic" required />
+              </label>
+              <label>
+                Category
+                <select value={suggestCategory} onChange={(event) => setSuggestCategory(event.target.value)}>
+                  {categories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}
+                </select>
+              </label>
+              <label>
+                Summary
+                <input value={suggestSummary} onChange={(event) => setSuggestSummary(event.target.value)} placeholder="Optional short note" />
+              </label>
+              <label>
+                Details
+                <textarea value={suggestContent} onChange={(event) => setSuggestContent(event.target.value)} placeholder="What should the GM review?" rows={6} required />
+              </label>
+              <button type="submit" disabled={suggestSubmitting || !suggestTitle.trim() || suggestContent.trim().length < 10}>
+                {suggestSubmitting ? "Submitting..." : "Send to GM"}
+              </button>
+            </form>
           </aside>
 
           <article className="player-reader panel">
