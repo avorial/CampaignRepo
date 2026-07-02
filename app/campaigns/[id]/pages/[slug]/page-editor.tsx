@@ -131,6 +131,10 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
   const [pageCalendar, setPageCalendar] = useState<{ months: { name: string; days: number }[]; weekdays: string[]; eraName?: string; currentDate: { year: number; month: number; day: number } } | null>(null);
   const [watching, setWatching] = useState(false);
   const [watchLoading, setWatchLoading] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareLinks, setShareLinks] = useState<{ id: number; token: string; createdAt: string }[]>([]);
+  const [shareBusy, setShareBusy] = useState(false);
+  const [shareCopied, setShareCopied] = useState<string | null>(null);
 
   useEffect(() => {
     if (!lightboxSrc) return;
@@ -175,6 +179,40 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
     const data = await res.json();
     setWatching(Boolean(data.watching));
     setWatchLoading(false);
+  }
+
+  async function openShare() {
+    setShareOpen(true);
+    if (shareLinks.length === 0) {
+      const res = await fetch(`/api/campaigns/${campaign.id}/pages/${slug}/share`);
+      const data = await res.json();
+      setShareLinks(data.shares || []);
+    }
+  }
+
+  async function createShare() {
+    setShareBusy(true);
+    const res = await fetch(`/api/campaigns/${campaign.id}/pages/${slug}/share`, { method: "POST" });
+    const data = await res.json();
+    if (data.share) setShareLinks((prev) => [data.share, ...prev]);
+    setShareBusy(false);
+  }
+
+  async function revokeShare(token: string) {
+    await fetch(`/api/campaigns/${campaign.id}/pages/${slug}/share`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token })
+    });
+    setShareLinks((prev) => prev.filter((s) => s.token !== token));
+  }
+
+  function copyShare(token: string) {
+    const url = `${window.location.origin}/share/${token}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setShareCopied(token);
+      setTimeout(() => setShareCopied(null), 2000);
+    });
   }
 
   const openHistory = useCallback(() => {
@@ -1033,9 +1071,40 @@ notes: ""
             <button type="button" className={watching ? "active" : "secondary"} disabled={watchLoading} onClick={toggleWatch} title={watching ? "Stop watching this page" : "Watch for changes"}>
               {watching ? "Watching" : "Watch"}
             </button>
+            {canManage && (
+              <button type="button" className={shareOpen ? "active" : "secondary"} onClick={shareOpen ? () => setShareOpen(false) : openShare} title="Create a public share link for this page">
+                Share
+              </button>
+            )}
             {canManage && <button type="button" onClick={() => setIsEditing(true)}>Edit page</button>}
             {canManage && <button type="button" className="danger" disabled={isSaving} onClick={deletePage}>Delete page</button>}
           </div>
+          {shareOpen && canManage && (
+            <div className="page-share-panel">
+              <div className="page-share-header">
+                <strong>Share link</strong>
+                <span className="muted" style={{ fontSize: 12 }}>Anyone with the link can view this page — no login required.</span>
+              </div>
+              {shareLinks.length === 0 && !shareBusy && (
+                <p className="muted" style={{ fontSize: 13 }}>No active share links. Create one below.</p>
+              )}
+              {shareLinks.map((s) => {
+                const url = typeof window !== "undefined" ? `${window.location.origin}/share/${s.token}` : `/share/${s.token}`;
+                return (
+                  <div key={s.token} className="page-share-link-row">
+                    <input readOnly value={url} className="page-share-url" onClick={(e) => (e.target as HTMLInputElement).select()} />
+                    <button type="button" className="secondary" onClick={() => copyShare(s.token)}>
+                      {shareCopied === s.token ? "Copied!" : "Copy"}
+                    </button>
+                    <button type="button" className="danger" onClick={() => revokeShare(s.token)}>Revoke</button>
+                  </div>
+                );
+              })}
+              <button type="button" onClick={createShare} disabled={shareBusy} style={{ marginTop: 6 }}>
+                {shareBusy ? "Creating…" : "+ New share link"}
+              </button>
+            </div>
+          )}
           {message && <p className="toast editor-toast">{message}</p>}
           {showHistory ? (
             <div className="page-history">

@@ -222,6 +222,21 @@ CREATE TABLE IF NOT EXISTS fork_proposals (
 );
 `);
 
+// Page share links table
+db.exec(`
+CREATE TABLE IF NOT EXISTS page_shares (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  token TEXT NOT NULL UNIQUE,
+  campaignId INTEGER NOT NULL,
+  slug TEXT NOT NULL,
+  createdBy INTEGER NOT NULL,
+  expiresAt TEXT,
+  createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (campaignId) REFERENCES campaigns(id),
+  FOREIGN KEY (createdBy) REFERENCES users(id)
+);
+`);
+
 // Migrations — safe to run on every start (errors mean column already exists)
 try { db.exec("ALTER TABLE campaign_memberships ADD COLUMN groups TEXT NOT NULL DEFAULT '[]'"); } catch { /* already migrated */ }
 try { db.exec("ALTER TABLE campaigns ADD COLUMN forkOf TEXT"); } catch { /* already migrated */ }
@@ -330,6 +345,10 @@ export function getPublicSite(campaignId: number): PublicSiteRow | null {
 export function getPublicSlugForCampaign(campaignId: number): string | null {
   const row = db.prepare("SELECT slug FROM public_sites WHERE campaignId = ? AND enabled = 1").get(campaignId) as { slug: string } | undefined;
   return row?.slug ?? null;
+}
+
+export function getCampaignByIdPublic(campaignId: number): Campaign | null {
+  return (db.prepare("SELECT * FROM campaigns WHERE id = ?").get(campaignId) as Campaign | undefined) || null;
 }
 
 export function getPublicSiteCampaign(slug: string): Campaign | null {
@@ -837,5 +856,37 @@ export function searchDocs(userId: number, query: string, campaignId?: number, m
     const playerSafe = row.visibility === "players" && row.approvalStatus === "approved";
     return mode === "player" || role === "player" ? playerSafe : true;
   });
+}
+
+// === Page share links ===
+
+export type PageShare = { id: number; token: string; campaignId: number; slug: string; createdBy: number; expiresAt: string | null; createdAt: string };
+
+export function createPageShare(userId: number, campaignId: number, slug: string, expiresAt?: string | null): PageShare {
+  if (!canManageCampaign(userId, campaignId)) throw new Error("Forbidden");
+  const token = crypto.randomBytes(18).toString("base64url");
+  db.prepare(
+    "INSERT INTO page_shares (token, campaignId, slug, createdBy, expiresAt) VALUES (?, ?, ?, ?, ?)"
+  ).run(token, campaignId, slug, userId, expiresAt ?? null);
+  return db.prepare("SELECT * FROM page_shares WHERE token = ?").get(token) as PageShare;
+}
+
+export function getPageShare(token: string): PageShare | null {
+  const row = db.prepare("SELECT * FROM page_shares WHERE token = ?").get(token) as PageShare | undefined;
+  if (!row) return null;
+  if (row.expiresAt && new Date(row.expiresAt) < new Date()) return null;
+  return row;
+}
+
+export function listPageShares(userId: number, campaignId: number, slug: string): PageShare[] {
+  if (!canManageCampaign(userId, campaignId)) return [];
+  return db.prepare("SELECT * FROM page_shares WHERE campaignId = ? AND slug = ? ORDER BY createdAt DESC").all(campaignId, slug) as PageShare[];
+}
+
+export function revokePageShare(userId: number, token: string): void {
+  const row = db.prepare("SELECT * FROM page_shares WHERE token = ?").get(token) as PageShare | undefined;
+  if (!row) return;
+  if (!canManageCampaign(userId, row.campaignId)) throw new Error("Forbidden");
+  db.prepare("DELETE FROM page_shares WHERE token = ?").run(token);
 }
 
