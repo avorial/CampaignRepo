@@ -19,7 +19,7 @@ CampaignRepo currently ships:
   blocks, named secret groups, covers, galleries, and transclusion.
 - Configurable campaign categories and per-game template packs.
 - Media manager with metadata, captions, alt text, tags, and page rendering.
-- Interactive maps with image pins linked to wiki pages.
+- Interactive maps with image pins, player/GM layers, and nested map links.
 - Nested page hierarchy through `parent` frontmatter and collapsible sidebars.
 - Relationship graph with typed relationship frontmatter and inverse labels.
 - Full-text search plus a global command palette.
@@ -28,11 +28,13 @@ CampaignRepo currently ships:
   public quest display.
 - Sessions, quests, fantasy calendar, overview widgets, boards, manuscripts, and
   lexicon/naming tools.
-- Traveller character sheets rendered from markdown/frontmatter, with rolling.
+- Traveller, D&D 5e, and World of Darkness character-sheet renderers, with
+  Traveller rolling and editor controls.
 - Review queue, campaign health center, bulk page organization, notifications,
   assignments, mentions, page watches, and page history/diff/restore workflow.
 - Importers for Foundry actors, generic character JSON, Obsidian, Notion, Google
-  Docs, CSV, journal/world exports, and character re-import diffing.
+  Docs, CSV, journals, Roll20, LegendKeeper, World Anvil, basic ZIP/JSON export,
+  and character re-import diffing.
 - AI generation, AI campaign Q&A, and MCP JSON-RPC tools.
 - Docker/GHCR deployment path.
 
@@ -159,12 +161,15 @@ watch changes. Email and category watches remain future work.
 
 ## In Progress / Partial
 
-### 24. Character sheets across systems - M
+### 24. Character sheets across systems - core shipped, polish remaining
 
-Traveller is functional and polished enough to use. Still needed:
+Traveller, D&D 5e, and World of Darkness markdown sheet blocks render in the
+reader, and the editor can insert sheet scaffolds. Traveller has the most
+complete experience, including inline editing support and rolling. Foundry D&D
+actors can import into D&D sheet blocks. Still needed:
 
-- D&D 5e / Pathfinder sheet renderers and editors.
-- World of Darkness sheet renderers and editors.
+- Full D&D 5e and World of Darkness field editors.
+- Pathfinder sheet renderer and editor.
 - Print views and theme-specific sheet polish.
 - Better import paths from external character generators/VTT exports.
 
@@ -178,24 +183,29 @@ The graph is useful, but the relationship feature still needs:
 - Graph search/highlight and stronger health checks for broken relationship
   targets.
 
-### 26. Import/export and VTT bridges - M-L
+### 26. Import/export and VTT bridges - core shipped, deeper sync remaining
 
-Many importers exist, but this should become a coherent migration/export system:
+The import hub now covers CSV, Foundry journals, Foundry actors, Obsidian,
+Notion, Google Docs, World Anvil, Roll20, LegendKeeper, generic character JSON,
+and character diff previews. A basic CampaignRepo export exists as ZIP or JSON.
+Still needed:
 
-- Guided import UI for all connectors.
-- Roll20, OneNote, LegendKeeper, and stronger World Anvil migration.
-- Portable CampaignRepo export bundle.
-- Re-import previews using source IDs and hashes across every importer.
+- OneNote migration.
+- A full portable export bundle that includes all campaign content, media,
+  sessions, quests, maps, search data, and settings.
+- Re-import previews using source IDs and hashes across every importer, not just
+  character sources.
 - Optional Foundry module push/pull with explicit previews and conflict handling.
 
-### 27. Bulk organization and media cleanup - M
+### 27. Bulk organization and media cleanup - core shipped
 
-Bulk page category/visibility/approval works. Still needed:
+Bulk page category, visibility, approval, parent, and tag editing are live.
+Organize also includes a media table with name/type/tag/unused filters, sorting,
+bulk tag add/remove, and bulk delete. Still needed:
 
-- Bulk parent and tag editing in the UI.
-- Sorting and saved filters.
-- Media table with bulk tags, captions, moves, unused-file cleanup, and large-file
-  checks.
+- Saved page/media filter presets.
+- Bulk media move, rename, and caption editing.
+- More guided cleanup for unused and oversized files.
 
 ### 28. Real-time collaboration and soft locks - M-L
 
@@ -216,24 +226,26 @@ feature still needs:
 - System-specific display templates.
 - VTT/export mapping.
 
-### 30. Publishing ecosystem - M-L
+### 30. Publishing ecosystem - core shipped, community layer remaining
 
-Public sites, gallery, custom slugs, quests, clone flow, fork/pull-request
+Public sites, gallery, custom slugs, quests, clone flow, fork-proposal
 workflow, token-based single-page and quest share links (with OpenGraph
 preview metadata), and gallery filters for system, sort, and tags are live.
 Still needed:
 
 - Rating/recently-updated gallery signals.
 - Community template/campaign library conventions.
+- True cross-repo GitHub pull-request flow for public-world contributions.
 
 ## Still Open
 
-### 31. Maps 2.0 - shipped
+### 31. Maps 2.0 - partial
 
-Layers, nested maps, regions, labels, routes, measuring, journey playback,
-discovered/undiscovered locations (with a GM "player view" fog-of-war preview),
-and health-center validation for broken pins, nested-map links, missing pin
-images, missing map backgrounds, and out-of-bounds routes are all shipped.
+Map pins, player/GM layers, discovered/undiscovered pins, nested map links, and
+health-center validation for broken pins, nested-map links, missing pin images,
+missing map backgrounds, and route integrity are in place. The client has early
+UI for regions, routes, measuring, and journeys, but the save API still needs to
+persist the full 2.0 map model before those can be called shipped.
 
 ### 32. Responsive, accessible, and fast at scale - M
 
@@ -269,35 +281,36 @@ non-technical groups, but should not compromise the own-your-data model.
 
 ## Recommended Next Release Sequence
 
-### Release A - Polish the table experience
+### Release A - Polish character sheets
 
-1. D&D and World of Darkness character sheets.
+1. D&D and World of Darkness sheet editors.
 2. Print/theme polish for sheets.
-3. Better character import paths.
+3. Pathfinder sheet renderer/editor.
+4. Better character import paths.
 
 ### Release B - Connect and migrate
 
-1. Unified import UI.
-2. Portable export bundle.
-3. LegendKeeper/World Anvil/OneNote/Roll20 migration.
-4. Re-import previews across all importers.
+1. Full portable export bundle.
+2. OneNote migration.
+3. Re-import previews across all importers.
+4. Foundry module sync research/prototype.
 
 ### Release C - Publish and share
 
-1. Single-page and quest share links.
-2. Better gallery discovery and tags.
-3. Fork/pull-request workflow for public worlds.
+1. Better gallery discovery, ratings, and recently-updated signals.
+2. Community template/campaign library conventions.
+3. True GitHub pull-request workflow for public worlds.
 
 ### Release D - Scale and reliability
 
 1. Responsive/accessibility pass.
 2. Performance budgets and large-campaign testing.
-3. Media bulk cleanup.
+3. Saved filters and richer media cleanup.
 4. Offline/PWA foundations.
 
 ### Release E - Deeper world systems
 
-1. Maps 2.0.
+1. Complete Maps 2.0 persistence for routes, regions, measuring, and journeys.
 2. Reusable properties/components.
 3. Relationship tree layouts.
 4. Extension and automation rules.

@@ -13,10 +13,10 @@ discovery and cloning; session planning; quest tracking; fantasy calendars;
 maps; relationship graphs; manuscripts; boards; lexicons; AI tools; MCP access;
 and Docker/GHCR deployment.
 
-The biggest remaining product gaps are broader character sheets beyond
-Traveller, a unified migration/export workflow, Maps 2.0, mobile/accessibility
-polish, offline/PWA support, and the public-world fork/pull-request ecosystem.
-See [ROADMAP.md](ROADMAP.md) for the cleaned-up shipped/partial/open status.
+The biggest remaining product gaps are sheet editor polish beyond Traveller,
+full portable exports, Maps 2.0 persistence, mobile/accessibility polish,
+offline/PWA support, and the public-world pull-request ecosystem. See
+[ROADMAP.md](ROADMAP.md) for the cleaned-up shipped/partial/open status.
 
 ## Product Tour
 
@@ -54,7 +54,7 @@ Players see only pages that are both approved and marked player-visible. GM-only
 
 - Stores everything in Git: pages, media, maps, sessions, quests, templates, calendar config, and campaign settings as Markdown and YAML.
 - Renders wiki pages with `[[links]]`, aliases, backlinks, covers, galleries, transclusion, and `:::gm` secret blocks.
-- Provides an interactive map viewer with pins that link to pages and open article panels.
+- Provides an interactive map viewer with pins, player/GM layers, nested map links, and article panels.
 - Shows a force-directed relationship graph with typed edges, category filters, and a detail panel.
 - Tracks quests with objectives, faction clocks, participant links, and arc grouping.
 - Runs a session workspace with agenda checklists, pinned pages, GM notes, handout queues, and session-to-event report generation.
@@ -62,7 +62,8 @@ Players see only pages that are both approved and marked player-visible. GM-only
 - Keeps a version history for every page with diff and restore-to-editor workflows.
 - Publishes a no-login public site for approved, player-visible lore and quests - shareable and cloneable.
 - Sends in-app notifications for review requests, assignments, mentions, and watched page changes.
-- Imports from Foundry actors, character JSON, Obsidian, Notion, Google Docs, CSV, and other world/journal exports.
+- Imports from Foundry actors and journals, character JSON, Obsidian, Notion, Google Docs, CSV, Roll20, LegendKeeper, World Anvil, and other world/journal exports.
+- Exports a basic CampaignRepo bundle as ZIP or JSON.
 - Offers AI page generation and full-campaign Q&A over Markdown with citations.
 - Exposes an MCP JSON-RPC API for AI tools and external clients.
 
@@ -97,8 +98,12 @@ Players see only pages that are both approved and marked player-visible. GM-only
 ### Maps
 
 - Upload a map image and place pins that link to wiki pages.
+- Organize pins into player-visible or GM-only layers.
+- Mark locations discovered/undiscovered and preview the player-safe map view.
+- Link pins to nested maps as well as wiki pages.
 - Click a pin to open an article panel without leaving the map.
 - Pins stored as portable JSON alongside the map image.
+- Early UI exists for routes, regions, measuring, and journeys; the full 2.0 map model still needs complete persistence.
 
 ### Relationship Graph
 
@@ -150,20 +155,25 @@ Players see only pages that are both approved and marked player-visible. GM-only
 
 ### Bulk Organization
 
-- Table view for pages with name and category filter, multi-select, and bulk change of category, visibility, and approval in one commit.
+- Table view for pages with filters, sorting, multi-select, and bulk changes for category, visibility, approval, parent, and tags in one commit.
+- Media table with name/type/tag/unused filters, sorting, bulk tag add/remove, and bulk delete.
 
 ### Character Sheets
 
 - **Traveller (Mongoose 2e)**: characteristics (STR/DEX/END/INT/EDU/SOC) with computed DMs, skills, weapons, armour, equipment, contacts, and credits. Click any characteristic or skill to roll 2D6 + that modifier with an animated result toast.
-- Sheet stored in page frontmatter; rendered in the page reader for Traveller campaigns.
+- **D&D 5e**: fenced `dnd-sheet` YAML blocks render as designed character sheets, and Foundry D&D actor import can create those blocks.
+- **World of Darkness**: fenced `wod-sheet` YAML blocks render World of Darkness style sheets.
+- Traveller has the most complete editor/roller experience today; D&D, World of Darkness, and Pathfinder still need deeper field editors and print polish.
 
 ### Public Site and Discovery
 
 - GMs publish a no-login public site for any campaign at a stable `/site/<slug>` URL.
 - Public link names can be customized from campaign settings.
 - Public sites include approved player-visible pages, media, covers, galleries, wiki links, and player-visible quests.
+- Individual pages and quests can also get token-based public share links at `/share/<token>`.
 - Public gallery at `/site` lists all published worlds, sorted by most-cloned, with name and system search.
 - "Clone this world" copies a published campaign into the viewer's own GitHub repo as a new campaign.
+- Fork proposals are available for public-world collaboration; true cross-repo GitHub pull requests are still roadmap work.
 
 ### Command Palette
 
@@ -172,7 +182,8 @@ Players see only pages that are both approved and marked player-visible. GM-only
 ### Imports and MCP
 
 - Foundry Actor JSON and generic character JSON import with optional field mapping and source diffing for re-import.
-- Obsidian, Notion, Google Docs, CSV, journal, and world export import routes.
+- Foundry journal, Obsidian, Notion, Google Docs, CSV, Roll20, LegendKeeper, World Anvil, and world export import routes.
+- Basic export downloads as ZIP or JSON from the import/export hub.
 - Media upload, rename, delete, captions, alt text, tags, and repo-persisted metadata.
 - SQLite full-text search and portable `/wiki/search/index.json` snapshots.
 - MCP JSON-RPC endpoint at `/api/mcp` with tools for search, page reads/creates/updates, templates, media, graph data, review queues, and setup instructions.
