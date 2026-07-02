@@ -32,7 +32,7 @@ The Rustwood Inn,location,"Roadside tavern in Thornmere","inn,tavern",players,`;
 export default function ImportClient({ campaignId, campaignName }: { campaignId: number; campaignName: string }) {
   const api = `/api/campaigns/${campaignId}`;
 
-  const [activeTab, setActiveTab] = useState<"csv" | "foundry" | "obsidian" | "notion" | "worldanvil" | "googledocs" | "export">("csv");
+  const [activeTab, setActiveTab] = useState<"csv" | "foundry" | "obsidian" | "notion" | "worldanvil" | "googledocs" | "roll20" | "legendkeeper" | "export">("csv");
 
   // Obsidian vault import state
   const [obsidianFiles, setObsidianFiles] = useState<FileEntry[]>([]);
@@ -73,6 +73,21 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
   const [gdApproval, setGdApproval] = useState<"approved" | "unapproved" | "rejected">("unapproved");
   const [gdBusy, setGdBusy] = useState(false);
   const [gdResult, setGdResult] = useState<ImportResponse | null>(null);
+
+  // Roll20 import state
+  const [r20Json, setR20Json] = useState("");
+  const [r20Visibility, setR20Visibility] = useState<"gm" | "players">("gm");
+  const [r20Approval, setR20Approval] = useState<"approved" | "unapproved" | "rejected">("unapproved");
+  const [r20IncludeHandouts, setR20IncludeHandouts] = useState(true);
+  const [r20Busy, setR20Busy] = useState(false);
+  const [r20Result, setR20Result] = useState<ImportResponse | null>(null);
+
+  // LegendKeeper import state
+  const [lkJson, setLkJson] = useState("");
+  const [lkVisibility, setLkVisibility] = useState<"gm" | "players">("gm");
+  const [lkApproval, setLkApproval] = useState<"approved" | "unapproved" | "rejected">("unapproved");
+  const [lkBusy, setLkBusy] = useState(false);
+  const [lkResult, setLkResult] = useState<ImportResponse | null>(null);
 
   // Foundry sub-tab
   const [foundryTab, setFoundryTab] = useState<"journals" | "actors">("journals");
@@ -165,6 +180,56 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
     } finally {
       setActorBusy(false);
     }
+  }
+
+  async function runR20Import() {
+    let json: unknown;
+    try { json = JSON.parse(r20Json); } catch { setR20Result({ results: [], created: 0, updated: 0, errors: 0, total: 0, error: "Invalid JSON. Paste the Roll20 campaign export JSON." }); return; }
+    setR20Busy(true);
+    setR20Result(null);
+    try {
+      const res = await fetch(`${api}/imports/roll20`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ json, visibility: r20Visibility, approvalStatus: r20Approval, includeHandouts: r20IncludeHandouts })
+      });
+      setR20Result(await res.json());
+    } finally {
+      setR20Busy(false);
+    }
+  }
+
+  function loadR20File(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setR20Json((ev.target?.result as string) || "");
+    reader.readAsText(file);
+  }
+
+  async function runLKImport() {
+    let json: unknown;
+    try { json = JSON.parse(lkJson); } catch { setLkResult({ results: [], created: 0, updated: 0, errors: 0, total: 0, error: "Invalid JSON. Paste a LegendKeeper JSON export." }); return; }
+    setLkBusy(true);
+    setLkResult(null);
+    try {
+      const res = await fetch(`${api}/imports/legendkeeper`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ json, visibility: lkVisibility, approvalStatus: lkApproval })
+      });
+      setLkResult(await res.json());
+    } finally {
+      setLkBusy(false);
+    }
+  }
+
+  function loadLKFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setLkJson((ev.target?.result as string) || "");
+    reader.readAsText(file);
   }
 
   function loadActorFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -274,6 +339,8 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
         <button className={`tab-btn${activeTab === "notion" ? " active" : ""}`} onClick={() => setActiveTab("notion")}>Notion</button>
         <button className={`tab-btn${activeTab === "worldanvil" ? " active" : ""}`} onClick={() => setActiveTab("worldanvil")}>World Anvil</button>
         <button className={`tab-btn${activeTab === "googledocs" ? " active" : ""}`} onClick={() => setActiveTab("googledocs")}>Google Docs</button>
+        <button className={`tab-btn${activeTab === "roll20" ? " active" : ""}`} onClick={() => setActiveTab("roll20")}>Roll20</button>
+        <button className={`tab-btn${activeTab === "legendkeeper" ? " active" : ""}`} onClick={() => setActiveTab("legendkeeper")}>LegendKeeper</button>
         <button className={`tab-btn${activeTab === "export" ? " active" : ""}`} onClick={() => setActiveTab("export")}>Export</button>
       </div>
 
@@ -627,6 +694,96 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
           </button>
 
           {gdResult && <ImportResultPanel result={gdResult} api={`/campaigns/${campaignId}`} />}
+        </div>
+      )}
+
+      {activeTab === "roll20" && (
+        <div className="import-panel stack">
+          <div className="import-intro">
+            <p>Import from Roll20. In Roll20, open your campaign, go to <strong>Settings → Export Campaign</strong> and download the JSON backup. Paste or upload it here.</p>
+            <p className="muted" style={{ fontSize: "12px" }}>
+              Imports characters and optionally handouts. Character bio and GM notes are converted to Markdown. GM notes are placed in a GM-only block. Attribute list is used to generate a stat summary.
+            </p>
+          </div>
+
+          <div className="import-options">
+            <label>Visibility
+              <select value={r20Visibility} onChange={(e) => setR20Visibility(e.target.value as "gm" | "players")}>
+                {VISIBILITY_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </label>
+            <label>Approval status
+              <select value={r20Approval} onChange={(e) => setR20Approval(e.target.value as "approved" | "unapproved" | "rejected")}>
+                {APPROVAL_OPTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <input type="checkbox" checked={r20IncludeHandouts} onChange={(e) => setR20IncludeHandouts(e.target.checked)} />
+              Include handouts
+            </label>
+          </div>
+
+          <label className="file-upload-row">
+            Upload JSON export
+            <input type="file" accept=".json,application/json" onChange={loadR20File} style={{ marginLeft: 8 }} />
+          </label>
+
+          <textarea
+            className="import-textarea"
+            placeholder={`Paste Roll20 campaign export JSON here…\n\nExample:\n{"schema_version":2,"characters":[{"id":"abc123","name":"Erevan","bio":"<p>An elven rogue…</p>","gmnotes":"","attributes":[{"name":"race","current":"Elf"},{"name":"class","current":"Rogue"},{"name":"level","current":"5"}]}],"handouts":[]}`}
+            value={r20Json}
+            onChange={(e) => setR20Json(e.target.value)}
+            rows={12}
+          />
+
+          <button onClick={runR20Import} disabled={r20Busy || !r20Json.trim()}>
+            {r20Busy ? "Importing…" : "Import Roll20 campaign"}
+          </button>
+
+          {r20Result && <ImportResultPanel result={r20Result} api={`/campaigns/${campaignId}`} />}
+        </div>
+      )}
+
+      {activeTab === "legendkeeper" && (
+        <div className="import-panel stack">
+          <div className="import-intro">
+            <p>Import from LegendKeeper. In LegendKeeper, open your atlas, go to <strong>Settings → Export</strong> and download the JSON. Paste or upload it here.</p>
+            <p className="muted" style={{ fontSize: "12px" }}>
+              Accepts the LegendKeeper JSON export with <code>entries</code>, <code>pages</code>, or <code>articles</code> arrays. ProseMirror rich-text content is converted to Markdown. Tags and entry types are preserved.
+            </p>
+          </div>
+
+          <div className="import-options">
+            <label>Visibility
+              <select value={lkVisibility} onChange={(e) => setLkVisibility(e.target.value as "gm" | "players")}>
+                {VISIBILITY_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </label>
+            <label>Approval status
+              <select value={lkApproval} onChange={(e) => setLkApproval(e.target.value as "approved" | "unapproved" | "rejected")}>
+                {APPROVAL_OPTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </label>
+          </div>
+
+          <label className="file-upload-row">
+            Upload JSON export
+            <input type="file" accept=".json,application/json" onChange={loadLKFile} style={{ marginLeft: 8 }} />
+          </label>
+
+          <textarea
+            className="import-textarea"
+            placeholder={`Paste LegendKeeper JSON export here…\n\nExample:\n{"entries":[{"id":"abc","title":"The Verdant City","type":"location","content":{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"A city built in the canopy…"}]}]},"tags":["city","nature"]}]}`}
+            value={lkJson}
+            onChange={(e) => setLkJson(e.target.value)}
+            rows={12}
+          />
+
+          <button onClick={runLKImport} disabled={lkBusy || !lkJson.trim()}>
+            {lkBusy ? "Importing…" : "Import LegendKeeper atlas"}
+          </button>
+
+          {lkResult && <ImportResultPanel result={lkResult} api={`/campaigns/${campaignId}`} />}
         </div>
       )}
 

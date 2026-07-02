@@ -16,7 +16,10 @@ const GROUPS: { type: string; label: string }[] = [
   { type: "empty-name", label: "Pages without a name" },
   { type: "unapproved", label: "Unapproved pages" },
   { type: "orphaned-page", label: "Orphaned pages" },
-  { type: "oversized-file", label: "Oversized media files" }
+  { type: "oversized-file", label: "Oversized media files" },
+  { type: "unused-media", label: "Unused media files" },
+  { type: "broken-map-pin", label: "Broken map pins" },
+  { type: "broken-map-route", label: "Broken map routes" }
 ];
 
 export default function HealthClient({ campaign }: { campaign: Campaign }) {

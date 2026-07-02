@@ -399,9 +399,19 @@ export default function PublicSiteClient({
               <>
                 {cover && <img className="page-cover page-cover-clickable" src={cover} alt={selectedPage.frontmatter.name} onClick={() => setLightboxSrc(cover)} />}
                 <header className="handout-header">
-                  <p>{categoryLabels[selectedPage.frontmatter.category] || selectedPage.frontmatter.category}</p>
-                  <h1>{selectedPage.frontmatter.name}</h1>
-                  {selectedPage.frontmatter.summary && <span>{selectedPage.frontmatter.summary}</span>}
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                    <div>
+                      <p>{categoryLabels[selectedPage.frontmatter.category] || selectedPage.frontmatter.category}</p>
+                      <h1>{selectedPage.frontmatter.name}</h1>
+                      {selectedPage.frontmatter.summary && <span>{selectedPage.frontmatter.summary}</span>}
+                    </div>
+                    <a
+                      href={`/site/${slug}/pages/${selectedPage.slug}`}
+                      className="button secondary small"
+                      title="Direct link to this page"
+                      style={{ flexShrink: 0, marginTop: 4 }}
+                    >Share</a>
+                  </div>
                   {Boolean(selectedPage.frontmatter.tags?.length) && (
                     <div className="badges">
                       {(selectedPage.frontmatter.tags || []).map((tag) => (

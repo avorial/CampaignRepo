@@ -229,6 +229,14 @@ button.active {
   color: #1a130a;
 }
 
+button.small,
+.button.small {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
 button.danger {
   color: var(--danger);
   background: transparent;
@@ -6351,5 +6359,58 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   .skip-link {
     transition: none;
   }
+}
+
+/* ---- Print styles ---- */
+@media print {
+  /* Hide navigation chrome */
+  .topbar,
+  .nav-sidebar,
+  .editor-toolbar,
+  .editor-tabs,
+  .editor-actions,
+  .editor-split-toggle,
+  .editor-meta-panel,
+  .page-actions,
+  .button,
+  button { display: none !important; }
+
+  /* Expand content to full width */
+  .app-shell { grid-template-columns: 1fr !important; }
+  .editor-pane, .preview-pane { width: 100% !important; max-width: 100% !important; }
+  .content-body { max-width: 100%; padding: 0; }
+
+  /* Force backgrounds to print (needed for dark-themed sheets) */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+  /* Traveller sheet print layout */
+  .tsheet {
+    page-break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid #555 !important;
+  }
+  .tsheet-skill-details[open] summary { display: none; }
+  .tsheet-panel { break-inside: avoid; }
+
+  /* D&D / PF2 sheet print layout */
+  .dnd-sheet {
+    page-break-inside: avoid;
+    box-shadow: none !important;
+  }
+  .dnd-main { display: block !important; }
+  .dnd-skills-col, .dnd-combat-col { width: 100%; break-inside: avoid; }
+  .dnd-section { break-inside: avoid; }
+
+  /* WoD sheet print — inline-styled, just ensure grid wraps reasonably */
+  /* The inline styles include dark background + borders; print-color-adjust forces them */
+
+  /* Manuscript print (already had rules, keep consistent) */
+  .manuscript-toolbar { display: none !important; }
+  .manuscript-reader { max-width: 100%; padding: 0; }
+  .manuscript-break { break-after: page; border: none; }
+
+  /* Page breaks */
+  h1, h2 { break-after: avoid; }
+  img { max-width: 100%; }
 }
 

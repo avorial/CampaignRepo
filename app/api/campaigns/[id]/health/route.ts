@@ -103,6 +103,55 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     }
   }
 
+  // Unused media: files in wiki/media that are not referenced by any page content or cover field.
+  const referencedMedia = new Set<string>();
+  for (const page of pages) {
+    // Content references: /wiki/media/<name> or wiki/media/<name>
+    for (const match of page.raw.matchAll(/wiki\/media\/([^\s)"'#?>\]]+)/g)) {
+      const file = decodeURIComponent(match[1]).split("/").pop();
+      if (file) referencedMedia.add(file);
+    }
+    // Cover frontmatter
+    if (page.frontmatter.cover) {
+      const coverFile = page.frontmatter.cover.split("/").pop();
+      if (coverFile) referencedMedia.add(coverFile);
+    }
+  }
+  for (const entry of media) {
+    if (entry.type !== "file" || entry.name === ".gitkeep") continue;
+    if (!referencedMedia.has(entry.name)) {
+      findings.push({ type: "unused-media", severity: "info", title: entry.name, detail: `Not referenced by any page — safe to delete from the media manager.` });
+    }
+  }
+
+  // Maps: validate pins pointing at non-existent pages or missing media, and routes with invalid pin indices.
+  try {
+    const mapFiles = await storage.listDirectoryTextFiles("wiki/maps", ".json");
+    for (const mf of mapFiles) {
+      if (!mf.name.endsWith(".json")) continue;
+      const mapName = mf.name.replace(/\.json$/, "");
+      let mapData: Record<string, unknown>;
+      try { mapData = JSON.parse(mf.text ?? "{}"); } catch { continue; }
+      const pins = Array.isArray(mapData.pins) ? mapData.pins as Array<Record<string, unknown>> : [];
+      const routes = Array.isArray(mapData.routes) ? mapData.routes as Array<Record<string, unknown>> : [];
+      for (const [i, pin] of pins.entries()) {
+        if (typeof pin.pageSlug === "string" && pin.pageSlug && !bySlug.has(pin.pageSlug)) {
+          findings.push({ type: "broken-map-pin", severity: "warn", title: mapData.name ? String(mapData.name) : mapName, detail: `Pin ${i + 1} "${pin.label || pin.pageSlug}" links to page "${pin.pageSlug}" which does not exist.` });
+        }
+        if (typeof pin.image === "string" && pin.image && !mediaNames.has(pin.image.split("/").pop() || "")) {
+          findings.push({ type: "broken-map-pin", severity: "warn", title: mapData.name ? String(mapData.name) : mapName, detail: `Pin ${i + 1} "${pin.label || ""}" references missing image "${pin.image}".` });
+        }
+      }
+      for (const [i, route] of routes.entries()) {
+        const from = Number(route.fromIndex ?? -1);
+        const to = Number(route.toIndex ?? -1);
+        if (from < 0 || from >= pins.length || to < 0 || to >= pins.length) {
+          findings.push({ type: "broken-map-route", severity: "warn", title: mapData.name ? String(mapData.name) : mapName, detail: `Route ${i + 1} "${route.label || ""}" references an out-of-bounds pin index.` });
+        }
+      }
+    }
+  } catch { /* maps not found */ }
+
   const counts = findings.reduce<Record<string, number>>((acc, f) => {
     acc[f.type] = (acc[f.type] || 0) + 1;
     return acc;

@@ -102,6 +102,162 @@ function extractSummary(actor: FoundryActor): string {
   return parts.join(", ");
 }
 
+/** Try to detect the Foundry system module from actor data. */
+function detectSystem(actor: FoundryActor): "dnd5e" | "pf2e" | "wod" | "unknown" {
+  const sys = actor.system || actor.data;
+  if (!sys || typeof sys !== "object") return "unknown";
+  const s = sys as SysObj;
+  if ("abilities" in s && "attributes" in s && "skills" in s) return "dnd5e";
+  if ("saves" in s && "attributes" in s && ("classDC" in s || "ancestry" in s)) return "pf2e";
+  if ("willpower" in s || "humanity" in s || "blood" in s) return "wod";
+  return "unknown";
+}
+
+function strNum(val: unknown, fallback = 0): number {
+  const n = Number(val);
+  return isNaN(n) ? fallback : n;
+}
+
+/** Build a dnd-sheet YAML block from a Foundry dnd5e actor. Returns null if not enough data. */
+function buildDnDSheetBlock(actor: FoundryActor, name: string): string | null {
+  const sys = (actor.system || actor.data) as SysObj | undefined;
+  if (!sys) return null;
+  const abilities = sys.abilities as Record<string, SysObj> | undefined;
+  if (!abilities || !abilities.str) return null;
+
+  const abilScore = (key: string) => strNum(abilities[key]?.value, 10);
+  const attrs = sys.attributes as SysObj | undefined;
+  const details = sys.details as SysObj | undefined;
+  const hp = attrs?.hp as SysObj | undefined;
+  const ac = attrs?.ac as SysObj | undefined;
+  const spd = attrs?.movement as SysObj | undefined;
+  const skills = sys.skills as Record<string, SysObj> | undefined;
+  const items = Array.isArray(actor.items) ? actor.items as SysObj[] : [];
+
+  // Level — sum of class item levels or details.level
+  let level = strNum(details?.level, 0) || strNum((details?.level as SysObj)?.value, 0);
+  if (!level) {
+    for (const item of items) {
+      if (item.type === "class") level += strNum((item.system as SysObj)?.levels, 1);
+    }
+  }
+  if (!level) level = 1;
+
+  // Class / subclass from items
+  const classItem = items.find(i => i.type === "class");
+  const subclassItem = items.find(i => i.type === "subclass");
+  const cls = typeof classItem?.name === "string" ? classItem.name : (typeof details?.class === "string" ? details.class : "");
+  const subcls = typeof subclassItem?.name === "string" ? subclassItem.name : (typeof details?.subclass === "string" ? details.subclass : "");
+
+  // Skills proficient
+  const SKILL_MAP: Record<string, string> = {
+    acr: "Acrobatics", ani: "Animal Handling", arc: "Arcana", ath: "Athletics",
+    dec: "Deception", his: "History", ins: "Insight", itm: "Intimidation",
+    inv: "Investigation", med: "Medicine", nat: "Nature", prc: "Perception",
+    prf: "Performance", per: "Persuasion", rel: "Religion", slt: "Sleight of Hand",
+    ste: "Stealth", sur: "Survival"
+  };
+  const profSkills: string[] = [];
+  const passivePerc = strNum(attrs?.prof, 2) + strNum(abilities.wis?.value, 10);
+  if (skills) {
+    for (const [key, skill] of Object.entries(skills)) {
+      const label = SKILL_MAP[key];
+      if (label && (strNum(skill.value, 0) >= 1 || skill.prof === true)) profSkills.push(label);
+    }
+  }
+
+  // Saving throw proficiencies
+  const profSaves: string[] = [];
+  const SAVE_LABELS: Record<string, string> = { str: "Strength", dex: "Dexterity", con: "Constitution", int: "Intelligence", wis: "Wisdom", cha: "Charisma" };
+  for (const [key, ab] of Object.entries(abilities)) {
+    if (ab.proficient || strNum(ab.proficient, 0) > 0) profSaves.push(SAVE_LABELS[key] || key);
+  }
+
+  // Attacks from weapon items
+  const attacks: { name: string; bonus: string; damage: string }[] = [];
+  for (const item of items.slice(0, 20)) {
+    if (item.type !== "weapon" && item.type !== "spell") continue;
+    const iSys = item.system as SysObj | undefined;
+    if (!iSys) continue;
+    const atk = (iSys.attack as SysObj | undefined)?.flat;
+    const dmg = (iSys.damage as SysObj | undefined);
+    const dmgParts = Array.isArray((dmg as SysObj | undefined)?.parts) ? ((dmg as SysObj).parts as unknown[][]).map(p => p[0]).filter(Boolean).join(" + ") : "";
+    if (typeof item.name === "string" && (atk || dmgParts)) {
+      attacks.push({ name: String(item.name), bonus: atk ? `+${atk}` : "", damage: dmgParts });
+    }
+  }
+
+  // Features
+  const features: string[] = items.filter(i => i.type === "feat" && typeof i.name === "string").slice(0, 12).map(i => String(i.name));
+
+  // Equipment
+  const equipment: string[] = items.filter(i => i.type === "equipment" || i.type === "consumable" || i.type === "tool" || i.type === "backpack" || i.type === "loot").slice(0, 20).map(i => String(i.name)).filter(Boolean);
+
+  // Languages / proficiencies
+  const traits = sys.traits as SysObj | undefined;
+  const langStr = (traits?.languages as SysObj | undefined)?.value;
+  const languages: string[] = Array.isArray(langStr) ? langStr.map(String) : (typeof langStr === "string" ? langStr.split(",").map(s => s.trim()).filter(Boolean) : []);
+  const toolProf = (traits?.toolProf as SysObj | undefined)?.value;
+  const profs: string[] = Array.isArray(toolProf) ? toolProf.map(String) : (typeof toolProf === "string" ? toolProf.split(",").map(s => s.trim()).filter(Boolean) : []);
+
+  // Spellcasting
+  let spellsBlock = "";
+  const spellAbility = (sys.attributes as SysObj | undefined)?.spellcasting as string | undefined;
+  const spellList: SysObj[] = items.filter(i => i.type === "spell") as SysObj[];
+  if (spellAbility && spellList.length) {
+    const saveDc = strNum((attrs as SysObj)?.spelldc, 0) || strNum((attrs as SysObj)?.spellDC, 0);
+    const levels = new Map<number, string[]>();
+    for (const sp of spellList) {
+      const spSys = sp.system as SysObj | undefined;
+      const lvl = strNum((spSys?.level), 0);
+      if (!levels.has(lvl)) levels.set(lvl, []);
+      if (typeof sp.name === "string") levels.get(lvl)!.push(sp.name);
+    }
+    const spellLines = [...levels.entries()].sort((a, b) => a[0] - b[0]).map(([lvl, list]) => {
+      const slots = (attrs as SysObj)?.spells ? strNum(((attrs as SysObj).spells as SysObj)[`spell${lvl}`]?.slots, 0) : 0;
+      return `    - level: ${lvl}\n      list:\n${list.slice(0, 10).map(n => `        - "${n}"`).join("\n")}${slots ? `\n      slots: ${slots}` : ""}`;
+    }).join("\n");
+    spellsBlock = `\nspellcasting:\n  ability: ${spellAbility.toUpperCase()}${saveDc ? `\n  spell_save_dc: ${saveDc}` : ""}\n  spells:\n${spellLines}`;
+  }
+
+  const hitDice = `${level}d${strNum((classItem?.system as SysObj | undefined)?.hitDice, 8)}`;
+
+  return [
+    "```dnd-sheet",
+    `system: dnd5e`,
+    `name: ${JSON.stringify(name)}`,
+    `race: ${JSON.stringify(typeof details?.race === "string" ? details.race : "")}`,
+    `class: ${JSON.stringify(cls)}`,
+    subcls ? `subclass: ${JSON.stringify(subcls)}` : null,
+    `background: ${JSON.stringify(typeof details?.background === "string" ? details.background : "")}`,
+    `level: ${level}`,
+    typeof details?.alignment === "string" && details.alignment ? `alignment: ${JSON.stringify(details.alignment)}` : null,
+    `ability_scores:`,
+    `  str: ${abilScore("str")}`,
+    `  dex: ${abilScore("dex")}`,
+    `  con: ${abilScore("con")}`,
+    `  int: ${abilScore("int")}`,
+    `  wis: ${abilScore("wis")}`,
+    `  cha: ${abilScore("cha")}`,
+    `hp_max: ${strNum(hp?.max, 0)}`,
+    `hp_current: ${strNum(hp?.value, 0)}`,
+    strNum(hp?.temp, 0) > 0 ? `hp_temp: ${strNum(hp?.temp, 0)}` : null,
+    `hit_dice: ${hitDice}`,
+    `ac: ${strNum(ac?.value, 10)}`,
+    spd ? `speed: ${strNum(typeof spd === "object" ? (spd as SysObj).walk : spd, 30)}` : null,
+    profSaves.length ? `saving_throw_proficiencies:\n${profSaves.map(s => `  - ${s}`).join("\n")}` : null,
+    profSkills.length ? `skill_proficiencies:\n${profSkills.map(s => `  - ${s}`).join("\n")}` : null,
+    passivePerc ? `passive_perception: ${passivePerc}` : null,
+    attacks.length ? `attacks:\n${attacks.map(a => `  - name: ${JSON.stringify(a.name)}\n    bonus: "${a.bonus}"\n    damage: "${a.damage}"`).join("\n")}` : null,
+    features.length ? `features:\n${features.map(f => `  - ${JSON.stringify(f)}`).join("\n")}` : null,
+    languages.length ? `languages:\n${languages.map(l => `  - ${l}`).join("\n")}` : null,
+    profs.length ? `proficiencies:\n${profs.map(p => `  - ${p}`).join("\n")}` : null,
+    equipment.length ? `equipment:\n${equipment.map(e => `  - name: ${JSON.stringify(e)}`).join("\n")}` : null,
+    spellsBlock || null,
+    "```"
+  ].filter(Boolean).join("\n");
+}
+
 function extractActors(raw: unknown): FoundryActor[] {
   if (Array.isArray(raw)) {
     return raw.filter((item): item is FoundryActor => typeof item === "object" && item !== null && "name" in item);
@@ -159,7 +315,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const actorType = typeof actor.type === "string" ? actor.type : "npc";
     const category = mapActorType(actorType);
     const bioHtml = extractBiography(actor);
-    const body = htmlToMarkdown(bioHtml);
+    const bioMarkdown = htmlToMarkdown(bioHtml);
+    const sheetBlock = detectSystem(actor) === "dnd5e" ? buildDnDSheetBlock(actor, name) : null;
+    const body = sheetBlock ? sheetBlock + "\n\n---\n\n" + bioMarkdown : bioMarkdown;
     const summary = extractSummary(actor);
 
     const slug = slugify(name) || `foundry-actor-${Date.now()}`;
