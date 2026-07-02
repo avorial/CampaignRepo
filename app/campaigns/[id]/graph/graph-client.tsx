@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CampaignGraphEdge, CampaignGraphNode } from "@/lib/types";
-import { REL_TYPE_MAP } from "@/lib/relationships";
+import { RELATIONSHIP_TYPES, REL_TYPE_MAP } from "@/lib/relationships";
 
 // === Physics simulation ===
 type Pos = { x: number; y: number; vx: number; vy: number };
@@ -181,6 +181,11 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
   const [layout, setLayout] = useState<"force" | "tree">("force");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
+  const [addRelOpen, setAddRelOpen] = useState(false);
+  const [addRelType, setAddRelType] = useState(RELATIONSHIP_TYPES[0]?.type ?? "related-to");
+  const [addRelTarget, setAddRelTarget] = useState("");
+  const [addRelBusy, setAddRelBusy] = useState(false);
+  const [addRelMsg, setAddRelMsg] = useState("");
 
   useEffect(() => {
     fetch(`/api/campaigns/${campaignId}/graph`)
@@ -351,6 +356,8 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
 
   function jumpToNode(slug: string) {
     setSelected(slug);
+    setAddRelOpen(false);
+    setAddRelMsg("");
     setSearchQuery("");
     setSearchOpen(false);
     const pos = activePositions.get(slug);
@@ -585,6 +592,62 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
               })}
             </div>
           )}
+
+          <div className="graph-detail-section">
+            {!addRelOpen ? (
+              <button
+                type="button"
+                className="button secondary"
+                style={{ width: "100%", marginTop: 4 }}
+                onClick={() => { setAddRelOpen(true); setAddRelTarget(""); setAddRelMsg(""); }}
+              >
+                + Add relationship
+              </button>
+            ) : (
+              <div className="graph-add-rel stack" style={{ gap: 6 }}>
+                <select value={addRelType} onChange={(e) => setAddRelType(e.target.value)}>
+                  {RELATIONSHIP_TYPES.map((rt) => <option key={rt.type} value={rt.type}>{rt.label}</option>)}
+                </select>
+                <input
+                  list="graph-rel-targets"
+                  value={addRelTarget}
+                  onChange={(e) => setAddRelTarget(e.target.value)}
+                  placeholder="Target page slug or name"
+                />
+                <datalist id="graph-rel-targets">
+                  {nodes.filter((n) => n.slug !== selectedNode.slug).map((n) => <option key={n.slug} value={n.slug}>{n.name}</option>)}
+                </datalist>
+                {addRelMsg && <p className="muted" style={{ fontSize: 12, margin: 0 }}>{addRelMsg}</p>}
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button
+                    type="button"
+                    disabled={addRelBusy || !addRelTarget.trim()}
+                    onClick={async () => {
+                      setAddRelBusy(true);
+                      setAddRelMsg("");
+                      const res = await fetch(`/api/campaigns/${campaignId}/pages/${selectedNode.slug}/relationships`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ type: addRelType, target: addRelTarget.trim() })
+                      });
+                      const data = await res.json();
+                      setAddRelBusy(false);
+                      if (res.ok) {
+                        setAddRelMsg("Saved. Refresh to see on graph.");
+                        setAddRelOpen(false);
+                        setAddRelTarget("");
+                      } else {
+                        setAddRelMsg(data.error || "Could not save.");
+                      }
+                    }}
+                  >
+                    {addRelBusy ? "Saving…" : "Save"}
+                  </button>
+                  <button type="button" className="secondary" onClick={() => setAddRelOpen(false)}>Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
 
           <a href={`/campaigns/${campaignId}/pages/${selectedNode.slug}`} className="button secondary graph-open-btn">
             Open page

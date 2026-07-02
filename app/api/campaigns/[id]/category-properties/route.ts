@@ -11,9 +11,11 @@ const CAMPAIGN_YAML = "wiki/campaign.yaml";
 
 const propSchema = z.object({
   name: z.string().min(1).max(60),
-  type: z.enum(["text", "textarea", "number", "select", "checkbox"]).default("text"),
+  type: z.enum(["text", "textarea", "number", "select", "checkbox", "date", "counter", "link"]).default("text"),
   options: z.array(z.string()).optional(),
-  placeholder: z.string().optional()
+  placeholder: z.string().optional(),
+  min: z.number().optional(),
+  max: z.number().optional()
 });
 
 const bodySchema = z.object({

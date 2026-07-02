@@ -1279,6 +1279,50 @@ notes: ""
                   </label>
                 );
               }
+              if (prop.type === "select" && Array.isArray((prop as { options?: string[] }).options)) {
+                return (
+                  <label key={prop.name}>{prop.name}
+                    <select value={typeof val === "string" ? val : ""} onChange={(e) => update(e.target.value)} disabled={!fieldsEditable}>
+                      <option value="">— choose —</option>
+                      {((prop as { options?: string[] }).options || []).map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </label>
+                );
+              }
+              if (prop.type === "date") {
+                return (
+                  <label key={prop.name}>{prop.name}
+                    <input type="date" value={typeof val === "string" ? val : ""} onChange={(e) => update(e.target.value)} readOnly={!fieldsEditable} />
+                  </label>
+                );
+              }
+              if (prop.type === "counter") {
+                const c = val && typeof val === "object" ? (val as Record<string, number>) : { current: 0, max: 0 };
+                return (
+                  <div key={prop.name} className="prop-row">
+                    <span style={{ fontSize: 13, color: "var(--text-secondary)", minWidth: 80 }}>{prop.name}</span>
+                    <input type="number" value={c.current ?? 0} style={{ width: 60 }} onChange={(e) => update({ ...c, current: Number(e.target.value) })} readOnly={!fieldsEditable} />
+                    <span style={{ alignSelf: "center", color: "var(--muted)", fontSize: 12 }}>/</span>
+                    <input type="number" value={c.max ?? 0} style={{ width: 60 }} onChange={(e) => update({ ...c, max: Number(e.target.value) })} readOnly={!fieldsEditable} />
+                  </div>
+                );
+              }
+              if (prop.type === "link") {
+                return (
+                  <label key={prop.name}>{prop.name}
+                    <input
+                      list={`custom-link-${prop.name}`}
+                      value={typeof val === "string" ? val : ""}
+                      onChange={(e) => update(e.target.value)}
+                      readOnly={!fieldsEditable}
+                      placeholder="Page slug or name"
+                    />
+                    <datalist id={`custom-link-${prop.name}`}>
+                      {knownPages.map((p) => <option key={p.slug} value={p.slug}>{p.frontmatter.name}</option>)}
+                    </datalist>
+                  </label>
+                );
+              }
               return (
                 <label key={prop.name}>{prop.name}
                   <input value={typeof val === "string" ? val : ""} onChange={(e) => update(e.target.value)} readOnly={!fieldsEditable} />

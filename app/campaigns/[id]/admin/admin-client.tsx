@@ -484,6 +484,10 @@ export default function AdminClient({ campaign, isGlobalAdmin = false, publicSlu
             <option value="textarea">Long text</option>
             <option value="number">Number</option>
             <option value="checkbox">Checkbox</option>
+            <option value="select">Dropdown (options)</option>
+            <option value="date">Date</option>
+            <option value="counter">Counter (current / max)</option>
+            <option value="link">Wiki page link</option>
           </select>
           <button type="button" onClick={addCatProp} disabled={!newPropName.trim()}>Add field</button>
           {catPropsSaved && <span style={{ color: "var(--gold)", fontSize: 13 }}>Saved ✓</span>}
