@@ -230,9 +230,9 @@ needed:
 
 ### 31. Maps 2.0 - M-L
 
-Build on map pins with layers, nested maps, regions, labels, routes, measuring,
-journey playback, discovered/undiscovered locations, and validation for broken
-pins/media/routes.
+Layers, nested maps, regions, labels, routes, measuring, journey playback, and
+discovered/undiscovered locations (with a GM "player view" fog-of-war preview)
+are shipped. Remaining: validation for broken pins/media/routes.
 
 ### 32. Responsive, accessible, and fast at scale - M
 

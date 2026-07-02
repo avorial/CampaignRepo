@@ -40,6 +40,7 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
   const [journeyAddMode, setJourneyAddMode] = useState(false);
   const [newJourneyName, setNewJourneyName] = useState("");
   const [editingJourneyId, setEditingJourneyId] = useState<string | null>(null);
+  const [playerView, setPlayerView] = useState(false);
 
   useEffect(() => {
     fetch(`/api/campaigns/${campaign.id}/maps`).then((r) => r.json()).then((d) => {
@@ -225,7 +226,10 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
     setHiddenLayers((s) => { const n = new Set(s); if (n.has(lid)) n.delete(lid); else n.add(lid); return n; });
   }
 
-  const visiblePins = map ? map.pins.filter((p) => !hiddenLayers.has(p.layer || "default")) : [];
+  const visiblePins = map
+    ? map.pins.filter((p) => !hiddenLayers.has(p.layer || "default") && (!playerView || p.discovered))
+    : [];
+  const undiscoveredCount = map ? map.pins.filter((p) => !p.discovered).length : 0;
 
   return (
     <section className="maps-grid">
@@ -348,10 +352,24 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
                 >
                   {addMode === "measure" ? (measurePts.length === 0 ? "Click start…" : measurePts.length === 1 ? "Click end…" : "Click to clear") : "Measure"}
                 </button>
+                <button
+                  type="button"
+                  className={playerView ? "active" : "secondary"}
+                  title={playerView ? "Showing only discovered pins (what players see)" : "Preview the map as players see it — undiscovered pins are hidden"}
+                  onClick={() => { setPlayerView((v) => !v); setEditingPin(null); setAddMode(null); }}
+                >
+                  {playerView ? `Player view (${undiscoveredCount} hidden)` : "Player view"}
+                </button>
                 <button type="button" onClick={saveMap}>Save</button>
                 <button type="button" className="danger" onClick={deleteMap}>Delete map</button>
               </div>
             </div>
+            {playerView && (
+              <div style={{ padding: "6px 12px", background: "rgba(74,144,217,0.12)", borderBottom: "1px solid var(--border-soft)", fontSize: 13, display: "flex", alignItems: "center", gap: 10 }}>
+                <strong style={{ color: "#4a90d9" }}>👁 Player view</strong>
+                <span className="muted">{undiscoveredCount} undiscovered pin{undiscoveredCount === 1 ? "" : "s"} hidden. Editing is disabled — toggle off to make changes.</span>
+              </div>
+            )}
 
             {measureResult && (
               <div style={{ padding: "6px 12px", background: "var(--bg-elevated)", borderBottom: "1px solid var(--border-soft)", fontSize: 13 }}>
@@ -492,14 +510,21 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
                   const imgSrc = pin.image ? `/campaign-media/${campaign.id}/${encodeURIComponent(pin.image)}` : null;
                   const isJourneyCurrent = currentPinIndex === pinIndex;
                   const isJourneyVisited = visitedPins?.has(pinIndex) && !isJourneyCurrent;
+                  const isUndiscovered = !pin.discovered && !playerView;
                   return (
                     <button
                       type="button"
                       key={pinIndex}
-                      className={`map-pin${pin.pageSlug || pin.mapSlug ? "" : " unlinked"}${editingPin === pinIndex ? " editing" : ""}${isRouteFrom ? " route-from" : ""}${imgSrc ? " map-pin-image" : ""}${isJourneyCurrent ? " journey-current" : ""}${isJourneyVisited ? " journey-visited" : ""}`}
+                      className={`map-pin${pin.pageSlug || pin.mapSlug ? "" : " unlinked"}${editingPin === pinIndex ? " editing" : ""}${isRouteFrom ? " route-from" : ""}${imgSrc ? " map-pin-image" : ""}${isJourneyCurrent ? " journey-current" : ""}${isJourneyVisited ? " journey-visited" : ""}${isUndiscovered ? " map-pin-undiscovered" : ""}`}
                       style={{ left: `${pin.x * 100}%`, top: `${pin.y * 100}%` }}
                       title={pin.label}
                       onClick={(e) => {
+                        if (playerView) {
+                          e.stopPropagation();
+                          if (pin.pageSlug) router.push(`/campaigns/${campaign.id}/pages/${pin.pageSlug}`);
+                          else if (pin.mapSlug) setSelected(pin.mapSlug);
+                          return;
+                        }
                         if (addMode === "route") { handlePinClickInRouteMode(pinIndex, e); return; }
                         if (journeyAddMode) { e.stopPropagation(); journeyAddPin(pinIndex); return; }
                         e.stopPropagation();

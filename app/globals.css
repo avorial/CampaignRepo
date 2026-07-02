@@ -1416,6 +1416,24 @@ button.nav-link.active {
   opacity: 0.5;
 }
 
+/* Undiscovered pins (fog of war) — dimmed with a dashed halo in GM view */
+.map-pin.map-pin-undiscovered {
+  opacity: 0.55;
+}
+
+.map-pin.map-pin-undiscovered::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 1px dashed rgba(155, 120, 220, 0.55);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.map-pin.map-pin-undiscovered .map-pin-icon {
+  filter: grayscale(0.7);
+}
+
 .map-pin-label {
   position: absolute;
   left: 50%;
