@@ -20,6 +20,7 @@ export default function AIChatClient({ campaign, pages }: { campaign: Campaign; 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingSeconds, setLoadingSeconds] = useState(0);
   const [error, setError] = useState("");
   const [contextSlugs, setContextSlugs] = useState<string[]>([]);
   const [showContext, setShowContext] = useState(false);
@@ -29,6 +30,15 @@ export default function AIChatClient({ campaign, pages }: { campaign: Campaign; 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (!loading) {
+      setLoadingSeconds(0);
+      return;
+    }
+    const timer = window.setInterval(() => setLoadingSeconds((seconds) => seconds + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [loading]);
 
   async function send(text: string) {
     const userMsg: Message = { role: "user", content: text };
@@ -43,7 +53,13 @@ export default function AIChatClient({ campaign, pages }: { campaign: Campaign; 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: next, contextSlugs })
       });
-      const data = await res.json() as { reply?: string; error?: string };
+      const textBody = await res.text();
+      let data: { reply?: string; error?: string } = {};
+      try {
+        data = textBody ? JSON.parse(textBody) : {};
+      } catch {
+        data = { error: textBody || "CampaignRepo returned a non-JSON response while waiting for the AI." };
+      }
       if (!res.ok || data.error) {
         setError(data.error || "Request failed.");
         setMessages(next); // keep user message
@@ -51,7 +67,7 @@ export default function AIChatClient({ campaign, pages }: { campaign: Campaign; 
         setMessages([...next, { role: "assistant", content: data.reply || "" }]);
       }
     } catch {
-      setError("Network error. Check your AI endpoint configuration.");
+      setError("The AI request was interrupted before CampaignRepo got a response. If the model is cold-loading, wait a moment and try again.");
     } finally {
       setLoading(false);
     }
@@ -115,7 +131,9 @@ export default function AIChatClient({ campaign, pages }: { campaign: Campaign; 
           {loading && (
             <div className="ai-message ai-message-assistant">
               <div className="ai-message-label">AI</div>
-              <div className="ai-message-content ai-thinking">Thinking…</div>
+              <div className="ai-message-content ai-thinking">
+                {loadingSeconds > 8 ? `Warming model / thinking... ${loadingSeconds}s` : "Thinking..."}
+              </div>
             </div>
           )}
           {error && <div className="ai-error">{error} — <Link href={`/campaigns/${campaign.id}/generate`} className="link">AI Settings</Link></div>}

@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
-import { chatCompletionsUrl, getEffectiveAiConfig } from "@/lib/ai-config";
+import { chatCompletionsUrl, extractAiReply, getEffectiveAiConfig } from "@/lib/ai-config";
 import { getStorageAdapter } from "@/lib/storage";
 import { readPageCache } from "@/lib/page-cache";
 
@@ -77,10 +77,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         { role: "system", content: systemPrompt },
         ...input.messages
       ],
+      think: false,
       temperature: 0.7,
-      max_tokens: 1200
+      max_tokens: 1800
     }),
-    signal: AbortSignal.timeout(45000)
+    signal: AbortSignal.timeout(120000)
   });
 
   if (!res.ok) {
@@ -88,7 +89,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: `AI error ${res.status}: ${text.slice(0, 200)}` }, { status: 502 });
   }
 
-  const data = await res.json() as { choices?: { message?: { content?: string } }[] };
-  const reply = data.choices?.[0]?.message?.content?.trim() || "";
+  const data = await res.json() as { choices?: { message?: { content?: string; reasoning?: string; reasoning_content?: string } }[] };
+  const reply = extractAiReply(data);
+  if (!reply) {
+    return NextResponse.json({ error: "AI returned an empty response. Try a different model or ask again." }, { status: 502 });
+  }
   return NextResponse.json({ reply });
 }

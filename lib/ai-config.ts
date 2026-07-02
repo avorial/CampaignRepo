@@ -47,6 +47,19 @@ export function chatCompletionsUrl(endpoint: string): string {
   return clean.endsWith("/v1") ? `${clean}/chat/completions` : `${clean}/v1/chat/completions`;
 }
 
+type AiChoice = {
+  message?: {
+    content?: string;
+    reasoning?: string;
+    reasoning_content?: string;
+  };
+};
+
+export function extractAiReply(data: { choices?: AiChoice[] }): string {
+  const message = data.choices?.[0]?.message;
+  return (message?.content || message?.reasoning_content || message?.reasoning || "").trim();
+}
+
 function modelsUrl(endpoint: string): string {
   const clean = endpoint.replace(/\/+$/, "");
   return clean.endsWith("/v1") ? `${clean}/models` : `${clean}/v1/models`;
@@ -99,10 +112,11 @@ export async function testAiConnection(config: AiConfig): Promise<AiConfig> {
         { role: "system", content: "Reply with ok." },
         { role: "user", content: "Connection test." }
       ],
+      think: false,
       temperature: 0,
-      max_tokens: 8
+      max_tokens: 512
     }),
-    signal: AbortSignal.timeout(10000)
+    signal: AbortSignal.timeout(120000)
   });
 
   if (!res.ok) {

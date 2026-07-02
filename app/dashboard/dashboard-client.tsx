@@ -73,6 +73,7 @@ export default function DashboardClient({
   const [aiModel, setAiModel] = useState("");
   const [aiKey, setAiKey] = useState("");
   const [aiSaving, setAiSaving] = useState(false);
+  const [aiSavingSeconds, setAiSavingSeconds] = useState(0);
   const [aiDiscovering, setAiDiscovering] = useState(false);
   const [aiModels, setAiModels] = useState<string[]>([]);
   const [draggedRepoId, setDraggedRepoId] = useState<number | null>(null);
@@ -137,6 +138,15 @@ export default function DashboardClient({
         setAiKey(config.apiKey || "");
       });
   }, []);
+
+  useEffect(() => {
+    if (!aiSaving) {
+      setAiSavingSeconds(0);
+      return;
+    }
+    const timer = window.setInterval(() => setAiSavingSeconds((seconds) => seconds + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [aiSaving]);
 
   async function mintToken(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -529,7 +539,9 @@ export default function DashboardClient({
                 <strong>Local AI examples</strong>
                 <span>Ollama: <code>http://localhost:11434/v1</code>. LM Studio: use its OpenAI-compatible server URL.</span>
               </div>
-              <button disabled={aiSaving}>{aiSaving ? "Testing..." : "Test and save personal AI"}</button>
+              <button disabled={aiSaving}>
+                {aiSaving ? `Testing / warming... ${aiSavingSeconds}s` : "Test and save personal AI"}
+              </button>
             </form>
           </div>
         </details>

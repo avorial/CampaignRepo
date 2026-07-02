@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
-import { chatCompletionsUrl, getEffectiveAiConfig } from "@/lib/ai-config";
+import { chatCompletionsUrl, extractAiReply, getEffectiveAiConfig } from "@/lib/ai-config";
 import { getStorageAdapter } from "@/lib/storage";
 import { readPageCache } from "@/lib/page-cache";
 import {
@@ -35,17 +35,18 @@ async function callAI(config: { endpoint?: string; model?: string; apiKey?: stri
         { role: "system", content: systemPrompt },
         { role: "user", content: prompt }
       ],
+      think: false,
       temperature: 0.85,
-      max_tokens: 800
+      max_tokens: 1600
     }),
-    signal: AbortSignal.timeout(30000)
+    signal: AbortSignal.timeout(120000)
   });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`AI endpoint error ${res.status}: ${text.slice(0, 200)}`);
   }
-  const data = await res.json() as { choices?: { message?: { content?: string } }[] };
-  return data.choices?.[0]?.message?.content || "";
+  const data = await res.json() as { choices?: { message?: { content?: string; reasoning?: string; reasoning_content?: string } }[] };
+  return extractAiReply(data);
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -106,6 +107,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   try {
     const aiContent = await callAI(aiConfig, prompt, systemPrompt);
+    if (!aiContent.trim()) throw new Error("AI returned an empty response.");
     const nameMatch = aiContent.match(/^##?\s+([^\n]+)/);
     const name = nameMatch?.[1]?.trim() || randomBase.name;
     const content = aiContent.trim();
