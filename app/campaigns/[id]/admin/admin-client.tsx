@@ -31,6 +31,11 @@ export default function AdminClient({ campaign, isGlobalAdmin = false, publicSlu
   const [bulkBusy, setBulkBusy] = useState(false);
   const [campaignGroups, setCampaignGroups] = useState<string[]>([]);
   const [newGroupName, setNewGroupName] = useState("");
+  const [migrateMode, setMigrateMode] = useState<"create" | "connect">("create");
+  const [migrateRepo, setMigrateRepo] = useState("");
+  const [migrateOwner, setMigrateOwner] = useState("");
+  const [migrateBusy, setMigrateBusy] = useState(false);
+  const [migrateResult, setMigrateResult] = useState<{ pushed?: number; skipped?: number; owner?: string; repo?: string; error?: string } | null>(null);
 
   type PropDef = { name: string; type: string; options?: string[]; placeholder?: string };
   const [categoryProperties, setCategoryProperties] = useState<Record<string, PropDef[]>>({});
@@ -66,6 +71,24 @@ export default function AdminClient({ campaign, isGlobalAdmin = false, publicSlu
 
   function inviteUrl(token: string) {
     return `${origin || ""}/invite/${token}`;
+  }
+
+  async function migrateToGitHub(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!migrateRepo.trim()) return;
+    setMigrateBusy(true);
+    setMigrateResult(null);
+    const res = await fetch(`/api/campaigns/${campaign.id}/migrate-to-github`, {
+      method: "POST",
+      body: JSON.stringify({ mode: migrateMode, repo: migrateRepo.trim(), owner: migrateOwner.trim() || undefined, branch: "main" })
+    });
+    const data = await res.json();
+    setMigrateBusy(false);
+    if (res.ok) {
+      setMigrateResult({ pushed: data.pushed, skipped: data.skipped, owner: data.owner, repo: data.repo });
+    } else {
+      setMigrateResult({ error: data.error || "Migration failed." });
+    }
   }
 
   async function addMember(event: FormEvent<HTMLFormElement>) {
@@ -576,6 +599,34 @@ export default function AdminClient({ campaign, isGlobalAdmin = false, publicSlu
             {!proposals.length && <p className="muted">No fork proposals yet.</p>}
             {proposalMsg && <p style={{ color: "var(--gold)", fontSize: 13 }}>{proposalMsg}</p>}
           </div>
+        </div>
+      )}
+
+      {campaign.storageBackend === "local" && (campaign.role === "owner" || isGlobalAdmin) && (
+        <div className="panel admin-wide">
+          <h2>Back up to GitHub</h2>
+          <p className="muted">Push all wiki pages, maps, sessions, quests, and other campaign files to a GitHub repository. Media files under 90 MB are included. After migration, CampaignRepo will use the GitHub repo as the source of truth.</p>
+          {migrateResult?.error && <p className="error">{migrateResult.error}</p>}
+          {migrateResult?.pushed != null && !migrateResult.error && (
+            <div className="setup-callout" style={{ background: "rgba(74,144,217,0.08)", borderColor: "rgba(74,144,217,0.25)" }}>
+              <strong>Migration complete</strong>
+              <span>{migrateResult.pushed} file{migrateResult.pushed === 1 ? "" : "s"} pushed{migrateResult.skipped ? `, ${migrateResult.skipped} skipped (too large or failed)` : ""}. Campaign now uses <code>{migrateResult.owner}/{migrateResult.repo}</code>.</span>
+              <span>Reload the page to see updated settings.</span>
+            </div>
+          )}
+          {!migrateResult?.pushed && (
+            <form onSubmit={migrateToGitHub} className="stack" style={{ marginTop: 8 }}>
+              <div className="segmented" style={{ marginBottom: 8 }}>
+                <button type="button" className={migrateMode === "create" ? "active" : ""} onClick={() => setMigrateMode("create")}>Create new repo</button>
+                <button type="button" className={migrateMode === "connect" ? "active" : ""} onClick={() => setMigrateMode("connect")}>Push to existing repo</button>
+              </div>
+              {migrateMode === "connect" && (
+                <label>Owner (optional)<input value={migrateOwner} onChange={(e) => setMigrateOwner(e.target.value)} placeholder="your-github-username" /></label>
+              )}
+              <label>{migrateMode === "create" ? "New repo name" : "Repo name or URL"}<input required value={migrateRepo} onChange={(e) => setMigrateRepo(e.target.value)} placeholder={migrateMode === "create" ? "my-campaign" : "username/my-campaign"} /></label>
+              <button disabled={migrateBusy || !migrateRepo.trim()}>{migrateBusy ? "Migrating…" : migrateMode === "create" ? "Create repo and migrate" : "Push to repo"}</button>
+            </form>
+          )}
         </div>
       )}
     </section>
