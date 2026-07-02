@@ -5681,6 +5681,49 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   width: 100%;
 }
 
+.graph-filter-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graph-cluster-btn {
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  border-radius: 3px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  margin-left: auto;
+  padding: 1px 4px;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.graph-cluster-btn:hover {
+  background: var(--bg-soft);
+  color: var(--gold);
+}
+
+.graph-cluster-btn.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--bg-base);
+}
+
+.graph-cluster-node {
+  filter: drop-shadow(0 0 12px rgba(0,0,0,0.5));
+}
+
+.graph-cluster-count {
+  fill: rgba(0, 0, 0, 0.65) !important;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
 /* ---- Slash command menu ---- */
 .slash-menu {
   background: var(--bg-surface);

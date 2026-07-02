@@ -186,6 +186,7 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
   const [addRelTarget, setAddRelTarget] = useState("");
   const [addRelBusy, setAddRelBusy] = useState(false);
   const [addRelMsg, setAddRelMsg] = useState("");
+  const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetch(`/api/campaigns/${campaignId}/graph`)
@@ -354,6 +355,59 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
 
   const activePositions = treePositions ?? positions;
 
+  // === Cluster mode ===
+  const clusterMeta = useMemo(() => {
+    const map = new Map<string, { count: number; slugs: string[] }>();
+    for (const n of visibleNodes) {
+      if (collapsedCats.has(n.category)) {
+        if (!map.has(n.category)) map.set(n.category, { count: 0, slugs: [] });
+        const entry = map.get(n.category)!;
+        entry.count++;
+        entry.slugs.push(n.slug);
+      }
+    }
+    return map;
+  }, [visibleNodes, collapsedCats]);
+
+  const clusterPositions = useMemo(() => {
+    const map = new Map<string, Pos>();
+    for (const [cat, meta] of clusterMeta) {
+      let sx = 0, sy = 0, cnt = 0;
+      for (const slug of meta.slugs) {
+        const p = activePositions.get(slug);
+        if (p) { sx += p.x; sy += p.y; cnt++; }
+      }
+      if (cnt > 0) map.set(`cluster:${cat}`, { x: sx / cnt, y: sy / cnt, vx: 0, vy: 0 });
+    }
+    return map;
+  }, [clusterMeta, activePositions]);
+
+  const clusterSlugs = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const [cat, meta] of clusterMeta)
+      for (const slug of meta.slugs) m.set(slug, `cluster:${cat}`);
+    return m;
+  }, [clusterMeta]);
+
+  const renderEdges = useMemo(() => {
+    const seen = new Set<string>();
+    const result: Array<{ source: string; target: string; relType?: string; label?: string }> = [];
+    for (const edge of visibleEdges) {
+      const src = clusterSlugs.get(edge.source) ?? edge.source;
+      const tgt = clusterSlugs.get(edge.target) ?? edge.target;
+      if (src === tgt) continue;
+      const key = [src, tgt].sort().join("\0");
+      if (!seen.has(key)) { seen.add(key); result.push({ source: src, target: tgt, relType: edge.relType ?? undefined, label: edge.label ?? undefined }); }
+    }
+    return result;
+  }, [visibleEdges, clusterSlugs]);
+
+  const renderPositions = useMemo(() => {
+    const m = new Map(activePositions);
+    for (const [k, v] of clusterPositions) m.set(k, v);
+    return m;
+  }, [activePositions, clusterPositions]);
+
   function jumpToNode(slug: string) {
     setSelected(slug);
     setAddRelOpen(false);
@@ -372,6 +426,14 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
       const next = new Set(prev);
       if (next.has(cat)) next.delete(cat);
       else next.add(cat);
+      return next;
+    });
+  }
+
+  function toggleCollapsed(cat: string) {
+    setCollapsedCats((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat); else next.add(cat);
       return next;
     });
   }
@@ -421,7 +483,15 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
           <label key={cat} className="graph-filter-item">
             <input type="checkbox" checked={filterCats.has(cat)} onChange={() => toggleCat(cat)} />
             <span className="cat-dot" style={{ background: catColor(cat) }} />
-            {cat}
+            <span className="graph-filter-label">{cat}</span>
+            {filterCats.has(cat) && (
+              <button
+                type="button"
+                className={`graph-cluster-btn${collapsedCats.has(cat) ? " active" : ""}`}
+                title={collapsedCats.has(cat) ? "Expand cluster" : "Collapse to cluster"}
+                onClick={(e) => { e.preventDefault(); toggleCollapsed(cat); }}
+              >⬡</button>
+            )}
           </label>
         ))}
         {usedRelCats.length > 0 && (
@@ -473,9 +543,9 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
         style={{ cursor: panStart ? "grabbing" : "grab" }}
       >
         <g transform={`translate(${pan.x}, ${pan.y}) scale(${scale})`}>
-          {visibleEdges.map((edge, i) => {
-            const a = activePositions.get(edge.source);
-            const b = activePositions.get(edge.target);
+          {renderEdges.map((edge, i) => {
+            const a = renderPositions.get(edge.source);
+            const b = renderPositions.get(edge.target);
             if (!a || !b) return null;
             const isRel = Boolean(edge.relType);
             const isActive = selected && (edge.source === selected || edge.target === selected);
@@ -515,7 +585,26 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
                 );
               })}
 
-          {visibleNodes.map((node) => {
+          {[...clusterMeta.entries()].map(([cat, meta]) => {
+            const pos = clusterPositions.get(`cluster:${cat}`);
+            if (!pos) return null;
+            const color = catColor(cat);
+            return (
+              <g
+                key={`cluster-${cat}`}
+                className="graph-node graph-cluster-node"
+                transform={`translate(${pos.x}, ${pos.y})`}
+                style={{ cursor: "pointer" }}
+                onClick={() => toggleCollapsed(cat)}
+              >
+                <circle r={38} fill={color} fillOpacity={0.92} stroke="var(--surface-2)" strokeWidth={3} />
+                <text textAnchor="middle" className="graph-node-initials" dy={-8}>{cat}</text>
+                <text textAnchor="middle" className="graph-cluster-count" dy={12}>{meta.count} nodes</text>
+              </g>
+            );
+          })}
+
+          {visibleNodes.filter((n) => !collapsedCats.has(n.category)).map((node) => {
             const pos = activePositions.get(node.slug);
             if (!pos) return null;
             const isSel = node.slug === selected;
