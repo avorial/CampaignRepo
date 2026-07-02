@@ -1,8 +1,8 @@
 # CampaignRepo Roadmap
 
-CampaignRepo has moved from "GitHub-backed RPG wiki" into a broad campaign
-platform: wiki, maps, sessions, quests, public publishing, dashboards, imports,
-AI tools, and local/GitHub storage are all on `main`.
+CampaignRepo is now at **1.0**. It has moved from "GitHub-backed RPG wiki" into
+a broad campaign platform: wiki, maps, sessions, quests, public publishing,
+dashboards, imports, AI tools, and local/GitHub storage are all on `main`.
 
 The guiding promise remains the same: every campaign is still a portable folder
 of Markdown, YAML, JSON, and media files. CampaignRepo can make that folder feel
@@ -33,8 +33,8 @@ CampaignRepo currently ships:
 - Review queue, campaign health center, bulk page organization, notifications,
   assignments, mentions, page watches, and page history/diff/restore workflow.
 - Importers for Foundry actors, generic character JSON, Obsidian, Notion, Google
-  Docs, CSV, journals, Roll20, LegendKeeper, World Anvil, basic ZIP/JSON export,
-  and character re-import diffing.
+  Docs, CSV, journals, Roll20, LegendKeeper, World Anvil, full ZIP/JSON backup
+  export, and character re-import diffing.
 - AI generation, AI campaign Q&A, and MCP JSON-RPC tools.
 - Docker/GHCR deployment path.
 
@@ -187,12 +187,12 @@ The graph is useful, but the relationship feature still needs:
 
 The import hub now covers CSV, Foundry journals, Foundry actors, Obsidian,
 Notion, Google Docs, World Anvil, Roll20, LegendKeeper, generic character JSON,
-and character diff previews. A basic CampaignRepo export exists as ZIP or JSON.
+and character diff previews. CampaignRepo exports full ZIP/JSON backups that
+include campaign content, media, sessions, quests, maps, search data, templates,
+and settings.
 Still needed:
 
 - OneNote migration.
-- A full portable export bundle that includes all campaign content, media,
-  sessions, quests, maps, search data, and settings.
 - Re-import previews using source IDs and hashes across every importer, not just
   character sources.
 - Optional Foundry module push/pull with explicit previews and conflict handling.

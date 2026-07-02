@@ -218,7 +218,7 @@ export async function POST(req: Request) {
     return rpc(body.id, {
       protocolVersion: "2024-11-05",
       capabilities: { tools: {}, resources: {} },
-      serverInfo: { name: "CampaignRepo MCP", version: "0.1.0" }
+      serverInfo: { name: "CampaignRepo MCP", version: "1.0.0" }
     });
   }
   if (body.method === "notifications/initialized" || body.method === "notifications/cancelled") {

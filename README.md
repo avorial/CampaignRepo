@@ -6,17 +6,18 @@ GMs get version history, private notes, a review queue, and full control over wh
 
 ## Where We Are Now
 
-CampaignRepo is now a usable campaign management app, not just a wiki prototype.
+CampaignRepo is now at **1.0**: a usable campaign management app, not just a
+wiki prototype.
 The current app supports local-folder and GitHub-backed campaigns; private GM
 workspaces; player-safe portals; public published worlds; public campaign
 discovery and cloning; session planning; quest tracking; fantasy calendars;
 maps; relationship graphs; manuscripts; boards; lexicons; AI tools; MCP access;
-and Docker/GHCR deployment.
+full ZIP/JSON campaign backups; and Docker/GHCR deployment.
 
 The biggest remaining product gaps are sheet editor polish beyond Traveller,
-full portable exports, Maps 2.0 persistence, mobile/accessibility polish,
-offline/PWA support, and the public-world pull-request ecosystem. See
-[ROADMAP.md](ROADMAP.md) for the cleaned-up shipped/partial/open status.
+Maps 2.0 persistence, mobile/accessibility polish, offline/PWA support, and the
+public-world pull-request ecosystem. See [ROADMAP.md](ROADMAP.md) for the
+cleaned-up shipped/partial/open status.
 
 ## Product Tour
 
@@ -63,7 +64,7 @@ Players see only pages that are both approved and marked player-visible. GM-only
 - Publishes a no-login public site for approved, player-visible lore and quests - shareable and cloneable.
 - Sends in-app notifications for review requests, assignments, mentions, and watched page changes.
 - Imports from Foundry actors and journals, character JSON, Obsidian, Notion, Google Docs, CSV, Roll20, LegendKeeper, World Anvil, and other world/journal exports.
-- Exports a basic CampaignRepo bundle as ZIP or JSON.
+- Exports a full CampaignRepo backup as ZIP or JSON, including pages, media, maps, sessions, quests, search data, templates, and settings.
 - Offers AI page generation and full-campaign Q&A over Markdown with citations.
 - Exposes an MCP JSON-RPC API for AI tools and external clients.
 
