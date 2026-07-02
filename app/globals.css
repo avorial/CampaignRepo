@@ -3794,6 +3794,31 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   background: var(--wash-gold);
 }
 
+.organize-table tr.media-row-unused td {
+  opacity: 0.7;
+}
+
+.organize-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.organize-table th.sortable:hover {
+  color: var(--text-primary);
+}
+
+.media-unused-badge {
+  background: rgba(255, 138, 138, 0.15);
+  border: 1px solid rgba(255, 138, 138, 0.35);
+  border-radius: 3px;
+  color: var(--danger);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  margin-left: 6px;
+  padding: 1px 4px;
+  vertical-align: middle;
+}
+
 .organize-table input[type="checkbox"] { width: auto; }
 
 /* ---- Manuscripts ---- */

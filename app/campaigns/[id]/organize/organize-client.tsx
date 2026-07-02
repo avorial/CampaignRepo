@@ -55,6 +55,9 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
   const [mediaBusy, setMediaBusy] = useState(false);
   const [mediaMessage, setMediaMessage] = useState("");
   const [bulkTagInput, setBulkTagInput] = useState("");
+  const [unusedOnly, setUnusedOnly] = useState(false);
+  const [mediaSortKey, setMediaSortKey] = useState<"name" | "size" | "type">("name");
+  const [mediaSortDir, setMediaSortDir] = useState<"asc" | "desc">("asc");
 
   const catLabel = useMemo(() => new Map(categories.map((c) => [c.id, c.label])), [categories]);
 
@@ -111,15 +114,44 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
   const allVisibleSelected = filtered.length > 0 && filtered.every((p) => selected.has(p.slug));
 
   // ── Media filtered ────────────────────────────────────────────────
+  const usedMediaNames = useMemo(() => {
+    const names = new Set<string>();
+    const pageText = pages.map((p) => {
+      const parts = [p.content, p.frontmatter.cover || ""];
+      const fm = p.frontmatter as Record<string, unknown>;
+      if (typeof fm.portrait === "string") parts.push(fm.portrait);
+      return parts.join("\n");
+    }).join("\n");
+    for (const m of media) {
+      if (pageText.includes(m.name) || pageText.includes(m.path)) names.add(m.path);
+    }
+    return names;
+  }, [pages, media]);
+
   const filteredMedia = useMemo(() => {
     const f = mediaFilter.trim().toLowerCase();
     const tag = mediaTagFilter.trim().toLowerCase();
-    return media
+    let rows = media
       .filter((m) => (mediaTypeFilter === "all" ? true : m.mediaType === mediaTypeFilter))
       .filter((m) => (f ? m.name.toLowerCase().includes(f) : true))
       .filter((m) => (tag ? (m.tags || []).some((t) => t.toLowerCase().includes(tag)) : true))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [media, mediaFilter, mediaTypeFilter, mediaTagFilter]);
+      .filter((m) => (unusedOnly ? !usedMediaNames.has(m.path) : true));
+    rows = [...rows].sort((a, b) => {
+      if (mediaSortKey === "size") return mediaSortDir === "asc" ? (a.size ?? 0) - (b.size ?? 0) : (b.size ?? 0) - (a.size ?? 0);
+      if (mediaSortKey === "type") {
+        const cmp = a.mediaType.localeCompare(b.mediaType);
+        return mediaSortDir === "asc" ? cmp : -cmp;
+      }
+      const cmp = a.name.localeCompare(b.name);
+      return mediaSortDir === "asc" ? cmp : -cmp;
+    });
+    return rows;
+  }, [media, mediaFilter, mediaTypeFilter, mediaTagFilter, unusedOnly, usedMediaNames, mediaSortKey, mediaSortDir]);
+
+  function toggleMediaSort(key: typeof mediaSortKey) {
+    if (mediaSortKey === key) setMediaSortDir((d) => d === "asc" ? "desc" : "asc");
+    else { setMediaSortKey(key); setMediaSortDir("asc"); }
+  }
 
   const allMediaVisible = filteredMedia.length > 0 && filteredMedia.every((m) => mediaSelected.has(m.path));
 
@@ -370,6 +402,23 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
               {MEDIA_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
             <input placeholder="Filter by tag…" value={mediaTagFilter} onChange={(e) => setMediaTagFilter(e.target.value)} style={{ width: "140px" }} />
+            <button
+              type="button"
+              className={unusedOnly ? "" : "secondary"}
+              onClick={() => setUnusedOnly((v) => !v)}
+              title="Show only files not referenced in any wiki page"
+            >
+              {unusedOnly ? "Unused only" : "All files"}
+            </button>
+            {unusedOnly && filteredMedia.length > 0 && (
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setMediaSelected(new Set(filteredMedia.map((m) => m.path)))}
+              >
+                Select all {filteredMedia.length} unused
+              </button>
+            )}
             <span className="organize-count">{filteredMedia.length} shown · {mediaSelected.size} selected</span>
           </div>
 
@@ -403,16 +452,22 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
                   <tr>
                     <th><input type="checkbox" checked={allMediaVisible} onChange={toggleAllMedia} aria-label="Select all media" /></th>
                     <th>Preview</th>
-                    <th>Name</th>
-                    <th>Type</th>
-                    <th>Size</th>
+                    <th className="sortable" onClick={() => toggleMediaSort("name")}>
+                      Name {mediaSortKey === "name" ? (mediaSortDir === "asc" ? "▲" : "▼") : ""}
+                    </th>
+                    <th className="sortable" onClick={() => toggleMediaSort("type")}>
+                      Type {mediaSortKey === "type" ? (mediaSortDir === "asc" ? "▲" : "▼") : ""}
+                    </th>
+                    <th className="sortable" onClick={() => toggleMediaSort("size")}>
+                      Size {mediaSortKey === "size" ? (mediaSortDir === "asc" ? "▲" : "▼") : ""}
+                    </th>
                     <th>Tags</th>
                     <th>Alt</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredMedia.map((m) => (
-                    <tr key={m.path} className={mediaSelected.has(m.path) ? "row-selected" : ""}>
+                    <tr key={m.path} className={`${mediaSelected.has(m.path) ? "row-selected" : ""}${!usedMediaNames.has(m.path) && pages.length > 0 ? " media-row-unused" : ""}`}>
                       <td><input type="checkbox" checked={mediaSelected.has(m.path)} onChange={() => toggleMedia(m.path)} aria-label={`Select ${m.name}`} /></td>
                       <td style={{ width: "48px" }}>
                         {m.mediaType === "image"
@@ -421,6 +476,9 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
                       </td>
                       <td>
                         <a href={m.downloadUrl} target="_blank" rel="noreferrer" style={{ wordBreak: "break-all", fontSize: "13px" }}>{m.name}</a>
+                        {pages.length > 0 && !usedMediaNames.has(m.path) && (
+                          <span className="media-unused-badge" title="Not referenced in any page">unused</span>
+                        )}
                       </td>
                       <td>{m.mediaType}</td>
                       <td>{fmtBytes(m.size)}</td>
