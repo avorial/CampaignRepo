@@ -670,6 +670,19 @@ code {
   padding: 16px;
 }
 
+.ai-model-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ai-model-list button {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: var(--text-label-sm);
+  text-transform: none;
+}
+
 .admin-grid {
   display: grid;
   grid-template-columns: 360px minmax(0, 1fr);

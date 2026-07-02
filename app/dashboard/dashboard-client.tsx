@@ -37,6 +37,8 @@ export default function DashboardClient({
   const [aiModel, setAiModel] = useState("");
   const [aiKey, setAiKey] = useState("");
   const [aiSaving, setAiSaving] = useState(false);
+  const [aiDiscovering, setAiDiscovering] = useState(false);
+  const [aiModels, setAiModels] = useState<string[]>([]);
   const [expandedPanels, setExpandedPanels] = useState({
     github: false,
     build: true,
@@ -148,10 +150,32 @@ export default function DashboardClient({
     if (res.ok) {
       setPersonalAi(data.config || {});
       setAiKey(data.config?.apiKey || "");
-      setMessage("Personal AI endpoint saved.");
+      setMessage("Personal AI endpoint tested and saved.");
       setPanelOpen("ai", false);
     } else {
       setMessage(data.error || "Could not save personal AI endpoint.");
+    }
+  }
+
+  async function discoverAiModels() {
+    if (!aiEndpoint.trim()) {
+      setMessage("Enter an AI address first.");
+      return;
+    }
+    setAiDiscovering(true);
+    setAiModels([]);
+    const params = new URLSearchParams({ endpoint: aiEndpoint });
+    if (aiKey && !aiKey.startsWith("••")) params.set("apiKey", aiKey);
+    const res = await fetch(`/api/ai-settings/models?${params.toString()}`);
+    const data = await res.json();
+    setAiDiscovering(false);
+    if (res.ok) {
+      setAiEndpoint(data.endpoint || aiEndpoint);
+      setAiModels(data.models || []);
+      if (!aiModel && data.models?.[0]) setAiModel(data.models[0]);
+      setMessage(data.models?.length ? `Found ${data.models.length} local model${data.models.length === 1 ? "" : "s"}.` : "No models were reported by that endpoint.");
+    } else {
+      setMessage(data.error || "Could not find models at that address.");
     }
   }
 
@@ -383,6 +407,23 @@ export default function DashboardClient({
                 Endpoint
                 <input value={aiEndpoint} onChange={(e) => setAiEndpoint(e.target.value)} placeholder="http://localhost:11434/v1" />
               </label>
+              <button type="button" className="secondary" onClick={discoverAiModels} disabled={aiDiscovering}>
+                {aiDiscovering ? "Finding..." : "Find models"}
+              </button>
+              {aiModels.length > 0 && (
+                <div className="ai-model-list" aria-label="Detected local AI models">
+                  {aiModels.map((model) => (
+                    <button
+                      key={model}
+                      type="button"
+                      className={aiModel === model ? "active" : "secondary"}
+                      onClick={() => setAiModel(model)}
+                    >
+                      {model}
+                    </button>
+                  ))}
+                </div>
+              )}
               <label>
                 Model
                 <input value={aiModel} onChange={(e) => setAiModel(e.target.value)} placeholder="llama3.2" />
@@ -395,7 +436,7 @@ export default function DashboardClient({
                 <strong>Local AI examples</strong>
                 <span>Ollama: <code>http://localhost:11434/v1</code>. LM Studio: use its OpenAI-compatible server URL.</span>
               </div>
-              <button disabled={aiSaving}>{aiSaving ? "Saving..." : "Save personal AI"}</button>
+              <button disabled={aiSaving}>{aiSaving ? "Testing..." : "Test and save personal AI"}</button>
             </form>
           </div>
         </details>
