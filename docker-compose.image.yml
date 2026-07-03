@@ -14,6 +14,11 @@ services:
       GITHUB_APP_ID: "${GITHUB_APP_ID:-}"
       GITHUB_APP_SLUG: "${GITHUB_APP_SLUG:-}"
       GITHUB_APP_PRIVATE_KEY: "${GITHUB_APP_PRIVATE_KEY:-}"
+      # Optional login providers. Leave blank to keep the collapsed login buttons disabled.
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-}"
+      GITHUB_OAUTH_CLIENT_ID: "${GITHUB_OAUTH_CLIENT_ID:-}"
+      GITHUB_OAUTH_CLIENT_SECRET: "${GITHUB_OAUTH_CLIENT_SECRET:-}"
     volumes:
       # Persists the SQLite DB (accounts, sessions, search index).
       - campaignrepo-data:/app/data

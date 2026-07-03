@@ -23,6 +23,10 @@ CREATE TABLE IF NOT EXISTS users (
   name TEXT NOT NULL,
   passwordHash TEXT NOT NULL,
   githubToken TEXT,
+  googleId TEXT,
+  githubId TEXT,
+  avatarUrl TEXT,
+  authProvider TEXT NOT NULL DEFAULT 'local',
   mustChangePassword INTEGER NOT NULL DEFAULT 0,
   isAdmin INTEGER NOT NULL DEFAULT 0,
   disabled INTEGER NOT NULL DEFAULT 0,
@@ -154,6 +158,23 @@ if (!userColumns.some((column) => column.name === "isAdmin")) {
 if (!userColumns.some((column) => column.name === "disabled")) {
   db.exec("ALTER TABLE users ADD COLUMN disabled INTEGER NOT NULL DEFAULT 0");
 }
+if (!userColumns.some((column) => column.name === "googleId")) {
+  try { db.exec("ALTER TABLE users ADD COLUMN googleId TEXT"); } catch { /* already migrated */ }
+}
+if (!userColumns.some((column) => column.name === "githubId")) {
+  try { db.exec("ALTER TABLE users ADD COLUMN githubId TEXT"); } catch { /* already migrated */ }
+}
+if (!userColumns.some((column) => column.name === "avatarUrl")) {
+  try { db.exec("ALTER TABLE users ADD COLUMN avatarUrl TEXT"); } catch { /* already migrated */ }
+}
+if (!userColumns.some((column) => column.name === "authProvider")) {
+  try { db.exec("ALTER TABLE users ADD COLUMN authProvider TEXT NOT NULL DEFAULT 'local'"); } catch { /* already migrated */ }
+}
+
+db.exec(`
+CREATE UNIQUE INDEX IF NOT EXISTS users_google_id_idx ON users(googleId) WHERE googleId IS NOT NULL AND googleId != '';
+CREATE UNIQUE INDEX IF NOT EXISTS users_github_id_idx ON users(githubId) WHERE githubId IS NOT NULL AND githubId != '';
+`);
 
 const campaignColumns = db.prepare("PRAGMA table_info(campaigns)").all() as Array<{ name: string }>;
 if (!campaignColumns.some((c) => c.name === "storageBackend")) {
@@ -280,6 +301,10 @@ export function publicUser(row: any): User | null {
     email: row.email,
     name: row.name,
     githubToken: row.githubToken,
+    googleId: row.googleId,
+    githubId: row.githubId,
+    avatarUrl: row.avatarUrl,
+    authProvider: row.authProvider,
     mustChangePassword: Boolean(row.mustChangePassword),
     isAdmin: Boolean(row.isAdmin),
     disabled: Boolean(row.disabled),
@@ -538,6 +563,62 @@ export function updateUserIdentity(userId: number, email: string, name: string) 
   if (existing) throw new Error("Another user already has that email.");
   const info = db.prepare("UPDATE users SET email = ?, name = ? WHERE id = ?").run(cleanEmail, cleanName, userId);
   if (info.changes === 0) throw new Error("User not found.");
+}
+
+export type OAuthProvider = "google" | "github";
+
+export function upsertOAuthUser(input: {
+  provider: OAuthProvider;
+  providerId: string;
+  email: string;
+  name: string;
+  avatarUrl?: string | null;
+  githubToken?: string | null;
+}) {
+  const email = input.email.trim().toLowerCase();
+  const name = input.name.trim() || email.split("@")[0] || "CampaignRepo user";
+  if (!email || !input.providerId.trim()) throw new Error("OAuth provider did not return a usable account.");
+  const providerColumn = input.provider === "google" ? "googleId" : "githubId";
+  const existingByProvider = db.prepare(`SELECT * FROM users WHERE ${providerColumn} = ?`).get(input.providerId) as any;
+  const existingByEmail = db.prepare("SELECT * FROM users WHERE lower(email) = lower(?)").get(email) as any;
+  const existing = existingByProvider || existingByEmail;
+  if (existing?.disabled) throw new Error("This account is disabled.");
+
+  if (existing) {
+    db.prepare(
+      `UPDATE users SET
+         ${providerColumn} = ?,
+         name = COALESCE(NULLIF(?, ''), name),
+         avatarUrl = COALESCE(?, avatarUrl),
+         authProvider = CASE WHEN authProvider = 'local' THEN ? ELSE authProvider END,
+         githubToken = COALESCE(?, githubToken)
+       WHERE id = ?`
+    ).run(
+      input.providerId,
+      name,
+      input.avatarUrl || null,
+      input.provider,
+      input.githubToken || null,
+      existing.id
+    );
+    return publicUser(db.prepare("SELECT * FROM users WHERE id = ?").get(existing.id))!;
+  }
+
+  const passwordHash = bcrypt.hashSync(crypto.randomBytes(32).toString("hex"), 12);
+  const info = db.prepare(
+    `INSERT INTO users (email, name, passwordHash, githubToken, googleId, githubId, avatarUrl, authProvider, mustChangePassword)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`
+  ).run(
+    email,
+    name,
+    passwordHash,
+    input.githubToken || null,
+    input.provider === "google" ? input.providerId : null,
+    input.provider === "github" ? input.providerId : null,
+    input.avatarUrl || null,
+    input.provider
+  );
+  return publicUser(db.prepare("SELECT * FROM users WHERE id = ?").get(info.lastInsertRowid))!;
 }
 
 export function resetUserPassword(userId: number, passwordHash: string) {

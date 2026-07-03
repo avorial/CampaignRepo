@@ -59,6 +59,10 @@ export type User = {
   email: string;
   name: string;
   githubToken?: string | null;
+  googleId?: string | null;
+  githubId?: string | null;
+  avatarUrl?: string | null;
+  authProvider?: string | null;
   mustChangePassword: boolean;
   isAdmin: boolean;
   disabled: boolean;

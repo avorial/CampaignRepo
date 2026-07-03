@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import KineticBackground from "@/app/components/kinetic-background";
 import Logo from "@/app/components/logo";
 
@@ -11,7 +11,16 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "";
   const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "";
-  const [error, setError] = useState("");
+  const oauthError = searchParams.get("oauth_error") || "";
+  const [error, setError] = useState(oauthError);
+  const [providers, setProviders] = useState<{ google: boolean; github: boolean } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/oauth/providers")
+      .then((res) => res.json())
+      .then((data) => setProviders(data.providers || { google: false, github: false }))
+      .catch(() => setProviders({ google: false, github: false }));
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -29,6 +38,11 @@ function LoginForm() {
     router.push(data.mustChangePassword ? "/change-password" : safeNext || "/dashboard");
   }
 
+  function oauthStart(provider: "google" | "github") {
+    const params = safeNext ? `?next=${encodeURIComponent(safeNext)}` : "";
+    window.location.href = `/api/auth/oauth/${provider}/start${params}`;
+  }
+
   return (
     <main className="auth-shell">
       <KineticBackground />
@@ -44,6 +58,20 @@ function LoginForm() {
           {error && <p className="error">{error}</p>}
           <button type="submit">Sign in</button>
         </form>
+        <details className="oauth-login-options">
+          <summary>Other sign-in options</summary>
+          <div className="oauth-login-grid">
+            <button type="button" className="secondary" disabled={!providers?.google} onClick={() => oauthStart("google")}>
+              Continue with Google
+            </button>
+            <button type="button" className="secondary" disabled={!providers?.github} onClick={() => oauthStart("github")}>
+              Continue with GitHub
+            </button>
+          </div>
+          {providers && !providers.google && !providers.github && (
+            <p className="muted">Google and GitHub sign-in are not configured on this server yet.</p>
+          )}
+        </details>
         <p className="muted">No account yet? <Link href="/register">Create one</Link>.</p>
         <p className="muted">New here? <Link href="/getting-started">Read the getting-started guide</Link>.</p>
         <p className="muted">Just browsing? <Link href="/site">Explore public worlds</Link> — no account needed.</p>

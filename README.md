@@ -342,9 +342,25 @@ SECURE_COOKIES=true
 GITHUB_APP_ID=123456
 GITHUB_APP_SLUG=your-github-app-slug
 GITHUB_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----"
+GOOGLE_CLIENT_ID=your-google-oauth-client-id
+GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
+GITHUB_OAUTH_CLIENT_ID=your-github-oauth-client-id
+GITHUB_OAUTH_CLIENT_SECRET=your-github-oauth-client-secret
 ```
 
 Set `SECURE_COOKIES=true` when serving behind HTTPS so session cookies use the `Secure` flag.
+
+Google and GitHub login are optional. The Docker image only contains the OAuth
+code; each server supplies its own credentials at runtime. Use these redirect
+URLs when creating OAuth clients:
+
+- Google: `https://your-domain.example/api/auth/oauth/google/callback`
+- GitHub OAuth App: `https://your-domain.example/api/auth/oauth/github/callback`
+
+GitHub OAuth login requests `repo` access so it can also act as the user's
+GitHub connection inside CampaignRepo. Use the separate GitHub App settings
+above if you want repository connection through the install-per-repo flow
+instead.
 
 Without Compose:
 
