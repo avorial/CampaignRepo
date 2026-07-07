@@ -5796,6 +5796,256 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   .dnd-prof-badge { grid-column: 1 / -1; }
 }
 
+/* 5e fillable-sheet inspired layout */
+.dnd-sheet-5e {
+  --dnd-paper: #f8f5ee;
+  --dnd-ink: #191713;
+  --dnd-rule: #22201b;
+  --dnd-muted: #5a554b;
+  --dnd-soft: #e7dfd1;
+  background: var(--dnd-paper);
+  border: 2px solid var(--dnd-rule);
+  border-radius: 4px;
+  color: var(--dnd-ink);
+  font-family: "IBM Plex Sans", Arial, sans-serif;
+  gap: 0;
+  padding: 12px;
+}
+
+.dnd-sheet-5e .dnd-header {
+  background: transparent;
+  border: 0;
+  display: grid;
+  grid-template-columns: 72px minmax(180px, 1fr) minmax(360px, 1.7fr);
+  gap: 12px;
+  padding: 0 0 10px;
+}
+
+.dnd-sheet-5e .dnd-header img,
+.dnd-sheet-5e .dnd-portrait-placeholder {
+  background: #fff;
+  border: 2px solid var(--dnd-rule);
+  border-radius: 4px;
+  color: var(--dnd-ink);
+  height: 72px;
+  width: 72px;
+}
+
+.dnd-sheet-5e .dnd-name {
+  color: var(--dnd-ink);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 30px;
+  letter-spacing: 0;
+}
+
+.dnd-sheet-5e .dnd-byline {
+  color: var(--dnd-muted);
+  font-family: "IBM Plex Mono", monospace;
+  letter-spacing: 0.04em;
+}
+
+.dnd-header-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.dnd-header-grid div,
+.dnd-textbox,
+.dnd-sheet-5e .dnd-section,
+.dnd-list-panel,
+.dnd-sheet-5e .dnd-passive,
+.dnd-inspiration-row,
+.dnd-sheet-5e .dnd-prof-badge,
+.dnd-sheet-5e .dnd-combat-block,
+.dnd-sheet-5e .dnd-hp-block,
+.dnd-sheet-5e .dnd-death-saves {
+  background: #fff;
+  border: 2px solid var(--dnd-rule);
+  border-radius: 4px;
+}
+
+.dnd-header-grid div {
+  min-height: 42px;
+  padding: 6px 8px 4px;
+}
+
+.dnd-header-grid b {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  min-height: 16px;
+}
+
+.dnd-header-grid span,
+.dnd-textbox span,
+.dnd-sheet-5e .dnd-combat-label,
+.dnd-sheet-5e .dnd-prof-label,
+.dnd-sheet-5e .dnd-hp-label,
+.dnd-sheet-5e h4 {
+  color: var(--dnd-muted);
+  display: block;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dnd-body {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.78fr) minmax(280px, 1.08fr) minmax(260px, 1fr);
+  gap: 10px;
+}
+
+.dnd-left-rail,
+.dnd-center-col,
+.dnd-right-rail {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.dnd-inspiration-row {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 36px 1fr;
+  padding: 5px;
+}
+
+.dnd-inspiration-box {
+  align-items: center;
+  border: 2px solid var(--dnd-rule);
+  display: flex;
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 800;
+  height: 28px;
+  justify-content: center;
+}
+
+.dnd-sheet-5e .dnd-prof-badge { padding: 7px; }
+.dnd-sheet-5e .dnd-prof-val,
+.dnd-sheet-5e .dnd-combat-val,
+.dnd-sheet-5e .dnd-hp-current {
+  color: var(--dnd-ink);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 32px;
+}
+
+.dnd-sheet-5e .dnd-abilities {
+  background: transparent;
+  border: 0;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 1fr;
+}
+
+.dnd-sheet-5e .dnd-ability-card {
+  background: #fff;
+  border: 2px solid var(--dnd-rule);
+  border-radius: 8px 8px 18px 18px;
+  color: var(--dnd-ink);
+  min-height: 78px;
+  padding: 6px;
+}
+
+.dnd-sheet-5e .dnd-ability-short,
+.dnd-sheet-5e .dnd-ability-mod,
+.dnd-sheet-5e .dnd-skill-bonus {
+  color: var(--dnd-ink);
+}
+
+.dnd-sheet-5e .dnd-ability-score { color: var(--dnd-ink); font-size: 30px; }
+.dnd-sheet-5e .dnd-save-row { display: none; }
+.dnd-list-panel { padding: 8px; }
+.dnd-sheet-5e .dnd-skills li { border-bottom: 1px solid #d9d0c1; color: var(--dnd-ink); }
+.dnd-sheet-5e .dnd-prof-icon { color: var(--dnd-muted); }
+.dnd-sheet-5e .dnd-prof-icon.proficient,
+.dnd-sheet-5e .dnd-prof-icon.expert { color: var(--dnd-ink); }
+.dnd-sheet-5e .dnd-passive { color: var(--dnd-ink); font-weight: 700; padding: 8px; }
+
+.dnd-sheet-5e .dnd-combat-stats,
+.dnd-small-pair {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dnd-small-pair { grid-template-columns: 1fr 1fr; }
+.dnd-sheet-5e .dnd-combat-block,
+.dnd-sheet-5e .dnd-hp-block,
+.dnd-sheet-5e .dnd-death-saves,
+.dnd-sheet-5e .dnd-section {
+  padding: 8px;
+}
+
+.dnd-sheet-5e .dnd-hp-bar { background: var(--dnd-soft); border: 1px solid var(--dnd-rule); height: 8px; }
+.dnd-sheet-5e .dnd-hp-fill { background: var(--dnd-ink); }
+.dnd-sheet-5e .dnd-death-row { color: var(--dnd-ink); }
+.dnd-sheet-5e .dnd-death-box { border-color: var(--dnd-rule); }
+.dnd-sheet-5e .dnd-death-box.filled { background: var(--dnd-ink); border-color: var(--dnd-rule); }
+
+.dnd-textbox {
+  min-height: 78px;
+  padding: 8px;
+}
+
+.dnd-textbox p {
+  color: var(--dnd-ink);
+  font-size: 13px;
+  line-height: 1.35;
+  margin: 0 0 8px;
+  white-space: pre-wrap;
+}
+
+.dnd-sheet-5e .dnd-attacks-table th,
+.dnd-sheet-5e .dnd-attacks-table td {
+  border-color: #d9d0c1;
+  color: var(--dnd-ink);
+}
+
+.dnd-sheet-5e .dnd-feature-list,
+.dnd-sheet-5e .dnd-equip-list {
+  display: grid;
+  gap: 4px;
+}
+
+.dnd-sheet-5e .dnd-feature-list li,
+.dnd-sheet-5e .dnd-equip-list span {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #d9d0c1;
+  border-radius: 0;
+  color: var(--dnd-ink);
+  padding: 3px 0;
+}
+
+.dnd-coins {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.dnd-coins h4 { grid-column: 1 / -1; }
+.dnd-coins div { align-items: center; display: grid; gap: 3px; text-align: center; }
+.dnd-coins div span { color: var(--dnd-muted); font-family: "IBM Plex Mono", monospace; font-size: 9px; }
+.dnd-coins div b { border: 1px solid var(--dnd-rule); border-radius: 999px; min-height: 24px; padding: 3px; }
+
+.dnd-appearance-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 6px;
+}
+.dnd-appearance-grid div { border-bottom: 1px solid #d9d0c1; }
+.dnd-appearance-grid b { color: var(--dnd-muted); font-family: "IBM Plex Mono", monospace; font-size: 8px; margin-right: 4px; text-transform: uppercase; }
+
+@media (max-width: 980px) {
+  .dnd-sheet-5e .dnd-header,
+  .dnd-body { grid-template-columns: 1fr; }
+  .dnd-header-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 /* ---- Relationship connections panel ---- */
 .rel-panel {
   border-top: 1px solid var(--border-soft);

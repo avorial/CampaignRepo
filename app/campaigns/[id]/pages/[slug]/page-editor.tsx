@@ -611,6 +611,17 @@ alignment: ""
 xp: 0
 portrait: ""
 player: ""
+inspiration: false
+personality_traits: ""
+ideals: ""
+bonds: ""
+flaws: ""
+age: ""
+height: ""
+weight: ""
+eyes: ""
+skin: ""
+hair: ""
 
 ability_scores:
   str: 10
@@ -663,6 +674,15 @@ languages: [Common]
 proficiencies: []
 equipment:
   - name: ""
+coins:
+  cp: 0
+  sp: 0
+  ep: 0
+  gp: 0
+  pp: 0
+backstory: ""
+allies: ""
+treasure: ""
 notes: ""
 \`\`\`\n\n`;
   }

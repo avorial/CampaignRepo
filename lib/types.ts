@@ -233,6 +233,17 @@ export type DnDSheet = {
   xp?: number;
   player?: string;
   portrait?: string;
+  inspiration?: boolean;
+  personality_traits?: string;
+  ideals?: string;
+  bonds?: string;
+  flaws?: string;
+  age?: string;
+  height?: string;
+  weight?: string;
+  eyes?: string;
+  skin?: string;
+  hair?: string;
   ability_scores?: Partial<Record<DnDAbilityKey, number>>;
   proficiency_bonus?: number;
   saving_throw_proficiencies?: string[];
@@ -258,6 +269,10 @@ export type DnDSheet = {
   languages?: string[];
   proficiencies?: string[];
   equipment?: { name: string; quantity?: number; notes?: string }[];
+  coins?: { cp?: number; sp?: number; ep?: number; gp?: number; pp?: number };
+  backstory?: string;
+  allies?: string;
+  treasure?: string;
   notes?: string;
 };
 
