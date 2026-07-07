@@ -338,6 +338,7 @@ export type CampaignGraphEdge = {
   label: string;
   missing: boolean;
   relType?: string;
+  relEditable?: boolean;
 };
 
 export type CampaignTimelineItem = {

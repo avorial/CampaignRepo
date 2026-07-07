@@ -53,7 +53,14 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       const target = resolveTarget(aliases, rel.target);
       const missing = !visibleSlugs.has(target);
       if (campaign.role !== "player" || !missing) {
-        edges.push({ source: page.slug, target, label: rel.label || rel.type, missing, relType: rel.type });
+        edges.push({ source: page.slug, target, label: rel.label || rel.type, missing, relType: rel.type, relEditable: true });
+      }
+    }
+    if (page.frontmatter.parent) {
+      const target = resolveTarget(aliases, page.frontmatter.parent);
+      const missing = !visibleSlugs.has(target);
+      if (campaign.role !== "player" || !missing) {
+        edges.push({ source: target, target: page.slug, label: "parent", missing, relType: "parent-of" });
       }
     }
   }

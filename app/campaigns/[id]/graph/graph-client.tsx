@@ -79,16 +79,19 @@ function stepOnce(positions: Map<string, Pos>, edges: CampaignGraphEdge[]): Map<
 const TREE_X = 180;
 const TREE_Y = 150;
 
-function computeTreeLayout(slugs: string[], parentOfEdges: CampaignGraphEdge[]): Map<string, Pos> {
+function computeTreeLayout(slugs: string[], hierarchyEdges: CampaignGraphEdge[]): Map<string, Pos> {
   const children = new Map<string, string[]>();
   const hasParent = new Set<string>();
   const slugSet = new Set(slugs);
 
-  for (const e of parentOfEdges) {
+  for (const e of hierarchyEdges) {
     if (!slugSet.has(e.source) || !slugSet.has(e.target)) continue;
-    if (!children.has(e.source)) children.set(e.source, []);
-    children.get(e.source)!.push(e.target);
-    hasParent.add(e.target);
+    const parent = e.relType === "child-of" || e.relType === "ward-of" ? e.target : e.source;
+    const child = e.relType === "child-of" || e.relType === "ward-of" ? e.source : e.target;
+    if (!slugSet.has(parent) || !slugSet.has(child) || parent === child) continue;
+    if (!children.has(parent)) children.set(parent, []);
+    children.get(parent)!.push(child);
+    hasParent.add(child);
   }
 
   const roots = slugs.filter((s) => !hasParent.has(s));
@@ -187,16 +190,20 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
   const [addRelBusy, setAddRelBusy] = useState(false);
   const [addRelMsg, setAddRelMsg] = useState("");
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
+  const [deleteRelBusy, setDeleteRelBusy] = useState<string | null>(null);
+
+  const loadGraph = useCallback(async () => {
+    const data = await fetch(`/api/campaigns/${campaignId}/graph`)
+      .then((r) => r.json())
+      .catch(() => ({ nodes: [], edges: [] }));
+    setNodes(data.nodes || []);
+    setEdges(data.edges || []);
+    setLoading(false);
+  }, [campaignId]);
 
   useEffect(() => {
-    fetch(`/api/campaigns/${campaignId}/graph`)
-      .then((r) => r.json())
-      .then((data) => {
-        setNodes(data.nodes || []);
-        setEdges(data.edges || []);
-        setLoading(false);
-      });
-  }, [campaignId]);
+    loadGraph();
+  }, [loadGraph]);
 
   const visibleNodes = useMemo(
     () => nodes.filter((n) => filterCats.has(n.category)),
@@ -216,16 +223,16 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
     [edges, visibleSlugs, showRelOnly, filterRelCats]
   );
 
-  const parentOfEdges = useMemo(
-    () => visibleEdges.filter((e) => e.relType === "parent-of"),
+  const hierarchyEdges = useMemo(
+    () => visibleEdges.filter((e) => ["parent-of", "child-of", "guardian-of", "ward-of"].includes(e.relType || "")),
     [visibleEdges]
   );
-  const hasParentOfEdges = parentOfEdges.length > 0;
+  const hasHierarchyEdges = hierarchyEdges.length > 0;
 
   const treePositions = useMemo(() => {
     if (layout !== "tree") return null;
-    return computeTreeLayout(visibleNodes.map((n) => n.slug), parentOfEdges);
-  }, [layout, visibleNodes, parentOfEdges]);
+    return computeTreeLayout(visibleNodes.map((n) => n.slug), hierarchyEdges);
+  }, [layout, visibleNodes, hierarchyEdges]);
 
   // Force simulation
   useEffect(() => {
@@ -447,6 +454,55 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
     });
   }
 
+  function resolveNodeInput(input: string) {
+    const value = input.trim().toLowerCase();
+    const exactSlug = nodes.find((n) => n.slug.toLowerCase() === value);
+    if (exactSlug) return exactSlug.slug;
+    const exactName = nodes.find((n) => n.name.toLowerCase() === value);
+    if (exactName) return exactName.slug;
+    return input.trim();
+  }
+
+  async function addRelationship(sourceSlug: string) {
+    const target = resolveNodeInput(addRelTarget);
+    setAddRelBusy(true);
+    setAddRelMsg("");
+    const res = await fetch(`/api/campaigns/${campaignId}/pages/${sourceSlug}/relationships`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: addRelType, target })
+    });
+    const data = await res.json();
+    setAddRelBusy(false);
+    if (res.ok) {
+      setAddRelMsg("Saved.");
+      setAddRelOpen(false);
+      setAddRelTarget("");
+      await loadGraph();
+    } else {
+      setAddRelMsg(data.error || "Could not save.");
+    }
+  }
+
+  async function deleteRelationship(edge: CampaignGraphEdge) {
+    if (!edge.relType) return;
+    const key = `${edge.source}:${edge.relType}:${edge.target}`;
+    setDeleteRelBusy(key);
+    const res = await fetch(`/api/campaigns/${campaignId}/pages/${edge.source}/relationships`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: edge.relType, target: edge.target })
+    });
+    const data = await res.json().catch(() => ({}));
+    setDeleteRelBusy(null);
+    if (res.ok) {
+      setAddRelMsg("Relationship removed.");
+      await loadGraph();
+    } else {
+      setAddRelMsg(data.error || "Could not remove relationship.");
+    }
+  }
+
   const dimmed = (slug: string) => {
     if (searchMatchSlugs) return !searchMatchSlugs.has(slug);
     if (selected) return !connectedSlugs.has(slug);
@@ -479,6 +535,12 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
           )}
         </div>
         <h4>Categories</h4>
+        {usedCats.length > 1 && (
+          <div className="graph-filter-actions">
+            <button type="button" className="linklike" onClick={() => setCollapsedCats(new Set(usedCats))}>Collapse all</button>
+            <button type="button" className="linklike" onClick={() => setCollapsedCats(new Set())}>Expand all</button>
+          </div>
+        )}
         {usedCats.map((cat) => (
           <label key={cat} className="graph-filter-item">
             <input type="checkbox" checked={filterCats.has(cat)} onChange={() => toggleCat(cat)} />
@@ -512,7 +574,7 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
           <input type="checkbox" checked={showRelOnly} onChange={(e) => setShowRelOnly(e.target.checked)} />
           <span>Typed relationships only</span>
         </label>
-        {hasParentOfEdges && (
+        {hasHierarchyEdges && (
           <>
             <hr />
             <h4>Layout</h4>
@@ -522,7 +584,7 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
             </label>
             <label className="graph-filter-item">
               <input type="radio" name="layout" checked={layout === "tree"} onChange={() => setLayout("tree")} />
-              <span>Genealogy tree</span>
+              <span>Family / hierarchy tree</span>
             </label>
           </>
         )}
@@ -656,11 +718,25 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
               {selectedOutgoing.map((e, i) => {
                 const target = nodeMap.get(e.target);
                 const rtDef = e.relType ? REL_TYPE_MAP.get(e.relType) : null;
+                const deleteKey = `${e.source}:${e.relType}:${e.target}`;
                 return (
-                  <button key={i} type="button" className="graph-detail-link" onClick={() => setSelected(e.target)}>
-                    {rtDef && <span className="rel-type">{rtDef.label}</span>}
-                    {target?.name ?? e.target}
-                  </button>
+                  <div key={i} className="graph-detail-link-row">
+                    <button type="button" className="graph-detail-link" onClick={() => setSelected(e.target)}>
+                      {rtDef && <span className="rel-type">{rtDef.label}</span>}
+                      {target?.name ?? e.target}
+                    </button>
+                    {e.relEditable && e.relType && (
+                      <button
+                        type="button"
+                        className="graph-rel-delete"
+                        disabled={deleteRelBusy === deleteKey}
+                        title="Remove relationship"
+                        onClick={() => deleteRelationship(e)}
+                      >
+                        {deleteRelBusy === deleteKey ? "..." : "x"}
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -711,24 +787,7 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
                   <button
                     type="button"
                     disabled={addRelBusy || !addRelTarget.trim()}
-                    onClick={async () => {
-                      setAddRelBusy(true);
-                      setAddRelMsg("");
-                      const res = await fetch(`/api/campaigns/${campaignId}/pages/${selectedNode.slug}/relationships`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ type: addRelType, target: addRelTarget.trim() })
-                      });
-                      const data = await res.json();
-                      setAddRelBusy(false);
-                      if (res.ok) {
-                        setAddRelMsg("Saved. Refresh to see on graph.");
-                        setAddRelOpen(false);
-                        setAddRelTarget("");
-                      } else {
-                        setAddRelMsg(data.error || "Could not save.");
-                      }
-                    }}
+                    onClick={() => addRelationship(selectedNode.slug)}
                   >
                     {addRelBusy ? "Saving…" : "Save"}
                   </button>
@@ -736,6 +795,7 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
                 </div>
               </div>
             )}
+            {addRelMsg && !addRelOpen && <p className="muted graph-rel-message">{addRelMsg}</p>}
           </div>
 
           <a href={`/campaigns/${campaignId}/pages/${selectedNode.slug}`} className="button secondary graph-open-btn">
