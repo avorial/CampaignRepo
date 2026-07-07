@@ -37,11 +37,14 @@ export default function AdminClient({ campaign, isGlobalAdmin = false, publicSlu
   const [migrateBusy, setMigrateBusy] = useState(false);
   const [migrateResult, setMigrateResult] = useState<{ pushed?: number; skipped?: number; owner?: string; repo?: string; error?: string } | null>(null);
 
-  type PropDef = { name: string; type: string; options?: string[]; placeholder?: string };
+  type PropDef = { name: string; type: string; options?: string[]; placeholder?: string; min?: number; max?: number; formula?: string; description?: string };
   const [categoryProperties, setCategoryProperties] = useState<Record<string, PropDef[]>>({});
   const [editingCatProps, setEditingCatProps] = useState<string>("character");
   const [newPropName, setNewPropName] = useState("");
   const [newPropType, setNewPropType] = useState("text");
+  const [newPropOptions, setNewPropOptions] = useState("");
+  const [newPropFormula, setNewPropFormula] = useState("");
+  const [newPropDescription, setNewPropDescription] = useState("");
   const [catPropsSaved, setCatPropsSaved] = useState(false);
 
   async function load() {
@@ -255,10 +258,18 @@ export default function AdminClient({ campaign, isGlobalAdmin = false, publicSlu
     if (!name) return;
     const current = categoryProperties[editingCatProps] || [];
     if (current.some((p) => p.name === name)) return;
-    const updated = { ...categoryProperties, [editingCatProps]: [...current, { name, type: newPropType }] };
+    const next: PropDef = { name, type: newPropType };
+    const options = newPropOptions.split(",").map((option) => option.trim()).filter(Boolean);
+    if ((newPropType === "select" || newPropType === "choice") && options.length) next.options = options;
+    if (newPropType === "formula" && newPropFormula.trim()) next.formula = newPropFormula.trim();
+    if (newPropDescription.trim()) next.description = newPropDescription.trim();
+    const updated = { ...categoryProperties, [editingCatProps]: [...current, next] };
     setCategoryProperties(updated);
     saveCategoryProperties(updated);
     setNewPropName("");
+    setNewPropOptions("");
+    setNewPropFormula("");
+    setNewPropDescription("");
   }
 
   function removeCatProp(cat: string, propName: string) {
@@ -477,12 +488,15 @@ export default function AdminClient({ campaign, isGlobalAdmin = false, publicSlu
 
         {(categoryProperties[editingCatProps] || []).length > 0 && (
           <table className="organize-table" style={{ marginBottom: 12 }}>
-            <thead><tr><th>Field name</th><th>Type</th><th></th></tr></thead>
+            <thead><tr><th>Field name</th><th>Type</th><th>Display</th><th></th></tr></thead>
             <tbody>
               {(categoryProperties[editingCatProps] || []).map((p) => (
                 <tr key={p.name}>
                   <td>{p.name}</td>
                   <td><span className="tag-chip">{p.type}</span></td>
+                  <td className="muted" style={{ fontSize: 12 }}>
+                    {p.type === "formula" ? (p.formula || "formula") : p.options?.length ? p.options.join(", ") : p.description || "frontmatter field"}
+                  </td>
                   <td><button type="button" className="linklike danger" onClick={() => removeCatProp(editingCatProps, p.name)}>Remove</button></td>
                 </tr>
               ))}
@@ -508,11 +522,37 @@ export default function AdminClient({ campaign, isGlobalAdmin = false, publicSlu
             <option value="number">Number</option>
             <option value="checkbox">Checkbox</option>
             <option value="select">Dropdown (options)</option>
+            <option value="choice">Choice buttons</option>
             <option value="date">Date</option>
             <option value="counter">Counter (current / max)</option>
             <option value="link">Wiki page link</option>
+            <option value="formula">Formula</option>
           </select>
           <button type="button" onClick={addCatProp} disabled={!newPropName.trim()}>Add field</button>
+          <div style={{ flexBasis: "100%", display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", marginTop: 2 }}>
+            {(newPropType === "select" || newPropType === "choice") && (
+              <input
+                className="search-input"
+                placeholder="Options: hostile, neutral, allied"
+                value={newPropOptions}
+                onChange={(e) => setNewPropOptions(e.target.value)}
+              />
+            )}
+            {newPropType === "formula" && (
+              <input
+                className="search-input"
+                placeholder="Formula, e.g. {STR} + {DEX}"
+                value={newPropFormula}
+                onChange={(e) => setNewPropFormula(e.target.value)}
+              />
+            )}
+            <input
+              className="search-input"
+              placeholder="Optional help text"
+              value={newPropDescription}
+              onChange={(e) => setNewPropDescription(e.target.value)}
+            />
+          </div>
           {catPropsSaved && <span style={{ color: "var(--gold)", fontSize: 13 }}>Saved ✓</span>}
         </div>
       </div>

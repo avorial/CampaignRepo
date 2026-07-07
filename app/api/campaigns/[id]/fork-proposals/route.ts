@@ -25,6 +25,15 @@ const updateSchema = z.object({
   status: z.enum(["accepted", "rejected"])
 });
 
+function githubPullRequestUrl(source: { owner: string; repo: string; branch: string; storageBackend: string } | null, fork: { owner: string; repo: string; branch: string; storageBackend: string }, title: string) {
+  if (!source || source.storageBackend !== "github" || fork.storageBackend !== "github") return null;
+  if (!source.owner || !source.repo || !fork.owner || !fork.repo) return null;
+  const base = encodeURIComponent(source.branch || "main");
+  const head = `${fork.owner}:${fork.branch || "main"}`;
+  const params = new URLSearchParams({ quick_pull: "1", title });
+  return `https://github.com/${source.owner}/${source.repo}/compare/${base}...${head}?${params.toString()}`;
+}
+
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const { id } = await params;
@@ -60,7 +69,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
   }
 
-  return NextResponse.json({ proposalId });
+  return NextResponse.json({ proposalId, githubPrUrl: githubPullRequestUrl(source, campaign, input.title) });
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {

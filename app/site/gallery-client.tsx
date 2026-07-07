@@ -4,8 +4,32 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import Logo from "@/app/components/logo";
 
-type Site = { slug: string; name: string; gameType: string; clones: number; publishedAt: string; description: string | null; tags: string[] };
-type SortKey = "clones" | "az" | "newest";
+type Site = {
+  slug: string;
+  name: string;
+  gameType: string;
+  clones: number;
+  publishedAt: string;
+  updatedAt: string;
+  description: string | null;
+  tags: string[];
+  ratingAverage: number;
+  ratingCount: number;
+  communityKind: string;
+  contributionGuidelines: string | null;
+};
+type SortKey = "clones" | "rating" | "updated" | "az" | "newest";
+
+function kindLabel(kind: string) {
+  if (kind === "template") return "Template";
+  if (kind === "starter") return "Starter";
+  if (kind === "system-pack") return "System pack";
+  return "Campaign";
+}
+
+function shortDate(value: string) {
+  return new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
 
 export default function PublicGalleryClient({ sites }: { sites: Site[] }) {
   const [query, setQuery] = useState("");
@@ -32,6 +56,8 @@ export default function PublicGalleryClient({ sites }: { sites: Site[] }) {
     if (tagFilter) result = result.filter((s) => (s.tags || []).includes(tagFilter));
     if (needle) result = result.filter((s) => s.name.toLowerCase().includes(needle) || s.gameType.toLowerCase().includes(needle) || (s.tags || []).some((t) => t.includes(needle)));
     if (sort === "clones") return [...result].sort((a, b) => b.clones - a.clones || a.name.localeCompare(b.name));
+    if (sort === "rating") return [...result].sort((a, b) => b.ratingAverage - a.ratingAverage || b.ratingCount - a.ratingCount || a.name.localeCompare(b.name));
+    if (sort === "updated") return [...result].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.name.localeCompare(b.name));
     if (sort === "newest") return [...result].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
     return [...result].sort((a, b) => a.name.localeCompare(b.name));
   }, [sites, query, systemFilter, tagFilter, sort]);
@@ -61,6 +87,8 @@ export default function PublicGalleryClient({ sites }: { sites: Site[] }) {
           <div className="gallery-sort">
             <span className="gallery-sort-label">Sort:</span>
             <button type="button" className={`gallery-sort-btn${sort === "clones" ? " active" : ""}`} onClick={() => setSort("clones")}>Most cloned</button>
+            <button type="button" className={`gallery-sort-btn${sort === "rating" ? " active" : ""}`} onClick={() => setSort("rating")}>Top rated</button>
+            <button type="button" className={`gallery-sort-btn${sort === "updated" ? " active" : ""}`} onClick={() => setSort("updated")}>Recently updated</button>
             <button type="button" className={`gallery-sort-btn${sort === "az" ? " active" : ""}`} onClick={() => setSort("az")}>A–Z</button>
             <button type="button" className={`gallery-sort-btn${sort === "newest" ? " active" : ""}`} onClick={() => setSort("newest")}>Newest</button>
           </div>
@@ -123,14 +151,17 @@ export default function PublicGalleryClient({ sites }: { sites: Site[] }) {
             {filtered.map((s) => (
               <Link key={s.slug} className="gallery-card" href={`/site/${s.slug}`}>
                 <strong>{s.name}</strong>
-                <span className="gallery-card-system">{s.gameType}</span>
+                <span className="gallery-card-system">{s.gameType} · {kindLabel(s.communityKind)}</span>
                 {s.description && <span className="gallery-card-description">{s.description}</span>}
                 {(s.tags || []).length > 0 && (
                   <div className="gallery-card-tags">
                     {s.tags.map((t) => <span key={t} className="gallery-card-tag">{t}</span>)}
                   </div>
                 )}
-                <span className="gallery-card-meta">{s.clones > 0 ? `${s.clones} clone${s.clones === 1 ? "" : "s"}` : "Be the first to clone"}</span>
+                <span className="gallery-card-meta">
+                  {s.ratingCount ? `${s.ratingAverage.toFixed(1)} stars · ${s.ratingCount} rating${s.ratingCount === 1 ? "" : "s"}` : "No ratings yet"}
+                </span>
+                <span className="gallery-card-meta">{s.clones > 0 ? `${s.clones} clone${s.clones === 1 ? "" : "s"}` : "Be the first to clone"} · Updated {shortDate(s.updatedAt)}</span>
                 <span className="gallery-card-cta">View world →</span>
               </Link>
             ))}

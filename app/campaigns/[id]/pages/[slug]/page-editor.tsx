@@ -8,6 +8,35 @@ import { renderMarkdown, type IncludeResolver, type MediaPathResolver, type Wiki
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
 import { RELATIONSHIP_TYPES, REL_TYPE_MAP } from "@/lib/relationships";
 
+type CategoryProperty = {
+  name: string;
+  type: string;
+  options?: string[];
+  placeholder?: string;
+  min?: number;
+  max?: number;
+  formula?: string;
+  description?: string;
+};
+
+function evaluateCustomFormula(formula: string | undefined, values: Record<string, unknown>) {
+  if (!formula?.trim()) return "";
+  const expression = formula.replace(/\{([^}]+)\}/g, (_, rawName: string) => {
+    const value = values[rawName.trim()];
+    if (typeof value === "number") return String(value);
+    if (value && typeof value === "object" && "current" in value) return String(Number((value as { current?: number }).current || 0));
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? String(parsed) : "0";
+  });
+  if (!/^[\d\s+\-*/().%]+$/.test(expression)) return "";
+  try {
+    const result = Function(`"use strict"; return (${expression});`)() as unknown;
+    return typeof result === "number" && Number.isFinite(result) ? String(Math.round(result * 100) / 100) : "";
+  } catch {
+    return "";
+  }
+}
+
 const travellerSkillRows: Array<{ name: string; speciality?: string; level?: number }> = [
   { name: "Admin" }, { name: "Advocate" }, { name: "Animals" }, { name: "Animals", speciality: "Handling" }, { name: "Animals", speciality: "Riding" }, { name: "Animals", speciality: "Veterinary" }, { name: "Animals", speciality: "Training" },
   { name: "Art" }, { name: "Art", speciality: "Performer" }, { name: "Art", speciality: "Holography" }, { name: "Art", speciality: "Instrument" }, { name: "Art", speciality: "Visual Media" }, { name: "Art", speciality: "Write" },
@@ -127,7 +156,7 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
   const [wikiMenuIdx, setWikiMenuIdx] = useState(0);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [coEditors, setCoEditors] = useState<{ userId: number; name: string }[]>([]);
-  const [categoryProps, setCategoryProps] = useState<Record<string, { name: string; type: string }[]>>({});
+  const [categoryProps, setCategoryProps] = useState<Record<string, CategoryProperty[]>>({});
   const [members, setMembers] = useState<{ email: string; name: string; role: string }[]>([]);
   const [pageCalendar, setPageCalendar] = useState<{ months: { name: string; days: number }[]; weekdays: string[]; eraName?: string; currentDate: { year: number; month: number; day: number } } | null>(null);
   const [watching, setWatching] = useState(false);
@@ -1349,14 +1378,35 @@ notes: ""
                   </label>
                 );
               }
-              if (prop.type === "select" && Array.isArray((prop as { options?: string[] }).options)) {
+              if (prop.type === "select" && Array.isArray(prop.options)) {
                 return (
                   <label key={prop.name}>{prop.name}
                     <select value={typeof val === "string" ? val : ""} onChange={(e) => update(e.target.value)} disabled={!fieldsEditable}>
                       <option value="">— choose —</option>
-                      {((prop as { options?: string[] }).options || []).map((o) => <option key={o} value={o}>{o}</option>)}
+                      {(prop.options || []).map((o) => <option key={o} value={o}>{o}</option>)}
                     </select>
                   </label>
+                );
+              }
+              if (prop.type === "choice" && Array.isArray(prop.options)) {
+                return (
+                  <div key={prop.name} className="stack" style={{ gap: 6 }}>
+                    <span style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 700 }}>{prop.name}</span>
+                    <div className="member-actions" style={{ justifyContent: "flex-start" }}>
+                      {(prop.options || []).map((option) => (
+                        <button
+                          type="button"
+                          key={option}
+                          className={val === option ? "" : "secondary"}
+                          onClick={() => update(option)}
+                          disabled={!fieldsEditable}
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                    {prop.description && <span className="muted" style={{ fontSize: 12 }}>{prop.description}</span>}
+                  </div>
                 );
               }
               if (prop.type === "date") {
@@ -1377,6 +1427,15 @@ notes: ""
                   </div>
                 );
               }
+              if (prop.type === "formula") {
+                const computed = evaluateCustomFormula(prop.formula, customProps);
+                return (
+                  <label key={prop.name}>{prop.name}
+                    <input value={computed} readOnly placeholder={prop.formula || "{Field} + 1"} />
+                    <span className="muted" style={{ fontSize: 12 }}>{prop.formula || prop.description || "Calculated from other custom fields."}</span>
+                  </label>
+                );
+              }
               if (prop.type === "link") {
                 return (
                   <label key={prop.name}>{prop.name}
@@ -1395,7 +1454,8 @@ notes: ""
               }
               return (
                 <label key={prop.name}>{prop.name}
-                  <input value={typeof val === "string" ? val : ""} onChange={(e) => update(e.target.value)} readOnly={!fieldsEditable} />
+                  <input value={typeof val === "string" ? val : ""} onChange={(e) => update(e.target.value)} readOnly={!fieldsEditable} placeholder={prop.placeholder || ""} />
+                  {prop.description && <span className="muted" style={{ fontSize: 12 }}>{prop.description}</span>}
                 </label>
               );
             })}

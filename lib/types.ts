@@ -131,6 +131,29 @@ export type WikiRelationship = {
   hidden?: boolean;
 };
 
+export type WikiFieldType =
+  | "text"
+  | "textarea"
+  | "number"
+  | "select"
+  | "choice"
+  | "checkbox"
+  | "date"
+  | "counter"
+  | "link"
+  | "formula";
+
+export type WikiFieldSchema = {
+  name: string;
+  type: WikiFieldType;
+  options?: string[];
+  placeholder?: string;
+  min?: number;
+  max?: number;
+  formula?: string;
+  description?: string;
+};
+
 export type WikiPageFrontmatter = {
   category: Category;
   type: string;
@@ -142,6 +165,7 @@ export type WikiPageFrontmatter = {
   knownToPlayers: boolean;
   keyLinks: string[];
   aliases: string[];
+  customProps?: Record<string, unknown>;
   relationships?: WikiRelationship[];
   parent?: string;
   cover?: string;
@@ -163,9 +187,9 @@ export type WikiPageFrontmatter = {
   lastEditedBy?: string;
   assignee?: string;
   sheet?: TravellerSheet;
-  inventory?: Array<{ name: string; qty?: number; value?: string; notes?: string }>;
-  abilities?: Array<{ name: string; description?: string; type?: string; notes?: string }>;
-  resources?: Array<{ name: string; current: number; max: number; notes?: string }>;
+  inventory?: Array<{ name: string; qty?: number; value?: string; type?: string; equipped?: boolean; notes?: string }>;
+  abilities?: Array<{ name: string; description?: string; type?: string; cost?: string; uses?: string; notes?: string }>;
+  resources?: Array<{ name: string; current: number; max: number; formula?: string; notes?: string }>;
 };
 
 export type TravellerSkill = { name: string; level?: number; speciality?: string };

@@ -12,6 +12,7 @@ export default function PublicSiteClient({
   slug,
   campaignName,
   gameType,
+  site,
   pages,
   quests,
   theme,
@@ -20,6 +21,7 @@ export default function PublicSiteClient({
   slug: string;
   campaignName: string;
   gameType: string;
+  site: { ratingAverage: number; ratingCount: number; communityKind: string; contributionGuidelines: string | null } | null;
   pages: WikiPage[];
   quests: Quest[];
   theme: CampaignTheme;
@@ -32,6 +34,8 @@ export default function PublicSiteClient({
   const [cloneMsg, setCloneMsg] = useState("");
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [diceRoll, setDiceRoll] = useState<{ label: string; detail: string; total: number } | null>(null);
+  const [rating, setRating] = useState({ average: site?.ratingAverage || 0, count: site?.ratingCount || 0 });
+  const [rated, setRated] = useState(false);
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({});
   const [openNodes, setOpenNodes] = useState<Record<string, boolean>>({});
 
@@ -57,6 +61,19 @@ export default function PublicSiteClient({
     }
     setCloning(false);
     setCloneMsg(data.error || "Could not clone this world.");
+  }
+
+  async function rateWorld(nextRating: number) {
+    const res = await fetch(`/api/site/${slug}/rating`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rating: nextRating })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      setRating({ average: data.ratingAverage || 0, count: data.ratingCount || 0 });
+      setRated(true);
+    }
   }
 
   useEffect(() => {
@@ -272,7 +289,14 @@ export default function PublicSiteClient({
         <div>
           <Logo href="/site" />
           <h1>{campaignName}</h1>
-          <p className="muted">{gameType}</p>
+          <p className="muted">{gameType}{site?.communityKind ? ` · ${site.communityKind.replace("-", " ")}` : ""}</p>
+          <div className="public-rating-row">
+            <span>{rating.count ? `${rating.average.toFixed(1)} stars from ${rating.count}` : "No ratings yet"}</span>
+            {[1, 2, 3, 4, 5].map((value) => (
+              <button key={value} type="button" className="secondary small" onClick={() => rateWorld(value)} disabled={rated}>{value}</button>
+            ))}
+          </div>
+          {site?.contributionGuidelines && <p className="muted public-contribution-note">{site.contributionGuidelines}</p>}
         </div>
         <div className="topbar-actions">
           <button type="button" onClick={cloneWorld} disabled={cloning}>Clone this world</button>

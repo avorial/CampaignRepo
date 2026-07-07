@@ -74,11 +74,13 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   }, []);
   const [openNodes, setOpenNodes] = useState<Record<string, boolean>>({});
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({});
-  const [publicSite, setPublicSite] = useState<{ slug: string; enabled: boolean; description?: string | null } | null>(null);
+  const [publicSite, setPublicSite] = useState<{ slug: string; enabled: boolean; description?: string | null; tags?: string[]; communityKind?: string; contributionGuidelines?: string | null } | null>(null);
   const [publicLinkName, setPublicLinkName] = useState(publicLinkInput(campaign.name));
   const [publicDescription, setPublicDescription] = useState("");
   const [publicTagInput, setPublicTagInput] = useState("");
   const [publicTags, setPublicTags] = useState<string[]>([]);
+  const [publicCommunityKind, setPublicCommunityKind] = useState("campaign");
+  const [publicContributionGuidelines, setPublicContributionGuidelines] = useState("");
   const [theme, setTheme] = useState<CampaignTheme>({});
   const [tab, setTab] = useState(campaign.role === "owner" || campaign.role === "gm" ? "pages" : "world");
   const pendingReviews = pages.filter((page) => page.frontmatter.approvalStatus !== "approved").length;
@@ -116,6 +118,8 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     setPublicLinkName(publicData.site?.slug || publicLinkInput(campaign.name));
     setPublicDescription(publicData.site?.description || "");
     setPublicTags(publicData.site?.tags || []);
+    setPublicCommunityKind(publicData.site?.communityKind || "campaign");
+    setPublicContributionGuidelines(publicData.site?.contributionGuidelines || "");
     setTheme(themeData.theme || {});
     if (categoriesData.categories?.length) {
       setCampaignCategories(categoriesData.categories);
@@ -200,6 +204,25 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
       body: JSON.stringify({ action: "tags", tags: nextTags })
     });
     if (res.ok) setMessage("Gallery tags saved.");
+  }
+
+  async function savePublicCommunity(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const res = await fetch(`/api/campaigns/${campaign.id}/public`, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "community",
+        communityKind: publicCommunityKind,
+        contributionGuidelines: publicContributionGuidelines
+      })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setPublicSite(data.site || null);
+      setMessage("Community library settings saved.");
+    } else {
+      setMessage(data.error || "Could not save community settings.");
+    }
   }
 
   async function saveCategories(event: FormEvent<HTMLFormElement>) {
@@ -968,6 +991,27 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
                     <button type="button" onClick={() => savePublicTags(publicTags)}>Save tags</button>
                   </div>
                 </div>
+                <form onSubmit={savePublicCommunity} className="stack" style={{ marginTop: 12 }}>
+                  <label>Library type
+                    <select value={publicCommunityKind} onChange={(e) => setPublicCommunityKind(e.target.value)}>
+                      <option value="campaign">Campaign world</option>
+                      <option value="template">Reusable template</option>
+                      <option value="starter">Starter campaign</option>
+                      <option value="system-pack">System pack</option>
+                    </select>
+                  </label>
+                  <label>Contribution guidance
+                    <textarea
+                      value={publicContributionGuidelines}
+                      onChange={(e) => setPublicContributionGuidelines(e.target.value)}
+                      placeholder="Tell visitors what kinds of fixes, pages, or additions you welcome."
+                      rows={3}
+                      maxLength={600}
+                      style={{ resize: "vertical" }}
+                    />
+                  </label>
+                  <button type="submit" className="secondary">Save library settings</button>
+                </form>
               </>
             ) : (
               <p className="muted">{publicSite ? "This world is currently offline. Re-publish to bring it back at its existing link." : "Not published yet."}</p>

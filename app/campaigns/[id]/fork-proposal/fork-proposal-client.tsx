@@ -11,7 +11,7 @@ export default function ForkProposalClient({ campaignId, forkOf, pages }: {
   const [description, setDescription] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ ok?: boolean; error?: string } | null>(null);
+  const [result, setResult] = useState<{ ok?: boolean; error?: string; githubPrUrl?: string | null } | null>(null);
 
   function toggle(slug: string) {
     setSelected((s) => { const n = new Set(s); if (n.has(slug)) n.delete(slug); else n.add(slug); return n; });
@@ -28,7 +28,7 @@ export default function ForkProposalClient({ campaignId, forkOf, pages }: {
         body: JSON.stringify({ title: title.trim(), description: description.trim() || null, pages: [...selected] })
       });
       const data = await res.json();
-      if (res.ok) setResult({ ok: true });
+      if (res.ok) setResult({ ok: true, githubPrUrl: data.githubPrUrl || null });
       else setResult({ error: data.error || "Could not submit proposal." });
     } finally {
       setBusy(false);
@@ -40,6 +40,11 @@ export default function ForkProposalClient({ campaignId, forkOf, pages }: {
       <section className="panel" style={{ maxWidth: 640, margin: "40px auto", padding: 32, textAlign: "center" }}>
         <h2>Proposal submitted</h2>
         <p className="muted">The source world owner has been notified and can review your proposed pages.</p>
+        {result.githubPrUrl && (
+          <p style={{ marginTop: 16 }}>
+            <a href={result.githubPrUrl} className="button secondary" target="_blank" rel="noreferrer">Open GitHub pull request</a>
+          </p>
+        )}
         <a href={`/campaigns/${campaignId}`} className="button" style={{ marginTop: 16 }}>Back to campaign</a>
       </section>
     );

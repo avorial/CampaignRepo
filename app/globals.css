@@ -3896,6 +3896,22 @@ button.nav-link.active {
   text-transform: uppercase;
 }
 
+.public-rating-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  text-transform: uppercase;
+}
+
+.public-contribution-note {
+  max-width: 760px;
+  margin-top: 8px;
+}
 
 .public-empty {
   padding: 60px 36px;

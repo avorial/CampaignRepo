@@ -194,6 +194,22 @@ if (!publicSiteColumns.some((column) => column.name === "description")) {
 if (!publicSiteColumns.some((column) => column.name === "tags")) {
   db.exec("ALTER TABLE public_sites ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'");
 }
+if (!publicSiteColumns.some((column) => column.name === "updatedAt")) {
+  db.exec("ALTER TABLE public_sites ADD COLUMN updatedAt TEXT");
+  db.exec("UPDATE public_sites SET updatedAt = COALESCE(createdAt, CURRENT_TIMESTAMP) WHERE updatedAt IS NULL OR updatedAt = ''");
+}
+if (!publicSiteColumns.some((column) => column.name === "ratingTotal")) {
+  db.exec("ALTER TABLE public_sites ADD COLUMN ratingTotal INTEGER NOT NULL DEFAULT 0");
+}
+if (!publicSiteColumns.some((column) => column.name === "ratingCount")) {
+  db.exec("ALTER TABLE public_sites ADD COLUMN ratingCount INTEGER NOT NULL DEFAULT 0");
+}
+if (!publicSiteColumns.some((column) => column.name === "communityKind")) {
+  db.exec("ALTER TABLE public_sites ADD COLUMN communityKind TEXT NOT NULL DEFAULT 'campaign'");
+}
+if (!publicSiteColumns.some((column) => column.name === "contributionGuidelines")) {
+  db.exec("ALTER TABLE public_sites ADD COLUMN contributionGuidelines TEXT");
+}
 
 const adminHash = bcrypt.hashSync("admin", 12);
 db.prepare(
@@ -373,7 +389,21 @@ export function setUserAiSettings(userId: number, config: AiConfig): AiConfig {
   return next;
 }
 
-export type PublicSiteRow = { campaignId: number; slug: string; enabled: boolean; createdAt: string };
+export type PublicSiteRow = {
+  campaignId: number;
+  slug: string;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  clones: number;
+  description: string | null;
+  tags: string[];
+  ratingTotal: number;
+  ratingCount: number;
+  ratingAverage: number;
+  communityKind: string;
+  contributionGuidelines: string | null;
+};
 
 function normalizePublicSlug(value?: string | null) {
   const clean = slugify(value || "").toLowerCase();
@@ -396,10 +426,16 @@ function assertPublicSlugAvailable(slug: string, campaignId: number) {
 
 /** The published-site record for a campaign, if one has ever been created. */
 export function getPublicSite(campaignId: number): PublicSiteRow | null {
-  const row = db.prepare("SELECT campaignId, slug, enabled, createdAt FROM public_sites WHERE campaignId = ?").get(campaignId) as
-    | { campaignId: number; slug: string; enabled: number; createdAt: string }
+  const row = db.prepare("SELECT * FROM public_sites WHERE campaignId = ?").get(campaignId) as
+    | (Omit<PublicSiteRow, "enabled" | "tags" | "ratingAverage"> & { enabled: number; tags: string })
     | undefined;
-  return row ? { ...row, enabled: Boolean(row.enabled) } : null;
+  return row ? {
+    ...row,
+    updatedAt: row.updatedAt || row.createdAt,
+    enabled: Boolean(row.enabled),
+    tags: JSON.parse(row.tags || "[]") as string[],
+    ratingAverage: row.ratingCount ? row.ratingTotal / row.ratingCount : 0
+  } : null;
 }
 
 /** Resolve a public share slug to its campaign — only when the site is enabled. */
@@ -425,36 +461,98 @@ export function getPublicSiteCampaign(slug: string): Campaign | null {
 }
 
 /** Every enabled public campaign, for the public discovery gallery (no auth). */
-export function listPublicSites(): { slug: string; name: string; gameType: string; clones: number; publishedAt: string; description: string | null; tags: string[] }[] {
+export function listPublicSites(): {
+  slug: string;
+  name: string;
+  gameType: string;
+  clones: number;
+  publishedAt: string;
+  updatedAt: string;
+  description: string | null;
+  tags: string[];
+  ratingAverage: number;
+  ratingCount: number;
+  communityKind: string;
+  contributionGuidelines: string | null;
+}[] {
   const rows = db
     .prepare(
       `SELECT public_sites.slug AS slug, campaigns.name AS name, campaigns.gameType AS gameType,
               public_sites.clones AS clones, public_sites.createdAt AS publishedAt,
+              COALESCE(public_sites.updatedAt, public_sites.createdAt) AS updatedAt,
               public_sites.description AS description,
-              public_sites.tags AS tags
+              public_sites.tags AS tags,
+              public_sites.ratingTotal AS ratingTotal,
+              public_sites.ratingCount AS ratingCount,
+              public_sites.communityKind AS communityKind,
+              public_sites.contributionGuidelines AS contributionGuidelines
        FROM public_sites
        JOIN campaigns ON campaigns.id = public_sites.campaignId
        WHERE public_sites.enabled = 1
-       ORDER BY public_sites.clones DESC, campaigns.name COLLATE NOCASE`
+       ORDER BY public_sites.updatedAt DESC, public_sites.clones DESC, campaigns.name COLLATE NOCASE`
     )
-    .all() as { slug: string; name: string; gameType: string; clones: number; publishedAt: string; description: string | null; tags: string }[];
-  return rows.map((r) => ({ ...r, tags: JSON.parse(r.tags || "[]") as string[] }));
+    .all() as {
+      slug: string;
+      name: string;
+      gameType: string;
+      clones: number;
+      publishedAt: string;
+      updatedAt: string;
+      description: string | null;
+      tags: string;
+      ratingTotal: number;
+      ratingCount: number;
+      communityKind: string;
+      contributionGuidelines: string | null;
+    }[];
+  return rows.map((r) => ({
+    ...r,
+    tags: JSON.parse(r.tags || "[]") as string[],
+    ratingAverage: r.ratingCount ? r.ratingTotal / r.ratingCount : 0
+  }));
+}
+
+export function getPublicSiteBySlug(slug: string): PublicSiteRow | null {
+  const row = db.prepare("SELECT * FROM public_sites WHERE slug = ? AND enabled = 1").get(slug) as
+    | (Omit<PublicSiteRow, "enabled" | "tags" | "ratingAverage"> & { enabled: number; tags: string })
+    | undefined;
+  return row ? {
+    ...row,
+    updatedAt: row.updatedAt || row.createdAt,
+    enabled: Boolean(row.enabled),
+    tags: JSON.parse(row.tags || "[]") as string[],
+    ratingAverage: row.ratingCount ? row.ratingTotal / row.ratingCount : 0
+  } : null;
 }
 
 export function updatePublicSiteDescription(userId: number, campaignId: number, description: string | null) {
   if (!canManageCampaign(userId, campaignId)) throw new Error("Forbidden");
-  db.prepare("UPDATE public_sites SET description = ? WHERE campaignId = ?").run(description || null, campaignId);
+  db.prepare("UPDATE public_sites SET description = ?, updatedAt = CURRENT_TIMESTAMP WHERE campaignId = ?").run(description || null, campaignId);
 }
 
 export function updatePublicSiteTags(userId: number, campaignId: number, tags: string[]) {
   if (!canManageCampaign(userId, campaignId)) throw new Error("Forbidden");
   const clean = tags.map((t) => t.trim().toLowerCase()).filter(Boolean).slice(0, 10);
-  db.prepare("UPDATE public_sites SET tags = ? WHERE campaignId = ?").run(JSON.stringify(clean), campaignId);
+  db.prepare("UPDATE public_sites SET tags = ?, updatedAt = CURRENT_TIMESTAMP WHERE campaignId = ?").run(JSON.stringify(clean), campaignId);
+}
+
+export function updatePublicSiteCommunity(userId: number, campaignId: number, communityKind: string, contributionGuidelines: string | null) {
+  if (!canManageCampaign(userId, campaignId)) throw new Error("Forbidden");
+  const allowed = new Set(["campaign", "template", "starter", "system-pack"]);
+  const kind = allowed.has(communityKind) ? communityKind : "campaign";
+  db.prepare("UPDATE public_sites SET communityKind = ?, contributionGuidelines = ?, updatedAt = CURRENT_TIMESTAMP WHERE campaignId = ?")
+    .run(kind, contributionGuidelines || null, campaignId);
+}
+
+export function ratePublicSite(slug: string, rating: number): PublicSiteRow | null {
+  const clean = Math.max(1, Math.min(5, Math.round(rating)));
+  db.prepare("UPDATE public_sites SET ratingTotal = ratingTotal + ?, ratingCount = ratingCount + 1 WHERE slug = ? AND enabled = 1").run(clean, slug);
+  return getPublicSiteBySlug(slug);
 }
 
 /** Bump a published world's clone counter (drives most-cloned discovery). */
 export function incrementCloneCount(campaignId: number) {
-  db.prepare("UPDATE public_sites SET clones = clones + 1 WHERE campaignId = ?").run(campaignId);
+  db.prepare("UPDATE public_sites SET clones = clones + 1, updatedAt = CURRENT_TIMESTAMP WHERE campaignId = ?").run(campaignId);
 }
 
 /** Publish (or re-enable) a campaign's public site. Mints a stable random slug on first publish unless a custom slug is requested. */
@@ -464,17 +562,17 @@ export function publishCampaign(userId: number, campaignId: number, requestedSlu
   const slug = normalizePublicSlug(requestedSlug);
   if (slug) assertPublicSlugAvailable(slug, campaignId);
   if (existing) {
-    db.prepare("UPDATE public_sites SET slug = ?, enabled = 1 WHERE campaignId = ?").run(slug || existing.slug, campaignId);
+    db.prepare("UPDATE public_sites SET slug = ?, enabled = 1, updatedAt = CURRENT_TIMESTAMP WHERE campaignId = ?").run(slug || existing.slug, campaignId);
     return getPublicSite(campaignId)!;
   }
-  db.prepare("INSERT INTO public_sites (campaignId, slug, enabled) VALUES (?, ?, 1)").run(campaignId, slug || randomPublicSlug());
+  db.prepare("INSERT INTO public_sites (campaignId, slug, enabled, updatedAt) VALUES (?, ?, 1, CURRENT_TIMESTAMP)").run(campaignId, slug || randomPublicSlug());
   return getPublicSite(campaignId)!;
 }
 
 /** Take a campaign's public site offline without discarding its slug. */
 export function unpublishCampaign(userId: number, campaignId: number) {
   if (!canManageCampaign(userId, campaignId)) throw new Error("Forbidden");
-  db.prepare("UPDATE public_sites SET enabled = 0 WHERE campaignId = ?").run(campaignId);
+  db.prepare("UPDATE public_sites SET enabled = 0, updatedAt = CURRENT_TIMESTAMP WHERE campaignId = ?").run(campaignId);
 }
 
 /** Rotate the share slug, invalidating any previously shared public URL. */
@@ -484,7 +582,7 @@ export function rotatePublicSlug(userId: number, campaignId: number, requestedSl
   assertPublicSlugAvailable(slug, campaignId);
   const existing = getPublicSite(campaignId);
   if (!existing) return publishCampaign(userId, campaignId, slug);
-  db.prepare("UPDATE public_sites SET slug = ? WHERE campaignId = ?").run(slug, campaignId);
+  db.prepare("UPDATE public_sites SET slug = ?, updatedAt = CURRENT_TIMESTAMP WHERE campaignId = ?").run(slug, campaignId);
   return getPublicSite(campaignId)!;
 }
 

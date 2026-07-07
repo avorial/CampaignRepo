@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getPublicSiteCampaign } from "@/lib/db";
+import { getPublicSiteBySlug, getPublicSiteCampaign } from "@/lib/db";
 import { loadCampaignCategories } from "@/lib/categories";
 import { loadCampaignTheme, loadPublicPages, loadPublicQuests } from "@/lib/public-site";
 import PublicSiteClient from "./public-site-client";
@@ -27,5 +27,6 @@ export default async function PublicSitePage({ params }: { params: Promise<{ slu
     loadCampaignTheme(campaign),
     loadCampaignCategories(campaign)
   ]);
-  return <PublicSiteClient slug={slug} campaignName={campaign.name} gameType={campaign.gameType} pages={pages} quests={quests} theme={theme} categories={categories} />;
+  const site = getPublicSiteBySlug(slug);
+  return <PublicSiteClient slug={slug} campaignName={campaign.name} gameType={campaign.gameType} site={site} pages={pages} quests={quests} theme={theme} categories={categories} />;
 }
