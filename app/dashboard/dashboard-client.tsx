@@ -276,6 +276,199 @@ export default function DashboardClient({
         )}
       </section>
 
+
+
+      <section className="dashboard-grid dashboard-grid-single">
+        <details className="panel dashboard-toggle-panel" open={expandedPanels.build} onToggle={(event) => setPanelOpen("build", event.currentTarget.open)}>
+          <summary>
+            <span>New campaign</span>
+            <small>{mode === "local" ? "Local folder" : mode === "create" ? "GitHub (new)" : "GitHub (connect)"}</small>
+          </summary>
+          <div className="dashboard-toggle-body">
+            <form onSubmit={buildRepo} className="stack" style={{ marginTop: 4 }}>
+              <label>Campaign name<input name="name" required placeholder="The Jardin File" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} /></label>
+              <label>Game system<select name="gameType">{gameTypeGroups.map((group) => (
+                <optgroup key={group.label} label={group.label}>{group.types.map((type) => <option key={type}>{type}</option>)}</optgroup>
+              ))}</select></label>
+              <details onToggle={(e) => { if ((e.currentTarget as HTMLDetailsElement).open && mode === "local") setBuildError(""); }}>
+                <summary style={{ cursor: "pointer", fontSize: "12px", color: "var(--muted)", padding: "4px 0" }}>Advanced options</summary>
+                <div className="stack" style={{ marginTop: 8, paddingLeft: 4 }}>
+                  <p className="muted" style={{ fontSize: "12px", margin: "0 0 8px" }}>Storage: choose where campaign files live.</p>
+                  <div className="segmented" style={{ marginBottom: 8 }}>
+                    <button type="button" className={mode === "local" ? "active" : ""} onClick={() => { setMode("local"); setBuildError(""); }}>Local folder</button>
+                    <button
+                      type="button"
+                      className={mode === "create" ? "active" : ""}
+                      disabled={isGitHubApp}
+                      title={isGitHubApp ? "GitHub App can't create repos — add a manual token to enable this" : undefined}
+                      onClick={() => { setMode("create"); setBuildError(""); }}
+                    >
+                      {isGitHubApp && <Lock size={11} aria-hidden style={{ marginRight: 5 }} />}GitHub (new repo)
+                    </button>
+                    <button type="button" className={mode === "connect" ? "active" : ""} onClick={() => { setMode("connect"); setBuildError(""); }}>GitHub (connect)</button>
+                  </div>
+                  {mode === "local" && (
+                    <>
+                      <label>
+                        Folder path <span className="muted" style={{ fontWeight: 400 }}>(optional)</span>
+                        <input name="localPath" placeholder={suggestedLocalPath || "Leave blank for default location"} />
+                        {suggestedLocalPath && <small className="muted">Default: {suggestedLocalPath}</small>}
+                      </label>
+                    </>
+                  )}
+                  {isGitHubApp && mode !== "local" && (
+                    <div className="setup-callout callout-warn">
+                      <strong><Lock size={13} aria-hidden style={{ marginRight: 6, verticalAlign: "-2px" }} />Creating new repos is locked</strong>
+                      <span>GitHub App can connect existing repos but can&apos;t create new ones. Make the repo at <a href="https://github.com/new" target="_blank" rel="noreferrer">github.com/new</a>, then use <button type="button" className="linklike" onClick={() => { setMode("connect"); setBuildError(""); }}>Connect existing</button>.</span>
+                    </div>
+                  )}
+                  {(mode === "create" || mode === "connect") && !githubConnected && (
+                    <div className="setup-callout callout-warn">
+                      <strong>GitHub not connected</strong>
+                      <span>Connect GitHub above, or keep <button type="button" className="linklike" onClick={() => { setMode("local"); setBuildError(""); }}>Local folder</button> to start without any account.</span>
+                    </div>
+                  )}
+                  {mode === "connect" && <label>Owner<input name="owner" placeholder="avorial (optional if pasting URL)" /></label>}
+                  {mode !== "local" && <label>{mode === "connect" ? "Repo name or URL" : "Repo name"}<input name="repo" required placeholder={mode === "connect" ? "kdwiki or https://github.com/avorial/kdwiki" : "jardin-campaign"} /></label>}
+                  {mode !== "local" && <label>Branch<input name="branch" defaultValue="main" /></label>}
+                  {mode === "create" && <label className="check"><input type="checkbox" name="private" defaultChecked /> Private repo</label>}
+                </div>
+              </details>
+              <button disabled={isGitHubApp && mode === "create"}>
+                {mode === "create" ? "Create and initialize" : mode === "local" ? "Create campaign" : "Connect and initialize"}
+              </button>
+              {buildError && <p className="error">{buildError}</p>}
+            </form>
+          </div>
+        </details>
+      </section>
+
+      <DemoBrowser />
+
+      <section className="dashboard-grid dashboard-grid-two">
+        <details className="panel dashboard-toggle-panel" open={expandedPanels.github} onToggle={(event) => setPanelOpen("github", event.currentTarget.open)}>
+          <summary>
+            <span>GitHub connection</span>
+            <small>{githubConnected ? `${githubConnection} connected` : "Connect access"}</small>
+          </summary>
+          <div className="dashboard-toggle-body">
+            {githubConnected ? (
+              <div className="connection-status">
+                <strong>Currently connected</strong>
+                <span>User {githubUser}</span>
+                <small>{githubConnection} access active for {user.email}</small>
+              </div>
+            ) : (
+              <p className="muted">Signed in as {user.email}. GitHub is not connected yet.</p>
+            )}
+            {!githubConnected && (
+              githubAppConfigured ? (
+                <div className="stack">
+                  <p className="muted">Install the GitHub App on the repos CampaignRepo can manage. This avoids storing a personal SSH key or broad personal token.</p>
+                  <a className="button" href="/api/github/app/start">Install GitHub App access</a>
+                </div>
+              ) : (
+                <div className="setup-callout">
+                  <strong>Connect GitHub with a GitHub App.</strong>
+                  <span>This creates a CampaignRepo GitHub App, stores its generated credentials in this server, then lets you choose the repos it can access.</span>
+                  <a className="button" href="/api/github/app/manifest/start">Connect GitHub</a>
+                </div>
+              )
+            )}
+            <details className="troubleshooting">
+              <summary>Connection troubleshooting</summary>
+              {githubAppConfigured ? (
+                <a className="button secondary" href="/api/github/app/start">Install or update GitHub App access</a>
+              ) : (
+                <a className="button secondary" href="/api/github/app/manifest/start">Rebuild GitHub App connection</a>
+              )}
+              <form onSubmit={connectGithub} className="stack">
+                <label>Manual GitHub token fallback<input name="token" type="password" placeholder="github_pat_..." /></label>
+                <button>Connect token</button>
+              </form>
+              <p className="muted">Token needs repository contents read/write access. Use this only for testing, repo creation, or repairing the GitHub App connection.</p>
+              <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">Create token instead</a>
+            </details>
+          </div>
+        </details>
+        <details className="panel dashboard-toggle-panel" open={expandedPanels.ai} onToggle={(event) => setPanelOpen("ai", event.currentTarget.open)}>
+          <summary>
+            <span>Personal AI</span>
+            <small>{personalAi.endpoint ? `Local AI ready · ${personalAi.model || "llama3.2"}` : "Local project AI"}</small>
+          </summary>
+          <div className="dashboard-toggle-body">
+            <p className="muted">
+              Set your default OpenAI-compatible endpoint for every project. Campaign-specific AI settings can still override this.
+            </p>
+            <form onSubmit={savePersonalAi} className="stack" style={{ marginTop: 4 }}>
+              <label>
+                Endpoint
+                <input value={aiEndpoint} onChange={(e) => setAiEndpoint(e.target.value)} placeholder="http://localhost:11434/v1" />
+              </label>
+              <button type="button" className="secondary" onClick={discoverAiModels} disabled={aiDiscovering}>
+                {aiDiscovering ? "Finding..." : "Find models"}
+              </button>
+              {aiModels.length > 0 && (
+                <div className="ai-model-list" aria-label="Detected local AI models">
+                  {aiModels.map((model) => (
+                    <button
+                      key={model}
+                      type="button"
+                      className={aiModel === model ? "active" : "secondary"}
+                      onClick={() => setAiModel(model)}
+                    >
+                      {model}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <label>
+                Model
+                <input value={aiModel} onChange={(e) => setAiModel(e.target.value)} placeholder="llama3.2" />
+              </label>
+              <label>
+                API key <span className="muted" style={{ fontWeight: 400 }}>(leave blank for Ollama / local endpoints)</span>
+                <input value={aiKey} onChange={(e) => setAiKey(e.target.value)} type="password" placeholder="optional" />
+              </label>
+              <div className="setup-callout">
+                <strong>Local AI examples</strong>
+                <span>Ollama: <code>http://localhost:11434/v1</code>. LM Studio: use its OpenAI-compatible server URL.</span>
+              </div>
+              <button disabled={aiSaving}>
+                {aiSaving ? `Testing / warming... ${aiSavingSeconds}s` : "Test and save personal AI"}
+              </button>
+            </form>
+          </div>
+        </details>
+      </section>
+
+      <section className="dashboard-grid dashboard-grid-single">
+        <details className="panel dashboard-toggle-panel" open={expandedPanels.mcp} onToggle={(event) => setPanelOpen("mcp", event.currentTarget.open)}>
+          <summary>
+            <span>MCP access tokens</span>
+            <small>{tokens.length} token{tokens.length === 1 ? "" : "s"}</small>
+          </summary>
+          <div className="dashboard-toggle-body">
+            <p className="muted">Connect an external AI/MCP client to <code>{mcpUrl}</code> with an <code>Authorization: Bearer</code> token.</p>
+            <form onSubmit={mintToken} className="inline-form">
+              <input name="tokenName" placeholder="Claude Desktop" />
+              <button>Mint token</button>
+            </form>
+            {newToken && (
+              <p className="muted">Copy now (shown once): <code>{newToken}</code></p>
+            )}
+            <div className="results">
+              {tokens.map((token) => (
+                <div key={token.id} className="token-row">
+                  <span><strong>{token.name}</strong> - last used {token.lastUsedAt || "never"}</span>
+                  <button type="button" onClick={() => revokeToken(token.id)}>Revoke</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </details>
+      </section>
+
       <section className="band repos-band">
         <div className="repos-band-head">
           <h2>Connected repos</h2>
@@ -385,194 +578,6 @@ export default function DashboardClient({
           )}
         </div>
         )}
-      </section>
-
-      <DemoBrowser />
-
-      <section className="dashboard-grid">
-        <details className="panel dashboard-toggle-panel" open={expandedPanels.github} onToggle={(event) => setPanelOpen("github", event.currentTarget.open)}>
-          <summary>
-            <span>GitHub connection</span>
-            <small>{githubConnected ? `${githubConnection} connected` : "Connect access"}</small>
-          </summary>
-          <div className="dashboard-toggle-body">
-            {githubConnected ? (
-              <div className="connection-status">
-                <strong>Currently connected</strong>
-                <span>User {githubUser}</span>
-                <small>{githubConnection} access active for {user.email}</small>
-              </div>
-            ) : (
-              <p className="muted">Signed in as {user.email}. GitHub is not connected yet.</p>
-            )}
-            {!githubConnected && (
-              githubAppConfigured ? (
-                <div className="stack">
-                  <p className="muted">Install the GitHub App on the repos CampaignRepo can manage. This avoids storing a personal SSH key or broad personal token.</p>
-                  <a className="button" href="/api/github/app/start">Install GitHub App access</a>
-                </div>
-              ) : (
-                <div className="setup-callout">
-                  <strong>Connect GitHub with a GitHub App.</strong>
-                  <span>This creates a CampaignRepo GitHub App, stores its generated credentials in this server, then lets you choose the repos it can access.</span>
-                  <a className="button" href="/api/github/app/manifest/start">Connect GitHub</a>
-                </div>
-              )
-            )}
-            <details className="troubleshooting">
-              <summary>Connection troubleshooting</summary>
-              {githubAppConfigured ? (
-                <a className="button secondary" href="/api/github/app/start">Install or update GitHub App access</a>
-              ) : (
-                <a className="button secondary" href="/api/github/app/manifest/start">Rebuild GitHub App connection</a>
-              )}
-              <form onSubmit={connectGithub} className="stack">
-                <label>Manual GitHub token fallback<input name="token" type="password" placeholder="github_pat_..." /></label>
-                <button>Connect token</button>
-              </form>
-              <p className="muted">Token needs repository contents read/write access. Use this only for testing, repo creation, or repairing the GitHub App connection.</p>
-              <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">Create token instead</a>
-            </details>
-          </div>
-        </details>
-
-        <details className="panel dashboard-toggle-panel" open={expandedPanels.build} onToggle={(event) => setPanelOpen("build", event.currentTarget.open)}>
-          <summary>
-            <span>New campaign</span>
-            <small>{mode === "local" ? "Local folder" : mode === "create" ? "GitHub (new)" : "GitHub (connect)"}</small>
-          </summary>
-          <div className="dashboard-toggle-body">
-            <form onSubmit={buildRepo} className="stack" style={{ marginTop: 4 }}>
-              <label>Campaign name<input name="name" required placeholder="The Jardin File" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} /></label>
-              <label>Game system<select name="gameType">{gameTypeGroups.map((group) => (
-                <optgroup key={group.label} label={group.label}>{group.types.map((type) => <option key={type}>{type}</option>)}</optgroup>
-              ))}</select></label>
-              <details onToggle={(e) => { if ((e.currentTarget as HTMLDetailsElement).open && mode === "local") setBuildError(""); }}>
-                <summary style={{ cursor: "pointer", fontSize: "12px", color: "var(--muted)", padding: "4px 0" }}>Advanced options</summary>
-                <div className="stack" style={{ marginTop: 8, paddingLeft: 4 }}>
-                  <p className="muted" style={{ fontSize: "12px", margin: "0 0 8px" }}>Storage: choose where campaign files live.</p>
-                  <div className="segmented" style={{ marginBottom: 8 }}>
-                    <button type="button" className={mode === "local" ? "active" : ""} onClick={() => { setMode("local"); setBuildError(""); }}>Local folder</button>
-                    <button
-                      type="button"
-                      className={mode === "create" ? "active" : ""}
-                      disabled={isGitHubApp}
-                      title={isGitHubApp ? "GitHub App can't create repos — add a manual token to enable this" : undefined}
-                      onClick={() => { setMode("create"); setBuildError(""); }}
-                    >
-                      {isGitHubApp && <Lock size={11} aria-hidden style={{ marginRight: 5 }} />}GitHub (new repo)
-                    </button>
-                    <button type="button" className={mode === "connect" ? "active" : ""} onClick={() => { setMode("connect"); setBuildError(""); }}>GitHub (connect)</button>
-                  </div>
-                  {mode === "local" && (
-                    <>
-                      <label>
-                        Folder path <span className="muted" style={{ fontWeight: 400 }}>(optional)</span>
-                        <input name="localPath" placeholder={suggestedLocalPath || "Leave blank for default location"} />
-                        {suggestedLocalPath && <small className="muted">Default: {suggestedLocalPath}</small>}
-                      </label>
-                    </>
-                  )}
-                  {isGitHubApp && mode !== "local" && (
-                    <div className="setup-callout callout-warn">
-                      <strong><Lock size={13} aria-hidden style={{ marginRight: 6, verticalAlign: "-2px" }} />Creating new repos is locked</strong>
-                      <span>GitHub App can connect existing repos but can&apos;t create new ones. Make the repo at <a href="https://github.com/new" target="_blank" rel="noreferrer">github.com/new</a>, then use <button type="button" className="linklike" onClick={() => { setMode("connect"); setBuildError(""); }}>Connect existing</button>.</span>
-                    </div>
-                  )}
-                  {(mode === "create" || mode === "connect") && !githubConnected && (
-                    <div className="setup-callout callout-warn">
-                      <strong>GitHub not connected</strong>
-                      <span>Connect GitHub above, or keep <button type="button" className="linklike" onClick={() => { setMode("local"); setBuildError(""); }}>Local folder</button> to start without any account.</span>
-                    </div>
-                  )}
-                  {mode === "connect" && <label>Owner<input name="owner" placeholder="avorial (optional if pasting URL)" /></label>}
-                  {mode !== "local" && <label>{mode === "connect" ? "Repo name or URL" : "Repo name"}<input name="repo" required placeholder={mode === "connect" ? "kdwiki or https://github.com/avorial/kdwiki" : "jardin-campaign"} /></label>}
-                  {mode !== "local" && <label>Branch<input name="branch" defaultValue="main" /></label>}
-                  {mode === "create" && <label className="check"><input type="checkbox" name="private" defaultChecked /> Private repo</label>}
-                </div>
-              </details>
-              <button disabled={isGitHubApp && mode === "create"}>
-                {mode === "create" ? "Create and initialize" : mode === "local" ? "Create campaign" : "Connect and initialize"}
-              </button>
-              {buildError && <p className="error">{buildError}</p>}
-            </form>
-          </div>
-        </details>
-
-        <details className="panel dashboard-toggle-panel" open={expandedPanels.ai} onToggle={(event) => setPanelOpen("ai", event.currentTarget.open)}>
-          <summary>
-            <span>Personal AI</span>
-            <small>{personalAi.endpoint ? `Local AI ready · ${personalAi.model || "llama3.2"}` : "Local project AI"}</small>
-          </summary>
-          <div className="dashboard-toggle-body">
-            <p className="muted">
-              Set your default OpenAI-compatible endpoint for every project. Campaign-specific AI settings can still override this.
-            </p>
-            <form onSubmit={savePersonalAi} className="stack" style={{ marginTop: 4 }}>
-              <label>
-                Endpoint
-                <input value={aiEndpoint} onChange={(e) => setAiEndpoint(e.target.value)} placeholder="http://localhost:11434/v1" />
-              </label>
-              <button type="button" className="secondary" onClick={discoverAiModels} disabled={aiDiscovering}>
-                {aiDiscovering ? "Finding..." : "Find models"}
-              </button>
-              {aiModels.length > 0 && (
-                <div className="ai-model-list" aria-label="Detected local AI models">
-                  {aiModels.map((model) => (
-                    <button
-                      key={model}
-                      type="button"
-                      className={aiModel === model ? "active" : "secondary"}
-                      onClick={() => setAiModel(model)}
-                    >
-                      {model}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <label>
-                Model
-                <input value={aiModel} onChange={(e) => setAiModel(e.target.value)} placeholder="llama3.2" />
-              </label>
-              <label>
-                API key <span className="muted" style={{ fontWeight: 400 }}>(leave blank for Ollama / local endpoints)</span>
-                <input value={aiKey} onChange={(e) => setAiKey(e.target.value)} type="password" placeholder="optional" />
-              </label>
-              <div className="setup-callout">
-                <strong>Local AI examples</strong>
-                <span>Ollama: <code>http://localhost:11434/v1</code>. LM Studio: use its OpenAI-compatible server URL.</span>
-              </div>
-              <button disabled={aiSaving}>
-                {aiSaving ? `Testing / warming... ${aiSavingSeconds}s` : "Test and save personal AI"}
-              </button>
-            </form>
-          </div>
-        </details>
-
-        <details className="panel dashboard-toggle-panel" open={expandedPanels.mcp} onToggle={(event) => setPanelOpen("mcp", event.currentTarget.open)}>
-          <summary>
-            <span>MCP access tokens</span>
-            <small>{tokens.length} token{tokens.length === 1 ? "" : "s"}</small>
-          </summary>
-          <div className="dashboard-toggle-body">
-            <p className="muted">Connect an external AI/MCP client to <code>{mcpUrl}</code> with an <code>Authorization: Bearer</code> token.</p>
-            <form onSubmit={mintToken} className="inline-form">
-              <input name="tokenName" placeholder="Claude Desktop" />
-              <button>Mint token</button>
-            </form>
-            {newToken && (
-              <p className="muted">Copy now (shown once): <code>{newToken}</code></p>
-            )}
-            <div className="results">
-              {tokens.map((token) => (
-                <div key={token.id} className="token-row">
-                  <span><strong>{token.name}</strong> - last used {token.lastUsedAt || "never"}</span>
-                  <button type="button" onClick={() => revokeToken(token.id)}>Revoke</button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </details>
       </section>
 
       {reviewGroups.length > 0 && (

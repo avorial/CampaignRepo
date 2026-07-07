@@ -33,7 +33,7 @@ export default function DemoBrowser() {
   const sheetBrief = kit.sheetBrief;
 
   return (
-    <section className="dashboard-grid">
+    <section className="dashboard-grid dashboard-grid-single">
       <details className="panel dashboard-toggle-panel" open={ready && open} onToggle={onToggle}>
         <summary>
           <span>Demo library</span>
