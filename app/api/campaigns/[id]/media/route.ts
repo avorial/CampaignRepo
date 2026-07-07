@@ -27,9 +27,19 @@ const deleteSchema = z.object({ path: z.string().min(1) });
 const renameSchema = z.object({
   path: z.string().min(1),
   fileName: z.string().min(1).optional(),
+  folder: z.string().optional(),
   alt: z.string().optional(),
   caption: z.string().optional(),
   tags: z.array(z.string()).optional()
+});
+
+const bulkSchema = z.object({
+  action: z.enum(["bulk"]),
+  paths: z.array(z.string().min(1)).min(1),
+  folder: z.string().optional(),
+  caption: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  appendTags: z.boolean().optional().default(false)
 });
 
 function mediaType(name: string, mimeType?: string): CampaignMedia["mediaType"] {
@@ -45,6 +55,23 @@ function cleanFileName(fileName: string) {
   const ext = lastDot >= 0 ? fileName.slice(lastDot).toLowerCase().replace(/[^.a-z0-9]/g, "") : "";
   const base = lastDot >= 0 ? fileName.slice(0, lastDot) : fileName;
   return `${slugify(base)}${ext}`;
+}
+
+function cleanFolder(folder?: string) {
+  return String(folder || "")
+    .split("/")
+    .map((part) => slugify(part.trim()))
+    .filter(Boolean)
+    .join("/");
+}
+
+function mediaNameFromPath(path: string) {
+  return path.replace(/^wiki\/media\//, "");
+}
+
+function mediaPathFor(name: string, folder?: string) {
+  const clean = cleanFolder(folder);
+  return `wiki/media/${clean ? `${clean}/` : ""}${name}`;
 }
 
 function encodeMediaPath(name: string) {
@@ -70,6 +97,15 @@ async function readMetadata(storage: StorageAdapter) {
 
 async function writeMetadata(storage: StorageAdapter, metadata: Record<string, MediaMetadata>, sha?: string) {
   await storage.putFile(metadataPath, JSON.stringify(metadata, null, 2) + "\n", "CampaignRepo: update media metadata", sha);
+}
+
+async function listMediaEntries(storage: StorageAdapter, dir = "wiki/media"): Promise<Array<{ name: string; path: string; sha: string; type: string; size?: number; downloadUrl?: string }>> {
+  const entries = await storage.listDirectory(dir);
+  const nested = await Promise.all(entries.map(async (entry) => {
+    if (entry.type === "dir") return listMediaEntries(storage, entry.path);
+    return [entry];
+  }));
+  return nested.flat();
 }
 
 function isEditableMediaPath(path: string) {
@@ -104,7 +140,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const storage = getStorageAdapter(campaign);
   if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const [entries, metadataFile] = await Promise.all([storage.listDirectory("wiki/media"), readMetadata(storage)]);
+  const [entries, metadataFile] = await Promise.all([listMediaEntries(storage), readMetadata(storage)]);
   const media = entries
     .filter((entry) => entry.type === "file" && entry.name !== ".gitkeep" && entry.path !== metadataPath)
     .map((entry) => toMedia(campaign.id, entry, metadataFile.metadata[entry.path]));
@@ -122,7 +158,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const input = uploadSchema.parse(await req.json());
   const name = cleanFileName(input.fileName);
   const type = mediaType(name, input.mimeType);
-  const path = `wiki/media/${name}`;
+  const path = mediaPathFor(name);
   await storage.putBase64File(path, input.base64, `CampaignRepo: upload media ${name}`);
   const uploaded = await storage.getContent(path);
   const metadataFile = await readMetadata(storage);
@@ -140,13 +176,56 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const storage = getStorageAdapter(campaign, user.githubToken);
   if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const input = renameSchema.parse(await req.json());
+  const raw = await req.json();
+  if (raw && typeof raw === "object" && (raw as { action?: unknown }).action === "bulk") {
+    const input = bulkSchema.parse(raw);
+    const metadataFile = await readMetadata(storage);
+    const nextMetadata = { ...metadataFile.metadata };
+    const updated: CampaignMedia[] = [];
+
+    for (const path of input.paths) {
+      if (!isEditableMediaPath(path)) return NextResponse.json({ error: "Only campaign media files can be updated." }, { status: 400 });
+      const current = await storage.getContent(path);
+      if (current.type !== "file") return NextResponse.json({ error: "Only files can be updated." }, { status: 400 });
+      const currentName = mediaNameFromPath(path).split("/").pop() || mediaNameFromPath(path);
+      const nextPath = input.folder !== undefined ? mediaPathFor(currentName, input.folder) : path;
+      const currentMeta = nextMetadata[path] || { alt: currentName, caption: "", tags: [] };
+      const nextTags = input.tags
+        ? (input.appendTags ? Array.from(new Set([...(currentMeta.tags || []), ...input.tags])) : input.tags)
+        : (currentMeta.tags || []);
+      const nextMeta = {
+        alt: currentMeta.alt || currentName,
+        caption: input.caption ?? currentMeta.caption ?? "",
+        tags: nextTags
+      };
+      if (nextPath !== path) {
+        try {
+          await storage.getContent(nextPath);
+          return NextResponse.json({ error: `A media file already exists at ${nextPath}.` }, { status: 409 });
+        } catch (error) {
+          if (!isNotFoundError(error)) throw error;
+        }
+        await storage.putBase64File(nextPath, current.content.replace(/\n/g, ""), `CampaignRepo: move media ${currentName}`);
+        await storage.deleteFile(path, `CampaignRepo: remove old media path ${currentName}`, current.sha);
+        delete nextMetadata[path];
+      }
+      nextMetadata[nextPath] = nextMeta;
+      const fresh = await storage.getContent(nextPath);
+      updated.push(toMedia(campaign.id, { name: mediaNameFromPath(nextPath), path: nextPath, sha: fresh.sha }, nextMeta));
+    }
+
+    await writeMetadata(storage, nextMetadata, metadataFile.sha);
+    scheduleSearchIndexRebuild(campaign);
+    return NextResponse.json({ media: updated });
+  }
+
+  const input = renameSchema.parse(raw);
   if (!isEditableMediaPath(input.path)) return NextResponse.json({ error: "Only campaign media files can be updated." }, { status: 400 });
   const current = await storage.getContent(input.path);
   if (current.type !== "file") return NextResponse.json({ error: "Only files can be updated." }, { status: 400 });
 
   if (!input.fileName) {
-    const name = input.path.split("/").pop() || input.path;
+    const name = mediaNameFromPath(input.path);
     const metadataFile = await readMetadata(storage);
     const currentMeta = metadataFile.metadata[input.path] || {};
     const nextMetadata = { ...metadataFile.metadata, [input.path]: { alt: input.alt ?? currentMeta.alt ?? name, caption: input.caption ?? currentMeta.caption ?? "", tags: input.tags ?? currentMeta.tags ?? [] } };
@@ -157,7 +236,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const name = cleanFileName(input.fileName);
   if (!name) return NextResponse.json({ error: "Choose a valid file name." }, { status: 400 });
-  const nextPath = `wiki/media/${name}`;
+  const nextPath = mediaPathFor(name, input.folder);
   if (nextPath === input.path) {
     const fresh = await storage.getContent(input.path);
     const metadataFile = await readMetadata(storage);

@@ -65,6 +65,8 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const [navOpen, setNavOpen] = useState(false);
   const [mediaFilterInput, setMediaFilterInput] = useState("");
   const [mediaFilter, setMediaFilter] = useState("");
+  const [savedMediaFilters, setSavedMediaFilters] = useState<string[]>([]);
+  const [selectedMediaPaths, setSelectedMediaPaths] = useState<string[]>([]);
   const [templateFilterInput, setTemplateFilterInput] = useState("");
   const [templateFilter, setTemplateFilter] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -85,6 +87,24 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const [tab, setTab] = useState(campaign.role === "owner" || campaign.role === "gm" ? "pages" : "world");
   const pendingReviews = pages.filter((page) => page.frontmatter.approvalStatus !== "approved").length;
   const pageTemplates = templates.filter((template) => template.category === pageCategory);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(`campaignrepo:media-filters:${campaign.id}`);
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(parsed)) setSavedMediaFilters(parsed.map(String).filter(Boolean));
+    } catch {
+      setSavedMediaFilters([]);
+    }
+  }, [campaign.id]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(`campaignrepo:media-filters:${campaign.id}`, JSON.stringify(savedMediaFilters));
+    } catch {
+      // Browser storage is optional; filters still work for this session.
+    }
+  }, [campaign.id, savedMediaFilters]);
 
   async function load() {
     const canManage = campaign.role === "owner" || campaign.role === "gm";
@@ -445,6 +465,71 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     }
   }
 
+  function saveCurrentMediaFilter() {
+    const value = mediaFilterInput.trim() || mediaFilter.trim();
+    if (!value) {
+      setMessage("Type a media filter first, then save it.");
+      return;
+    }
+    setSavedMediaFilters((current) => current.includes(value) ? current : [...current, value].sort((a, b) => a.localeCompare(b)));
+    setMessage(`Saved media filter: ${value}`);
+  }
+
+  function applySavedMediaFilter(value: string) {
+    setMediaFilterInput(value);
+    setMediaFilter(value);
+  }
+
+  function removeSavedMediaFilter(value: string) {
+    setSavedMediaFilters((current) => current.filter((item) => item !== value));
+  }
+
+  function toggleMediaSelection(path: string, checked: boolean) {
+    setSelectedMediaPaths((current) => checked ? Array.from(new Set([...current, path])) : current.filter((item) => item !== path));
+  }
+
+  async function bulkUpdateMedia(patch: { folder?: string; caption?: string; tags?: string[]; appendTags?: boolean }) {
+    if (!selectedMediaPaths.length) {
+      setMessage("Select media files first.");
+      return;
+    }
+    const res = await fetch(`/api/campaigns/${campaign.id}/media`, {
+      method: "PATCH",
+      body: JSON.stringify({ action: "bulk", paths: selectedMediaPaths, ...patch })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      const updated = (data.media || []) as CampaignMedia[];
+      setMedia((current) => {
+        const changed = new Set(selectedMediaPaths);
+        return [...updated, ...current.filter((item) => !changed.has(item.path) && !updated.some((next) => next.path === item.path))];
+      });
+      setSelectedMediaPaths([]);
+      setMessage(`Updated ${updated.length} media file${updated.length === 1 ? "" : "s"}.`);
+    } else {
+      setMessage(data.error || "Could not update selected media.");
+    }
+  }
+
+  async function bulkMoveMedia() {
+    const folder = window.prompt("Move selected media into folder under wiki/media", "");
+    if (folder === null) return;
+    await bulkUpdateMedia({ folder });
+  }
+
+  async function bulkCaptionMedia() {
+    const caption = window.prompt("Set caption for selected media", "");
+    if (caption === null) return;
+    await bulkUpdateMedia({ caption });
+  }
+
+  async function bulkTagMedia(appendTags: boolean) {
+    const tagsInput = window.prompt(appendTags ? "Append tags to selected media" : "Replace tags on selected media", "");
+    if (tagsInput === null) return;
+    const tags = tagsInput.split(",").map((tag) => tag.trim()).filter(Boolean);
+    await bulkUpdateMedia({ tags, appendTags });
+  }
+
   async function repairRepo() {
     const res = await fetch(`/api/campaigns/${campaign.id}/validation`, { method: "POST" });
     const data = await res.json();
@@ -568,6 +653,8 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const filteredMedia = media.filter((item) =>
     !mediaFilterLc || [item.name, item.path, item.mediaType, item.alt, item.caption, ...(item.tags || [])].filter(Boolean).join(" ").toLowerCase().includes(mediaFilterLc)
   );
+  const filteredMediaPaths = filteredMedia.map((item) => item.path);
+  const selectedVisibleMedia = filteredMedia.filter((item) => selectedMediaPaths.includes(item.path));
   const templateFilterLc = templateFilter.trim().toLowerCase();
   const templatesByGame = gameTypes.map((gameType) => ({
     gameType,
@@ -837,10 +924,46 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
 
             <div className="panel media-library">
               <h2>Media Library</h2>
-              <input type="search" className="library-filter" value={mediaFilterInput} onChange={(event) => { setMediaFilterInput(event.target.value); debounce(setMediaFilter, event.target.value); }} placeholder="Filter media by name, type, caption, or tag" />
+              <div className="media-cleanup-bar">
+                <input type="search" className="library-filter" value={mediaFilterInput} onChange={(event) => { setMediaFilterInput(event.target.value); debounce(setMediaFilter, event.target.value); }} placeholder="Filter media by name, type, caption, or tag" />
+                <button type="button" className="secondary" onClick={saveCurrentMediaFilter}>Save filter</button>
+              </div>
+              {savedMediaFilters.length > 0 && (
+                <div className="media-filter-chips">
+                  {savedMediaFilters.map((filter) => (
+                    <span key={filter} className="tag-chip">
+                      <button type="button" className="linklike" onClick={() => applySavedMediaFilter(filter)}>{filter}</button>
+                      <button type="button" className="linklike" aria-label={`Remove ${filter}`} onClick={() => removeSavedMediaFilter(filter)}>x</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {filteredMedia.length > 0 && (
+                <div className="media-bulk-bar">
+                  <label className="checkbox-line">
+                    <input
+                      type="checkbox"
+                      checked={filteredMedia.length > 0 && filteredMedia.every((item) => selectedMediaPaths.includes(item.path))}
+                      onChange={(event) => {
+                        if (event.target.checked) setSelectedMediaPaths((current) => Array.from(new Set([...current, ...filteredMediaPaths])));
+                        else setSelectedMediaPaths((current) => current.filter((path) => !filteredMediaPaths.includes(path)));
+                      }}
+                    />
+                    Select visible
+                  </label>
+                  <span className="muted">{selectedVisibleMedia.length} selected</span>
+                  <button type="button" className="secondary" disabled={!selectedMediaPaths.length} onClick={bulkMoveMedia}>Move</button>
+                  <button type="button" className="secondary" disabled={!selectedMediaPaths.length} onClick={bulkCaptionMedia}>Caption</button>
+                  <button type="button" className="secondary" disabled={!selectedMediaPaths.length} onClick={() => bulkTagMedia(false)}>Replace tags</button>
+                  <button type="button" className="secondary" disabled={!selectedMediaPaths.length} onClick={() => bulkTagMedia(true)}>Append tags</button>
+                </div>
+              )}
               <div className="media-list">
                 {filteredMedia.map((item) => (
                   <article key={item.path} className="media-row">
+                    <label className="media-select" aria-label={`Select ${item.name}`}>
+                      <input type="checkbox" checked={selectedMediaPaths.includes(item.path)} onChange={(event) => toggleMediaSelection(item.path, event.target.checked)} />
+                    </label>
                     <div className={`media-preview media-preview-${item.mediaType}`}>
                       {item.downloadUrl && item.mediaType === "image" && <img src={item.downloadUrl} alt={item.alt || item.name} loading="lazy" decoding="async" />}
                       {item.downloadUrl && item.mediaType === "pdf" && <iframe title={item.alt || item.name} src={item.downloadUrl} />}

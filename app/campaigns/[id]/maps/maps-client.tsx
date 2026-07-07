@@ -28,6 +28,7 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
   const [message, setMessage] = useState("");
   const [editingPin, setEditingPin] = useState<number | null>(null);
   const [editingRoute, setEditingRoute] = useState<number | null>(null);
+  const [editingRegion, setEditingRegion] = useState<number | null>(null);
   const [routeFrom, setRouteFrom] = useState<number | null>(null);
   const [hiddenLayers, setHiddenLayers] = useState<Set<string>>(new Set());
   const [newLayerName, setNewLayerName] = useState("");
@@ -75,6 +76,17 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
     if (!map) return;
     patchMap(map.slug, { routes: (map.routes || []).filter((_, i) => i !== index) });
     if (editingRoute === index) setEditingRoute(null);
+  }
+
+  function updateRegion(index: number, patch: Partial<Region>) {
+    if (!map) return;
+    patchMap(map.slug, { regions: (map.regions || []).map((r, i) => i === index ? { ...r, ...patch } : r) });
+  }
+
+  function deleteRegion(index: number) {
+    if (!map) return;
+    patchMap(map.slug, { regions: (map.regions || []).filter((_, i) => i !== index) });
+    if (editingRegion === index) setEditingRegion(null);
   }
 
   function createJourney() {
@@ -173,6 +185,21 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
       const newPin: Pin = { x, y, label: "New pin", layer: activeLayer, icon: "📍" };
       patchMap(map.slug, { pins: [...map.pins, newPin] });
       setEditingPin(map.pins.length);
+      setAddMode(null);
+    }
+
+    if (addMode === "region") {
+      const newRegion: Region = {
+        x: Math.min(0.88, x),
+        y: Math.min(0.88, y),
+        w: 0.12,
+        h: 0.12,
+        label: "New region",
+        layer: activeLayer,
+        color: "#4a90d9"
+      };
+      patchMap(map.slug, { regions: [...(map.regions || []), newRegion] });
+      setEditingRegion((map.regions || []).length);
       setAddMode(null);
     }
 
@@ -334,21 +361,28 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
                 <button
                   type="button"
                   className={addMode === "pin" ? "active" : "secondary"}
-                  onClick={() => { setAddMode((v) => v === "pin" ? null : "pin"); setEditingPin(null); setRouteFrom(null); setMeasurePts([]); setMeasureResult(null); }}
+                  onClick={() => { setAddMode((v) => v === "pin" ? null : "pin"); setEditingPin(null); setEditingRegion(null); setRouteFrom(null); setMeasurePts([]); setMeasureResult(null); }}
                 >
                   {addMode === "pin" ? `Click map to place pin…` : "Add pin"}
                 </button>
                 <button
                   type="button"
+                  className={addMode === "region" ? "active" : "secondary"}
+                  onClick={() => { setAddMode((v) => v === "region" ? null : "region"); setEditingPin(null); setEditingRegion(null); setRouteFrom(null); setMeasurePts([]); setMeasureResult(null); }}
+                >
+                  {addMode === "region" ? "Click map to place region..." : "Add region"}
+                </button>
+                <button
+                  type="button"
                   className={addMode === "route" ? "active" : "secondary"}
-                  onClick={() => { setAddMode((v) => v === "route" ? null : "route"); setEditingPin(null); setRouteFrom(null); setMeasurePts([]); setMeasureResult(null); }}
+                  onClick={() => { setAddMode((v) => v === "route" ? null : "route"); setEditingPin(null); setEditingRegion(null); setRouteFrom(null); setMeasurePts([]); setMeasureResult(null); }}
                 >
                   {addMode === "route" ? (routeFrom !== null ? "Click second pin…" : "Click first pin…") : "Add route"}
                 </button>
                 <button
                   type="button"
                   className={addMode === "measure" ? "active" : "secondary"}
-                  onClick={() => { setAddMode((v) => v === "measure" ? null : "measure"); setMeasurePts([]); setMeasureResult(null); setEditingPin(null); setRouteFrom(null); }}
+                  onClick={() => { setAddMode((v) => v === "measure" ? null : "measure"); setMeasurePts([]); setMeasureResult(null); setEditingPin(null); setEditingRegion(null); setRouteFrom(null); }}
                 >
                   {addMode === "measure" ? (measurePts.length === 0 ? "Click start…" : measurePts.length === 1 ? "Click end…" : "Click to clear") : "Measure"}
                 </button>
@@ -424,6 +458,8 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
                       width={region.w * 100} height={region.h * 100}
                       fill={region.color || "#4a90d9"} fillOpacity="0.18"
                       stroke={region.color || "#4a90d9"} strokeWidth="0.4" strokeOpacity="0.6"
+                      onClick={(event) => { event.stopPropagation(); setEditingRegion(i); setEditingPin(null); setEditingRoute(null); }}
+                      style={{ cursor: "pointer" }}
                     />
                     {region.label && (
                       <text x={(region.x + region.w / 2) * 100} y={(region.y + region.h / 2) * 100}
@@ -547,6 +583,49 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
                 });
               })()}
             </div>
+
+            {(editingRegion !== null || (map.regions || []).length > 0) && (
+              <div className="field-group">
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <h3>Regions {(map.regions || []).length > 0 && `(${(map.regions || []).length})`}</h3>
+                  {editingRegion !== null && <button type="button" className="linklike" onClick={() => setEditingRegion(null)}>Close editor</button>}
+                </div>
+
+                {editingRegion !== null && (() => {
+                  const region = (map.regions || [])[editingRegion];
+                  if (!region) return null;
+                  const pct = (value: number) => Math.round(value * 100);
+                  return (
+                    <div className="map-pin-editor">
+                      <label>Label<input value={region.label || ""} onChange={(e) => updateRegion(editingRegion, { label: e.target.value })} /></label>
+                      <label>Color<input type="color" value={region.color || "#4a90d9"} onChange={(e) => updateRegion(editingRegion, { color: e.target.value })} /></label>
+                      <label>Layer
+                        <select value={region.layer || "default"} onChange={(e) => updateRegion(editingRegion, { layer: e.target.value })}>
+                          {layers.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                        </select>
+                      </label>
+                      <label>Width %
+                        <input type="number" min={1} max={100} value={pct(region.w)} onChange={(e) => updateRegion(editingRegion, { w: Math.max(0.01, Math.min(1, Number(e.target.value) / 100 || region.w)) })} />
+                      </label>
+                      <label>Height %
+                        <input type="number" min={1} max={100} value={pct(region.h)} onChange={(e) => updateRegion(editingRegion, { h: Math.max(0.01, Math.min(1, Number(e.target.value) / 100 || region.h)) })} />
+                      </label>
+                      <button type="button" className="danger" onClick={() => deleteRegion(editingRegion)}>Delete region</button>
+                    </div>
+                  );
+                })()}
+
+                <div className="map-pin-list">
+                  {(map.regions || []).map((region, index) => (
+                    <div key={index} className="map-pin-list-row" onClick={() => { setEditingRegion(index); setEditingPin(null); setEditingRoute(null); }}>
+                      <span style={{ color: region.color || "#4a90d9" }}>■</span>
+                      <span>{region.label || "Unnamed region"}</span>
+                      <span className="muted" style={{ fontSize: 12 }}>{layers.find((l) => l.id === (region.layer || "default"))?.name || region.layer}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {editingRoute !== null && (() => {
               const route = (map.routes || [])[editingRoute];

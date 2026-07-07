@@ -2201,6 +2201,34 @@ button.nav-link.active {
   z-index: 1;
 }
 
+.media-cleanup-bar,
+.media-bulk-bar,
+.media-filter-chips {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.media-cleanup-bar .library-filter {
+  flex: 1 1 260px;
+  margin-bottom: 0;
+}
+
+.media-bulk-bar {
+  border-bottom: 1px solid var(--border-soft);
+  border-top: 1px solid var(--border-soft);
+  padding: 8px 0;
+}
+
+.checkbox-line,
+.media-select {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+}
+
 .template-group {
   border-top: 1px solid var(--border-soft);
   padding: 12px 0;
@@ -2252,7 +2280,7 @@ button.nav-link.active {
 
 .media-row {
   display: grid;
-  grid-template-columns: 128px minmax(0, 1fr) auto;
+  grid-template-columns: auto 128px minmax(0, 1fr) auto;
   gap: 14px;
   align-items: center;
   background: var(--bg-elevated);
@@ -2261,7 +2289,7 @@ button.nav-link.active {
   padding: 12px;
 }
 
-.media-row > div:nth-child(2) {
+.media-row > div:nth-child(3) {
   min-width: 0;
   display: grid;
   gap: 6px;
