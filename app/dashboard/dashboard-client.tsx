@@ -278,6 +278,117 @@ export default function DashboardClient({
 
 
 
+      <section className="band repos-band">
+        <div className="repos-band-head">
+          <h2>Connected repos</h2>
+          {repos.length > 0 && (
+            <div className="segmented">
+              <button type="button" className={repoView === "grid" ? "active" : ""} onClick={() => setRepoView("grid")} title="Grid view" aria-pressed={repoView === "grid"}>Grid</button>
+              <button type="button" className={repoView === "marquee" ? "active" : ""} onClick={() => setRepoView("marquee")} title="Marquee view" aria-pressed={repoView === "marquee"}>Marquee</button>
+            </div>
+          )}
+        </div>
+        {repoView === "marquee" && repos.length > 0 ? (
+          <div className="repo-marquee">
+            <div className="repo-marquee-track">
+              {[...repos, ...repos].map((campaign, i) => {
+                const logo = gamePackLogos[campaign.gameType];
+                const plateClass = darkPlatePacks.has(campaign.gameType) ? " repo-logo-plate-dark" : "";
+                const slug = campaign.storageBackend === "local" ? (campaign.localPath || "local") : `${campaign.owner}/${campaign.repo}`;
+                const meta = [campaign.gameType, campaign.storageBackend !== "local" ? campaign.branch : null, campaign.role].filter(Boolean).join(" · ");
+                return (
+                  <div className="campaign-card" key={`${campaign.id}-${i}`}>
+                    <Link className="campaign-card-link" href={`/campaigns/${campaign.id}`}>
+                      <div className="campaign-card-logo">
+                        {logo ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <span className={`repo-logo-plate${plateClass}`}><img src={logo} alt={campaign.gameType} /></span>
+                        ) : (
+                          <span className="repo-logo-plate repo-logo-initial" aria-hidden>{campaign.gameType.charAt(0).toUpperCase()}</span>
+                        )}
+                      </div>
+                      <p className="campaign-card-name">{campaign.name}</p>
+                      <span className="campaign-card-slug">{slug}</span>
+                      <small className="campaign-card-meta">{meta}</small>
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+        <div className="repo-grid">
+          {repos.map((campaign) => {
+            const logo = gamePackLogos[campaign.gameType];
+            const plateClass = darkPlatePacks.has(campaign.gameType) ? " repo-logo-plate-dark" : "";
+            const slug = campaign.storageBackend === "local" ? (campaign.localPath || "local") : `${campaign.owner}/${campaign.repo}`;
+            const meta = [campaign.gameType, campaign.storageBackend !== "local" ? campaign.branch : null, campaign.role].filter(Boolean).join(" · ");
+            return (
+              <div
+                className={`campaign-card${draggedRepoId === campaign.id ? " dragging" : ""}${dragOverRepoId === campaign.id ? " drag-over" : ""}`}
+                key={campaign.id}
+                draggable
+                onDragStart={(event) => {
+                  setDraggedRepoId(campaign.id);
+                  event.dataTransfer.effectAllowed = "move";
+                  event.dataTransfer.setData("text/plain", String(campaign.id));
+                }}
+                onDragEnter={() => setDragOverRepoId(campaign.id)}
+                onDragOver={(event) => {
+                  if (draggedRepoId !== campaign.id) event.preventDefault();
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  const draggedId = Number(event.dataTransfer.getData("text/plain") || draggedRepoId);
+                  reorderRepo(draggedId, campaign.id);
+                  setDraggedRepoId(null);
+                  setDragOverRepoId(null);
+                }}
+                onDragEnd={() => {
+                  setDraggedRepoId(null);
+                  setDragOverRepoId(null);
+                }}
+                title="Drag to reorder"
+              >
+                <Link className="campaign-card-link" href={`/campaigns/${campaign.id}`}>
+                  <div className="campaign-card-logo">
+                    {logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <span className={`repo-logo-plate${plateClass}`}><img src={logo} alt={campaign.gameType} /></span>
+                    ) : (
+                      <span className="repo-logo-plate repo-logo-initial" aria-hidden>{campaign.gameType.charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <p className="campaign-card-name">{campaign.name}</p>
+                  <span className="campaign-card-slug">{slug}</span>
+                  <small className="campaign-card-meta">{meta}</small>
+                </Link>
+                {campaign.role === "owner" && (
+                  <button type="button" className="campaign-card-remove" onClick={() => removeRepo(campaign.id, campaign.name)} aria-label={`Remove ${campaign.name}`}>✕</button>
+                )}
+              </div>
+            );
+          })}
+          {!repos.length && (
+            <div className="onboarding-hero">
+              <div className="onboarding-hero-icon">📖</div>
+              <h3>Your first campaign is one click away</h3>
+              <p>No installs, no accounts required. CampaignRepo stores your world in a plain folder — pages, maps, sessions, and media — so you own everything and can open files anywhere.</p>
+              <button type="button" onClick={() => setPanelOpen("build", true)} className="button">
+                Create your first campaign ↓
+              </button>
+              <ul className="onboarding-feature-list">
+                <li>Wiki pages with rich markdown, images, and relationships</li>
+                <li>Session planning, quests, and in-world calendar</li>
+                <li>Traveller, WoD, and D&amp;D character sheets</li>
+                <li>Optional GitHub sync for history and multi-device access</li>
+              </ul>
+            </div>
+          )}
+        </div>
+        )}
+      </section>
+
       <section className="dashboard-grid dashboard-grid-single">
         <details className="panel dashboard-toggle-panel" open={expandedPanels.build} onToggle={(event) => setPanelOpen("build", event.currentTarget.open)}>
           <summary>
@@ -469,116 +580,7 @@ export default function DashboardClient({
         </details>
       </section>
 
-      <section className="band repos-band">
-        <div className="repos-band-head">
-          <h2>Connected repos</h2>
-          {repos.length > 0 && (
-            <div className="segmented">
-              <button type="button" className={repoView === "grid" ? "active" : ""} onClick={() => setRepoView("grid")} title="Grid view" aria-pressed={repoView === "grid"}>Grid</button>
-              <button type="button" className={repoView === "marquee" ? "active" : ""} onClick={() => setRepoView("marquee")} title="Marquee view" aria-pressed={repoView === "marquee"}>Marquee</button>
-            </div>
-          )}
-        </div>
-        {repoView === "marquee" && repos.length > 0 ? (
-          <div className="repo-marquee">
-            <div className="repo-marquee-track">
-              {[...repos, ...repos].map((campaign, i) => {
-                const logo = gamePackLogos[campaign.gameType];
-                const plateClass = darkPlatePacks.has(campaign.gameType) ? " repo-logo-plate-dark" : "";
-                const slug = campaign.storageBackend === "local" ? (campaign.localPath || "local") : `${campaign.owner}/${campaign.repo}`;
-                const meta = [campaign.gameType, campaign.storageBackend !== "local" ? campaign.branch : null, campaign.role].filter(Boolean).join(" · ");
-                return (
-                  <div className="campaign-card" key={`${campaign.id}-${i}`}>
-                    <Link className="campaign-card-link" href={`/campaigns/${campaign.id}`}>
-                      <div className="campaign-card-logo">
-                        {logo ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <span className={`repo-logo-plate${plateClass}`}><img src={logo} alt={campaign.gameType} /></span>
-                        ) : (
-                          <span className="repo-logo-plate repo-logo-initial" aria-hidden>{campaign.gameType.charAt(0).toUpperCase()}</span>
-                        )}
-                      </div>
-                      <p className="campaign-card-name">{campaign.name}</p>
-                      <span className="campaign-card-slug">{slug}</span>
-                      <small className="campaign-card-meta">{meta}</small>
-                    </Link>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-        <div className="repo-grid">
-          {repos.map((campaign) => {
-            const logo = gamePackLogos[campaign.gameType];
-            const plateClass = darkPlatePacks.has(campaign.gameType) ? " repo-logo-plate-dark" : "";
-            const slug = campaign.storageBackend === "local" ? (campaign.localPath || "local") : `${campaign.owner}/${campaign.repo}`;
-            const meta = [campaign.gameType, campaign.storageBackend !== "local" ? campaign.branch : null, campaign.role].filter(Boolean).join(" · ");
-            return (
-              <div
-                className={`campaign-card${draggedRepoId === campaign.id ? " dragging" : ""}${dragOverRepoId === campaign.id ? " drag-over" : ""}`}
-                key={campaign.id}
-                draggable
-                onDragStart={(event) => {
-                  setDraggedRepoId(campaign.id);
-                  event.dataTransfer.effectAllowed = "move";
-                  event.dataTransfer.setData("text/plain", String(campaign.id));
-                }}
-                onDragEnter={() => setDragOverRepoId(campaign.id)}
-                onDragOver={(event) => {
-                  if (draggedRepoId !== campaign.id) event.preventDefault();
-                }}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  const draggedId = Number(event.dataTransfer.getData("text/plain") || draggedRepoId);
-                  reorderRepo(draggedId, campaign.id);
-                  setDraggedRepoId(null);
-                  setDragOverRepoId(null);
-                }}
-                onDragEnd={() => {
-                  setDraggedRepoId(null);
-                  setDragOverRepoId(null);
-                }}
-                title="Drag to reorder"
-              >
-                <Link className="campaign-card-link" href={`/campaigns/${campaign.id}`}>
-                  <div className="campaign-card-logo">
-                    {logo ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <span className={`repo-logo-plate${plateClass}`}><img src={logo} alt={campaign.gameType} /></span>
-                    ) : (
-                      <span className="repo-logo-plate repo-logo-initial" aria-hidden>{campaign.gameType.charAt(0).toUpperCase()}</span>
-                    )}
-                  </div>
-                  <p className="campaign-card-name">{campaign.name}</p>
-                  <span className="campaign-card-slug">{slug}</span>
-                  <small className="campaign-card-meta">{meta}</small>
-                </Link>
-                {campaign.role === "owner" && (
-                  <button type="button" className="campaign-card-remove" onClick={() => removeRepo(campaign.id, campaign.name)} aria-label={`Remove ${campaign.name}`}>✕</button>
-                )}
-              </div>
-            );
-          })}
-          {!repos.length && (
-            <div className="onboarding-hero">
-              <div className="onboarding-hero-icon">📖</div>
-              <h3>Your first campaign is one click away</h3>
-              <p>No installs, no accounts required. CampaignRepo stores your world in a plain folder — pages, maps, sessions, and media — so you own everything and can open files anywhere.</p>
-              <button type="button" onClick={() => setPanelOpen("build", true)} className="button">
-                Create your first campaign ↓
-              </button>
-              <ul className="onboarding-feature-list">
-                <li>Wiki pages with rich markdown, images, and relationships</li>
-                <li>Session planning, quests, and in-world calendar</li>
-                <li>Traveller, WoD, and D&amp;D character sheets</li>
-                <li>Optional GitHub sync for history and multi-device access</li>
-              </ul>
-            </div>
-          )}
-        </div>
-        )}
-      </section>
+
 
       {reviewGroups.length > 0 && (
         <section className="band">
