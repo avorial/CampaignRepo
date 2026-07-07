@@ -281,12 +281,16 @@ export type WoDRated = { name: string; score: number; notes?: string; descriptio
 export type WoDSheet = {
   system: WoDSystem;
   name?: string;
+  player?: string;
   clan?: string;
+  tradition?: string;
+  affiliation?: string;
   chronicle?: string;
   generation?: number;
   sire?: string;
   nature?: string;
   demeanor?: string;
+  essence?: string;
   concept?: string;
   sect?: string;
   real_age?: string;
@@ -308,6 +312,9 @@ export type WoDSheet = {
   willpower_current?: number;
   blood?: number;
   blood_current?: number;
+  quintessence?: number;
+  quintessence_current?: number;
+  paradox?: number;
   humanity?: number;
   health?: {
     bruised?: boolean; hurt?: boolean; injured?: boolean;
@@ -316,6 +323,12 @@ export type WoDSheet = {
   };
   weapons?: { name: string; damage?: string; notes?: string }[];
   equipment?: { name: string; notes?: string }[];
+  resonance?: WoDRated[];
+  focus?: { name: string; notes?: string }[];
+  rotes?: { name: string; notes?: string }[];
+  wonders?: { name: string; notes?: string }[];
+  history?: string[];
+  description?: string[];
   notes?: string;
 };
 

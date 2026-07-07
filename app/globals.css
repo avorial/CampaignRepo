@@ -5621,6 +5621,224 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   .wod-morality { grid-column: 1 / -1; text-align: left; }
 }
 
+/* Mage: The Ascension sheet */
+.mage-sheet {
+  --mage-paper: #f4efe2;
+  --mage-ink: #17120f;
+  --mage-muted: #6e6256;
+  --mage-rule: #3d2f27;
+  --mage-gold: #b5822b;
+  --mage-red: #8e1f25;
+  --mage-blue: #243f68;
+  background:
+    linear-gradient(90deg, rgba(36, 63, 104, 0.06), transparent 16%, transparent 84%, rgba(142, 31, 37, 0.06)),
+    var(--mage-paper);
+  border: 2px solid var(--mage-rule);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.28);
+  color: var(--mage-ink);
+  display: grid;
+  gap: 12px;
+  margin: 20px 0;
+  padding: 16px;
+}
+
+.mage-header {
+  align-items: stretch;
+  border-bottom: 3px double var(--mage-rule);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 86px minmax(180px, 0.8fr) minmax(260px, 1.2fr);
+  padding-bottom: 12px;
+}
+
+.mage-sigil {
+  align-items: center;
+  border: 2px solid var(--mage-rule);
+  display: flex;
+  justify-content: center;
+  min-height: 86px;
+  overflow: hidden;
+}
+
+.mage-sigil img,
+.mage-sigil > div {
+  border: 0 !important;
+  height: 100% !important;
+  object-fit: cover;
+  width: 100% !important;
+}
+
+.mage-kicker,
+.mage-panel h4,
+.mage-header-facts span,
+.mage-pool span {
+  color: var(--mage-red);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.mage-header h3 {
+  color: var(--mage-ink);
+  font-family: var(--font-display);
+  font-size: 34px;
+  line-height: 1;
+  margin: 6px 0 4px;
+}
+
+.mage-header p {
+  color: var(--mage-muted);
+  margin: 0;
+}
+
+.mage-header-facts {
+  display: grid;
+  gap: 6px 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.mage-header-facts div {
+  border-bottom: 1px solid rgba(61, 47, 39, 0.42);
+  min-width: 0;
+  padding: 3px 0 5px;
+}
+
+.mage-header-facts b {
+  color: var(--mage-ink);
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+
+.mage-grid,
+.mage-main,
+.mage-bottom {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mage-main {
+  grid-template-columns: minmax(260px, 1.1fr) minmax(220px, 0.9fr) minmax(220px, 0.9fr) minmax(220px, 0.9fr);
+}
+
+.mage-bottom {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.mage-panel,
+.mage-pool {
+  background: rgba(255, 255, 255, 0.38);
+  border: 1px solid rgba(61, 47, 39, 0.58);
+  min-width: 0;
+  padding: 10px 12px;
+}
+
+.mage-panel h4 {
+  border-bottom: 1px solid rgba(61, 47, 39, 0.38);
+  margin: 0 0 8px;
+  padding-bottom: 6px;
+}
+
+.mage-panel [style*="grid-template-columns"] {
+  margin: 6px 0 !important;
+}
+
+.mage-panel [style*="text-transform:uppercase"] {
+  color: var(--mage-ink) !important;
+}
+
+.mage-rated,
+.mage-lines {
+  display: grid;
+  gap: 3px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mage-rated li,
+.mage-lines li {
+  align-items: start;
+  border-bottom: 1px solid rgba(61, 47, 39, 0.24);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 4px 0;
+}
+
+.mage-lines li {
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+}
+
+.mage-rated span,
+.mage-lines b {
+  color: var(--mage-ink);
+  font-size: 12px;
+}
+
+.mage-rated em,
+.mage-lines span {
+  color: var(--mage-muted);
+  display: block;
+  font-size: 11px;
+  font-style: normal;
+  margin-top: 2px;
+}
+
+.mage-spheres .mage-rated {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mage-pools {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.mage-pool {
+  display: grid;
+  gap: 7px;
+  justify-items: center;
+  text-align: center;
+}
+
+.mage-pool b {
+  color: var(--mage-blue);
+  font-family: var(--font-display);
+  font-size: 20px;
+}
+
+.mage-empty {
+  color: var(--mage-muted);
+  font-size: 12px;
+  font-style: italic;
+  margin: 0;
+}
+
+@media (max-width: 1100px) {
+  .mage-header,
+  .mage-main,
+  .mage-bottom { grid-template-columns: 1fr 1fr; }
+  .mage-grid,
+  .mage-pools { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mage-header .mage-header-facts { grid-column: 1 / -1; }
+}
+
+@media (max-width: 680px) {
+  .mage-header,
+  .mage-grid,
+  .mage-main,
+  .mage-bottom,
+  .mage-pools,
+  .mage-header-facts { grid-template-columns: 1fr; }
+  .mage-spheres .mage-rated { grid-template-columns: 1fr; }
+}
+
 /* ---- D&D 5e / Pathfinder 2e character sheet ---- */
 .dnd-sheet {
   background: var(--bg-overlay, rgba(0,0,0,0.5));

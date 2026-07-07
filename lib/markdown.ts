@@ -451,6 +451,20 @@ function normalizeWoDRated(input: unknown): WoDRated[] {
   }).filter((r) => r.name);
 }
 
+function normalizeWoDNamed(input: unknown): { name: string; notes?: string }[] {
+  if (Array.isArray(input)) {
+    return input.flatMap((item: unknown) => {
+      if (typeof item === "string") return item.trim() ? [{ name: item.trim() }] : [];
+      if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+      const rec = item as Record<string, unknown>;
+      const name = String(rec.name || rec.title || "").trim();
+      if (!name) return [];
+      return [{ name, notes: rec.notes ? String(rec.notes) : rec.detail ? String(rec.detail) : undefined }];
+    });
+  }
+  return compactRecords(input, (name, parts) => ({ name, notes: parts.join(" - ") || undefined }));
+}
+
 function normalizeWoDSheet(input: unknown) {
   const raw = input && typeof input === "object" && !Array.isArray(input) ? input as Record<string, unknown> : {};
   const systemRaw = String(raw.system || "");
@@ -474,14 +488,18 @@ function normalizeWoDSheet(input: unknown) {
   return {
     system,
     name: raw.name ? String(raw.name) : undefined,
-    clan: raw.clan ? String(raw.clan) : undefined,
+    player: raw.player ? String(raw.player) : undefined,
+    clan: (raw.clan || raw.tribe || raw.tradition || raw.group) ? String(raw.clan || raw.tribe || raw.tradition || raw.group) : undefined,
+    tradition: raw.tradition ? String(raw.tradition) : undefined,
+    affiliation: raw.affiliation ? String(raw.affiliation) : undefined,
     chronicle: raw.chronicle ? String(raw.chronicle) : undefined,
     generation: raw.generation != null ? Number(raw.generation) || undefined : undefined,
     sire: raw.sire ? String(raw.sire) : undefined,
     nature: raw.nature ? String(raw.nature) : undefined,
     demeanor: raw.demeanor ? String(raw.demeanor) : undefined,
+    essence: raw.essence ? String(raw.essence) : undefined,
     concept: raw.concept ? String(raw.concept) : undefined,
-    sect: raw.sect ? String(raw.sect) : undefined,
+    sect: (raw.sect || raw.affiliation) ? String(raw.sect || raw.affiliation) : undefined,
     real_age: raw.real_age ? String(raw.real_age) : undefined,
     apparent_age: raw.apparent_age ? String(raw.apparent_age) : undefined,
     road: raw.road ? String(raw.road) : undefined,
@@ -496,6 +514,7 @@ function normalizeWoDSheet(input: unknown) {
     backgrounds: normalizeWoDRated(raw.backgrounds),
     merits: normalizeWoDRated(raw.merits),
     flaws: normalizeWoDRated(raw.flaws),
+    resonance: normalizeWoDRated(raw.resonance),
     virtues: {
       first: asOptionalNumber(virt.first ?? virt.conscience ?? virt.conviction),
       second: asOptionalNumber(virt.second ?? virt.self_control ?? virt.instinct),
@@ -503,15 +522,23 @@ function normalizeWoDSheet(input: unknown) {
     },
     willpower: asOptionalNumber(raw.willpower),
     willpower_current: asOptionalNumber(raw.willpower_current),
-    blood: asOptionalNumber(raw.blood ?? raw.blood_pool),
-    blood_current: asOptionalNumber(raw.blood_current ?? raw.blood_pool_current),
-    humanity: asOptionalNumber(raw.humanity ?? raw.road_rating),
+    blood: asOptionalNumber(raw.blood ?? raw.blood_pool ?? raw.quintessence),
+    blood_current: asOptionalNumber(raw.blood_current ?? raw.blood_pool_current ?? raw.quintessence_current),
+    quintessence: asOptionalNumber(raw.quintessence),
+    quintessence_current: asOptionalNumber(raw.quintessence_current),
+    paradox: asOptionalNumber(raw.paradox),
+    humanity: asOptionalNumber(raw.humanity ?? raw.road_rating ?? raw.arete),
     health: {
       bruised: Boolean(health.bruised), hurt: Boolean(health.hurt), injured: Boolean(health.injured),
       wounded: Boolean(health.wounded), mauled: Boolean(health.mauled), crippled: Boolean(health.crippled),
       incapacitated: Boolean(health.incapacitated)
     },
     weapons, equipment,
+    focus: normalizeWoDNamed(raw.focus),
+    rotes: normalizeWoDNamed(raw.rotes),
+    wonders: normalizeWoDNamed(raw.wonders),
+    history: asStringArray(raw.history),
+    description: asStringArray(raw.description),
     notes: raw.notes ? String(raw.notes) : undefined
   };
 }
@@ -526,6 +553,7 @@ function renderWoDSheetHtml(rawInput: string) {
   const sheet = normalizeWoDSheet(parsed);
   const info = WOD_SYSTEM_INFO[sheet.system];
   const isVampire = sheet.system === "vampire-masquerade" || sheet.system === "dark-ages-vampire";
+  const isMage = sheet.system === "mage-ascension";
 
   const sS = "border:1px solid rgba(160,170,180,.28);background:linear-gradient(145deg,rgba(8,10,12,.94),rgba(14,18,20,.88));padding:16px 18px;";
   const hS = "margin:0 0 12px;color:#ff3834;font-size:13px;letter-spacing:.18em;text-transform:uppercase;border-bottom:1px solid rgba(160,170,180,.22);padding-bottom:8px;";
@@ -620,6 +648,95 @@ function renderWoDSheetHtml(rawInput: string) {
   const notesHtml = sheet.notes
     ? `<div style="margin-top:18px;border:1px solid rgba(160,170,180,.28);padding:14px 18px;background:rgba(0,0,0,.3);"><h3 style="${hS}">Notes</h3><p style="color:#cfc7b8;line-height:1.6;white-space:pre-wrap;margin:0;">${escapeHtml(sheet.notes)}</p></div>`
     : "";
+
+  if (isMage) {
+    const MAGE_TALENTS = new Set(["Alertness","Athletics","Awareness","Brawl","Dodge","Empathy","Expression","Intimidation","Leadership","Streetwise","Subterfuge"]);
+    const MAGE_SKILLS = new Set(["Animal Ken","Crafts","Drive","Etiquette","Firearms","Meditation","Melee","Performance","Stealth","Survival","Technology"]);
+    const mageTalents: WoDRated[] = [], mageSkills: WoDRated[] = [], mageKnowledges: WoDRated[] = [];
+    for (const ab of sheet.abilities ?? []) {
+      if (MAGE_TALENTS.has(ab.name)) mageTalents.push(ab);
+      else if (MAGE_SKILLS.has(ab.name)) mageSkills.push(ab);
+      else mageKnowledges.push(ab);
+    }
+    const mageSpheres = (() => {
+      const defaults = ["Correspondence","Entropy","Forces","Life","Matter","Mind","Prime","Spirit","Time"];
+      const existing = new Map((sheet.powers ?? []).map((p) => [p.name.toLowerCase(), p]));
+      return defaults.map((name) => existing.get(name.toLowerCase()) || { name, score: 0 });
+    })();
+    const mageList = (items: WoDRated[]) =>
+      `<ul class="mage-rated">${items.map((item) => `<li><span>${escapeHtml(item.name)}${item.notes ? `<em>${escapeHtml(item.notes)}</em>` : ""}</span>${diamonds(item.score)}</li>`).join("")}</ul>`;
+    const mageTextList = (items: { name: string; notes?: string }[], empty: string) =>
+      items.length ? `<ul class="mage-lines">${items.map((item) => `<li><b>${escapeHtml(item.name)}</b>${item.notes ? `<span>${escapeHtml(item.notes)}</span>` : ""}</li>`).join("")}</ul>` : `<p class="mage-empty">${escapeHtml(empty)}</p>`;
+    const textBlock = (title: string, lines?: string[]) =>
+      `<section class="mage-panel"><h4>${escapeHtml(title)}</h4>${lines?.length ? `<ul class="mage-lines">${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>` : `<p class="mage-empty">-</p>`}</section>`;
+    const mageHeaderFacts = [
+      ["Player", sheet.player],
+      ["Chronicle", sheet.chronicle],
+      ["Nature", sheet.nature],
+      ["Demeanor", sheet.demeanor],
+      ["Essence", sheet.essence],
+      ["Tradition", sheet.tradition || sheet.clan],
+      ["Affiliation", sheet.affiliation || sheet.sect],
+      ["Concept", sheet.concept]
+    ].map(([label, value]) => `<div><span>${escapeHtml(String(label))}</span><b>${escapeHtml(String(value || "-"))}</b></div>`).join("");
+    const poolPanel = (label: string, current: number | undefined, max: number | undefined, fallbackMax = 10) => {
+      const cap = Math.max(1, max ?? current ?? fallbackMax);
+      return `<div class="mage-pool"><span>${escapeHtml(label)}</span>${boxRow(current, cap)}<b>${escapeHtml(String(current ?? 0))}${max != null ? ` / ${max}` : ""}</b></div>`;
+    };
+    const gear = [...(sheet.weapons ?? []), ...(sheet.equipment ?? [])];
+
+    return `
+<section class="mage-sheet">
+  <header class="mage-header">
+    <div class="mage-sigil">${portrait}</div>
+    <div>
+      <span class="mage-kicker">Mage: The Ascension</span>
+      <h3>${escapeHtml(sheet.name || "Unnamed Mage")}</h3>
+      <p>${escapeHtml([sheet.tradition || sheet.clan, sheet.essence, sheet.concept].filter(Boolean).join(" - ") || "Awakened character")}</p>
+    </div>
+    <div class="mage-header-facts">${mageHeaderFacts}</div>
+  </header>
+
+  <div class="mage-grid mage-attrs">
+    <section class="mage-panel"><h4>Physical</h4>${attrRow("Strength", a.strength)}${attrRow("Dexterity", a.dexterity)}${attrRow("Stamina", a.stamina)}</section>
+    <section class="mage-panel"><h4>Social</h4>${attrRow("Charisma", a.charisma)}${attrRow("Manipulation", a.manipulation)}${attrRow("Appearance", a.appearance)}</section>
+    <section class="mage-panel"><h4>Mental</h4>${attrRow("Perception", a.perception)}${attrRow("Intelligence", a.intelligence)}${attrRow("Wits", a.wits)}</section>
+  </div>
+
+  <div class="mage-grid mage-abilities">
+    <section class="mage-panel"><h4>Talents</h4>${mageList(mageTalents)}</section>
+    <section class="mage-panel"><h4>Skills</h4>${mageList(mageSkills)}</section>
+    <section class="mage-panel"><h4>Knowledges</h4>${mageList(mageKnowledges)}</section>
+  </div>
+
+  <div class="mage-main">
+    <section class="mage-panel mage-spheres"><h4>Spheres</h4>${mageList(mageSpheres)}</section>
+    <section class="mage-panel"><h4>Backgrounds</h4>${mageList(sheet.backgrounds ?? [])}</section>
+    <section class="mage-panel"><h4>Resonance</h4>${mageList(sheet.resonance ?? [])}</section>
+    <section class="mage-panel"><h4>Focus</h4>${mageTextList(sheet.focus ?? [], "No focus tools recorded.")}</section>
+  </div>
+
+  <div class="mage-pools">
+    ${poolPanel("Arete", sheet.humanity, 10)}
+    ${poolPanel("Willpower", wpc, wp)}
+    ${poolPanel("Quintessence", sheet.quintessence_current ?? bpc, sheet.quintessence ?? bp)}
+    ${poolPanel("Paradox", sheet.paradox, 10)}
+  </div>
+
+  <div class="mage-bottom">
+    <section class="mage-panel"><h4>Rotes</h4>${mageTextList(sheet.rotes ?? [], "No rotes recorded.")}</section>
+    <section class="mage-panel"><h4>Wonders</h4>${mageTextList(sheet.wonders ?? [], "No wonders recorded.")}</section>
+    <section class="mage-panel"><h4>Merits &amp; Flaws</h4>${mageList([...(sheet.merits ?? []), ...(sheet.flaws ?? []).map((f) => ({ ...f, name: `Flaw: ${f.name}` }))])}</section>
+    <section class="mage-panel"><h4>Gear &amp; Combat</h4>${gear.length ? mageTextList(gear.map((item) => ({ name: item.name, notes: [("damage" in item ? item.damage : undefined), item.notes].filter(Boolean).join(" - ") || undefined })), "No gear recorded.") : `<p class="mage-empty">No gear recorded.</p>`}</section>
+  </div>
+
+  <div class="mage-bottom">
+    ${textBlock("History", sheet.history)}
+    ${textBlock("Description", sheet.description)}
+    ${sheet.notes ? `<section class="mage-panel"><h4>Notes</h4><p>${escapeHtml(sheet.notes)}</p></section>` : ""}
+  </div>
+</section>`;
+  }
 
   return `
 <div style="background:#080b0d;color:#d8d1c4;border:1px solid rgba(160,170,180,.24);padding:18px;margin:20px 0;font-family:Georgia,'Times New Roman',serif;box-shadow:0 0 28px rgba(0,0,0,.42) inset;">

@@ -516,7 +516,7 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
       : isWerewolf
       ? `  - name: "Gifts (Rank 1)"\n    score: 0`
       : isMage
-      ? `  - name: Correspondence\n    score: 0\n  - name: Forces\n    score: 0\n  - name: Life\n    score: 0`
+      ? `  - name: Correspondence\n    score: 0\n  - name: Entropy\n    score: 0\n  - name: Forces\n    score: 0\n  - name: Life\n    score: 0\n  - name: Matter\n    score: 0\n  - name: Mind\n    score: 0\n  - name: Prime\n    score: 0\n  - name: Spirit\n    score: 0\n  - name: Time\n    score: 0`
       : `  - name: Power\n    score: 0`;
     const poolLine = isVamp ? "blood: 10\nblood_current: 10\n" :
       isWerewolf ? "rage: 5\nrage_current: 5\ngnosis: 5\ngnosis_current: 5\n" :
@@ -527,10 +527,11 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
     return `\n\n\`\`\`wod-sheet
 system: ${system}
 name: ${JSON.stringify(name || "")}
+player:
 ${groupLine}
 ${genLine}chronicle:
 sire:
-${sectLine}${roadLine}nature:
+${sectLine}${isMage ? "affiliation:\nessence:\n" : ""}${roadLine}nature:
 demeanor:
 concept:
 portrait:
@@ -578,6 +579,7 @@ virtues:
 willpower: 3
 willpower_current: 3
 ${poolLine}${humanityLabel}
+${isMage ? "paradox: 0\nresonance:\n  - name: Dynamic\n    score: 0\n  - name: Entropic\n    score: 0\n  - name: Static\n    score: 0\nfocus:\n  - name: Instrument\n    notes: \"\"\nrotes:\n  - name: \"\"\n    notes: \"\"\nwonders:\n  - name: \"\"\n    notes: \"\"\nhistory: []\ndescription: []\n" : ""}
 weapons:
   - name: ""
     damage: ""
