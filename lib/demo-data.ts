@@ -522,10 +522,67 @@ export function demoKitFor(gameType: GameType): DemoKit {
   };
 }
 
+function mdList(items: string[]) {
+  return items.map((item) => `- ${item}`).join("\n");
+}
+
+function demoStoryBeats(kit: DemoKit) {
+  const { location: loc, faction: fac, npc, pc, threat, item } = kit;
+  return {
+    locationDetails: [
+      `A public landmark points visitors toward [[${npc.name}]] before they know why.`,
+      `A private room, alley, shrine, dock, vault, or back office links [[${loc.name}]] to [[${fac.name}]].`,
+      `A visible clue hints that [[${threat.name}]] is already closer than anyone admits.`
+    ],
+    sceneStarters: [
+      `[[${npc.name}]] asks [[${pc.name}]] to deliver a warning and refuses to say who is listening.`,
+      `Agents of [[${fac.name}]] move openly through [[${loc.name}]] while pretending nothing is wrong.`,
+      `The [[${item.name}]] appears in the wrong hands for one tense scene, then vanishes again.`
+    ],
+    factionGoals: [
+      `Secure influence over [[${loc.name}]] before rivals realize what is at stake.`,
+      `Control access to the [[${item.name}]] without being blamed for the fallout.`,
+      `Use [[${npc.name}]] as an asset, scapegoat, or bargaining chip.`,
+      `Keep the truth of [[${threat.name}]] contained until containment stops being possible.`
+    ],
+    factionMethods: [
+      "Offer useful favors with hooks in them.",
+      "Control information before controlling territory.",
+      "Put a friendly face between the party and the ugly order.",
+      "Escalate quietly first, then publicly once leverage is secure."
+    ],
+    npcSecrets: [
+      `${npc.name} has already seen proof of [[${threat.name}]].`,
+      `${npc.name} knows one safe way to approach the [[${item.name}]], but using it costs a relationship.`,
+      `${npc.name} is less loyal to [[${fac.name}]] than everyone assumes.`
+    ],
+    pcPrompts: [
+      `What does [[${pc.name}]] need from [[${loc.name}]] right now?`,
+      `Why does [[${fac.name}]] think [[${pc.name}]] can be pressured?`,
+      `What did [[${npc.name}]] once do that [[${pc.name}]] has not forgiven?`,
+      `What rumor about the [[${item.name}]] does [[${pc.name}]] hope is false?`
+    ],
+    countdown: [
+      `1. A strange sign appears at [[${loc.name}]].`,
+      `2. [[${fac.name}]] suppresses witnesses or buys their silence.`,
+      `3. [[${npc.name}]] disappears, defects, or is publicly discredited.`,
+      `4. The [[${item.name}]] is activated, stolen, broken, or revealed.`,
+      `5. [[${threat.name}]] becomes impossible to ignore.`
+    ],
+    itemQuestions: [
+      `Who made the [[${item.name}]], and what did they sacrifice?`,
+      `Why does [[${fac.name}]] believe they have a right to it?`,
+      `What does [[${npc.name}]] know about its last owner?`,
+      `What changes at [[${loc.name}]] when it is used?`
+    ]
+  };
+}
+
 /** Render a game's demo kit into a uniform set of cross-linked wiki pages. */
 export function demoPagesFor(gameType: GameType): DemoPage[] {
   const kit = demoKitFor(gameType);
   const { location: loc, faction: fac, npc, pc, threat, item } = kit;
+  const beats = demoStoryBeats(kit);
   const tag = "demo";
 
   const pages: DemoPage[] = [
@@ -585,6 +642,69 @@ export function demoPagesFor(gameType: GameType): DemoPage[] {
     }
   ];
 
+  pages.push({
+    slug: demoSlug(`${gameType} Opening Situation`),
+    name: `${gameType} Opening Situation`,
+    category: "event",
+    visibility: "gm",
+    summary: `A ready-to-run first situation for the ${gameType} demo.`,
+    tags: [tag, "opening", "gm"],
+    body: `# ${gameType} Opening Situation
+
+> A first playable scene tying the sample pages together.
+
+## Start Here
+
+The party arrives at [[${loc.name}]] because [[${npc.name}]] sent a warning, a job offer, a confession, or a plea for help. [[${fac.name}]] is already moving, the [[${item.name}]] has become dangerous, and [[${threat.name}]] is still deniable for one more scene.
+
+## Immediate Questions
+
+- Why is [[${pc.name}]] the person who cannot ignore this?
+- What does [[${npc.name}]] refuse to say in public?
+- What does [[${fac.name}]] offer that is genuinely useful?
+- What sign of [[${threat.name}]] proves this is more than local trouble?
+
+## First Three Scenes
+
+1. **Public pressure:** something obvious happens at [[${loc.name}]] while witnesses are present.
+2. **Private ask:** [[${npc.name}]] explains just enough to make refusal costly.
+3. **Complication:** [[${fac.name}]] arrives, claims authority, or reveals they are already one step ahead.
+
+## Outcomes To Track
+
+- Who leaves with the [[${item.name}]]?
+- Who learns the first real truth about [[${threat.name}]]?
+- Which relationship is strained before the next session?
+- What page should be created next: a map, a quest, a rival, or a secret history?
+
+:::gm
+Use this page as scaffolding, not canon. Rewrite the facts after session one and keep the links; the graph will immediately show how the demo is growing.
+:::
+`
+  });
+
+  for (const page of pages) {
+    if (page.slug === demoSlug(loc.name)) {
+      page.body += `\n## Demo Expansion Notes\n\n${mdList(beats.locationDetails)}\n\n## Scene Starters\n\n${mdList(beats.sceneStarters)}\n`;
+    }
+    if (page.slug === demoSlug(fac.name)) {
+      page.body = page.body.replace("## Goals\n\n- \n", `## Goals\n\n${mdList(beats.factionGoals)}\n`);
+      page.body += `\n## Methods\n\n${mdList(beats.factionMethods)}\n`;
+    }
+    if (page.slug === demoSlug(npc.name)) {
+      page.body += `\n## Wants\n\n- To survive the next move by [[${fac.name}]].\n- To keep [[${threat.name}]] from becoming public knowledge.\n- To learn whether [[${pc.name}]] can be trusted with the [[${item.name}]].\n\n:::gm\n## Additional Secrets\n\n${mdList(beats.npcSecrets)}\n:::\n`;
+    }
+    if (page.slug === demoSlug(pc.name)) {
+      page.body += `\n## Player Prompts\n\n${mdList(beats.pcPrompts)}\n`;
+    }
+    if (page.slug === demoSlug(threat.name)) {
+      page.body += `\n## Countdown\n\n${beats.countdown.join("\n")}\n`;
+    }
+    if (page.slug === demoSlug(item.name)) {
+      page.body += `\n## Questions To Answer In Play\n\n${mdList(beats.itemQuestions)}\n\n:::gm\nThe [[${item.name}]] can delay, reveal, redirect, or worsen [[${threat.name}]]. Pick the exact truth after the first session so it fits the table's choices.\n:::\n`;
+    }
+  }
+
   // Optional researched primer: concept + reference lists for the system.
   if (kit.concept || (kit.lists && kit.lists.length)) {
     const listMd = (kit.lists || [])
@@ -599,6 +719,11 @@ export function demoPagesFor(gameType: GameType): DemoPage[] {
       tags: [tag, "reference"],
       body: `# ${gameType} — Player Primer\n\n> A quick reference for this system: concept, and the lists you'll reach for most.\n\n## Concept\n\n${kit.concept || kit.premise}\n\n${listMd}\n\n_Demo content — edit or delete freely._\n`
     });
+  }
+
+  const primer = pages.find((page) => page.slug === demoSlug(`${gameType} Primer`));
+  if (primer) {
+    primer.body += `\n## Suggested First Click\n\nStart with [[${gameType} Opening Situation]], then follow links to [[${loc.name}]], [[${fac.name}]], and [[${pc.name}]].\n`;
   }
 
   return pages;
