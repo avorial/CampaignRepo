@@ -6,6 +6,7 @@ import { Lock } from "lucide-react";
 import type { AiConfig, ApiToken, Campaign, User } from "@/lib/types";
 import { gameTypeGroups } from "@/lib/templates";
 import { darkPlatePacks, gamePackLogos } from "@/lib/game-pack-branding";
+import DemoBrowser from "./demo-browser";
 
 type DashboardPanelState = {
   github: boolean;
@@ -385,6 +386,8 @@ export default function DashboardClient({
         </div>
         )}
       </section>
+
+      <DemoBrowser />
 
       <section className="dashboard-grid">
         <details className="panel dashboard-toggle-panel" open={expandedPanels.github} onToggle={(event) => setPanelOpen("github", event.currentTarget.open)}>

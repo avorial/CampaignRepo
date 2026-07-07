@@ -58,6 +58,8 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const [pageCategory, setPageCategory] = useState(categories[0]?.id || "character");
   const [createVisibility, setCreateVisibility] = useState<"gm" | "players">("gm");
   const [createTemplatePath, setCreateTemplatePath] = useState("");
+  const [showDemoPrompt, setShowDemoPrompt] = useState(false);
+  const [demoBusy, setDemoBusy] = useState(false);
   const [navFilterInput, setNavFilterInput] = useState("");
   const [navFilter, setNavFilter] = useState("");
   const [navOpen, setNavOpen] = useState(false);
@@ -229,6 +231,41 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
       if (typeof saved.templatePath === "string") setCreateTemplatePath(saved.templatePath);
     } catch { /* ignore malformed storage */ }
   }, [createDefaultsKey]);
+
+  // Offer demo data once per campaign (managers only), on first visit in this browser.
+  const demoPromptKey = `cr-demo-prompt-${campaign.id}`;
+  const canManageDemo = campaign.role === "owner" || campaign.role === "gm";
+  useEffect(() => {
+    if (!canManageDemo) return;
+    try { if (!localStorage.getItem(demoPromptKey)) setShowDemoPrompt(true); } catch { /* ignore */ }
+  }, [canManageDemo, demoPromptKey]);
+
+  function dismissDemoPrompt() {
+    try { localStorage.setItem(demoPromptKey, "seen"); } catch { /* ignore */ }
+    setShowDemoPrompt(false);
+  }
+
+  async function seedDemo() {
+    setDemoBusy(true);
+    setMessage("Adding demo data...");
+    const res = await fetch(`/api/campaigns/${campaign.id}/demo`, { method: "POST" });
+    const data = await res.json();
+    setDemoBusy(false);
+    dismissDemoPrompt();
+    if (res.ok) { setMessage(data.created ? `Added ${data.created} demo page${data.created === 1 ? "" : "s"}.` : "Demo pages already present."); void load(); }
+    else setMessage(data.error || "Could not add demo data.");
+  }
+
+  async function removeDemo() {
+    if (!window.confirm("Remove all demo pages from this campaign?")) return;
+    setDemoBusy(true);
+    setMessage("Removing demo data...");
+    const res = await fetch(`/api/campaigns/${campaign.id}/demo`, { method: "DELETE" });
+    const data = await res.json();
+    setDemoBusy(false);
+    if (res.ok) { setMessage(`Removed ${data.removed} demo page${data.removed === 1 ? "" : "s"}.`); void load(); }
+    else setMessage(data.error || "Could not remove demo data.");
+  }
 
   async function createPage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -556,6 +593,22 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
 
   return (
     <section className="workspace" id="main-content">
+      {showDemoPrompt && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="demo-modal-title">
+          <div className="modal-card">
+            <h2 id="demo-modal-title">Add demo data?</h2>
+            <p className="muted">
+              Populate this campaign with a small set of example {campaign.gameType} pages — a location, faction, NPC,
+              sample character, threat, and item — all cross-linked so you can see the wiki, relationship map, and player
+              portal in action. They're tagged as demo and easy to remove later.
+            </p>
+            <div className="modal-actions">
+              <button type="button" disabled={demoBusy} onClick={seedDemo}>{demoBusy ? "Adding..." : "Add demo pages"}</button>
+              <button type="button" className="secondary" disabled={demoBusy} onClick={dismissDemoPrompt}>No thanks</button>
+            </div>
+          </div>
+        </div>
+      )}
       <button
         type="button"
         className="mobile-nav-toggle"
@@ -654,6 +707,13 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
               <button>Create page</button>
             </form>
             <p className="muted create-page-hint">Importing a character sheet or actor JSON? Use <Link href={`/campaigns/${campaign.id}/tools/import`} className="quiet-link">Import &amp; Export</Link>.</p>
+            <div className="demo-controls">
+              <span className="create-page-hint muted">Demo data — a set of example {campaign.gameType} pages you can add or clear anytime.</span>
+              <div className="demo-controls-actions">
+                <button type="button" className="secondary small" disabled={demoBusy} onClick={seedDemo}>{demoBusy ? "Working..." : "Add demo pages"}</button>
+                <button type="button" className="secondary small" disabled={demoBusy} onClick={removeDemo}>Remove demo pages</button>
+              </div>
+            </div>
           </section>
         )}
 
