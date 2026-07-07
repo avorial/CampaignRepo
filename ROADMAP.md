@@ -21,15 +21,21 @@ CampaignRepo currently ships:
 - Media manager with metadata, captions, alt text, tags, and page rendering.
 - Interactive maps with image pins, player/GM layers, and nested map links.
 - Nested page hierarchy through `parent` frontmatter and collapsible sidebars.
-- Relationship graph with typed relationship frontmatter and inverse labels.
+- Relationship graph with typed relationship frontmatter, inverse labels,
+  hierarchy/family layout, dense-campaign clusters, graph editing, search, and
+  health checks.
 - Full-text search plus a global command palette.
 - Player portal and public no-login sites for approved player-visible content.
-- Public campaign gallery, custom public link names, clone-this-world flow, and
-  public quest display.
+- Public campaign gallery, custom public link names, ratings, recently-updated
+  discovery signals, clone-this-world flow, contribution guidance, GitHub
+  compare/PR handoff, and public quest display.
 - Sessions, quests, fantasy calendar, overview widgets, boards, manuscripts, and
   lexicon/naming tools.
 - Traveller, D&D 5e, and World of Darkness character-sheet renderers, with
   Traveller rolling and editor controls.
+- Reusable category property schemas, custom typed fields, inventories,
+  abilities, resources, and safe formula fields stored in campaign YAML/page
+  frontmatter.
 - Review queue, campaign health center, bulk page organization, notifications,
   assignments, mentions, page watches, and page history/diff/restore workflow.
 - Importers for Foundry actors, generic character JSON, Obsidian, Notion, Google
@@ -173,15 +179,12 @@ actors can import into D&D sheet blocks. Still needed:
 - Print views and theme-specific sheet polish.
 - Better import paths from external character generators/VTT exports.
 
-### 25. Relationship trees and genealogy views - M-L
+### 25. Relationship trees and genealogy views - shipped
 
-The graph is useful, but the relationship feature still needs:
-
-- Family-tree / hierarchy layout mode.
-- Collapsed clusters for dense campaigns.
-- Relationship editing directly from the graph.
-- Graph search/highlight and stronger health checks for broken relationship
-  targets.
+The graph supports family/hierarchy layout, collapsed category clusters for dense
+campaigns, direct relationship editing from the graph, node search/highlight,
+and health checks for missing relationship targets, self-links, and unknown
+relationship types.
 
 ### 26. Import/export and VTT bridges - core shipped, deeper sync remaining
 
@@ -216,26 +219,23 @@ Presence endpoints exist. Still needed:
 - Better conflict resolution for simultaneous edits.
 - True live collaboration only if it can coexist cleanly with Git commits.
 
-### 29. Reusable properties, inventories, and abilities - M-L
+### 29. Reusable properties, inventories, and abilities - core shipped
 
-Some page frontmatter can render inventory, abilities, and resources. The larger
-feature still needs:
+Campaigns can define reusable category property schemas in `campaign.yaml`.
+Editors render text, textarea, number, choice/select, checkbox, date, counter,
+link, and safe formula fields into page `customProps`. Pages also support
+portable inventory, ability, and resource frontmatter. Remaining polish is VTT
+export/import mapping and more system-specific presentation templates.
 
-- A reusable property schema.
-- Field types: text, number, choice, link, date, counters, and safe formulas.
-- System-specific display templates.
-- VTT/export mapping.
-
-### 30. Publishing ecosystem - core shipped, community layer remaining
+### 30. Publishing ecosystem - core shipped
 
 Public sites, gallery, custom slugs, quests, clone flow, fork-proposal
 workflow, token-based single-page and quest share links (with OpenGraph
-preview metadata), and gallery filters for system, sort, and tags are live.
-Still needed:
-
-- Rating/recently-updated gallery signals.
-- Community template/campaign library conventions.
-- True cross-repo GitHub pull-request flow for public-world contributions.
+preview metadata), gallery filters for system/sort/tags, ratings,
+recently-updated signals, community library type, contribution guidance, and a
+GitHub compare/PR handoff for public-world contributions are live. Remaining
+polish would be richer moderation and fully automated PR creation through a
+GitHub App permission flow.
 
 ## Still Open
 
@@ -297,9 +297,10 @@ non-technical groups, but should not compromise the own-your-data model.
 
 ### Release C - Publish and share
 
-1. Better gallery discovery, ratings, and recently-updated signals.
-2. Community template/campaign library conventions.
-3. True GitHub pull-request workflow for public worlds.
+1. Richer gallery moderation and featured/community curation.
+2. Optional automated GitHub PR creation once the GitHub App has the right
+   permission model.
+3. Public contribution review UX polish.
 
 ### Release D - Scale and reliability
 
@@ -311,6 +312,6 @@ non-technical groups, but should not compromise the own-your-data model.
 ### Release E - Deeper world systems
 
 1. Complete Maps 2.0 persistence for routes, regions, measuring, and journeys.
-2. Reusable properties/components.
-3. Relationship tree layouts.
+2. VTT/export mappings for reusable properties/components.
+3. More system-specific property and character-sheet presentations.
 4. Extension and automation rules.

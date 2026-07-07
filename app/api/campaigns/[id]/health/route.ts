@@ -4,6 +4,7 @@ import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getStorageAdapter } from "@/lib/storage";
 import { parsePage } from "@/lib/markdown";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
+import { REL_TYPE_MAP } from "@/lib/relationships";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,18 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     for (const link of page.outgoingLinks) {
       if (!bySlug.has(resolveTarget(aliasMap, link.target))) {
         findings.push({ type: "broken-link", severity: "warn", slug: page.slug, title: name || page.slug, detail: `Links to "${link.target}", which has no matching page.` });
+      }
+    }
+    for (const rel of page.frontmatter.relationships || []) {
+      const target = resolveTarget(aliasMap, rel.target);
+      if (!target || !bySlug.has(target)) {
+        findings.push({ type: "broken-relationship", severity: "warn", slug: page.slug, title: name || page.slug, detail: `Relationship "${rel.type}" points at "${rel.target}", which has no matching page.` });
+      }
+      if (target === page.slug) {
+        findings.push({ type: "self-relationship", severity: "info", slug: page.slug, title: name || page.slug, detail: `Relationship "${rel.type}" points back to the same page.` });
+      }
+      if (rel.type && !REL_TYPE_MAP.has(rel.type)) {
+        findings.push({ type: "unknown-relationship-type", severity: "info", slug: page.slug, title: name || page.slug, detail: `Relationship type "${rel.type}" is not in CampaignRepo's relationship type registry.` });
       }
     }
     for (const match of page.content.matchAll(/\/wiki\/media\/([^\s)"'#?]+)/g)) {
