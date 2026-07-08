@@ -34,7 +34,7 @@ The Rustwood Inn,location,"Roadside tavern in Thornmere","inn,tavern",players,`;
 export default function ImportClient({ campaignId, campaignName }: { campaignId: number; campaignName: string }) {
   const api = `/api/campaigns/${campaignId}`;
 
-  const [activeTab, setActiveTab] = useState<"csv" | "characters" | "foundry" | "obsidian" | "notion" | "worldanvil" | "googledocs" | "roll20" | "legendkeeper" | "export">("csv");
+  const [activeTab, setActiveTab] = useState<"csv" | "characters" | "foundry" | "obsidian" | "notion" | "onenote" | "worldanvil" | "googledocs" | "roll20" | "legendkeeper" | "export">("csv");
 
   // Single character JSON import state (custom field-path mapping)
   const [charSource, setCharSource] = useState<"foundry" | "generic">("foundry");
@@ -61,6 +61,15 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
   const [notionApproval, setNotionApproval] = useState<"approved" | "unapproved" | "rejected">("unapproved");
   const [notionBusy, setNotionBusy] = useState(false);
   const [notionResult, setNotionResult] = useState<ImportResponse | null>(null);
+
+  // OneNote export import state
+  const [oneNoteFiles, setOneNoteFiles] = useState<FileEntry[]>([]);
+  const [oneNoteCategory, setOneNoteCategory] = useState("lore");
+  const [oneNoteVisibility, setOneNoteVisibility] = useState<"gm" | "players">("gm");
+  const [oneNoteApproval, setOneNoteApproval] = useState<"approved" | "unapproved" | "rejected">("unapproved");
+  const [oneNoteFolderSections, setOneNoteFolderSections] = useState(true);
+  const [oneNoteBusy, setOneNoteBusy] = useState(false);
+  const [oneNoteResult, setOneNoteResult] = useState<ImportResponse | null>(null);
 
   // World Anvil import state
   const [waJson, setWaJson] = useState("");
@@ -354,6 +363,36 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
     }
   }
 
+  async function loadOneNoteFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files) return;
+    const all = Array.from(files).filter((f) => /\.(html?|mhtml?|txt)$/i.test(f.name));
+    setOneNoteFiles(await readFileList(all.length ? all : Array.from(files)));
+    setOneNoteResult(null);
+  }
+
+  async function runOneNoteImport() {
+    if (!oneNoteFiles.length) return;
+    setOneNoteBusy(true);
+    setOneNoteResult(null);
+    try {
+      const res = await fetch(`${api}/imports/onenote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          files: oneNoteFiles,
+          category: oneNoteCategory,
+          visibility: oneNoteVisibility,
+          approvalStatus: oneNoteApproval,
+          folderAsSection: oneNoteFolderSections
+        })
+      });
+      setOneNoteResult(await res.json());
+    } finally {
+      setOneNoteBusy(false);
+    }
+  }
+
   function loadCsvFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -402,6 +441,7 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
         <button className={`tab-btn${activeTab === "foundry" ? " active" : ""}`} onClick={() => setActiveTab("foundry")}>Foundry</button>
         <button className={`tab-btn${activeTab === "obsidian" ? " active" : ""}`} onClick={() => setActiveTab("obsidian")}>Obsidian</button>
         <button className={`tab-btn${activeTab === "notion" ? " active" : ""}`} onClick={() => setActiveTab("notion")}>Notion</button>
+        <button className={`tab-btn${activeTab === "onenote" ? " active" : ""}`} onClick={() => setActiveTab("onenote")}>OneNote</button>
         <button className={`tab-btn${activeTab === "worldanvil" ? " active" : ""}`} onClick={() => setActiveTab("worldanvil")}>World Anvil</button>
         <button className={`tab-btn${activeTab === "googledocs" ? " active" : ""}`} onClick={() => setActiveTab("googledocs")}>Google Docs</button>
         <button className={`tab-btn${activeTab === "roll20" ? " active" : ""}`} onClick={() => setActiveTab("roll20")}>Roll20</button>
@@ -773,6 +813,65 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
           </button>
 
           {notionResult && <ImportResultPanel result={notionResult} api={`/campaigns/${campaignId}`} />}
+        </div>
+      )}
+
+      {activeTab === "onenote" && (
+        <div className="import-panel stack">
+          <div className="import-intro">
+            <p>Import from OneNote exports. Export a notebook or section as <code>.html</code>, <code>.mht</code>/<code>.mhtml</code>, or plain text, then select the files here.</p>
+            <p className="muted" style={{ fontSize: "12px" }}>
+              Folder names can be recorded as OneNote section names. HTML tables, headings, lists, links, bold, and italic text are converted into Markdown pages.
+            </p>
+          </div>
+
+          <div className="import-options">
+            <label>Default category
+              <select value={oneNoteCategory} onChange={(e) => setOneNoteCategory(e.target.value)}>
+                {CATEGORY_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
+            <label>Visibility
+              <select value={oneNoteVisibility} onChange={(e) => setOneNoteVisibility(e.target.value as "gm" | "players")}>
+                {VISIBILITY_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </label>
+            <label>Approval status
+              <select value={oneNoteApproval} onChange={(e) => setOneNoteApproval(e.target.value as "approved" | "unapproved" | "rejected")}>
+                {APPROVAL_OPTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </label>
+          </div>
+
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+            <input type="checkbox" checked={oneNoteFolderSections} onChange={(e) => setOneNoteFolderSections(e.target.checked)} />
+            Record parent folder as OneNote section
+          </label>
+
+          <label className="file-upload-row">
+            Select OneNote export folder or files
+            <input
+              type="file"
+              accept=".html,.htm,.mht,.mhtml,.txt"
+              multiple
+              // @ts-expect-error webkitdirectory is non-standard but widely supported
+              webkitdirectory=""
+              onChange={loadOneNoteFiles}
+              style={{ marginLeft: 8 }}
+            />
+          </label>
+
+          {oneNoteFiles.length > 0 && (
+            <p className="muted" style={{ fontSize: 13 }}>
+              {oneNoteFiles.length} file{oneNoteFiles.length !== 1 ? "s" : ""} selected
+            </p>
+          )}
+
+          <button onClick={runOneNoteImport} disabled={oneNoteBusy || oneNoteFiles.length === 0}>
+            {oneNoteBusy ? "Importing..." : `Import ${oneNoteFiles.length > 0 ? oneNoteFiles.length + " OneNote page" + (oneNoteFiles.length === 1 ? "" : "s") : "OneNote pages"}`}
+          </button>
+
+          {oneNoteResult && <ImportResultPanel result={oneNoteResult} api={`/campaigns/${campaignId}`} />}
         </div>
       )}
 

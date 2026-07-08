@@ -189,13 +189,12 @@ relationship types.
 ### 26. Import/export and VTT bridges - core shipped, deeper sync remaining
 
 The import hub now covers CSV, Foundry journals, Foundry actors, Obsidian,
-Notion, Google Docs, World Anvil, Roll20, LegendKeeper, generic character JSON,
+Notion, OneNote, Google Docs, World Anvil, Roll20, LegendKeeper, generic character JSON,
 and character diff previews. CampaignRepo exports full ZIP/JSON backups that
 include campaign content, media, sessions, quests, maps, search data, templates,
 and settings.
 Still needed:
 
-- OneNote migration.
 - Re-import previews using source IDs and hashes across every importer, not just
   character sources.
 - Optional Foundry module push/pull with explicit previews and conflict handling.
