@@ -81,6 +81,9 @@ CREATE TABLE IF NOT EXISTS imports (
   source TEXT NOT NULL,
   sourceId TEXT NOT NULL,
   pageSlug TEXT NOT NULL,
+  sourcePath TEXT,
+  sourceHash TEXT,
+  updatedAt TEXT,
   createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS api_tokens (
@@ -289,6 +292,10 @@ CREATE TABLE IF NOT EXISTS page_shares (
 try { db.exec("ALTER TABLE campaign_memberships ADD COLUMN groups TEXT NOT NULL DEFAULT '[]'"); } catch { /* already migrated */ }
 try { db.exec("ALTER TABLE page_shares ADD COLUMN kind TEXT NOT NULL DEFAULT 'page'"); } catch { /* already migrated */ }
 try { db.exec("ALTER TABLE campaigns ADD COLUMN forkOf TEXT"); } catch { /* already migrated */ }
+try { db.exec("ALTER TABLE imports ADD COLUMN sourcePath TEXT"); } catch { /* already migrated */ }
+try { db.exec("ALTER TABLE imports ADD COLUMN sourceHash TEXT"); } catch { /* already migrated */ }
+try { db.exec("ALTER TABLE imports ADD COLUMN updatedAt TEXT"); } catch { /* already migrated */ }
+try { db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_imports_source ON imports(campaignId, source, sourceId)"); } catch { /* already migrated */ }
 
 export function getDb() {
   return db;

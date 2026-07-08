@@ -159,6 +159,11 @@ Players see only pages that are both approved and marked player-visible. GM-only
 - Table view for pages with filters, sorting, multi-select, and bulk changes for category, visibility, approval, parent, and tags in one commit.
 - Media table with name/type/tag/unused filters, sorting, bulk tag add/remove, and bulk delete.
 
+### Character Import Sync
+
+- Single-character JSON imports preserve the original source under `wiki/imports/characters`.
+- Imported pages store the source path, source ID, and stable source hash in frontmatter so later imports can be recognized as new, unchanged, or changed.
+
 ### Character Sheets
 
 - **Traveller (Mongoose 2e)**: characteristics (STR/DEX/END/INT/EDU/SOC) with computed DMs, skills, weapons, armour, equipment, contacts, and credits. Click any characteristic or skill to roll 2D6 + that modifier with an animated result toast.

@@ -1,4 +1,5 @@
 ﻿import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign, getDb } from "@/lib/db";
@@ -52,6 +53,16 @@ function importTags(source: any, mapping?: z.infer<typeof schema>["mapping"]) {
   return [];
 }
 
+function stableJson(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  return `{${Object.keys(value as Record<string, unknown>).sort().map((key) => `${JSON.stringify(key)}:${stableJson((value as Record<string, unknown>)[key])}`).join(",")}}`;
+}
+
+function sourceHash(value: unknown) {
+  return crypto.createHash("sha256").update(stableJson(value)).digest("hex");
+}
+
 function importBody(source: any, sourceName: string, mapping?: z.infer<typeof schema>["mapping"]) {
   const biography =
     mappedValue(source, mapping?.biography) ||
@@ -92,17 +103,31 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const slug = slugify(name);
   const sourceId = String(input.sourceJson._id || input.sourceJson.id || slug);
   const sourcePath = `wiki/imports/characters/${input.source}/${sourceId}.json`;
+  const hash = sourceHash(input.sourceJson);
+  const existingImport = getDb().prepare("SELECT pageSlug, sourceHash FROM imports WHERE campaignId = ? AND source = ? AND sourceId = ?")
+    .get(campaign.id, input.source, sourceId) as { pageSlug?: string; sourceHash?: string } | undefined;
+  const importStatus = existingImport?.sourceHash === hash ? "unchanged" : existingImport ? "changed" : "new";
   const frontmatter = {
     ...defaultFrontmatter(name, importCategory(input.sourceJson, input.mapping), input.visibility),
     approvalStatus: input.approvalStatus,
     summary: String(mappedValue(input.sourceJson, input.mapping?.summary) || ""),
     tags: importTags(input.sourceJson, input.mapping),
     sourceImport: sourcePath,
+    sourceId,
+    sourceHash: hash,
     foundryLink: input.source === "foundry" ? input.sourceJson.uuid || input.sourceJson._id : undefined
   };
   await storage.putFile(sourcePath, JSON.stringify(input.sourceJson, null, 2) + "\n", `CampaignRepo: import source JSON for ${name}`);
   await storage.putFile(`wiki/pages/${slug}.md`, serializePage(frontmatter, importBody(input.sourceJson, name, input.mapping)), `CampaignRepo: import character ${name}`);
-  getDb().prepare("INSERT INTO imports (campaignId, source, sourceId, pageSlug) VALUES (?, ?, ?, ?)").run(campaign.id, input.source, sourceId, slug);
+  getDb().prepare(`
+    INSERT INTO imports (campaignId, source, sourceId, pageSlug, sourcePath, sourceHash, updatedAt)
+    VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(campaignId, source, sourceId) DO UPDATE SET
+      pageSlug = excluded.pageSlug,
+      sourcePath = excluded.sourcePath,
+      sourceHash = excluded.sourceHash,
+      updatedAt = CURRENT_TIMESTAMP
+  `).run(campaign.id, input.source, sourceId, slug, sourcePath, hash);
   scheduleSearchIndexRebuild(campaign);
-  return NextResponse.json({ slug });
+  return NextResponse.json({ slug, sourceId, sourcePath, sourceHash: hash, importStatus, previousSlug: existingImport?.pageSlug });
 }

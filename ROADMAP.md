@@ -260,6 +260,10 @@ Add re-import previews using source IDs and hashes across every importer, VTT
 mapping for reusable properties/components, and optional Foundry module
 push/pull with explicit previews and conflict handling.
 
+Initial sync pass: single-character JSON imports now store source path, source
+ID, and a stable SHA-256 hash in the import index and page frontmatter, then
+report whether a re-import source is new, unchanged, or changed.
+
 ### D. Collaboration polish - M-L
 
 Add clearer in-editor "who is editing" surfaces, soft locks, stale-lock handling,

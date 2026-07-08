@@ -44,6 +44,7 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
   const [charJson, setCharJson] = useState("");
   const [charBusy, setCharBusy] = useState(false);
   const [charError, setCharError] = useState("");
+  const [charNotice, setCharNotice] = useState("");
 
   // Obsidian vault import state
   const [obsidianFiles, setObsidianFiles] = useState<FileEntry[]>([]);
@@ -137,6 +138,7 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
     }
     setCharBusy(true);
     setCharError("");
+    setCharNotice("");
     try {
       const res = await fetch(`${api}/imports/characters`, {
         method: "POST",
@@ -144,7 +146,12 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
         body: JSON.stringify({ source: charSource, visibility: charVisibility, approvalStatus: charApproval, mapping: charMap, sourceJson })
       });
       const data = await res.json();
-      if (res.ok && data.slug) { window.location.href = `/campaigns/${campaignId}/pages/${data.slug}`; return; }
+      if (res.ok && data.slug) {
+        const status = data.importStatus || "new";
+        setCharNotice(status === "unchanged" ? "Source matched an existing import with no JSON changes." : status === "changed" ? "Source matched an existing import and has changed JSON." : "Imported as a new source.");
+        window.location.href = `/campaigns/${campaignId}/pages/${data.slug}?import=${encodeURIComponent(status)}`;
+        return;
+      }
       setCharError(data.error || "Import failed.");
     } finally {
       setCharBusy(false);
@@ -561,6 +568,7 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
           </button>
 
           {charError && <p className="error">{charError}</p>}
+          {charNotice && <p className="toast">{charNotice}</p>}
         </div>
       )}
 
