@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
-import { Lock } from "lucide-react";
+import { ArrowLeft, ArrowRight, Lock } from "lucide-react";
 import type { AiConfig, ApiToken, Campaign, User } from "@/lib/types";
 import { gameTypeGroups } from "@/lib/templates";
 import { darkPlatePacks, gamePackLogos } from "@/lib/game-pack-branding";
@@ -117,6 +117,19 @@ export default function DashboardClient({
       const next = [...current];
       const [moved] = next.splice(from, 1);
       next.splice(to, 0, moved);
+      persistRepoOrder(next);
+      return next;
+    });
+  };
+
+  const moveRepo = (campaignId: number, direction: -1 | 1) => {
+    setRepos((current) => {
+      const index = current.findIndex((campaign) => campaign.id === campaignId);
+      const target = index + direction;
+      if (index < 0 || target < 0 || target >= current.length) return current;
+      const next = [...current];
+      const [moved] = next.splice(index, 1);
+      next.splice(target, 0, moved);
       persistRepoOrder(next);
       return next;
     });
@@ -318,7 +331,7 @@ export default function DashboardClient({
           </div>
         ) : (
         <div className="repo-grid">
-          {repos.map((campaign) => {
+          {repos.map((campaign, index) => {
             const logo = gamePackLogos[campaign.gameType];
             const plateClass = darkPlatePacks.has(campaign.gameType) ? " repo-logo-plate-dark" : "";
             const slug = campaign.storageBackend === "local" ? (campaign.localPath || "local") : `${campaign.owner}/${campaign.repo}`;
@@ -350,6 +363,26 @@ export default function DashboardClient({
                 }}
                 title="Drag to reorder"
               >
+                <div className="campaign-card-reorder" aria-label={`Reorder ${campaign.name}`}>
+                  <button
+                    type="button"
+                    onClick={() => moveRepo(campaign.id, -1)}
+                    disabled={index === 0}
+                    aria-label={`Move ${campaign.name} earlier`}
+                    title="Move earlier"
+                  >
+                    <ArrowLeft size={14} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveRepo(campaign.id, 1)}
+                    disabled={index === repos.length - 1}
+                    aria-label={`Move ${campaign.name} later`}
+                    title="Move later"
+                  >
+                    <ArrowRight size={14} aria-hidden="true" />
+                  </button>
+                </div>
                 <Link className="campaign-card-link" href={`/campaigns/${campaign.id}`}>
                   <div className="campaign-card-logo">
                     {logo ? (
@@ -380,7 +413,7 @@ export default function DashboardClient({
               <ul className="onboarding-feature-list">
                 <li>Wiki pages with rich markdown, images, and relationships</li>
                 <li>Session planning, quests, and in-world calendar</li>
-                <li>Traveller, WoD, and D&amp;D character sheets</li>
+                <li>Traveller, D&amp;D, Pathfinder, and WoD character sheets</li>
                 <li>Optional GitHub sync for history and multi-device access</li>
               </ul>
             </div>

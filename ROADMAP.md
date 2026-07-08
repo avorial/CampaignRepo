@@ -242,6 +242,10 @@ criteria. Add virtualized lists, paged media loading, cached repo reads,
 incremental search updates, thumbnails, reduced-motion handling, and automated
 accessibility checks.
 
+Initial polish pass: connected repos can be reordered by keyboard-accessible
+move controls as well as drag and drop, and dashboard copy reflects the current
+sheet systems.
+
 ### B. Sheet editor and print polish - M
 
 Add full field editors for D&D 5e, Pathfinder 2e, and World of Darkness sheets,

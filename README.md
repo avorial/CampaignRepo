@@ -163,8 +163,9 @@ Players see only pages that are both approved and marked player-visible. GM-only
 
 - **Traveller (Mongoose 2e)**: characteristics (STR/DEX/END/INT/EDU/SOC) with computed DMs, skills, weapons, armour, equipment, contacts, and credits. Click any characteristic or skill to roll 2D6 + that modifier with an animated result toast.
 - **D&D 5e**: fenced `dnd-sheet` YAML blocks render as designed character sheets, and Foundry D&D actor import can create those blocks.
+- **Pathfinder 2e**: fenced `dnd-sheet` YAML blocks with `system: pathfinder2` render rank-aware skills, saves, actions, feats, equipment, and spell/focus sections.
 - **World of Darkness**: fenced `wod-sheet` YAML blocks render World of Darkness style sheets.
-- Traveller has the most complete editor/roller experience today; D&D, World of Darkness, and Pathfinder still need deeper field editors and print polish.
+- Traveller has the most complete editor/roller experience today; D&D, Pathfinder, and World of Darkness still need deeper field editors and more print polish.
 
 ### Public Site and Discovery
 
