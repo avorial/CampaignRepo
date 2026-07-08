@@ -83,6 +83,10 @@ months, weekdays, eras, current in-world date, and date-linked sessions/quests.
 Typed relationship frontmatter powers reader connection panels and a graph page
 with typed edges, filters, focus, pan, and zoom.
 
+Family relationships also have a dedicated Family Tree page. It filters out the
+general graph noise, defaults to genealogy layout, supports direct family-link
+editing, and can display existing page portraits or images on tree nodes.
+
 ### 8. Published public sites - shipped
 
 Campaigns can publish stable `/site/<slug>` links. Public pages, media, and now

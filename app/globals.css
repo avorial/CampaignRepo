@@ -7203,6 +7203,21 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   width: 100%;
 }
 
+.graph-empty {
+  align-self: center;
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center;
+  max-width: 420px;
+  padding: 18px;
+  text-align: center;
+  z-index: 5;
+}
+
+.graph-empty h3 {
+  margin-top: 0;
+}
+
 .graph-edge {
   stroke: var(--border-strong);
   stroke-width: 1.5;

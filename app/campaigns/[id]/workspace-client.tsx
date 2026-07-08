@@ -756,6 +756,9 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
           <Link href={`/campaigns/${campaign.id}/boards`} className="nav-link nav-tool-link" aria-label="Boards"><span aria-hidden="true">🗂</span> Boards</Link>
         )}
         {canManage && (
+          <Link href={`/campaigns/${campaign.id}/family`} className="nav-link nav-tool-link" aria-label="Family Tree"><span aria-hidden="true">FT</span> Family Tree</Link>
+        )}
+        {canManage && (
           <Link href={`/campaigns/${campaign.id}/generate`} className="nav-link nav-tool-link" aria-label="Generate content"><span aria-hidden="true">⚙</span> Generate</Link>
         )}
         {canManage && (

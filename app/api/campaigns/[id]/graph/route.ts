@@ -14,6 +14,24 @@ function visibleForRole(page: WikiPage, role?: string) {
   return page.frontmatter.visibility === "players" && page.frontmatter.approvalStatus === "approved";
 }
 
+function graphImageSrc(campaignId: number, raw?: unknown) {
+  if (!raw || typeof raw !== "string") return undefined;
+  const value = raw.trim();
+  if (!value) return undefined;
+  if (/^https?:\/\//i.test(value) || value.startsWith("/campaign-media/")) return value;
+  if (value.startsWith("/") && !/^\/?wiki\/media\//i.test(value)) return value;
+  const mediaPath = value.replace(/^\/?wiki\/media\//i, "");
+  return `/campaign-media/${campaignId}/${mediaPath.split("/").map(encodeURIComponent).join("/")}`;
+}
+
+function pageGraphImage(campaignId: number, page: WikiPage) {
+  const frontmatter = page.frontmatter as WikiPage["frontmatter"] & { portrait?: string; image?: string; logo?: string };
+  const explicit = graphImageSrc(campaignId, frontmatter.portrait || frontmatter.image || frontmatter.logo);
+  if (explicit) return explicit;
+  const match = page.content.match(/!\[[^\]]*]\(([^)\s]+)(?:\s+"[^"]*")?\)/);
+  return match ? graphImageSrc(campaignId, match[1]) : undefined;
+}
+
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const { id } = await params;
@@ -70,6 +88,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     name: page.frontmatter.name,
     category: page.frontmatter.category,
     summary: page.frontmatter.summary,
+    image: pageGraphImage(campaign.id, page),
     tags: page.frontmatter.tags,
     visibility: page.frontmatter.visibility,
     approvalStatus: page.frontmatter.approvalStatus,

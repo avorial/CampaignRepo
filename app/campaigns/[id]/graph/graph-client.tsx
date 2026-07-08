@@ -79,7 +79,7 @@ function stepOnce(positions: Map<string, Pos>, edges: CampaignGraphEdge[]): Map<
 const TREE_X = 180;
 const TREE_Y = 150;
 
-function computeTreeLayout(slugs: string[], hierarchyEdges: CampaignGraphEdge[]): Map<string, Pos> {
+function computeTreeLayout(slugs: string[], hierarchyEdges: CampaignGraphEdge[], spouseEdges: CampaignGraphEdge[] = []): Map<string, Pos> {
   const children = new Map<string, string[]>();
   const hasParent = new Set<string>();
   const slugSet = new Set(slugs);
@@ -126,6 +126,17 @@ function computeTreeLayout(slugs: string[], hierarchyEdges: CampaignGraphEdge[])
   for (const s of slugs) {
     if (!pos.has(s)) { pos.set(s, { x: freeX++ * TREE_X, y: (maxDepth + 1.5) * TREE_Y, vx: 0, vy: 0 }); }
   }
+
+  for (const e of spouseEdges) {
+    const a = pos.get(e.source);
+    const b = pos.get(e.target);
+    if (!a || !b) continue;
+    const y = Math.min(a.y, b.y);
+    const mid = (a.x + b.x) / 2;
+    pos.set(e.source, { ...a, x: mid - TREE_X * 0.32, y });
+    pos.set(e.target, { ...b, x: mid + TREE_X * 0.32, y });
+  }
+
   return pos;
 }
 
@@ -148,6 +159,9 @@ function relCatColor(relType: string): string {
   return REL_CAT_COLORS[cat ?? ""] ?? "#888888";
 }
 
+const FAMILY_REL_TYPES = new Set(["parent-of", "child-of", "spouse-of", "sibling-of", "guardian-of", "ward-of"]);
+const HIERARCHY_REL_TYPES = new Set(["parent-of", "child-of", "guardian-of", "ward-of"]);
+
 // === Category colors ===
 const CAT_COLORS: Record<string, string> = {
   character: "#d4a957",
@@ -165,8 +179,12 @@ function catColor(cat: string): string {
   return CAT_COLORS[cat] || "#888";
 }
 
+type GraphMode = "relationship" | "family";
+
 // === Component ===
-export default function GraphClient({ campaignId }: { campaignId: number }) {
+export default function GraphClient({ campaignId, mode = "relationship" }: { campaignId: number; mode?: GraphMode }) {
+  const isFamilyMode = mode === "family";
+  const relationshipTypes = isFamilyMode ? RELATIONSHIP_TYPES.filter((rt) => rt.category === "family") : RELATIONSHIP_TYPES;
   const svgRef = useRef<SVGSVGElement>(null);
   const [nodes, setNodes] = useState<CampaignGraphNode[]>([]);
   const [edges, setEdges] = useState<CampaignGraphEdge[]>([]);
@@ -179,13 +197,13 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
   const [panStart, setPanStart] = useState<{ mx: number; my: number; ox: number; oy: number } | null>(null);
   const [dragNode, setDragNode] = useState<string | null>(null);
   const [filterCats, setFilterCats] = useState<Set<string>>(new Set(Object.keys(CAT_COLORS)));
-  const [filterRelCats, setFilterRelCats] = useState<Set<string>>(new Set(Object.keys(REL_CAT_COLORS)));
-  const [showRelOnly, setShowRelOnly] = useState(false);
-  const [layout, setLayout] = useState<"force" | "tree">("force");
+  const [filterRelCats, setFilterRelCats] = useState<Set<string>>(new Set(isFamilyMode ? ["family"] : Object.keys(REL_CAT_COLORS)));
+  const [showRelOnly, setShowRelOnly] = useState(isFamilyMode);
+  const [layout, setLayout] = useState<"force" | "tree">(isFamilyMode ? "tree" : "force");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [addRelOpen, setAddRelOpen] = useState(false);
-  const [addRelType, setAddRelType] = useState(RELATIONSHIP_TYPES[0]?.type ?? "related-to");
+  const [addRelType, setAddRelType] = useState(relationshipTypes[0]?.type ?? "related-to");
   const [addRelTarget, setAddRelTarget] = useState("");
   const [addRelBusy, setAddRelBusy] = useState(false);
   const [addRelMsg, setAddRelMsg] = useState("");
@@ -205,9 +223,25 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
     loadGraph();
   }, [loadGraph]);
 
+  const familyEdges = useMemo(
+    () => edges.filter((e) => !e.missing && e.relType && FAMILY_REL_TYPES.has(e.relType)),
+    [edges]
+  );
+  const familySlugs = useMemo(() => {
+    const slugs = new Set<string>();
+    for (const edge of familyEdges) {
+      slugs.add(edge.source);
+      slugs.add(edge.target);
+    }
+    return slugs;
+  }, [familyEdges]);
+  const baseNodes = useMemo(
+    () => (isFamilyMode ? nodes.filter((n) => familySlugs.has(n.slug)) : nodes),
+    [isFamilyMode, nodes, familySlugs]
+  );
   const visibleNodes = useMemo(
-    () => nodes.filter((n) => filterCats.has(n.category)),
-    [nodes, filterCats]
+    () => baseNodes.filter((n) => filterCats.has(n.category)),
+    [baseNodes, filterCats]
   );
   const visibleSlugs = useMemo(() => new Set(visibleNodes.map((n) => n.slug)), [visibleNodes]);
   const visibleEdges = useMemo(
@@ -217,22 +251,27 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
           !e.missing &&
           visibleSlugs.has(e.source) &&
           visibleSlugs.has(e.target) &&
+          (!isFamilyMode || Boolean(e.relType && FAMILY_REL_TYPES.has(e.relType))) &&
           (!showRelOnly || Boolean(e.relType)) &&
           (!e.relType || filterRelCats.has(REL_TYPE_MAP.get(e.relType)?.category ?? "generic"))
       ),
-    [edges, visibleSlugs, showRelOnly, filterRelCats]
+    [edges, visibleSlugs, isFamilyMode, showRelOnly, filterRelCats]
   );
 
   const hierarchyEdges = useMemo(
-    () => visibleEdges.filter((e) => ["parent-of", "child-of", "guardian-of", "ward-of"].includes(e.relType || "")),
+    () => visibleEdges.filter((e) => HIERARCHY_REL_TYPES.has(e.relType || "")),
     [visibleEdges]
   );
-  const hasHierarchyEdges = hierarchyEdges.length > 0;
+  const spouseEdges = useMemo(
+    () => visibleEdges.filter((e) => e.relType === "spouse-of"),
+    [visibleEdges]
+  );
+  const hasHierarchyEdges = isFamilyMode || hierarchyEdges.length > 0 || spouseEdges.length > 0;
 
   const treePositions = useMemo(() => {
     if (layout !== "tree") return null;
-    return computeTreeLayout(visibleNodes.map((n) => n.slug), hierarchyEdges);
-  }, [layout, visibleNodes, hierarchyEdges]);
+    return computeTreeLayout(visibleNodes.map((n) => n.slug), hierarchyEdges, spouseEdges);
+  }, [layout, visibleNodes, hierarchyEdges, spouseEdges]);
 
   // Force simulation
   useEffect(() => {
@@ -259,7 +298,7 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
 
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [visibleNodes, visibleEdges]);
+  }, [visibleNodes, visibleEdges, layout]);
 
   const onWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
@@ -340,14 +379,15 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
     [selected, visibleEdges]
   );
   const nodeMap = useMemo(() => new Map(nodes.map((n) => [n.slug, n])), [nodes]);
-  const usedCats = useMemo(() => [...new Set(nodes.map((n) => n.category))].sort(), [nodes]);
+  const usedCats = useMemo(() => [...new Set(baseNodes.map((n) => n.category))].sort(), [baseNodes]);
   const usedRelCats = useMemo(() => {
     const cats = new Set<string>();
-    for (const e of edges) {
+    const sourceEdges = isFamilyMode ? familyEdges : edges;
+    for (const e of sourceEdges) {
       if (e.relType) cats.add(REL_TYPE_MAP.get(e.relType)?.category ?? "generic");
     }
     return [...cats].sort();
-  }, [edges]);
+  }, [edges, familyEdges, isFamilyMode]);
 
   const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -515,7 +555,7 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
         <div className="graph-search-wrap">
           <input
             className="graph-search-input"
-            placeholder="Search nodes…"
+            placeholder={isFamilyMode ? "Search family members..." : "Search nodes..."}
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setSearchOpen(true); }}
             onFocus={() => setSearchOpen(true)}
@@ -534,7 +574,7 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
             </ul>
           )}
         </div>
-        <h4>Categories</h4>
+        <h4>{isFamilyMode ? "People and houses" : "Categories"}</h4>
         {usedCats.length > 1 && (
           <div className="graph-filter-actions">
             <button type="button" className="linklike" onClick={() => setCollapsedCats(new Set(usedCats))}>Collapse all</button>
@@ -560,20 +600,28 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
           <>
             <hr />
             <h4>Relationship types</h4>
-            {usedRelCats.map((cat) => (
-              <label key={cat} className="graph-filter-item">
-                <input type="checkbox" checked={filterRelCats.has(cat)} onChange={() => toggleRelCat(cat)} />
-                <span className="cat-dot" style={{ background: REL_CAT_COLORS[cat] ?? "#888" }} />
-                {cat}
-              </label>
-            ))}
+            {isFamilyMode ? (
+              <p className="muted graph-count">Showing parent, child, spouse, sibling, and guardian links.</p>
+            ) : (
+              usedRelCats.map((cat) => (
+                <label key={cat} className="graph-filter-item">
+                  <input type="checkbox" checked={filterRelCats.has(cat)} onChange={() => toggleRelCat(cat)} />
+                  <span className="cat-dot" style={{ background: REL_CAT_COLORS[cat] ?? "#888" }} />
+                  {cat}
+                </label>
+              ))
+            )}
           </>
         )}
-        <hr />
-        <label className="graph-filter-item">
-          <input type="checkbox" checked={showRelOnly} onChange={(e) => setShowRelOnly(e.target.checked)} />
-          <span>Typed relationships only</span>
-        </label>
+        {!isFamilyMode && (
+          <>
+            <hr />
+            <label className="graph-filter-item">
+              <input type="checkbox" checked={showRelOnly} onChange={(e) => setShowRelOnly(e.target.checked)} />
+              <span>Typed relationships only</span>
+            </label>
+          </>
+        )}
         {hasHierarchyEdges && (
           <>
             <hr />
@@ -584,7 +632,7 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
             </label>
             <label className="graph-filter-item">
               <input type="radio" name="layout" checked={layout === "tree"} onChange={() => setLayout("tree")} />
-              <span>Family / hierarchy tree</span>
+              <span>{isFamilyMode ? "Family tree" : "Family / hierarchy tree"}</span>
             </label>
           </>
         )}
@@ -605,6 +653,13 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
         style={{ cursor: panStart ? "grabbing" : "grab" }}
       >
         <g transform={`translate(${pan.x}, ${pan.y}) scale(${scale})`}>
+          <defs>
+            {visibleNodes.filter((n) => n.image).map((node) => (
+              <clipPath key={`clip-${node.slug}`} id={`graph-node-clip-${node.slug}`}>
+                <circle r={22} />
+              </clipPath>
+            ))}
+          </defs>
           {renderEdges.map((edge, i) => {
             const a = renderPositions.get(edge.source);
             const b = renderPositions.get(edge.target);
@@ -673,6 +728,7 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
             const isDim = dimmed(node.slug);
             const initials = node.name.slice(0, 2).toUpperCase();
             const color = catColor(node.category);
+            const showImage = isFamilyMode && Boolean(node.image);
             return (
               <g
                 key={node.slug}
@@ -684,9 +740,22 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
                 <circle r={22} fill={color} fillOpacity={isSel ? 1 : isDim ? 0.25 : 0.72}
                   stroke={isSel ? color : (searchMatchSlugs?.has(node.slug) && !isSel) ? "#fff" : "transparent"}
                   strokeWidth={isSel ? 3 : 2} />
-                <text textAnchor="middle" dominantBaseline="central" className="graph-node-initials" fillOpacity={isDim ? 0.4 : 1}>
-                  {initials}
-                </text>
+                {showImage ? (
+                  <image
+                    href={node.image}
+                    x={-22}
+                    y={-22}
+                    width={44}
+                    height={44}
+                    clipPath={`url(#graph-node-clip-${node.slug})`}
+                    preserveAspectRatio="xMidYMid slice"
+                    opacity={isDim ? 0.35 : 1}
+                  />
+                ) : (
+                  <text textAnchor="middle" dominantBaseline="central" className="graph-node-initials" fillOpacity={isDim ? 0.4 : 1}>
+                    {initials}
+                  </text>
+                )}
                 <text textAnchor="middle" y={36} className="graph-node-label" fillOpacity={isDim ? 0.3 : 1}>
                   {node.name.length > 16 ? node.name.slice(0, 14) + "…" : node.name}
                 </text>
@@ -695,6 +764,16 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
           })}
         </g>
       </svg>
+
+      {isFamilyMode && !loading && familyEdges.length === 0 && (
+        <div className="graph-empty panel">
+          <h3>No family tree yet</h3>
+          <p className="muted">
+            Add family relationships from a page detail panel, or import genealogy data as frontmatter relationships.
+            Parent, spouse, sibling, and guardian links will appear here separately from the general relationship graph.
+          </p>
+        </div>
+      )}
 
       {selectedNode && (
         <aside className="graph-detail panel">
@@ -771,7 +850,7 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
             ) : (
               <div className="graph-add-rel stack" style={{ gap: 6 }}>
                 <select value={addRelType} onChange={(e) => setAddRelType(e.target.value)}>
-                  {RELATIONSHIP_TYPES.map((rt) => <option key={rt.type} value={rt.type}>{rt.label}</option>)}
+                  {relationshipTypes.map((rt) => <option key={rt.type} value={rt.type}>{rt.label}</option>)}
                 </select>
                 <input
                   list="graph-rel-targets"
@@ -780,7 +859,7 @@ export default function GraphClient({ campaignId }: { campaignId: number }) {
                   placeholder="Target page slug or name"
                 />
                 <datalist id="graph-rel-targets">
-                  {nodes.filter((n) => n.slug !== selectedNode.slug).map((n) => <option key={n.slug} value={n.slug}>{n.name}</option>)}
+                  {(isFamilyMode ? baseNodes : nodes).filter((n) => n.slug !== selectedNode.slug).map((n) => <option key={n.slug} value={n.slug}>{n.name}</option>)}
                 </datalist>
                 {addRelMsg && <p className="muted" style={{ fontSize: 12, margin: 0 }}>{addRelMsg}</p>}
                 <div style={{ display: "flex", gap: 6 }}>

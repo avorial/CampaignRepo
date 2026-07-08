@@ -113,6 +113,13 @@ Players see only pages that are both approved and marked player-visible. GM-only
 - Typed edges dashed and labeled on hover; category filter checkboxes and typed-only toggle.
 - Click a node to focus: dims unconnected nodes, shows detail panel with outgoing and incoming links.
 
+### Family Tree
+
+- Dedicated family-tree route separate from the general relationship graph.
+- Shows only family relationships: parent, child, spouse, sibling, guardian, and ward.
+- Defaults to hierarchy layout, places spouses beside each other, and uses existing page portraits/images when available.
+- Edits write normal relationship frontmatter, so genealogy stays portable in the campaign repo.
+
 ### Sessions
 
 - Sessions stored as `wiki/sessions/<slug>.md` with YAML frontmatter and Markdown notes.

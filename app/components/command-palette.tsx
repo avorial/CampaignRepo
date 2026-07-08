@@ -106,6 +106,7 @@ export default function CommandPalette() {
       list.push({ id: "nav-ws", group: "Go to", label: "Campaign workspace", run: go(`/campaigns/${currentId}`) });
       list.push({ id: "nav-overview", group: "Go to", label: "Overview dashboard", run: go(`/campaigns/${currentId}/overview`) });
       list.push({ id: "nav-graph", group: "Go to", label: "Relationship graph", run: go(`/campaigns/${currentId}/graph`) });
+      list.push({ id: "nav-family", group: "Go to", label: "Family tree", run: go(`/campaigns/${currentId}/family`) });
       list.push({ id: "nav-calendar", group: "Go to", label: "Calendar", run: go(`/campaigns/${currentId}/calendar`) });
       list.push({ id: "nav-sessions", group: "Go to", label: "Sessions", run: go(`/campaigns/${currentId}/sessions`) });
       list.push({ id: "nav-quests", group: "Go to", label: "Quests", run: go(`/campaigns/${currentId}/quests`) });

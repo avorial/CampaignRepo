@@ -392,6 +392,7 @@ export type CampaignGraphNode = {
   name: string;
   category: Category;
   summary: string;
+  image?: string;
   tags: string[];
   visibility: Visibility;
   approvalStatus: ApprovalStatus;
