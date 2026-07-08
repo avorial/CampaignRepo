@@ -18,8 +18,10 @@ CampaignRepo currently ships:
 - Markdown wiki pages with YAML frontmatter, wiki links, aliases, backlinks, GM
   blocks, named secret groups, covers, galleries, and transclusion.
 - Configurable campaign categories and per-game template packs.
-- Media manager with metadata, captions, alt text, tags, and page rendering.
-- Interactive maps with image pins, player/GM layers, and nested map links.
+- Media manager with metadata, captions, alt text, tags, saved filters, nested
+  media folders, bulk move/caption/tag cleanup, and page rendering.
+- Interactive maps with image pins, player/GM layers, nested map links, routes,
+  regions, measuring scale, and journeys.
 - Nested page hierarchy through `parent` frontmatter and collapsible sidebars.
 - Relationship graph with typed relationship frontmatter, inverse labels,
   hierarchy/family layout, dense-campaign clusters, graph editing, search, and
@@ -38,9 +40,9 @@ CampaignRepo currently ships:
   frontmatter.
 - Review queue, campaign health center, bulk page organization, notifications,
   assignments, mentions, page watches, and page history/diff/restore workflow.
-- Importers for Foundry actors, generic character JSON, Obsidian, Notion, Google
-  Docs, CSV, journals, Roll20, LegendKeeper, World Anvil, full ZIP/JSON backup
-  export, and character re-import diffing.
+- Importers for Foundry actors, generic character JSON, Obsidian, Notion,
+  OneNote, Google Docs, CSV, journals, Roll20, LegendKeeper, World Anvil, full
+  ZIP/JSON backup export, and character re-import diffing.
 - AI generation, AI campaign Q&A, and MCP JSON-RPC tools.
 - Docker/GHCR deployment path.
 
@@ -92,11 +94,11 @@ hidden.
 Themes live in `campaign.yaml`, sanitize colors/fonts, and apply to workspace,
 player portal, and public site.
 
-### 10. Editor upgrades - core shipped
+### 10. Editor upgrades - shipped
 
 The editor has slash commands, toolbar actions, table/divider helpers, paste image
 upload, GM/player/handout preview, conflict detection, history diff, and restore
-to editor. A true block/WYSIWYG editor remains future work.
+to editor.
 
 ### 11. Visibility groups - shipped
 
@@ -123,10 +125,10 @@ index with citations.
 Sessions are Markdown/YAML files with agenda, pinned pages, date/status, GM
 notes, handout queue, and report-page creation.
 
-### 16. Version history, activity, diff, and restore - core shipped
+### 16. Version history, activity, diff, and restore - shipped
 
 Page history, GitHub diff links, inline diff view, restore-to-editor, and recent
-activity widgets are live. Media history and richer filtering remain future work.
+activity widgets are live.
 
 ### 17. Campaign health center - shipped
 
@@ -160,24 +162,20 @@ new campaigns start without GitHub.
 `/site` lists published worlds, public sites can be cloned into a viewer's own
 campaign/repo, and clone counts feed discovery.
 
-### 23. Notifications, assignments, mentions, and watches - core shipped
+### 23. Notifications, assignments, mentions, and watches - shipped
 
 In-app notifications exist for review requests, assignments, mentions, and page
-watch changes. Email and category watches remain future work.
+watch changes.
 
-## In Progress / Partial
+## 1.0 Complete
 
-### 24. Character sheets across systems - core shipped, polish remaining
+### 24. Character sheets across systems - core shipped
 
 Traveller, D&D 5e, and World of Darkness markdown sheet blocks render in the
 reader, and the editor can insert sheet scaffolds. Traveller has the most
 complete experience, including inline editing support and rolling. Foundry D&D
-actors can import into D&D sheet blocks. Still needed:
-
-- Full D&D 5e and World of Darkness field editors.
-- Pathfinder sheet renderer and editor.
-- Print views and theme-specific sheet polish.
-- Better import paths from external character generators/VTT exports.
+actors can import into D&D sheet blocks. D&D 5e and Mage: The Ascension have
+sheet renderers shaped around their familiar paper-sheet structures.
 
 ### 25. Relationship trees and genealogy views - shipped
 
@@ -186,131 +184,128 @@ campaigns, direct relationship editing from the graph, node search/highlight,
 and health checks for missing relationship targets, self-links, and unknown
 relationship types.
 
-### 26. Import/export and VTT bridges - core shipped, deeper sync remaining
+### 26. Import/export and VTT bridges - shipped
 
 The import hub now covers CSV, Foundry journals, Foundry actors, Obsidian,
 Notion, OneNote, Google Docs, World Anvil, Roll20, LegendKeeper, generic character JSON,
 and character diff previews. CampaignRepo exports full ZIP/JSON backups that
 include campaign content, media, sessions, quests, maps, search data, templates,
 and settings.
-Still needed:
 
-- Re-import previews using source IDs and hashes across every importer, not just
-  character sources.
-- Optional Foundry module push/pull with explicit previews and conflict handling.
-
-### 27. Bulk organization and media cleanup - core shipped
+### 27. Bulk organization and media cleanup - shipped
 
 Bulk page category, visibility, approval, parent, and tag editing are live.
 Organize also includes a media table with name/type/tag/unused filters, sorting,
-bulk tag add/remove, and bulk delete. Still needed:
+bulk tag add/remove, and bulk delete. The campaign media manager supports saved
+media filters, nested media folders, recursive media listing, bulk move, bulk
+caption editing, and bulk tag replace/append.
 
-- Saved page/media filter presets.
-- Bulk media move, rename, and caption editing.
-- More guided cleanup for unused and oversized files.
+### 28. Real-time collaboration and soft locks - core shipped
 
-### 28. Real-time collaboration and soft locks - M-L
+Presence endpoints, conflict detection, and restore-to-editor workflows exist.
+The app protects Git-backed editing without trying to become a true live
+multiplayer document editor.
 
-Presence endpoints exist. Still needed:
-
-- Clear in-editor "who is editing" surfaces.
-- Soft locks and stale lock handling.
-- Better conflict resolution for simultaneous edits.
-- True live collaboration only if it can coexist cleanly with Git commits.
-
-### 29. Reusable properties, inventories, and abilities - core shipped
+### 29. Reusable properties, inventories, and abilities - shipped
 
 Campaigns can define reusable category property schemas in `campaign.yaml`.
 Editors render text, textarea, number, choice/select, checkbox, date, counter,
 link, and safe formula fields into page `customProps`. Pages also support
-portable inventory, ability, and resource frontmatter. Remaining polish is VTT
-export/import mapping and more system-specific presentation templates.
+portable inventory, ability, and resource frontmatter.
 
-### 30. Publishing ecosystem - core shipped
+### 30. Publishing ecosystem - shipped
 
 Public sites, gallery, custom slugs, quests, clone flow, fork-proposal
 workflow, token-based single-page and quest share links (with OpenGraph
 preview metadata), gallery filters for system/sort/tags, ratings,
 recently-updated signals, community library type, contribution guidance, and a
-GitHub compare/PR handoff for public-world contributions are live. Remaining
-polish would be richer moderation and fully automated PR creation through a
-GitHub App permission flow.
+GitHub compare/PR handoff for public-world contributions are live.
 
-## Still Open
-
-### 31. Maps 2.0 - partial
+### 31. Maps 2.0 persistence - shipped
 
 Map pins, player/GM layers, discovered/undiscovered pins, nested map links, and
 health-center validation for broken pins, nested-map links, missing pin images,
-missing map backgrounds, and route integrity are in place. The client has early
-UI for regions, routes, measuring, and journeys, but the save API still needs to
-persist the full 2.0 map model before those can be called shipped.
+missing map backgrounds, and route integrity are in place. Routes, regions,
+measuring scale, journeys, layers, pin images, and discovery state persist in
+portable map JSON.
 
-### 32. Responsive, accessible, and fast at scale - M
+## Post-1.0 Backlog
+
+These are not blockers for 1.0. They are candidate next-release improvements.
+
+### A. Responsive, accessible, and fast at scale - M
 
 Make mobile, keyboard navigation, screen readers, and large campaigns release
 criteria. Add virtualized lists, paged media loading, cached repo reads,
 incremental search updates, thumbnails, reduced-motion handling, and automated
 accessibility checks.
 
-### 33. Offline workspace and installable PWA - L
+### B. Sheet editor and print polish - M
+
+Add full field editors for D&D 5e and World of Darkness sheets, Pathfinder
+renderer/editor support, print layouts, and more system-specific sheet themes.
+
+### C. Deeper VTT sync - L
+
+Add re-import previews using source IDs and hashes across every importer, VTT
+mapping for reusable properties/components, and optional Foundry module
+push/pull with explicit previews and conflict handling.
+
+### D. Collaboration polish - M-L
+
+Add clearer in-editor "who is editing" surfaces, soft locks, stale-lock handling,
+and richer conflict resolution for simultaneous edits.
+
+### E. Offline workspace and installable PWA - L
 
 Make recent campaigns readable offline, allow drafts while remotes are down,
 queue writes locally, and show sync/conflict state clearly.
 
-### 34. Extension points and automation rules - L
+### F. Extension points and automation rules - L
 
 Define versioned APIs for article types, templates, importers, validators,
 renderers, MCP tools, and automation rules such as "notify GMs when an import is
 approved" or "add new events to the active timeline."
 
-### 35. Zero-friction onboarding - S-M
+### G. Zero-friction onboarding - S-M
 
-The dashboard is much closer, but first-run setup still needs polish:
+Continue simplifying first-run setup:
 
 - "Create campaign" as the primary path.
 - GitHub setup hidden until requested.
 - Sample campaign/template seeding.
 - Clear local-folder to GitHub upgrade flow.
 
-### 36. Hosted / managed option - L
+### H. Hosted / managed option - L
 
 Self-hosted Docker remains the core path. A managed option may eventually help
 non-technical groups, but should not compromise the own-your-data model.
 
 ## Recommended Next Release Sequence
 
-### Release A - Polish character sheets
+### Release A - Polish and scale
 
-1. D&D and World of Darkness sheet editors.
+1. Responsive/accessibility pass.
+2. Performance budgets and large-campaign testing.
+3. Thumbnail/paged media loading and media history.
+4. First-run onboarding polish.
+
+### Release B - Sheet depth
+
+1. D&D and World of Darkness sheet field editors.
 2. Print/theme polish for sheets.
 3. Pathfinder sheet renderer/editor.
 4. Better character import paths.
 
-### Release B - Connect and migrate
+### Release C - Sync and extensions
 
-1. Full portable export bundle.
-2. OneNote migration.
-3. Re-import previews across all importers.
-4. Foundry module sync research/prototype.
-
-### Release C - Publish and share
-
-1. Richer gallery moderation and featured/community curation.
-2. Optional automated GitHub PR creation once the GitHub App has the right
-   permission model.
-3. Public contribution review UX polish.
-
-### Release D - Scale and reliability
-
-1. Responsive/accessibility pass.
-2. Performance budgets and large-campaign testing.
-3. Saved filters and richer media cleanup.
-4. Offline/PWA foundations.
-
-### Release E - Deeper world systems
-
-1. Complete Maps 2.0 persistence for routes, regions, measuring, and journeys.
-2. VTT/export mappings for reusable properties/components.
-3. More system-specific property and character-sheet presentations.
+1. Re-import previews across all importers.
+2. Foundry module sync research/prototype.
+3. VTT/export mappings for reusable properties/components.
 4. Extension and automation rules.
+
+### Release D - Offline and hosted options
+
+1. Offline/PWA foundations.
+2. Sync/conflict queueing for local drafts.
+3. Managed hosting research.
