@@ -251,6 +251,9 @@ sheet systems.
 Add full field editors for D&D 5e, Pathfinder 2e, and World of Darkness sheets,
 plus deeper print/theme polish and more system-specific sheet themes.
 
+Initial polish pass: page editor toolbars now expose Print/PDF directly when a
+page contains a Traveller, D&D/Pathfinder, or World of Darkness sheet block.
+
 ### C. Deeper VTT sync - L
 
 Add re-import previews using source IDs and hashes across every importer, VTT

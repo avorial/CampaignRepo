@@ -2,7 +2,7 @@
 
 import { FormEvent, KeyboardEvent, MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bold, Code2, Heading1, Heading2, Heading3, Italic, Link2, List, ListOrdered, Minus, Quote, Table2 } from "lucide-react";
+import { Bold, Code2, Heading1, Heading2, Heading3, Italic, Link2, List, ListOrdered, Minus, Printer, Quote, Table2 } from "lucide-react";
 import type { Campaign, CampaignMedia, WikiPage } from "@/lib/types";
 import { renderMarkdown, type IncludeResolver, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
@@ -1155,6 +1155,7 @@ notes: ""
   ];
   const isWoD = WOD_GAME_TYPES.includes(campaign.gameType);
   const canUseWoDSheet = isWoD && (frontmatter.category === "character" || frontmatter.category === "npc");
+  const hasPrintableSheet = /```(?:traveller-sheet|dnd-sheet|wod-sheet)\b/.test(content);
 
   // Ancestor chain (breadcrumbs) + cycle-safe parent options.
   const pageBySlug = new Map(knownPages.map((p) => [p.slug, p]));
@@ -1856,6 +1857,7 @@ notes: ""
           {fieldsEditable && <button type="button" onClick={() => insertSnippet("```tracker\ntitle: Resources\nresources:\n  - name: Hit Points\n    current: 10\n    max: 10\n    color: \"#e74c3c\"\n  - name: Mana\n    current: 5\n    max: 5\n    color: \"#3498db\"\n```\n\n")}>Insert tracker</button>}
           {fieldsEditable && <button type="button" onClick={() => insertSnippet("```traits\ntitle: Traits & Abilities\ntraits:\n  - name: Trait name\n    value: \"\"\n    description: Optional tooltip\n    type: \"\"\n```\n\n")}>Insert traits</button>}
           {fieldsEditable && <button type="button" onClick={() => insertSnippet("![[Page Name]]\n")}>Embed page</button>}
+          {hasPrintableSheet && <button type="button" className="secondary" onClick={() => window.print()} title="Print or save this sheet as PDF"><Printer size={16} aria-hidden="true" /> Print / PDF</button>}
           {fieldsEditable && <button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Save"}</button>}
           {fieldsEditable && <button type="button" disabled={isSaving} onClick={() => savePage(true)}>{isSaving ? "Saving..." : "Save and finish"}</button>}
           {canManage && !isEditing && <button type="button" onClick={() => setIsEditing(true)}>Edit page</button>}
