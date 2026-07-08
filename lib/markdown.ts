@@ -842,6 +842,29 @@ const DND_SKILLS: { name: string; ability: string }[] = [
   { name: "Stealth",         ability: "dex" }, { name: "Survival",        ability: "wis" }
 ];
 
+const PF2_SKILLS: { key: string; name: string; ability: string }[] = [
+  { key: "acrobatics",   name: "Acrobatics",   ability: "dex" },
+  { key: "arcana",       name: "Arcana",       ability: "int" },
+  { key: "athletics",    name: "Athletics",    ability: "str" },
+  { key: "crafting",     name: "Crafting",     ability: "int" },
+  { key: "deception",    name: "Deception",    ability: "cha" },
+  { key: "diplomacy",    name: "Diplomacy",    ability: "cha" },
+  { key: "intimidation", name: "Intimidation", ability: "cha" },
+  { key: "lore",         name: "Lore",         ability: "int" },
+  { key: "medicine",     name: "Medicine",     ability: "wis" },
+  { key: "nature",       name: "Nature",       ability: "wis" },
+  { key: "occultism",    name: "Occultism",    ability: "int" },
+  { key: "performance",  name: "Performance",  ability: "cha" },
+  { key: "religion",     name: "Religion",     ability: "wis" },
+  { key: "society",      name: "Society",      ability: "int" },
+  { key: "stealth",      name: "Stealth",      ability: "dex" },
+  { key: "survival",     name: "Survival",     ability: "wis" },
+  { key: "thievery",     name: "Thievery",     ability: "dex" }
+];
+
+const PF2_RANK_BONUS: Record<string, number> = { U: 0, T: 2, E: 4, M: 6, L: 8 };
+const PF2_RANK_LABEL: Record<string, string> = { U: "Untrained", T: "Trained", E: "Expert", M: "Master", L: "Legendary" };
+
 const SAVE_ABBREV: Record<string, string> = {
   strength: "str", dexterity: "dex", constitution: "con",
   intelligence: "int", wisdom: "wis", charisma: "cha"
@@ -850,6 +873,15 @@ const SAVE_ABBREV: Record<string, string> = {
 function dndAbilMod(score: number) { return Math.floor((score - 10) / 2); }
 function dndProfBonus(level: number) { return Math.ceil(level / 4) + 1; }
 function dndFmt(n: number) { return n >= 0 ? `+${n}` : String(n); }
+function pf2Rank(value: unknown, fallback = "U") {
+  const raw = String(value ?? fallback).trim().toUpperCase();
+  if (raw === "UNTRAINED") return "U";
+  if (raw === "TRAINED") return "T";
+  if (raw === "EXPERT") return "E";
+  if (raw === "MASTER") return "M";
+  if (raw === "LEGENDARY") return "L";
+  return PF2_RANK_BONUS[raw] != null ? raw : fallback;
+}
 
 function normalizeDnDSheet(input: unknown) {
   const raw = input && typeof input === "object" && !Array.isArray(input) ? input as Record<string, unknown> : {};
@@ -862,6 +894,13 @@ function normalizeDnDSheet(input: unknown) {
     ? raw.death_saves as Record<string, unknown> : {};
   const coinsRaw = raw.coins && typeof raw.coins === "object" && !Array.isArray(raw.coins)
     ? raw.coins as Record<string, unknown> : {};
+  const skillRankRaw = raw.skill_ranks && typeof raw.skill_ranks === "object" && !Array.isArray(raw.skill_ranks)
+    ? raw.skill_ranks as Record<string, unknown> : {};
+  const saveRankRaw = raw.save_ranks && typeof raw.save_ranks === "object" && !Array.isArray(raw.save_ranks)
+    ? raw.save_ranks as Record<string, unknown> : {};
+  const rankMap = (value: Record<string, unknown>) => Object.fromEntries(
+    Object.entries(value).map(([key, rank]) => [key.trim().toLowerCase().replace(/\s+/g, "_"), pf2Rank(rank)])
+  );
   const level = Math.max(1, asNumber(raw.level, 1));
   const profBonus = raw.proficiency_bonus != null ? asNumber(raw.proficiency_bonus) : dndProfBonus(level);
   const savesRaw = asStringArray(raw.saving_throw_proficiencies).map((s) => {
@@ -883,13 +922,36 @@ function normalizeDnDSheet(input: unknown) {
     ...asRecordArray(raw.equipment).map((e) => ({ name: String(e.name || e.item || ""), quantity: asOptionalNumber(e.quantity), notes: e.notes ? String(e.notes) : undefined })),
     ...compactRecords(raw.equipment, (name, parts) => ({ name, quantity: parts[0] && Number.isFinite(+parts[0]) ? +parts[0] : undefined, notes: (parts[0] && Number.isFinite(+parts[0]) ? parts.slice(1) : parts).join(", ") || undefined }))
   ].filter((e) => e.name);
+  const actions = [
+    ...asRecordArray(raw.actions).map((a) => ({
+      name: String(a.name || ""),
+      action: a.action ? String(a.action) : undefined,
+      traits: asStringArray(a.traits),
+      notes: a.notes ? String(a.notes) : undefined
+    })),
+    ...compactRecords(raw.actions, (name, parts) => ({ name, action: parts[0], traits: [], notes: parts.slice(1).join(", ") || undefined }))
+  ].filter((a) => a.name);
+  const feats = [
+    ...asRecordArray(raw.feats).map((f) => ({
+      name: String(f.name || ""),
+      type: f.type ? String(f.type) : undefined,
+      level: asOptionalNumber(f.level),
+      notes: f.notes ? String(f.notes) : undefined
+    })),
+    ...compactRecords(raw.feats, (name, parts) => ({ name, type: parts[0], level: parts[1] && Number.isFinite(+parts[1]) ? +parts[1] : undefined, notes: parts.slice(parts[1] && Number.isFinite(+parts[1]) ? 2 : 1).join(", ") || undefined }))
+  ].filter((f) => f.name);
   const scores: Record<string, number> = {};
   for (const { key } of DND_ABILITIES) scores[key] = asNumber(abilRaw[key], 10);
   return {
     system, name: raw.name ? String(raw.name) : undefined,
     class: raw.class ? String(raw.class) : undefined, subclass: raw.subclass ? String(raw.subclass) : undefined,
     level, race: raw.race ? String(raw.race) : undefined,
+    ancestry: raw.ancestry ? String(raw.ancestry) : (raw.race ? String(raw.race) : undefined),
+    heritage: raw.heritage ? String(raw.heritage) : undefined,
     background: raw.background ? String(raw.background) : undefined, alignment: raw.alignment ? String(raw.alignment) : undefined,
+    deity: raw.deity ? String(raw.deity) : undefined,
+    size: raw.size ? String(raw.size) : undefined,
+    keyAbility: raw.key_ability ? String(raw.key_ability) : undefined,
     xp: asOptionalNumber(raw.xp), player: raw.player ? String(raw.player) : undefined,
     portrait: raw.portrait ? String(raw.portrait) : undefined,
     inspiration: Boolean(raw.inspiration),
@@ -908,12 +970,29 @@ function normalizeDnDSheet(input: unknown) {
     scores, profBonus, saveProfSet: new Set(savesRaw),
     skillProfs: new Set(asStringArray(raw.skill_proficiencies).map((s) => s.toLowerCase())),
     skillExpert: new Set(asStringArray(raw.skill_expertise).map((s) => s.toLowerCase())),
-    ac: asOptionalNumber(raw.ac), initiative: asOptionalNumber(raw.initiative), speed: asOptionalNumber(raw.speed),
+    saveRanks: rankMap(saveRankRaw),
+    skillRanks: rankMap(skillRankRaw),
+    perceptionRank: pf2Rank(raw.perception_rank),
+    ac: asOptionalNumber(raw.ac), classDc: asOptionalNumber(raw.class_dc), initiative: asOptionalNumber(raw.initiative), speed: asOptionalNumber(raw.speed),
     hpMax: asOptionalNumber(raw.hp_max), hpCurrent: asOptionalNumber(raw.hp_current ?? raw.hp_max), hpTemp: asOptionalNumber(raw.hp_temp),
+    heroPoints: asOptionalNumber(raw.hero_points),
+    armor: raw.armor ? String(raw.armor) : undefined,
+    shield: raw.shield ? String(raw.shield) : undefined,
+    conditions: asStringArray(raw.conditions),
     hitDice: raw.hit_dice ? String(raw.hit_dice) : undefined,
     deathSuccesses: asNumber(deathRaw.successes, 0), deathFailures: asNumber(deathRaw.failures, 0),
     passivePerception: asOptionalNumber(raw.passive_perception),
-    attacks, spellcasting: spellRaw ? { ability: spellRaw.ability ? String(spellRaw.ability).toLowerCase() : undefined, saveDC: asOptionalNumber(spellRaw.spell_save_dc), attack: spellRaw.spell_attack ? String(spellRaw.spell_attack) : undefined, spells } : null,
+    attacks, actions,
+    spellcasting: spellRaw ? {
+      ability: spellRaw.ability ? String(spellRaw.ability).toLowerCase() : undefined,
+      saveDC: asOptionalNumber(spellRaw.spell_save_dc),
+      attack: spellRaw.spell_attack ? String(spellRaw.spell_attack) : undefined,
+      focusPoints: spellRaw.focus_points && typeof spellRaw.focus_points === "object" && !Array.isArray(spellRaw.focus_points)
+        ? { current: asOptionalNumber((spellRaw.focus_points as Record<string, unknown>).current), max: asOptionalNumber((spellRaw.focus_points as Record<string, unknown>).max) }
+        : null,
+      spells
+    } : null,
+    feats,
     features: asStringArray(raw.features), languages: asStringArray(raw.languages),
     proficiencies: asStringArray(raw.proficiencies), equipment,
     coins: {
@@ -1040,6 +1119,123 @@ function renderDnDSheetHtml(rawInput: string) {
     s.treasure && `<div class="dnd-misc-row"><b>Treasure</b> ${escapeHtml(s.treasure)}</div>`,
     s.notes && `<div class="dnd-misc-row"><b>Notes</b> ${escapeHtml(s.notes)}</div>`
   ].filter(Boolean).join("");
+
+  if (s.system === "pathfinder2") {
+    const rankBonus = (rank: string) => rank === "U" ? 0 : s.level + (PF2_RANK_BONUS[rank] ?? 0);
+    const rankFor = (map: Record<string, string>, key: string, legacySet?: Set<string>) => {
+      const normalized = key.trim().toLowerCase().replace(/\s+/g, "_");
+      if (map[normalized]) return map[normalized];
+      if (legacySet?.has(key.toLowerCase())) return "T";
+      return "U";
+    };
+    const pf2Total = (ability: string, rank: string) => abilMod(ability) + rankBonus(rank);
+    const pf2Identity = [
+      [classSub || s.class || "-", "Class"],
+      [s.ancestry || "-", "Ancestry"],
+      [s.heritage || "-", "Heritage"],
+      [s.background || "-", "Background"],
+      [s.player || "-", "Player"],
+      [s.deity || "-", "Deity"],
+      [s.size || "Medium", "Size"],
+      [s.keyAbility || "-", "Key Ability"]
+    ].map(([value, label]) => `<div><b>${escapeHtml(String(value))}</b><span>${escapeHtml(String(label))}</span></div>`).join("");
+
+    const pf2Abilities = DND_ABILITIES.map(({ key, label, short }) => {
+      const score = s.scores[key] ?? 10;
+      return `<div class="pf2-ability" data-roll="1d20" data-mod="${abilMod(key)}" data-label="${escapeHtml(label)} check">
+  <span>${short}</span><strong>${score}</strong><b>${dndFmt(abilMod(key))}</b><small>${escapeHtml(label)}</small>
+</div>`;
+    }).join("");
+
+    const pf2SaveRows = [
+      { key: "fortitude", label: "Fortitude", ability: "con" },
+      { key: "reflex", label: "Reflex", ability: "dex" },
+      { key: "will", label: "Will", ability: "wis" }
+    ].map(({ key, label, ability }) => {
+      const rank = rankFor(s.saveRanks, key, s.saveProfSet);
+      const bonus = pf2Total(ability, rank);
+      return `<li data-roll="1d20" data-mod="${bonus}" data-label="${escapeHtml(label)} save"><span class="pf2-rank pf2-rank-${rank.toLowerCase()}" title="${escapeHtml(PF2_RANK_LABEL[rank] || rank)}">${rank}</span><span>${escapeHtml(label)}</span><small>${ability.toUpperCase()}</small><b>${dndFmt(bonus)}</b></li>`;
+    }).join("");
+
+    const perceptionRank = rankFor({ perception: s.perceptionRank }, "perception");
+    const perceptionBonus = pf2Total("wis", perceptionRank);
+    const pf2SkillRows = PF2_SKILLS.map(({ key, name, ability }) => {
+      const rank = rankFor(s.skillRanks, key, s.skillProfs);
+      const bonus = pf2Total(ability, rank);
+      return `<li data-roll="1d20" data-mod="${bonus}" data-label="${escapeHtml(name)}"><span class="pf2-rank pf2-rank-${rank.toLowerCase()}" title="${escapeHtml(PF2_RANK_LABEL[rank] || rank)}">${rank}</span><span>${escapeHtml(name)}</span><small>${ability.toUpperCase()}</small><b>${dndFmt(bonus)}</b></li>`;
+    }).join("");
+
+    const pf2AttackRows = s.attacks.length
+      ? s.attacks.map((a) => `<tr><td>${escapeHtml(a.name)}</td><td>${escapeHtml(a.bonus || "-")}</td><td>${escapeHtml(a.damage || "-")}</td><td>${escapeHtml(a.notes || "")}</td></tr>`).join("")
+      : `<tr><td colspan="4">No attacks recorded.</td></tr>`;
+
+    const pf2ActionRows = s.actions.length
+      ? s.actions.map((a) => `<li><b>${escapeHtml(a.name)}</b><span>${escapeHtml([a.action, ...(a.traits || [])].filter(Boolean).join(" - "))}</span>${a.notes ? `<p>${escapeHtml(a.notes)}</p>` : ""}</li>`).join("")
+      : `<li><b>Action</b><span>Add actions in the sheet YAML.</span></li>`;
+
+    const pf2FeatRows = [...s.feats.map((f) => `<li><b>${escapeHtml(f.name)}</b><span>${escapeHtml([f.type, f.level != null ? `Level ${f.level}` : null].filter(Boolean).join(" - "))}</span>${f.notes ? `<p>${escapeHtml(f.notes)}</p>` : ""}</li>`),
+      ...s.features.map((f) => `<li><b>${escapeHtml(f)}</b><span>Feature</span></li>`)].join("");
+
+    const pf2EquipmentRows = s.equipment.length
+      ? s.equipment.map((e) => `<li><span>${escapeHtml(e.name)}</span><b>${escapeHtml(e.quantity != null ? String(e.quantity) : "")}</b><small>${escapeHtml(e.notes || "")}</small></li>`).join("")
+      : `<li><span>No equipment recorded.</span><b></b><small></small></li>`;
+
+    const focus = s.spellcasting?.focusPoints;
+    const pf2SpellGroups = s.spellcasting?.spells.length
+      ? s.spellcasting.spells.map((sl) => `<div class="pf2-spell-row"><b>${sl.level === 0 ? "Cantrips" : `Rank ${sl.level}`}</b><span>${escapeHtml(sl.list.join(", ") || "-")}</span><small>${sl.slots ? `${sl.slots - (sl.used ?? 0)}/${sl.slots}` : ""}</small></div>`).join("")
+      : `<div class="pf2-spell-row"><b>Spells</b><span>No spells recorded.</span><small></small></div>`;
+
+    return `
+<section class="dnd-sheet pf2-sheet">
+  <header class="pf2-header">
+    ${portrait}
+    <div class="pf2-title">
+      <span>Pathfinder Second Edition</span>
+      <strong>${escapeHtml(s.name || "Unnamed Character")}</strong>
+      <small>Level ${s.level}${classSub ? ` - ${escapeHtml(classSub)}` : ""}</small>
+    </div>
+    <div class="pf2-hero"><b>${s.heroPoints ?? 1}</b><span>Hero Points</span></div>
+  </header>
+
+  <div class="pf2-identity">${pf2Identity}</div>
+  <div class="pf2-body">
+    <aside class="pf2-left">
+      <div class="pf2-abilities">${pf2Abilities}</div>
+      <section class="pf2-panel"><h4>Perception</h4><div class="pf2-perception" data-roll="1d20" data-mod="${perceptionBonus}" data-label="Perception"><span class="pf2-rank pf2-rank-${perceptionRank.toLowerCase()}" title="${escapeHtml(PF2_RANK_LABEL[perceptionRank] || perceptionRank)}">${perceptionRank}</span><b>${dndFmt(perceptionBonus)}</b><small>WIS</small></div></section>
+      <section class="pf2-panel"><h4>Saving Throws</h4><ul class="pf2-list">${pf2SaveRows}</ul></section>
+      <section class="pf2-panel pf2-skills-panel"><h4>Skills</h4><ul class="pf2-list">${pf2SkillRows}</ul></section>
+    </aside>
+
+    <main class="pf2-main">
+      <div class="pf2-stat-row">
+        <div><b>${s.ac ?? 10}</b><span>Armor Class</span></div>
+        <div><b>${s.classDc ?? "-"}</b><span>Class DC</span></div>
+        <div><b>${s.speed ?? 25} ft</b><span>Speed</span></div>
+        <div><b>${dndFmt(s.initiative ?? perceptionBonus)}</b><span>Initiative</span></div>
+      </div>
+      <section class="pf2-hp">
+        <h4>Hit Points</h4>
+        <strong>${hpCur || 0} / ${hpMax || 0}</strong>
+        <div class="pf2-hp-bar"><span style="width:${hpPct}%"></span></div>
+        <p>${escapeHtml([s.armor && `Armor: ${s.armor}`, s.shield && `Shield: ${s.shield}`, s.hpTemp ? `Temp HP: ${s.hpTemp}` : null].filter(Boolean).join(" - ") || "No armor or shield notes.")}</p>
+      </section>
+      <section class="pf2-panel"><h4>Strikes &amp; Attacks</h4><table class="pf2-table"><thead><tr><th>Name</th><th>Attack</th><th>Damage</th><th>Traits / Notes</th></tr></thead><tbody>${pf2AttackRows}</tbody></table></section>
+      <section class="pf2-panel"><h4>Actions &amp; Activities</h4><ul class="pf2-card-list">${pf2ActionRows}</ul></section>
+      <section class="pf2-panel"><h4>Spellcasting${s.spellcasting?.ability ? ` <span>${escapeHtml(s.spellcasting.ability.toUpperCase())}</span>` : ""}</h4>
+        <div class="pf2-spell-meta"><span>DC ${s.spellcasting?.saveDC ?? "-"}</span><span>Attack ${escapeHtml(s.spellcasting?.attack || "-")}</span><span>Focus ${focus?.current ?? "-"} / ${focus?.max ?? "-"}</span></div>
+        ${pf2SpellGroups}
+      </section>
+    </main>
+
+    <aside class="pf2-right">
+      <section class="pf2-panel"><h4>Feats &amp; Features</h4><ul class="pf2-card-list">${pf2FeatRows || `<li><b>No feats recorded.</b><span>Add feats in the sheet YAML.</span></li>`}</ul></section>
+      <section class="pf2-panel"><h4>Equipment</h4><ul class="pf2-equipment">${pf2EquipmentRows}</ul><div class="pf2-coins">${coinsHtml}</div></section>
+      <section class="pf2-panel"><h4>Conditions</h4><p>${escapeHtml(s.conditions.join(", ") || "No active conditions.")}</p></section>
+      <section class="pf2-panel"><h4>Notes</h4><p>${escapeHtml([s.backstory, s.notes].filter(Boolean).join("\n\n") || "-")}</p></section>
+    </aside>
+  </div>
+</section>`;
+  }
 
   return `
 <section class="dnd-sheet dnd-sheet-5e">

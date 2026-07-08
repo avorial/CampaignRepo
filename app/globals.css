@@ -6292,6 +6292,333 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   .dnd-header-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+/* Pathfinder 2e Remaster-inspired layout */
+.pf2-sheet {
+  --pf2-paper: #f7f0df;
+  --pf2-panel: #fffaf0;
+  --pf2-ink: #201816;
+  --pf2-muted: #6f6258;
+  --pf2-red: #8f2028;
+  --pf2-red-dark: #5a1117;
+  --pf2-line: #c9b9a1;
+  background: var(--pf2-paper);
+  border: 2px solid var(--pf2-red-dark);
+  border-radius: 4px;
+  color: var(--pf2-ink);
+  font-family: "IBM Plex Sans", Arial, sans-serif;
+  gap: 10px;
+  padding: 12px;
+}
+
+.pf2-header {
+  align-items: stretch;
+  background: var(--pf2-red);
+  border: 1px solid var(--pf2-red-dark);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 82px minmax(0, 1fr) 96px;
+  padding: 8px;
+}
+
+.pf2-header img,
+.pf2-header .dnd-portrait-placeholder {
+  background: var(--pf2-panel);
+  border: 2px solid var(--pf2-red-dark);
+  border-radius: 3px;
+  height: 82px;
+  object-fit: cover;
+  width: 82px;
+}
+
+.pf2-title {
+  align-content: center;
+  background: var(--pf2-panel);
+  border: 1px solid rgba(0,0,0,0.25);
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 12px;
+}
+
+.pf2-title span,
+.pf2-title small,
+.pf2-hero span,
+.pf2-identity span,
+.pf2-panel h4,
+.pf2-stat-row span,
+.pf2-spell-meta,
+.pf2-list small,
+.pf2-card-list span,
+.pf2-equipment small {
+  color: var(--pf2-muted);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pf2-title strong {
+  color: var(--pf2-ink);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 32px;
+  line-height: 1;
+}
+
+.pf2-hero {
+  align-content: center;
+  background: var(--pf2-panel);
+  border: 1px solid rgba(0,0,0,0.25);
+  display: grid;
+  justify-items: center;
+  padding: 8px;
+  text-align: center;
+}
+
+.pf2-hero b {
+  color: var(--pf2-red);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 38px;
+  line-height: 1;
+}
+
+.pf2-identity {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.pf2-identity div,
+.pf2-panel,
+.pf2-stat-row div,
+.pf2-hp,
+.pf2-ability {
+  background: var(--pf2-panel);
+  border: 1px solid var(--pf2-line);
+  border-radius: 3px;
+}
+
+.pf2-identity div { min-height: 42px; padding: 6px 8px; }
+.pf2-identity b { display: block; font-size: 13px; min-height: 18px; }
+
+.pf2-body {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(360px, 1.25fr) minmax(260px, 0.95fr);
+}
+
+.pf2-left,
+.pf2-main,
+.pf2-right {
+  align-content: start;
+  display: grid;
+  gap: 8px;
+}
+
+.pf2-abilities {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.pf2-ability {
+  display: grid;
+  gap: 1px;
+  justify-items: center;
+  min-height: 84px;
+  padding: 6px;
+}
+
+.pf2-ability span {
+  color: var(--pf2-red);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.pf2-ability strong,
+.pf2-stat-row b,
+.pf2-hp strong,
+.pf2-perception b {
+  color: var(--pf2-ink);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.pf2-ability b {
+  border: 1px solid var(--pf2-line);
+  border-radius: 999px;
+  padding: 1px 10px;
+}
+
+.pf2-ability small { color: var(--pf2-muted); font-size: 10px; }
+.pf2-panel { padding: 8px; }
+.pf2-panel h4 { color: var(--pf2-red); margin: 0 0 7px; }
+.pf2-panel p { margin: 0; white-space: pre-wrap; }
+
+.pf2-list {
+  display: grid;
+  gap: 2px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pf2-list li,
+.pf2-perception {
+  align-items: center;
+  border-bottom: 1px solid var(--pf2-line);
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 24px minmax(0, 1fr) 34px 44px;
+  min-height: 27px;
+}
+
+.pf2-list b { text-align: right; }
+.pf2-rank {
+  border: 1px solid var(--pf2-line);
+  border-radius: 999px;
+  color: var(--pf2-muted);
+  display: inline-grid;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+  font-weight: 900;
+  height: 20px;
+  place-items: center;
+  width: 20px;
+}
+
+.pf2-rank-t,
+.pf2-rank-e,
+.pf2-rank-m,
+.pf2-rank-l {
+  background: var(--pf2-red);
+  border-color: var(--pf2-red-dark);
+  color: #fff;
+}
+
+.pf2-rank-e { background: #6f2a2f; }
+.pf2-rank-m { background: #34363b; }
+.pf2-rank-l { background: #111; }
+
+.pf2-stat-row {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.pf2-stat-row div {
+  display: grid;
+  justify-items: center;
+  min-height: 66px;
+  padding: 8px 6px;
+  text-align: center;
+}
+
+.pf2-hp { padding: 9px; }
+.pf2-hp h4 { color: var(--pf2-red); margin: 0 0 4px; text-transform: uppercase; }
+.pf2-hp-bar { background: #eadccb; border: 1px solid var(--pf2-line); height: 9px; margin: 6px 0; }
+.pf2-hp-bar span { background: var(--pf2-red); display: block; height: 100%; }
+.pf2-hp p { color: var(--pf2-muted); font-size: 12px; margin: 0; }
+
+.pf2-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.pf2-table th,
+.pf2-table td {
+  border-bottom: 1px solid var(--pf2-line);
+  font-size: 12px;
+  padding: 5px;
+  text-align: left;
+}
+
+.pf2-table th {
+  color: var(--pf2-red);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.pf2-card-list,
+.pf2-equipment {
+  display: grid;
+  gap: 5px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pf2-card-list li,
+.pf2-equipment li {
+  border-bottom: 1px solid var(--pf2-line);
+  padding: 3px 0 5px;
+}
+
+.pf2-card-list b,
+.pf2-card-list span,
+.pf2-card-list p {
+  display: block;
+}
+
+.pf2-card-list p {
+  color: var(--pf2-muted);
+  font-size: 12px;
+  margin: 3px 0 0;
+}
+
+.pf2-equipment li {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) 42px minmax(80px, 1fr);
+}
+
+.pf2-equipment b { text-align: center; }
+.pf2-coins {
+  display: grid;
+  gap: 5px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 8px;
+}
+
+.pf2-coins div {
+  border: 1px solid var(--pf2-line);
+  border-radius: 999px;
+  display: grid;
+  gap: 1px;
+  justify-items: center;
+  padding: 3px;
+}
+
+.pf2-coins span {
+  color: var(--pf2-muted);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 8px;
+}
+
+.pf2-spell-meta,
+.pf2-spell-row {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.pf2-spell-row {
+  border-bottom: 1px solid var(--pf2-line);
+  padding: 5px 0;
+}
+
+.pf2-spell-row span { grid-column: span 1; }
+
+@media (max-width: 980px) {
+  .pf2-header,
+  .pf2-body,
+  .pf2-identity { grid-template-columns: 1fr; }
+  .pf2-stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 /* ---- Relationship connections panel ---- */
 .rel-panel {
   border-top: 1px solid var(--border-soft);
@@ -7776,6 +8103,20 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   .dnd-sheet {
     page-break-inside: avoid;
     box-shadow: none !important;
+  }
+  .pf2-sheet {
+    border-color: #5a1117 !important;
+    max-width: 100% !important;
+    padding: 8px !important;
+  }
+  .pf2-panel,
+  .pf2-hp,
+  .pf2-stat-row,
+  .pf2-identity,
+  .pf2-abilities,
+  .pf2-card-list li,
+  .pf2-equipment li {
+    break-inside: avoid;
   }
   .dnd-main { display: block !important; }
   .dnd-skills-col, .dnd-combat-col { width: 100%; break-inside: avoid; }

@@ -601,6 +601,109 @@ notes: ""
   function dndSheetSnippet(name: string) {
     const isPF2 = campaign.gameType === "Pathfinder";
     const system = isPF2 ? "pathfinder2" : "dnd5e";
+    if (isPF2) {
+      return `\n\n\`\`\`dnd-sheet
+system: ${system}
+name: ${JSON.stringify(name || "")}
+portrait: ""
+player: ""
+class: ""
+subclass: ""
+level: 1
+ancestry: ""
+heritage: ""
+background: ""
+deity: ""
+size: Medium
+key_ability: ""
+hero_points: 1
+
+ability_scores:
+  str: 10
+  dex: 10
+  con: 10
+  int: 10
+  wis: 10
+  cha: 10
+
+# PF2 ranks: U, T, E, M, L
+perception_rank: U
+save_ranks:
+  fortitude: U
+  reflex: U
+  will: U
+skill_ranks:
+  acrobatics: U
+  arcana: U
+  athletics: U
+  crafting: U
+  deception: U
+  diplomacy: U
+  intimidation: U
+  lore: U
+  medicine: U
+  nature: U
+  occultism: U
+  performance: U
+  religion: U
+  society: U
+  stealth: U
+  survival: U
+  thievery: U
+
+ac: 10
+class_dc:
+speed: 25
+hp_max: 0
+hp_current: 0
+hp_temp: 0
+armor: ""
+shield: ""
+conditions: []
+
+attacks:
+  - name: ""
+    bonus: ""
+    damage: ""
+    notes: ""
+actions:
+  - name: ""
+    action: ""
+    traits: []
+    notes: ""
+
+spellcasting:
+  ability: ""
+  spell_save_dc:
+  spell_attack: ""
+  focus_points:
+    current:
+    max:
+  spells:
+    - level: 0
+      list: []
+
+feats:
+  - name: ""
+    type: ""
+    level:
+    notes: ""
+features: []
+languages: []
+proficiencies: []
+equipment:
+  - name: ""
+    quantity:
+    notes: ""
+coins:
+  cp: 0
+  sp: 0
+  gp: 0
+  pp: 0
+backstory: ""
+notes: ""
+\`\`\`\n\n`;
+    }
     return `\n\n\`\`\`dnd-sheet
 system: ${system}
 name: ${JSON.stringify(name || "")}
@@ -693,7 +796,7 @@ notes: ""
     setMode("gm");
     setIsEditing(true);
     insertSnippet(dndSheetSnippet(frontmatter.name));
-    setMessage("D&D sheet block inserted. Edit the values in the markdown, then save.");
+    setMessage(`${campaign.gameType === "Pathfinder" ? "Pathfinder" : "D&D"} sheet block inserted. Edit the values in the markdown, then save.`);
   }
 
   function insertSnippet(snippet: string) {
@@ -1748,7 +1851,7 @@ notes: ""
           <button type="button" className={mode === "handout" ? "active" : ""} onClick={() => setMode("handout")}>Handout</button>
           {fieldsEditable && canUseTravellerSheet && <button type="button" onClick={insertTravellerSheetBlock}>Insert character sheet</button>}
           {fieldsEditable && canUseWoDSheet && <button type="button" onClick={insertWoDSheetBlock}>Insert WoD sheet</button>}
-          {fieldsEditable && canUseDnDSheet && <button type="button" onClick={insertDnDSheetBlock}>Insert D&amp;D sheet</button>}
+          {fieldsEditable && canUseDnDSheet && <button type="button" onClick={insertDnDSheetBlock}>{campaign.gameType === "Pathfinder" ? "Insert Pathfinder sheet" : "Insert D&D sheet"}</button>}
           {fieldsEditable && <button type="button" onClick={() => insertSnippet("```inventory\ntitle: Inventory\nitems:\n  - name: Item name\n    qty: 1\n    weight: 1\n    value: \"\"\n    notes: \"\"\n```\n\n")}>Insert inventory</button>}
           {fieldsEditable && <button type="button" onClick={() => insertSnippet("```tracker\ntitle: Resources\nresources:\n  - name: Hit Points\n    current: 10\n    max: 10\n    color: \"#e74c3c\"\n  - name: Mana\n    current: 5\n    max: 5\n    color: \"#3498db\"\n```\n\n")}>Insert tracker</button>}
           {fieldsEditable && <button type="button" onClick={() => insertSnippet("```traits\ntitle: Traits & Abilities\ntraits:\n  - name: Trait name\n    value: \"\"\n    description: Optional tooltip\n    type: \"\"\n```\n\n")}>Insert traits</button>}

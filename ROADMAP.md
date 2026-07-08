@@ -171,11 +171,13 @@ watch changes.
 
 ### 24. Character sheets across systems - core shipped
 
-Traveller, D&D 5e, and World of Darkness markdown sheet blocks render in the
-reader, and the editor can insert sheet scaffolds. Traveller has the most
-complete experience, including inline editing support and rolling. Foundry D&D
-actors can import into D&D sheet blocks. D&D 5e and Mage: The Ascension have
-sheet renderers shaped around their familiar paper-sheet structures.
+Traveller, D&D 5e, Pathfinder 2e, and World of Darkness markdown sheet blocks
+render in the reader, and the editor can insert system-specific sheet scaffolds.
+Traveller has the most complete experience, including inline editing support and
+rolling. Foundry D&D actors can import into D&D sheet blocks. D&D 5e, Pathfinder
+2e, and Mage: The Ascension have sheet renderers shaped around familiar
+paper-sheet structures, with Pathfinder using rank-aware skills/saves and print
+polish.
 
 ### 25. Relationship trees and genealogy views - shipped
 
@@ -242,8 +244,8 @@ accessibility checks.
 
 ### B. Sheet editor and print polish - M
 
-Add full field editors for D&D 5e and World of Darkness sheets, Pathfinder
-renderer/editor support, print layouts, and more system-specific sheet themes.
+Add full field editors for D&D 5e, Pathfinder 2e, and World of Darkness sheets,
+plus deeper print/theme polish and more system-specific sheet themes.
 
 ### C. Deeper VTT sync - L
 
