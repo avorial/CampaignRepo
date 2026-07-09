@@ -78,8 +78,16 @@ function stepOnce(positions: Map<string, Pos>, edges: CampaignGraphEdge[]): Map<
 // === Tree layout (genealogy preset) ===
 const TREE_X = 180;
 const TREE_Y = 150;
+const FAMILY_CARD_X = 170;
+const FAMILY_CARD_Y = 92;
 
-function computeTreeLayout(slugs: string[], hierarchyEdges: CampaignGraphEdge[], spouseEdges: CampaignGraphEdge[] = []): Map<string, Pos> {
+function computeTreeLayout(
+  slugs: string[],
+  hierarchyEdges: CampaignGraphEdge[],
+  spouseEdges: CampaignGraphEdge[] = [],
+  xGap = TREE_X,
+  yGap = TREE_Y
+): Map<string, Pos> {
   const children = new Map<string, string[]>();
   const hasParent = new Set<string>();
   const slugSet = new Set(slugs);
@@ -110,7 +118,7 @@ function computeTreeLayout(slugs: string[], hierarchyEdges: CampaignGraphEdge[],
   function assignX(s: string): number {
     if (assigned.has(s)) return assigned.get(s)!;
     const kids = children.get(s) ?? [];
-    if (kids.length === 0) { const x = leafX++ * TREE_X; assigned.set(s, x); return x; }
+    if (kids.length === 0) { const x = leafX++ * xGap; assigned.set(s, x); return x; }
     const xs = kids.map(assignX);
     const x = (Math.min(...xs) + Math.max(...xs)) / 2;
     assigned.set(s, x);
@@ -120,11 +128,11 @@ function computeTreeLayout(slugs: string[], hierarchyEdges: CampaignGraphEdge[],
 
   const maxDepth = depth.size > 0 ? Math.max(...depth.values()) : 0;
   const pos = new Map<string, Pos>();
-  for (const [s, d] of depth) pos.set(s, { x: assigned.get(s) ?? 0, y: d * TREE_Y, vx: 0, vy: 0 });
+  for (const [s, d] of depth) pos.set(s, { x: assigned.get(s) ?? 0, y: d * yGap, vx: 0, vy: 0 });
 
   let freeX = 0;
   for (const s of slugs) {
-    if (!pos.has(s)) { pos.set(s, { x: freeX++ * TREE_X, y: (maxDepth + 1.5) * TREE_Y, vx: 0, vy: 0 }); }
+    if (!pos.has(s)) { pos.set(s, { x: freeX++ * xGap, y: (maxDepth + 1.5) * yGap, vx: 0, vy: 0 }); }
   }
 
   for (const e of spouseEdges) {
@@ -133,8 +141,8 @@ function computeTreeLayout(slugs: string[], hierarchyEdges: CampaignGraphEdge[],
     if (!a || !b) continue;
     const y = Math.min(a.y, b.y);
     const mid = (a.x + b.x) / 2;
-    pos.set(e.source, { ...a, x: mid - TREE_X * 0.32, y });
-    pos.set(e.target, { ...b, x: mid + TREE_X * 0.32, y });
+    pos.set(e.source, { ...a, x: mid - xGap * 0.32, y });
+    pos.set(e.target, { ...b, x: mid + xGap * 0.32, y });
   }
 
   return pos;
@@ -274,8 +282,8 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
     }));
   }, [selectedFamilyTree]);
   const baseNodes = useMemo(
-    () => (selectedFamilyTree ? familyTreeNodes : isFamilyMode ? nodes.filter((n) => familySlugs.has(n.slug)) : nodes),
-    [selectedFamilyTree, familyTreeNodes, isFamilyMode, nodes, familySlugs]
+    () => (selectedFamilyTree ? familyTreeNodes : isFamilyMode ? [] : nodes),
+    [selectedFamilyTree, familyTreeNodes, isFamilyMode, nodes]
   );
   const visibleNodes = useMemo(
     () => baseNodes.filter((n) => filterCats.has(n.category)),
@@ -308,8 +316,14 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
 
   const treePositions = useMemo(() => {
     if (layout !== "tree") return null;
-    return computeTreeLayout(visibleNodes.map((n) => n.slug), hierarchyEdges, spouseEdges);
-  }, [layout, visibleNodes, hierarchyEdges, spouseEdges]);
+    return computeTreeLayout(
+      visibleNodes.map((n) => n.slug),
+      hierarchyEdges,
+      spouseEdges,
+      selectedFamilyTree ? FAMILY_CARD_X : TREE_X,
+      selectedFamilyTree ? FAMILY_CARD_Y : TREE_Y
+    );
+  }, [layout, visibleNodes, hierarchyEdges, spouseEdges, selectedFamilyTree]);
 
   // Force simulation
   useEffect(() => {
@@ -345,7 +359,7 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
     const my = e.clientY - rect.top;
     const factor = e.deltaY > 0 ? 0.88 : 1.12;
     setScale((s) => {
-      const newScale = Math.max(0.15, Math.min(5, s * factor));
+      const newScale = Math.max(0.05, Math.min(5, s * factor));
       setPan((p) => ({
         x: mx - (mx - p.x) * (newScale / s),
         y: my - (my - p.y) * (newScale / s),
@@ -439,6 +453,26 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
   }, [searchQuery, searchResults]);
 
   const activePositions = treePositions ?? positions;
+
+  useEffect(() => {
+    if (!treePositions || visibleNodes.length === 0) return;
+    const svg = svgRef.current;
+    if (!svg) return;
+    const pts = visibleNodes.map((node) => treePositions.get(node.slug)).filter(Boolean) as Pos[];
+    if (!pts.length) return;
+    const minX = Math.min(...pts.map((p) => p.x));
+    const maxX = Math.max(...pts.map((p) => p.x));
+    const minY = Math.min(...pts.map((p) => p.y));
+    const maxY = Math.max(...pts.map((p) => p.y));
+    const rect = svg.getBoundingClientRect();
+    const pad = selectedFamilyTree ? 180 : 120;
+    const nextScale = Math.max(0.05, Math.min(1, rect.width / Math.max(maxX - minX + pad, 1), rect.height / Math.max(maxY - minY + pad, 1)));
+    setScale(nextScale);
+    setPan({
+      x: rect.width / 2 - ((minX + maxX) / 2) * nextScale,
+      y: rect.height / 2 - ((minY + maxY) / 2) * nextScale
+    });
+  }, [treePositions, visibleNodes, selectedFamilyTree]);
 
   // === Cluster mode ===
   const clusterMeta = useMemo(() => {
@@ -650,6 +684,8 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
             </ul>
           )}
         </div>
+        {!selectedFamilyTree && (
+        <>
         <h4>{isFamilyMode ? "People and houses" : "Categories"}</h4>
         {usedCats.length > 1 && (
           <div className="graph-filter-actions">
@@ -672,7 +708,9 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
             )}
           </label>
         ))}
-        {usedRelCats.length > 0 && (
+        </>
+        )}
+        {!selectedFamilyTree && usedRelCats.length > 0 && (
           <>
             <hr />
             <h4>Relationship types</h4>
@@ -689,7 +727,7 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
             )}
           </>
         )}
-        {!isFamilyMode && (
+        {!isFamilyMode && !selectedFamilyTree && (
           <>
             <hr />
             <label className="graph-filter-item">
@@ -698,7 +736,7 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
             </label>
           </>
         )}
-        {hasHierarchyEdges && (
+        {!selectedFamilyTree && hasHierarchyEdges && (
           <>
             <hr />
             <h4>Layout</h4>
@@ -881,12 +919,12 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
         </g>
       </svg>
 
-      {isFamilyMode && !loading && familyEdges.length === 0 && (
+      {isFamilyMode && !loading && !selectedFamilyTree && (
         <div className="graph-empty panel">
-          <h3>No family tree yet</h3>
+          <h3>No imported family tree yet</h3>
           <p className="muted">
-            Add family relationships from a page detail panel, or import genealogy data as frontmatter relationships.
-            Parent, spouse, sibling, and guardian links will appear here separately from the general relationship graph.
+            Add a JSON tree under <code>wiki/family-trees/</code>. Imported genealogy data appears here as a dedicated
+            Family Echo-style tree, with links to existing wiki pages where available.
           </p>
         </div>
       )}
