@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { PointerEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CampaignFamilyTree, CampaignGraphEdge, CampaignGraphNode } from "@/lib/types";
 import { RELATIONSHIP_TYPES, REL_TYPE_MAP } from "@/lib/relationships";
@@ -221,6 +222,16 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
   const [createPageBusy, setCreatePageBusy] = useState(false);
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
   const [deleteRelBusy, setDeleteRelBusy] = useState<string | null>(null);
+  const familyBoardRef = useRef<HTMLElement>(null);
+  const [familyEditMode, setFamilyEditMode] = useState(false);
+  const [familyDirty, setFamilyDirty] = useState(false);
+  const [familySaveBusy, setFamilySaveBusy] = useState(false);
+  const [familySaveMsg, setFamilySaveMsg] = useState("");
+  const [newTreeName, setNewTreeName] = useState("Family Tree");
+  const [newPersonName, setNewPersonName] = useState("");
+  const [newRelationTarget, setNewRelationTarget] = useState("");
+  const [newRelationType, setNewRelationType] = useState<"parent" | "child" | "spouse" | "sibling">("child");
+  const [familyBoardDrag, setFamilyBoardDrag] = useState<{ x: number; y: number; left: number; top: number } | null>(null);
 
   const loadGraph = useCallback(async () => {
     const data = await fetch(`/api/campaigns/${campaignId}/graph`)
@@ -230,6 +241,7 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
     setEdges(data.edges || []);
     setFamilyTrees(data.familyTrees || []);
     setSelectedTreeId((current) => current || data.familyTrees?.[0]?.id || "");
+    setFamilyDirty(false);
     setLoading(false);
   }, [campaignId]);
 
@@ -685,6 +697,9 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
         if (edge.target !== echoSelectedNode.slug) siblingKeys.add(edge.target);
       }
     }
+    for (const edge of visibleEdges.filter((candidate) => candidate.relType === "sibling-of" && (candidate.source === echoSelectedNode.slug || candidate.target === echoSelectedNode.slug))) {
+      siblingKeys.add(edge.source === echoSelectedNode.slug ? edge.target : edge.source);
+    }
     const siblings = [...siblingKeys].map((slug) => echoNodeMap.get(slug)).filter(Boolean) as CampaignGraphNode[];
     return { parents, spouses, siblings, children };
   }, [echoSelectedNode, visibleEdges, echoNodeMap]);
@@ -694,6 +709,151 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
     const list = q ? familyTreeNodes.filter((node) => node.name.toLowerCase().includes(q)) : familyTreeNodes;
     return list;
   }, [familyTreeNodes, searchQuery]);
+
+  const selectedFamilyId = echoSelectedNode?.familyId || null;
+  const familyRawNodes = selectedFamilyTree?.nodes || [];
+  const familyRawTargets = familyRawNodes.filter((node) => node.id !== selectedFamilyId);
+
+  function familyNodeSlug(treeId: string, nodeId: string) {
+    return `family:${treeId}:${nodeId}`;
+  }
+
+  function updateSelectedFamilyTree(mutator: (tree: CampaignFamilyTree) => CampaignFamilyTree) {
+    if (!selectedFamilyTree) return;
+    setFamilyTrees((prev) =>
+      prev.map((tree) => tree.id === selectedFamilyTree.id ? mutator({ ...tree, nodes: [...tree.nodes], edges: [...tree.edges] }) : tree)
+    );
+    setFamilyDirty(true);
+    setFamilySaveMsg("Unsaved changes");
+  }
+
+  function updateSelectedFamilyNode(patch: Partial<CampaignFamilyTree["nodes"][number]>) {
+    if (!selectedFamilyId) return;
+    updateSelectedFamilyTree((tree) => ({
+      ...tree,
+      nodes: tree.nodes.map((node) => node.id === selectedFamilyId ? { ...node, ...patch } : node)
+    }));
+  }
+
+  function addFamilyPerson(relationship?: typeof newRelationType) {
+    if (!selectedFamilyTree) return;
+    const name = newPersonName.trim() || "Unnamed person";
+    const idBase = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "person";
+    const used = new Set(selectedFamilyTree.nodes.map((node) => node.id));
+    let id = idBase;
+    let suffix = 2;
+    while (used.has(id)) id = `${idBase}-${suffix++}`;
+    updateSelectedFamilyTree((tree) => {
+      const next = { ...tree, nodes: [...tree.nodes, { id, name, category: "character" as const }], edges: [...tree.edges] };
+      if (relationship && selectedFamilyId) {
+        next.edges = addFamilyEdge(next.edges, selectedFamilyId, id, relationship);
+      }
+      return next;
+    });
+    setSelected(familyNodeSlug(selectedFamilyTree.id, id));
+    setNewPersonName("");
+  }
+
+  function addFamilyEdge(edges: CampaignFamilyTree["edges"], selectedId: string, targetId: string, relation: typeof newRelationType) {
+    const next =
+      relation === "parent"
+        ? { source: targetId, target: selectedId, type: "parent-of", label: "parent" }
+        : relation === "child"
+          ? { source: selectedId, target: targetId, type: "parent-of", label: "parent" }
+          : relation === "spouse"
+            ? { source: selectedId, target: targetId, type: "spouse-of", label: "spouse" }
+            : { source: selectedId, target: targetId, type: "sibling-of", label: "sibling" };
+    const exists = edges.some((edge) =>
+      edge.type === next.type &&
+      ((edge.source === next.source && edge.target === next.target) ||
+        (next.type !== "parent-of" && edge.source === next.target && edge.target === next.source))
+    );
+    return exists ? edges : [...edges, next];
+  }
+
+  function addSelectedFamilyRelationship() {
+    if (!selectedFamilyId || !newRelationTarget) return;
+    updateSelectedFamilyTree((tree) => ({
+      ...tree,
+      edges: addFamilyEdge(tree.edges, selectedFamilyId, newRelationTarget, newRelationType)
+    }));
+    setNewRelationTarget("");
+  }
+
+  function removeFamilyEdge(source: string, target: string, type: string) {
+    updateSelectedFamilyTree((tree) => ({
+      ...tree,
+      edges: tree.edges.filter((edge) => !(edge.source === source && edge.target === target && edge.type === type))
+    }));
+  }
+
+  function deleteSelectedFamilyPerson() {
+    if (!selectedFamilyId || !selectedFamilyTree) return;
+    const node = selectedFamilyTree.nodes.find((candidate) => candidate.id === selectedFamilyId);
+    if (!window.confirm(`Delete ${node?.name || "this person"} from this family tree? Their wiki page, if any, will not be deleted.`)) return;
+    updateSelectedFamilyTree((tree) => ({
+      ...tree,
+      nodes: tree.nodes.filter((candidate) => candidate.id !== selectedFamilyId),
+      edges: tree.edges.filter((edge) => edge.source !== selectedFamilyId && edge.target !== selectedFamilyId)
+    }));
+    setSelected(null);
+  }
+
+  async function createFamilyTree() {
+    setFamilySaveBusy(true);
+    setFamilySaveMsg("");
+    const res = await fetch(`/api/campaigns/${campaignId}/family-trees`, {
+      method: "POST",
+      body: JSON.stringify({ name: newTreeName })
+    });
+    const data = await res.json().catch(() => ({}));
+    setFamilySaveBusy(false);
+    if (!res.ok || !data.tree) {
+      setFamilySaveMsg(data.error || "Could not create family tree.");
+      return;
+    }
+    setFamilyTrees((prev) => [...prev, data.tree]);
+    setSelectedTreeId(data.tree.id);
+    setSelected(null);
+    setFamilyEditMode(true);
+    setFamilyDirty(false);
+    setFamilySaveMsg("Family tree created.");
+  }
+
+  async function saveFamilyTree() {
+    if (!selectedFamilyTree) return;
+    setFamilySaveBusy(true);
+    setFamilySaveMsg("Saving...");
+    const res = await fetch(`/api/campaigns/${campaignId}/family-trees`, {
+      method: "PUT",
+      body: JSON.stringify({ treeId: selectedFamilyTree.id, tree: selectedFamilyTree })
+    });
+    const data = await res.json().catch(() => ({}));
+    setFamilySaveBusy(false);
+    if (!res.ok || !data.tree) {
+      setFamilySaveMsg(data.error || "Could not save family tree.");
+      return;
+    }
+    setFamilyTrees((prev) => prev.map((tree) => tree.id === data.tree.id ? data.tree : tree));
+    setFamilyDirty(false);
+    setFamilySaveMsg("Saved.");
+  }
+
+  function startFamilyBoardDrag(event: PointerEvent<HTMLElement>) {
+    if ((event.target as HTMLElement).closest("button, input, select, a")) return;
+    const board = familyBoardRef.current;
+    if (!board) return;
+    setFamilyBoardDrag({ x: event.clientX, y: event.clientY, left: board.scrollLeft, top: board.scrollTop });
+    board.setPointerCapture(event.pointerId);
+  }
+
+  function moveFamilyBoardDrag(event: PointerEvent<HTMLElement>) {
+    if (!familyBoardDrag) return;
+    const board = familyBoardRef.current;
+    if (!board) return;
+    board.scrollLeft = familyBoardDrag.left - (event.clientX - familyBoardDrag.x);
+    board.scrollTop = familyBoardDrag.top - (event.clientY - familyBoardDrag.y);
+  }
 
   function echoCard(node: CampaignGraphNode, role: string, featured = false) {
     const active = node.slug === echoSelectedNode?.slug;
@@ -713,6 +873,28 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
     );
   }
 
+  if (isFamilyMode && !selectedFamilyTree) {
+    return (
+      <div className="family-echo-shell">
+        <aside className="family-echo-sidebar panel">
+          <Link href={`/campaigns/${campaignId}`} className="quiet-link">Campaign</Link>
+          <h2>Family Tree</h2>
+          <p className="muted">Create a family tree here, then add people, parents, spouses, siblings, and children.</p>
+        </aside>
+        <section className="family-echo-board family-echo-empty-board" aria-label="Create family tree">
+          <div className="family-echo-create panel">
+            <h3>Create Family Tree</h3>
+            <input value={newTreeName} onChange={(event) => setNewTreeName(event.target.value)} placeholder="Bellringer Noble Lines" />
+            <button type="button" className="button" disabled={familySaveBusy} onClick={createFamilyTree}>
+              {familySaveBusy ? "Creating..." : "Create Tree"}
+            </button>
+            {familySaveMsg && <p className="muted">{familySaveMsg}</p>}
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   if (selectedFamilyTree) {
     return (
       <div className="family-echo-shell">
@@ -726,6 +908,33 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
             </select>
           </label>
           <p className="muted">{selectedFamilyTree.nodes.length} people · {selectedFamilyTree.edges.length} family links</p>
+          <div className="family-echo-editor-actions">
+            <button type="button" className={familyEditMode ? "button" : "button secondary"} onClick={() => setFamilyEditMode((value) => !value)}>
+              {familyEditMode ? "Viewing" : "Edit Tree"}
+            </button>
+            {familyEditMode && (
+              <button type="button" className="button" disabled={familySaveBusy || !familyDirty} onClick={saveFamilyTree}>
+                {familySaveBusy ? "Saving..." : "Save"}
+              </button>
+            )}
+          </div>
+          {familySaveMsg && <p className="muted family-echo-save-msg">{familySaveMsg}</p>}
+          {familyEditMode && (
+            <div className="family-echo-editbox">
+              <label>
+                <span>New person</span>
+                <input value={newPersonName} onChange={(event) => setNewPersonName(event.target.value)} placeholder="Name" />
+              </label>
+              <button type="button" className="button secondary" onClick={() => addFamilyPerson()}>Add Person</button>
+              {selectedFamilyId && (
+                <div className="family-echo-inline-buttons">
+                  <button type="button" onClick={() => addFamilyPerson("parent")}>As parent</button>
+                  <button type="button" onClick={() => addFamilyPerson("spouse")}>As spouse</button>
+                  <button type="button" onClick={() => addFamilyPerson("child")}>As child</button>
+                </div>
+              )}
+            </div>
+          )}
           <input
             className="graph-search-input"
             placeholder="Find a person..."
@@ -747,7 +956,15 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
           </div>
         </aside>
 
-        <section className="family-echo-board" aria-label="Family Echo style tree">
+        <section
+          ref={familyBoardRef}
+          className={`family-echo-board${familyBoardDrag ? " dragging" : ""}`}
+          aria-label="Family Echo style tree"
+          onPointerDown={startFamilyBoardDrag}
+          onPointerMove={moveFamilyBoardDrag}
+          onPointerUp={() => setFamilyBoardDrag(null)}
+          onPointerCancel={() => setFamilyBoardDrag(null)}
+        >
           {echoSelectedNode && (
             <>
               <div className="family-echo-generation parents">
@@ -778,10 +995,65 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
               <span className="cat-dot" style={{ background: catColor(echoSelectedNode.category) }} />
               <span className="muted">{echoSelectedNode.missingPage ? "Genealogy record" : "Wiki linked"}</span>
             </div>
-            <h3>{echoSelectedNode.name}</h3>
+            {familyEditMode ? (
+              <div className="family-echo-detail-form">
+                <label>
+                  <span>Name</span>
+                  <input value={echoSelectedNode.name} onChange={(event) => updateSelectedFamilyNode({ name: event.target.value })} />
+                </label>
+                <label>
+                  <span>Category</span>
+                  <select value={echoSelectedNode.category} onChange={(event) => updateSelectedFamilyNode({ category: event.target.value as CampaignFamilyTree["nodes"][number]["category"] })}>
+                    {Object.keys(CAT_COLORS).map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+                  </select>
+                </label>
+                <label>
+                  <span>Wiki page slug</span>
+                  <input value={echoSelectedNode.pageSlug || ""} onChange={(event) => updateSelectedFamilyNode({ pageSlug: event.target.value || undefined })} placeholder="Conner-Silverridge" />
+                </label>
+                <label>
+                  <span>Portrait path or URL</span>
+                  <input value={echoSelectedNode.image || ""} onChange={(event) => updateSelectedFamilyNode({ image: event.target.value || undefined })} placeholder="wiki/media/family-echo/I1.jpg" />
+                </label>
+              </div>
+            ) : (
+              <h3>{echoSelectedNode.name}</h3>
+            )}
             <p className="muted graph-detail-summary">
               {echoRelatives.parents.length} parents · {echoRelatives.spouses.length} spouses · {echoRelatives.children.length} children
             </p>
+            {familyEditMode && (
+              <div className="family-echo-editbox">
+                <label>
+                  <span>Add relationship</span>
+                  <select value={newRelationType} onChange={(event) => setNewRelationType(event.target.value as typeof newRelationType)}>
+                    <option value="parent">Target is parent</option>
+                    <option value="child">Target is child</option>
+                    <option value="spouse">Target is spouse</option>
+                    <option value="sibling">Target is sibling</option>
+                  </select>
+                </label>
+                <select value={newRelationTarget} onChange={(event) => setNewRelationTarget(event.target.value)}>
+                  <option value="">Choose person...</option>
+                  {familyRawTargets.map((node) => <option key={node.id} value={node.id}>{node.name}</option>)}
+                </select>
+                <button type="button" className="button secondary" disabled={!newRelationTarget} onClick={addSelectedFamilyRelationship}>Add Relationship</button>
+                <div className="family-echo-rel-list">
+                  {selectedFamilyTree.edges
+                    .filter((edge) => edge.source === selectedFamilyId || edge.target === selectedFamilyId)
+                    .map((edge) => {
+                      const otherId = edge.source === selectedFamilyId ? edge.target : edge.source;
+                      const other = selectedFamilyTree.nodes.find((node) => node.id === otherId);
+                      return (
+                        <button key={`${edge.source}-${edge.target}-${edge.type}`} type="button" onClick={() => removeFamilyEdge(edge.source, edge.target, edge.type)}>
+                          {edge.label || edge.type}: {other?.name || otherId} ×
+                        </button>
+                      );
+                    })}
+                </div>
+                <button type="button" className="button danger" onClick={deleteSelectedFamilyPerson}>Delete Person</button>
+              </div>
+            )}
             {echoSelectedNode.missingPage ? (
               <button type="button" className="button secondary graph-open-btn" disabled={createPageBusy} onClick={() => createPageForNode(echoSelectedNode)}>
                 {createPageBusy ? "Creating..." : "Create wiki page"}
