@@ -7502,6 +7502,298 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   font-weight: 700;
 }
 
+.family-echo-shell {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr) minmax(220px, 280px);
+  height: 100svh;
+  inset: 0;
+  overflow: hidden;
+  padding: 14px;
+  position: fixed;
+  width: 100vw;
+}
+
+.family-echo-sidebar,
+.family-echo-detail {
+  align-self: stretch;
+  background: color-mix(in srgb, var(--bg-elevated) 90%, transparent);
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 14px;
+  z-index: 4;
+}
+
+.family-echo-sidebar .quiet-link {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.family-echo-sidebar h2,
+.family-echo-detail h3 {
+  line-height: 1;
+  margin: 8px 0 14px;
+}
+
+.family-echo-sidebar label {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.family-echo-sidebar label span {
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.family-echo-sidebar select,
+.family-echo-sidebar input {
+  width: 100%;
+}
+
+.family-echo-list {
+  border-top: 1px solid var(--border-soft);
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 12px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-top: 10px;
+}
+
+.family-echo-list button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 8px 9px;
+  text-align: left;
+}
+
+.family-echo-list button:hover,
+.family-echo-list button.active {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 34%, transparent);
+}
+
+.family-echo-list small {
+  color: var(--accent);
+  font-family: var(--font-ui);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.family-echo-board {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 18%, transparent) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, var(--accent) 14%, transparent) 1px, transparent 1px),
+    color-mix(in srgb, var(--bg-surface) 92%, transparent);
+  background-size: 52px 52px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  box-shadow: var(--shadow-soft);
+  display: grid;
+  grid-template-rows: 1fr auto auto 1fr;
+  gap: 26px;
+  min-height: 0;
+  overflow: auto;
+  padding: min(5vw, 56px);
+  position: relative;
+}
+
+.family-echo-board::before,
+.family-echo-board::after {
+  background: color-mix(in srgb, var(--accent) 38%, transparent);
+  content: "";
+  left: 50%;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.family-echo-board::before {
+  height: 1px;
+  width: min(76%, 900px);
+}
+
+.family-echo-board::after {
+  height: min(58%, 520px);
+  width: 1px;
+}
+
+.family-echo-generation {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  min-width: min-content;
+  position: relative;
+  z-index: 1;
+}
+
+.family-echo-generation h3 {
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.family-echo-generation > div,
+.family-echo-spouses {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+.family-echo-generation.focus {
+  grid-template-columns: 1fr auto 1fr;
+  margin: 8px 0;
+}
+
+.family-echo-generation.focus > .family-echo-card {
+  grid-column: 2;
+}
+
+.family-echo-spouses {
+  grid-column: 1 / 4;
+  min-height: 0;
+}
+
+.family-echo-card {
+  align-items: center;
+  background: color-mix(in srgb, var(--bg-elevated) 93%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-strong) 84%, transparent);
+  border-radius: 5px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  min-height: 62px;
+  padding: 7px;
+  text-align: left;
+  width: 190px;
+}
+
+.family-echo-card:hover,
+.family-echo-card.active {
+  border-color: var(--accent);
+}
+
+.family-echo-card.featured {
+  background: color-mix(in srgb, var(--accent) 13%, var(--bg-elevated));
+  border-color: var(--accent);
+  min-height: 76px;
+  width: 230px;
+}
+
+.family-echo-card.missing-page {
+  opacity: 0.78;
+}
+
+.family-echo-avatar {
+  align-items: center;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 48%, transparent);
+  border-radius: 999px;
+  display: flex;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  height: 38px;
+  justify-content: center;
+  overflow: hidden;
+  width: 38px;
+}
+
+.family-echo-card.featured .family-echo-avatar {
+  height: 50px;
+  width: 50px;
+}
+
+.family-echo-avatar img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.family-echo-name {
+  font-size: 14px;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.family-echo-status {
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 9px;
+  grid-column: 2;
+  letter-spacing: 0.08em;
+  margin-top: 3px;
+  text-transform: uppercase;
+}
+
+.family-echo-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 10px;
+}
+
+.family-echo-detail .graph-detail-header {
+  flex: initial;
+}
+
+.family-echo-detail .button {
+  margin-top: auto;
+}
+
+@media (max-width: 1100px) {
+  .family-echo-shell {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  .family-echo-detail {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .family-echo-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    padding: 10px;
+  }
+
+  .family-echo-sidebar {
+    max-height: 240px;
+  }
+
+  .family-echo-board {
+    padding: 28px 18px;
+  }
+}
+
 /* ---- Slash command menu ---- */
 .slash-menu {
   background: var(--bg-surface);

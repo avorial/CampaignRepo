@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CampaignFamilyTree, CampaignGraphEdge, CampaignGraphNode } from "@/lib/types";
 import { RELATIONSHIP_TYPES, REL_TYPE_MAP } from "@/lib/relationships";
@@ -654,6 +655,149 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
     return false;
   };
 
+  useEffect(() => {
+    if (!selectedFamilyTree || selected) return;
+    const firstLinked = familyTreeNodes.find((node) => node.pageSlug);
+    setSelected((firstLinked || familyTreeNodes[0])?.slug || null);
+  }, [selectedFamilyTree, familyTreeNodes, selected]);
+
+  const echoSelectedNode = selectedFamilyTree
+    ? familyTreeNodes.find((node) => node.slug === selected) || familyTreeNodes.find((node) => node.pageSlug) || familyTreeNodes[0]
+    : null;
+  const echoNodeMap = useMemo(() => new Map(familyTreeNodes.map((node) => [node.slug, node])), [familyTreeNodes]);
+  const echoRelatives = useMemo(() => {
+    if (!echoSelectedNode) return { parents: [], spouses: [], siblings: [], children: [] } as Record<string, CampaignGraphNode[]>;
+    const parents = visibleEdges
+      .filter((edge) => edge.relType === "parent-of" && edge.target === echoSelectedNode.slug)
+      .map((edge) => echoNodeMap.get(edge.source))
+      .filter(Boolean) as CampaignGraphNode[];
+    const spouses = visibleEdges
+      .filter((edge) => edge.relType === "spouse-of" && (edge.source === echoSelectedNode.slug || edge.target === echoSelectedNode.slug))
+      .map((edge) => echoNodeMap.get(edge.source === echoSelectedNode.slug ? edge.target : edge.source))
+      .filter(Boolean) as CampaignGraphNode[];
+    const children = visibleEdges
+      .filter((edge) => edge.relType === "parent-of" && edge.source === echoSelectedNode.slug)
+      .map((edge) => echoNodeMap.get(edge.target))
+      .filter(Boolean) as CampaignGraphNode[];
+    const siblingKeys = new Set<string>();
+    for (const parent of parents) {
+      for (const edge of visibleEdges.filter((candidate) => candidate.relType === "parent-of" && candidate.source === parent.slug)) {
+        if (edge.target !== echoSelectedNode.slug) siblingKeys.add(edge.target);
+      }
+    }
+    const siblings = [...siblingKeys].map((slug) => echoNodeMap.get(slug)).filter(Boolean) as CampaignGraphNode[];
+    return { parents, spouses, siblings, children };
+  }, [echoSelectedNode, visibleEdges, echoNodeMap]);
+
+  const echoPeople = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const list = q ? familyTreeNodes.filter((node) => node.name.toLowerCase().includes(q)) : familyTreeNodes;
+    return list;
+  }, [familyTreeNodes, searchQuery]);
+
+  function echoCard(node: CampaignGraphNode, role: string, featured = false) {
+    const active = node.slug === echoSelectedNode?.slug;
+    return (
+      <button
+        key={`${role}-${node.slug}`}
+        type="button"
+        className={`family-echo-card${active ? " active" : ""}${featured ? " featured" : ""}${node.missingPage ? " missing-page" : ""}`}
+        onClick={() => { setSelected(node.slug); setAddRelMsg(""); }}
+      >
+        <span className="family-echo-avatar">
+          {node.image ? <img src={node.image} alt="" /> : <span>{node.name.slice(0, 2).toUpperCase()}</span>}
+        </span>
+        <span className="family-echo-name">{node.name}</span>
+        <span className="family-echo-status">{node.missingPage ? "No wiki page" : "Wiki page"}</span>
+      </button>
+    );
+  }
+
+  if (selectedFamilyTree) {
+    return (
+      <div className="family-echo-shell">
+        <aside className="family-echo-sidebar panel">
+          <Link href={`/campaigns/${campaignId}`} className="quiet-link">Campaign</Link>
+          <h2>Family Tree</h2>
+          <label>
+            <span>Tree</span>
+            <select value={selectedTreeId || selectedFamilyTree.id} onChange={(event) => { setSelectedTreeId(event.target.value); setSelected(null); }}>
+              {familyTrees.map((tree) => <option key={tree.id} value={tree.id}>{tree.name}</option>)}
+            </select>
+          </label>
+          <p className="muted">{selectedFamilyTree.nodes.length} people · {selectedFamilyTree.edges.length} family links</p>
+          <input
+            className="graph-search-input"
+            placeholder="Find a person..."
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+          />
+          <div className="family-echo-list" aria-label="People in family tree">
+            {echoPeople.map((node) => (
+              <button
+                key={node.slug}
+                type="button"
+                className={node.slug === echoSelectedNode?.slug ? "active" : ""}
+                onClick={() => { setSelected(node.slug); setAddRelMsg(""); }}
+              >
+                <span>{node.name}</span>
+                {!node.missingPage && <small>wiki</small>}
+              </button>
+            ))}
+          </div>
+        </aside>
+
+        <section className="family-echo-board" aria-label="Family Echo style tree">
+          {echoSelectedNode && (
+            <>
+              <div className="family-echo-generation parents">
+                <h3>Parents</h3>
+                <div>{echoRelatives.parents.length ? echoRelatives.parents.map((node) => echoCard(node, "parent")) : <span className="family-echo-empty">Unknown parents</span>}</div>
+              </div>
+              <div className="family-echo-generation focus">
+                <div className="family-echo-spouses">
+                  {echoRelatives.spouses.map((node) => echoCard(node, "spouse"))}
+                </div>
+                {echoCard(echoSelectedNode, "focus", true)}
+              </div>
+              <div className="family-echo-generation siblings">
+                <h3>Siblings</h3>
+                <div>{echoRelatives.siblings.length ? echoRelatives.siblings.map((node) => echoCard(node, "sibling")) : <span className="family-echo-empty">No known siblings</span>}</div>
+              </div>
+              <div className="family-echo-generation children">
+                <h3>Children</h3>
+                <div>{echoRelatives.children.length ? echoRelatives.children.map((node) => echoCard(node, "child")) : <span className="family-echo-empty">No known children</span>}</div>
+              </div>
+            </>
+          )}
+        </section>
+
+        {echoSelectedNode && (
+          <aside className="family-echo-detail panel">
+            <div className="graph-detail-header">
+              <span className="cat-dot" style={{ background: catColor(echoSelectedNode.category) }} />
+              <span className="muted">{echoSelectedNode.missingPage ? "Genealogy record" : "Wiki linked"}</span>
+            </div>
+            <h3>{echoSelectedNode.name}</h3>
+            <p className="muted graph-detail-summary">
+              {echoRelatives.parents.length} parents · {echoRelatives.spouses.length} spouses · {echoRelatives.children.length} children
+            </p>
+            {echoSelectedNode.missingPage ? (
+              <button type="button" className="button secondary graph-open-btn" disabled={createPageBusy} onClick={() => createPageForNode(echoSelectedNode)}>
+                {createPageBusy ? "Creating..." : "Create wiki page"}
+              </button>
+            ) : (
+              <a href={`/campaigns/${campaignId}/pages/${echoSelectedNode.pageSlug || echoSelectedNode.slug}`} className="button secondary graph-open-btn">
+                Open wiki page
+              </a>
+            )}
+            {addRelMsg && <p className="muted graph-rel-message">{addRelMsg}</p>}
+          </aside>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="graph-shell">
       <aside className="graph-filters panel">
@@ -666,7 +810,7 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
               ))}
             </select>
             <p className="muted graph-count">
-              {selectedFamilyTree?.nodes.length || 0} people · {selectedFamilyTree?.edges.length || 0} family links
+              {(familyTrees.find((tree) => tree.id === selectedTreeId) || familyTrees[0])?.nodes.length || 0} people · {(familyTrees.find((tree) => tree.id === selectedTreeId) || familyTrees[0])?.edges.length || 0} family links
             </p>
             <hr />
           </>

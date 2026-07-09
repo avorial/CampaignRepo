@@ -68,7 +68,7 @@ async function loadFamilyTrees(campaignId: number, storage: ReturnType<typeof ge
             id: String(node.id),
             name: String(node.name || node.id),
             pageSlug: page?.slug || node.pageSlug,
-            image: node.image || (page ? pageGraphImage(campaignId, page) : undefined),
+            image: graphImageSrc(campaignId, node.image) || (page ? pageGraphImage(campaignId, page) : undefined),
             category: page?.frontmatter.category || node.category || "character"
           };
         }),

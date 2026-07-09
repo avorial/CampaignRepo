@@ -1,5 +1,4 @@
 import type { CSSProperties } from "react";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { getCampaign } from "@/lib/db";
@@ -18,13 +17,6 @@ export default async function FamilyTreePage({ params }: { params: Promise<{ id:
   const themeVars = themeToCssVars(theme) as CSSProperties;
   return (
     <main className="app-shell family-tree-app" data-theme={theme.preset || undefined} style={themeVars}>
-      <header className="topbar">
-        <div>
-          <Link href={`/campaigns/${campaign.id}`} className="quiet-link">{campaign.name}</Link>
-          <h1>Family tree</h1>
-          <p className="muted">Trace bloodlines, marriages, siblings, guardians, and succession separately from the relationship graph.</p>
-        </div>
-      </header>
       <GraphClient campaignId={campaign.id} mode="family" />
     </main>
   );
