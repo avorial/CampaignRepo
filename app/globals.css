@@ -7416,6 +7416,92 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   pointer-events: none;
 }
 
+/* ---- Fullscreen imported genealogy viewer ---- */
+.family-tree-app {
+  height: 100svh;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+  width: 100vw;
+}
+
+.family-tree-app .topbar {
+  align-items: flex-start;
+  background: color-mix(in srgb, var(--bg-elevated) 82%, transparent);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  box-shadow: var(--shadow-soft);
+  left: 16px;
+  max-width: 270px;
+  padding: 12px;
+  position: fixed;
+  top: 14px;
+  z-index: 30;
+}
+
+.family-tree-app .topbar h1 {
+  font-size: 28px;
+  line-height: 0.95;
+}
+
+.family-tree-app .topbar p {
+  display: none;
+}
+
+.family-tree-app .graph-shell {
+  display: block;
+  height: 100svh;
+  margin: 0;
+  overflow: hidden;
+  position: relative;
+  width: 100vw;
+}
+
+.family-tree-app .graph-canvas {
+  border: 0;
+  border-radius: 0;
+  height: 100svh;
+  inset: 0;
+  position: absolute;
+  width: 100vw;
+}
+
+.family-tree-app .graph-filters {
+  background: color-mix(in srgb, var(--bg-elevated) 90%, transparent);
+  box-shadow: var(--shadow-soft);
+  left: 16px;
+  max-height: calc(100svh - 142px);
+  overflow-y: auto;
+  position: absolute;
+  top: 126px;
+  width: 270px;
+  z-index: 25;
+}
+
+.family-tree-app .graph-detail {
+  box-shadow: var(--shadow-soft);
+  margin: 0;
+  max-height: calc(100svh - 36px);
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  width: 280px;
+  z-index: 28;
+}
+
+.family-tree-app .graph-empty {
+  position: absolute;
+}
+
+.family-tree-app .graph-family-card rect {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.16));
+}
+
+.family-tree-app .graph-family-name {
+  font-size: 11px;
+  font-weight: 700;
+}
+
 /* ---- Slash command menu ---- */
 .slash-menu {
   background: var(--bg-surface);

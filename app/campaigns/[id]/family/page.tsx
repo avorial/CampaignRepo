@@ -17,7 +17,7 @@ export default async function FamilyTreePage({ params }: { params: Promise<{ id:
   const theme = await loadCampaignTheme(campaign, user.githubToken);
   const themeVars = themeToCssVars(theme) as CSSProperties;
   return (
-    <main className="app-shell" data-theme={theme.preset || undefined} style={themeVars}>
+    <main className="app-shell family-tree-app" data-theme={theme.preset || undefined} style={themeVars}>
       <header className="topbar">
         <div>
           <Link href={`/campaigns/${campaign.id}`} className="quiet-link">{campaign.name}</Link>

@@ -465,6 +465,15 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
     const minY = Math.min(...pts.map((p) => p.y));
     const maxY = Math.max(...pts.map((p) => p.y));
     const rect = svg.getBoundingClientRect();
+    if (selectedFamilyTree) {
+      const readableScale = 0.78;
+      setScale(readableScale);
+      setPan({
+        x: 120 - minX * readableScale,
+        y: 180 - minY * readableScale
+      });
+      return;
+    }
     const pad = selectedFamilyTree ? 180 : 120;
     const nextScale = Math.max(0.05, Math.min(1, rect.width / Math.max(maxX - minX + pad, 1), rect.height / Math.max(maxY - minY + pad, 1)));
     setScale(nextScale);
