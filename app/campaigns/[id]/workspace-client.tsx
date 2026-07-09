@@ -811,7 +811,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
             <h2>Create page</h2>
             <p className="muted create-page-hint">Your last category, template, and visibility are remembered for the next page.</p>
             <form onSubmit={createPage} className="stack">
-              <label>Name<input name="name" required placeholder="Victor Mendes" autoFocus /></label>
+              <label>Name<input name="name" required placeholder="Avery Stone" autoFocus /></label>
               <div className="create-page-grid">
                 <label>Category<select name="category" value={pageCategory} onChange={(event) => setPageCategory(event.target.value)}>{campaignCategories.map((cat) => <option key={cat.id} value={cat.id}>{cat.label}</option>)}</select></label>
                 <label>Template<select name="templatePath" value={pageTemplates.some((t) => t.path === createTemplatePath) ? createTemplatePath : ""} onChange={(event) => setCreateTemplatePath(event.target.value)}><option value="">Starter default</option>{pageTemplates.map((template) => <option key={template.path} value={template.path}>{template.gameType} - {template.category} - {template.name}</option>)}</select></label>
@@ -906,7 +906,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
                   </p>
                 </article>
               ))}
-              {!linkedNodes.length && <p className="muted">Use wiki links like [[Jardin]] to grow relationships.</p>}
+              {!linkedNodes.length && <p className="muted">Use wiki links like [[Old Harbor]] to grow relationships.</p>}
             </div>
           </div>
         </section>
@@ -918,8 +918,8 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
               <h2>Media Manager</h2>
               <form onSubmit={uploadMedia} className="stack">
                 <label>Media file<input name="file" type="file" accept="image/*,application/pdf,audio/*" required /></label>
-                <label>Alt text or link label<input name="alt" placeholder="Jardin subsector map" /></label>
-                <label>Caption<input name="caption" placeholder="Player-facing map of Jardin highport" /></label>
+                <label>Alt text or link label<input name="alt" placeholder="Regional map" /></label>
+                <label>Caption<input name="caption" placeholder="Player-facing map of the highport" /></label>
                 <label>Tags<input name="tags" placeholder="map, handout, jardin" /></label>
                 <button>Upload to /wiki/media</button>
               </form>
@@ -1001,7 +1001,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
             <div className="panel">
               <h2>Template Creator</h2>
               <form onSubmit={createTemplate} className="stack">
-                <label>Template name<input name="templateName" required placeholder="Solomani Patron" /></label>
+                <label>Template name<input name="templateName" required placeholder="Faction Patron" /></label>
                 <label>Game type<select name="gameType" defaultValue={campaign.gameType}>{gameTypeGroups.map((group) => (
                   <optgroup key={group.label} label={group.label}>{group.types.map((type) => <option key={type}>{type}</option>)}</optgroup>
                 ))}</select></label>

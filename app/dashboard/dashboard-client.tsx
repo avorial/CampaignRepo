@@ -275,7 +275,7 @@ export default function DashboardClient({
     <>
       <section className="dashboard-search-bar" aria-label="Search all campaign repositories">
         <form onSubmit={runSearch} className="dashboard-search-form">
-          <input name="q" placeholder="Search all repos: Jardin, SolSec, rumor..." />
+          <input name="q" placeholder="Search all repos: city, faction, rumor..." />
           <button>Search</button>
         </form>
         {search.length > 0 && (
@@ -430,7 +430,7 @@ export default function DashboardClient({
           </summary>
           <div className="dashboard-toggle-body">
             <form onSubmit={buildRepo} className="stack" style={{ marginTop: 4 }}>
-              <label>Campaign name<input name="name" required placeholder="The Jardin File" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} /></label>
+              <label>Campaign name<input name="name" required placeholder="The Lantern File" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} /></label>
               <label>Game system<select name="gameType">{gameTypeGroups.map((group) => (
                 <optgroup key={group.label} label={group.label}>{group.types.map((type) => <option key={type}>{type}</option>)}</optgroup>
               ))}</select></label>
@@ -472,8 +472,8 @@ export default function DashboardClient({
                       <span>Connect GitHub above, or keep <button type="button" className="linklike" onClick={() => { setMode("local"); setBuildError(""); }}>Local folder</button> to start without any account.</span>
                     </div>
                   )}
-                  {mode === "connect" && <label>Owner<input name="owner" placeholder="avorial (optional if pasting URL)" /></label>}
-                  {mode !== "local" && <label>{mode === "connect" ? "Repo name or URL" : "Repo name"}<input name="repo" required placeholder={mode === "connect" ? "kdwiki or https://github.com/avorial/kdwiki" : "jardin-campaign"} /></label>}
+                  {mode === "connect" && <label>Owner<input name="owner" placeholder="owner (optional if pasting URL)" /></label>}
+                  {mode !== "local" && <label>{mode === "connect" ? "Repo name or URL" : "Repo name"}<input name="repo" required placeholder={mode === "connect" ? "campaign-wiki or https://github.com/owner/campaign-wiki" : "lantern-campaign"} /></label>}
                   {mode !== "local" && <label>Branch<input name="branch" defaultValue="main" /></label>}
                   {mode === "create" && <label className="check"><input type="checkbox" name="private" defaultChecked /> Private repo</label>}
                 </div>

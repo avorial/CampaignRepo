@@ -45,7 +45,7 @@ export default function QuestsClient({ campaign }: { campaign: Campaign }) {
       <div className="panel">
         <h2>New quest</h2>
         <form onSubmit={create} className="stack">
-          <label>Title<input name="title" required placeholder="Recover the Jardin File" /></label>
+          <label>Title<input name="title" required placeholder="Recover the missing ledger" /></label>
           <button>Create quest</button>
         </form>
         {message && <p className="toast">{message}</p>}

@@ -12,19 +12,19 @@ import { buildAliasMap, resolveTarget, resolveLinkTarget } from "@/lib/links";
 
 describe("slug", () => {
   it("slugifies and round-trips a title (case preserved)", () => {
-    expect(slugify("Victor Mendes")).toBe("Victor-Mendes");
-    expect(slugify("  The Jardin File!  ")).toBe("The-Jardin-File");
+    expect(slugify("Avery Stone")).toBe("Avery-Stone");
+    expect(slugify("  The Lantern File!  ")).toBe("The-Lantern-File");
     expect(slugify("")).toBe("untitled");
-    expect(titleFromSlug("Victor-Mendes")).toBe("Victor Mendes");
+    expect(titleFromSlug("Avery-Stone")).toBe("Avery Stone");
   });
 });
 
 describe("wiki links", () => {
   it("parses plain and aliased links", () => {
-    const links = parseWikiLinks("See [[Jardin]] and [[Victor Mendes|Victor]].");
+    const links = parseWikiLinks("See [[Old Harbor]] and [[Avery Stone|Avery]].");
     expect(links).toEqual([
-      { target: "Jardin", label: "Jardin" },
-      { target: "Victor Mendes", label: "Victor" }
+      { target: "Old Harbor", label: "Old Harbor" },
+      { target: "Avery Stone", label: "Avery" }
     ]);
   });
 });
@@ -45,37 +45,37 @@ describe("frontmatter", () => {
     expect(fm.visibility).toBe("players");
     expect(fm.approvalStatus).toBe("approved");
 
-    const raw = serializePage(fm, "Body text [[Jardin]]");
+    const raw = serializePage(fm, "Body text [[Old Harbor]]");
     const page = parsePage("victor", raw);
     expect(page.frontmatter.name).toBe("Victor");
-    expect(page.outgoingLinks[0].target).toBe("Jardin");
+    expect(page.outgoingLinks[0].target).toBe("Old Harbor");
   });
 });
 
 describe("link resolution", () => {
   const pages = [
-    { slug: "jardin", name: "Jardin", aliases: ["The Garden"] },
-    { slug: "victor-mendes", name: "Victor Mendes", aliases: [] }
+    { slug: "old-harbor", name: "Old Harbor", aliases: ["The Harbor"] },
+    { slug: "Avery-Stone", name: "Avery Stone", aliases: [] }
   ];
   const aliasMap = buildAliasMap(pages);
   const known = new Set(pages.map((p) => p.slug));
 
   it("resolves by slug, name, and alias", () => {
-    expect(resolveTarget(aliasMap, "Jardin")).toBe("jardin");
-    expect(resolveTarget(aliasMap, "The Garden")).toBe("jardin");
-    expect(resolveTarget(aliasMap, "Victor Mendes")).toBe("victor-mendes");
+    expect(resolveTarget(aliasMap, "Old Harbor")).toBe("old-harbor");
+    expect(resolveTarget(aliasMap, "The Harbor")).toBe("old-harbor");
+    expect(resolveTarget(aliasMap, "Avery Stone")).toBe("Avery-Stone");
   });
 
   it("falls back to slugify and flags missing targets", () => {
-    expect(resolveLinkTarget(aliasMap, known, "Jardin")).toEqual({ slug: "jardin", missing: false });
+    expect(resolveLinkTarget(aliasMap, known, "Old Harbor")).toEqual({ slug: "old-harbor", missing: false });
     expect(resolveLinkTarget(aliasMap, known, "Unknown Place")).toEqual({ slug: "Unknown-Place", missing: true });
   });
 });
 
 describe("renderMarkdown", () => {
   const resolve = (target: string) =>
-    target.toLowerCase() === "jardin"
-      ? { href: "/campaigns/1/pages/jardin", missing: false }
+    target.toLowerCase() === "old harbor"
+      ? { href: "/campaigns/1/pages/old-harbor", missing: false }
       : { href: "/campaigns/1/pages/" + slugify(target), missing: true };
 
   it("renders rich Markdown (lists, code)", () => {
@@ -85,9 +85,9 @@ describe("renderMarkdown", () => {
   });
 
   it("adds heading ids and resolves section links", () => {
-    const html = renderMarkdown("## Public Face\n\n[[Jardin#Public Face]]", "gm", resolve);
+    const html = renderMarkdown("## Public Face\n\n[[Old Harbor#Public Face]]", "gm", resolve);
     expect(html).toContain('id="public-face"');
-    expect(html).toContain('href="/campaigns/1/pages/jardin#public-face"');
+    expect(html).toContain('href="/campaigns/1/pages/old-harbor#public-face"');
   });
 
   it("renders :::gallery blocks into an image grid", () => {
@@ -98,8 +98,8 @@ describe("renderMarkdown", () => {
   });
 
   it("expands ![[Page]] embeds inline", () => {
-    const includeResolve = (target: string) => (target.toLowerCase() === "jardin" ? "Embedded **lore** body." : null);
-    const html = renderMarkdown("Intro.\n\n![[Jardin]]", "gm", resolve, undefined, includeResolve);
+    const includeResolve = (target: string) => (target.toLowerCase() === "old harbor" ? "Embedded **lore** body." : null);
+    const html = renderMarkdown("Intro.\n\n![[Old Harbor]]", "gm", resolve, undefined, includeResolve);
     expect(html).toContain("Embedded");
     expect(html).toContain("<strong>lore</strong>");
   });
@@ -114,28 +114,28 @@ describe("renderMarkdown", () => {
   });
 
   it("renders wiki-links with hrefs and flags missing ones", () => {
-    const html = renderMarkdown("[[Jardin]] and [[SolSec]]", "gm", resolve);
-    expect(html).toContain('href="/campaigns/1/pages/jardin"');
+    const html = renderMarkdown("[[Old Harbor]] and [[Missing Faction]]", "gm", resolve);
+    expect(html).toContain('href="/campaigns/1/pages/old-harbor"');
     expect(html).toContain('class="wiki-link"');
     expect(html).toContain("wiki-link missing");
     expect(html).toContain('data-missing="true"');
   });
 
   it("rewrites campaign media paths with the provided resolver", () => {
-    const html = renderMarkdown("![Portrait](/wiki/media/Cass-Pien.png)", "gm", undefined, (path) => `/campaign-media/1/${path}`);
-    expect(html).toContain('src="/campaign-media/1/Cass-Pien.png"');
+    const html = renderMarkdown("![Portrait](/wiki/media/Portrait-Example.png)", "gm", undefined, (path) => `/campaign-media/1/${path}`);
+    expect(html).toContain('src="/campaign-media/1/Portrait-Example.png"');
     expect(html).toContain('alt="Portrait"');
   });
 
   it("renders traveller-sheet fenced blocks as designed sheet HTML", () => {
-    const html = renderMarkdown("Before\n\n```traveller-sheet\nheader:\n  left: Third Imperium\n  center: Muster File\n  right: TAS-7\nportrait: Victor.png\nname: Victor Mendes\nspecies: Racial Solomani\ncharacteristics:\n  STR: 12\nskills:\n  Advocate: 0\n  Diplomat: 2\n  \"Tactics (Naval)\": 1\nitems:\n  Vacc suit patches: 3, Field kit\ngear:\n  Spare Filter: 2, backup\nweapons:\n  Laser Pistol: 3D, Medium, sidearm\narmour:\n  Cloth: 8, jacket\nholdings:\n  Ship Share: collateral\npeople:\n  Fixer: ally\npsionics:\n  Telepathy: 1, trained\n```\n\nAfter", "gm");
+    const html = renderMarkdown("Before\n\n```traveller-sheet\nheader:\n  left: Third Imperium\n  center: Muster File\n  right: TAS-7\nportrait: Avery.png\nname: Avery Stone\nspecies: Racial Solomani\ncharacteristics:\n  STR: 12\nskills:\n  Advocate: 0\n  Diplomat: 2\n  \"Tactics (Naval)\": 1\nitems:\n  Vacc suit patches: 3, Field kit\ngear:\n  Spare Filter: 2, backup\nweapons:\n  Laser Pistol: 3D, Medium, sidearm\narmour:\n  Cloth: 8, jacket\nholdings:\n  Ship Share: collateral\npeople:\n  Fixer: ally\npsionics:\n  Telepathy: 1, trained\n```\n\nAfter", "gm");
 
     expect(html).toContain('class="tsheet"');
-    expect(html).toContain("Victor Mendes");
+    expect(html).toContain("Avery Stone");
     expect(html).toContain("Third Imperium");
     expect(html).toContain("Muster File");
     expect(html).toContain("TAS-7");
-    expect(html).toContain('src="/wiki/media/Victor.png"');
+    expect(html).toContain('src="/wiki/media/Avery.png"');
     expect(html).toContain("Racial Solomani");
     expect(html).toContain("Diplomat");
     expect(html).toContain("Vacc Suit");

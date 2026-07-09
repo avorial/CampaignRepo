@@ -31,6 +31,14 @@ vi.mock("@/lib/github", () => ({
   putFile: mocks.putFile,
   listDirectory: vi.fn(async () => [])
 }));
+vi.mock("@/lib/storage", () => ({
+  getStorageAdapter: vi.fn(() => ({
+    getTextFile: mocks.getTextFile,
+    putFile: mocks.putFile
+  })),
+  isConflictError: (error: unknown) => Boolean((error as { status?: number })?.status === 409 || (error as { status?: number })?.status === 422),
+  isNotFoundError: (error: unknown) => Boolean((error as { status?: number })?.status === 404)
+}));
 vi.mock("@/lib/search", () => ({ scheduleSearchIndexRebuild: mocks.scheduleSearchIndexRebuild }));
 vi.mock("@/lib/page-cache", () => ({
   readPageCache: mocks.readPageCache,
@@ -102,8 +110,6 @@ describe("page creation", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ slug: "New-Contact" });
     expect(mocks.putFile).toHaveBeenCalledWith(
-      "token",
-      expect.objectContaining({ id: 2 }),
       "wiki/pages/New-Contact.md",
       expect.any(String),
       "CampaignRepo: create New Contact"

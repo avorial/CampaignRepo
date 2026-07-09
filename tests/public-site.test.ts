@@ -40,7 +40,7 @@ objectives:
 participants:
   - Annette
 locations:
-  - Jardin
+  - Old Harbor
 clocks:
   - name: Heat
     segments: 6

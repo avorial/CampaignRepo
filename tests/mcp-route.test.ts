@@ -1,11 +1,14 @@
 import { describe, it, expect, beforeAll, vi } from "vitest";
 
-// Keep GitHub and the search rebuild out of the test; the route only needs to
+// Keep storage and the search rebuild out of the test; the route only needs to
 // reach its auth/role logic and the unapproved-status write path.
-vi.mock("@/lib/github", () => ({
+vi.mock("@/lib/storage", () => ({
+  getStorageAdapter: vi.fn(() => ({
   getTextFile: vi.fn(async () => ({ sha: "sha", text: "---\nname: Existing\n---\nbody" })),
   putFile: vi.fn(async () => {}),
-  listDirectory: vi.fn(async () => [])
+    listDirectoryTextFiles: vi.fn(async () => []),
+    commitFiles: vi.fn(async () => ({ commit: "commit", files: 0 }))
+  }))
 }));
 vi.mock("@/lib/search", () => ({ scheduleSearchIndexRebuild: vi.fn() }));
 

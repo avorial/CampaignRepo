@@ -210,10 +210,10 @@ describe("public sites", () => {
   it("publishes with a custom URL-safe link name", () => {
     const id = createOwnedCampaign("Custom Public");
 
-    const site = publishCampaign(gmId, id, "Sparks of the Past!");
+    const site = publishCampaign(gmId, id, "Lanterns in the Fog!");
 
-    expect(site.slug).toBe("sparks-of-the-past");
-    expect(getPublicSiteCampaign("sparks-of-the-past")?.id).toBe(id);
+    expect(site.slug).toBe("lanterns-in-the-fog");
+    expect(getPublicSiteCampaign("lanterns-in-the-fog")?.id).toBe(id);
   });
 
   it("can rename an existing public link while republishing", () => {

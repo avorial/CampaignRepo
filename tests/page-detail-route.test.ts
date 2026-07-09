@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/auth", () => ({ requireUser: vi.fn(async () => ({ id: 1 })) }));
 vi.mock("@/lib/db", () => ({
-  getCampaign: vi.fn(() => ({ id: 4, owner: "avorial", repo: "kingdomdivided", branch: "main", role: "owner" })),
+  getCampaign: vi.fn(() => ({ id: 4, owner: "owner", repo: "campaign-wiki", branch: "main", role: "owner" })),
   getCampaignRepositoryToken: vi.fn(() => "installation-token"),
   canManageCampaign: vi.fn(() => true)
 }));
@@ -19,6 +19,11 @@ vi.mock("@/lib/github", () => ({
   GitHubError: class GitHubError extends Error {
     constructor(message: string, public status?: number) { super(message); }
   }
+}));
+vi.mock("@/lib/storage", () => ({
+  getStorageAdapter: vi.fn(() => ({
+    getTextFile: mocks.getTextFile
+  }))
 }));
 vi.mock("@/lib/search", () => ({ scheduleSearchIndexRebuild: vi.fn() }));
 vi.mock("@/lib/page-cache", () => ({
@@ -31,23 +36,23 @@ import { GET } from "@/app/api/campaigns/[id]/pages/[slug]/route";
 describe("page detail reads", () => {
   it("serves a valid linked page from the local cache without a GitHub REST request", async () => {
     const page = {
-      slug: "House-Bellkind",
+      slug: "House-Aster",
       sha: "cached-sha",
       frontmatter: {
-        name: "House Bellkind",
+        name: "House Aster",
         category: "organization",
         visibility: "players",
         approvalStatus: "unapproved"
       },
-      content: "Liege: [[House-Rivers|House Rivers]]",
+      content: "Liege: [[House-River|House River]]",
       raw: "cached",
-      outgoingLinks: [{ target: "House-Rivers", label: "House Rivers" }],
+      outgoingLinks: [{ target: "House-River", label: "House River" }],
       backlinks: []
     };
     mocks.readPageCache.mockReturnValue({ pages: [page], refreshedAt: "2026-06-23", refreshError: null });
 
-    const response = await GET(new Request("http://localhost/api/campaigns/4/pages/House-Bellkind"), {
-      params: Promise.resolve({ id: "4", slug: "House-Bellkind" })
+    const response = await GET(new Request("http://localhost/api/campaigns/4/pages/House-Aster"), {
+      params: Promise.resolve({ id: "4", slug: "House-Aster" })
     });
 
     expect(response.status).toBe(200);

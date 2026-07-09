@@ -557,7 +557,7 @@ export default function ImportClient({ campaignId, campaignName }: { campaignId:
 
           <textarea
             className="import-textarea"
-            placeholder={'{"name":"Victor Mendes","type":"npc","system":{"biography":{"value":"<p>A dockside fixer…</p>"}}}'}
+            placeholder={'{"name":"Avery Stone","type":"npc","system":{"biography":{"value":"<p>A dockside fixer…</p>"}}}'}
             value={charJson}
             onChange={(e) => setCharJson(e.target.value)}
             rows={10}

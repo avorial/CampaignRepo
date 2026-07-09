@@ -884,7 +884,7 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
         <section className="family-echo-board family-echo-empty-board" aria-label="Create family tree">
           <div className="family-echo-create panel">
             <h3>Create Family Tree</h3>
-            <input value={newTreeName} onChange={(event) => setNewTreeName(event.target.value)} placeholder="Bellringer Noble Lines" />
+            <input value={newTreeName} onChange={(event) => setNewTreeName(event.target.value)} placeholder="Noble Lineage" />
             <button type="button" className="button" disabled={familySaveBusy} onClick={createFamilyTree}>
               {familySaveBusy ? "Creating..." : "Create Tree"}
             </button>
@@ -1009,11 +1009,11 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
                 </label>
                 <label>
                   <span>Wiki page slug</span>
-                  <input value={echoSelectedNode.pageSlug || ""} onChange={(event) => updateSelectedFamilyNode({ pageSlug: event.target.value || undefined })} placeholder="Conner-Silverridge" />
+                  <input value={echoSelectedNode.pageSlug || ""} onChange={(event) => updateSelectedFamilyNode({ pageSlug: event.target.value || undefined })} placeholder="Existing-Page-Slug" />
                 </label>
                 <label>
                   <span>Portrait path or URL</span>
-                  <input value={echoSelectedNode.image || ""} onChange={(event) => updateSelectedFamilyNode({ image: event.target.value || undefined })} placeholder="wiki/media/family-echo/I1.jpg" />
+                  <input value={echoSelectedNode.image || ""} onChange={(event) => updateSelectedFamilyNode({ image: event.target.value || undefined })} placeholder="wiki/media/portraits/person.jpg" />
                 </label>
               </div>
             ) : (
@@ -1346,10 +1346,10 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
 
       {isFamilyMode && !loading && !selectedFamilyTree && (
         <div className="graph-empty panel">
-          <h3>No imported family tree yet</h3>
+          <h3>No family tree yet</h3>
           <p className="muted">
-            Add a JSON tree under <code>wiki/family-trees/</code>. Imported genealogy data appears here as a dedicated
-            Family Echo-style tree, with links to existing wiki pages where available.
+            Create a tree here or add JSON under <code>wiki/family-trees/</code>. Genealogy data appears as a dedicated
+            family-tree view, with links to existing wiki pages where available.
           </p>
         </div>
       )}
