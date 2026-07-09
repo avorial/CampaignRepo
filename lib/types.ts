@@ -393,6 +393,9 @@ export type CampaignGraphNode = {
   category: Category;
   summary: string;
   image?: string;
+  pageSlug?: string;
+  familyId?: string;
+  missingPage?: boolean;
   tags: string[];
   visibility: Visibility;
   approvalStatus: ApprovalStatus;
@@ -408,6 +411,29 @@ export type CampaignGraphEdge = {
   missing: boolean;
   relType?: string;
   relEditable?: boolean;
+};
+
+export type CampaignFamilyTreeNode = {
+  id: string;
+  name: string;
+  pageSlug?: string;
+  image?: string;
+  category?: Category;
+};
+
+export type CampaignFamilyTreeEdge = {
+  source: string;
+  target: string;
+  type: string;
+  label?: string;
+};
+
+export type CampaignFamilyTree = {
+  id: string;
+  name: string;
+  source?: string;
+  nodes: CampaignFamilyTreeNode[];
+  edges: CampaignFamilyTreeEdge[];
 };
 
 export type CampaignTimelineItem = {

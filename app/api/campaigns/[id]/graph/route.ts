@@ -5,7 +5,7 @@ import { parsePage, stripGmBlocks } from "@/lib/markdown";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import { readPageCache, refreshPageCache, refreshPageCacheInBackground } from "@/lib/page-cache";
 import { getStorageAdapter } from "@/lib/storage";
-import type { CampaignGraphEdge, CampaignGraphNode, CampaignTimelineItem, WikiPage } from "@/lib/types";
+import type { CampaignFamilyTree, CampaignGraphEdge, CampaignGraphNode, CampaignTimelineItem, WikiPage } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +30,62 @@ function pageGraphImage(campaignId: number, page: WikiPage) {
   if (explicit) return explicit;
   const match = page.content.match(/!\[[^\]]*]\(([^)\s]+)(?:\s+"[^"]*")?\)/);
   return match ? graphImageSrc(campaignId, match[1]) : undefined;
+}
+
+function lookupKey(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+async function loadFamilyTrees(campaignId: number, storage: ReturnType<typeof getStorageAdapter>, pages: WikiPage[]) {
+  if (!storage) return [];
+  const bySlug = new Map(pages.map((page) => [page.slug, page]));
+  const byName = new Map<string, WikiPage>();
+  for (const page of pages) {
+    byName.set(lookupKey(page.frontmatter.name), page);
+    for (const alias of page.frontmatter.aliases || []) byName.set(lookupKey(alias), page);
+  }
+  const files = await storage.listDirectoryTextFiles("wiki/family-trees", ".json").catch(() => []);
+  const trees: CampaignFamilyTree[] = [];
+  for (const file of files) {
+    if (!file.text) continue;
+    try {
+      const raw = JSON.parse(file.text) as CampaignFamilyTree;
+      const id = raw.id || file.name.replace(/\.json$/i, "");
+      const nodes = Array.isArray(raw.nodes) ? raw.nodes : [];
+      const edges = Array.isArray(raw.edges) ? raw.edges : [];
+      trees.push({
+        id,
+        name: raw.name || id,
+        source: raw.source || file.path,
+        nodes: nodes.map((node) => {
+          const page = (node.pageSlug ? bySlug.get(node.pageSlug) : undefined) || byName.get(lookupKey(node.name));
+          return {
+            id: String(node.id),
+            name: String(node.name || node.id),
+            pageSlug: page?.slug || node.pageSlug,
+            image: node.image || (page ? pageGraphImage(campaignId, page) : undefined),
+            category: page?.frontmatter.category || node.category || "character"
+          };
+        }),
+        edges: edges
+          .filter((edge) => edge?.source && edge?.target)
+          .map((edge) => ({
+            source: String(edge.source),
+            target: String(edge.target),
+            type: String(edge.type || "related-to"),
+            label: edge.label
+          }))
+      });
+    } catch {
+      // Ignore malformed tree data rather than breaking the whole graph.
+    }
+  }
+  return trees;
 }
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -115,5 +171,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     }))
     .sort((a, b) => (a.eventDate || "9999").localeCompare(b.eventDate || "9999") || a.name.localeCompare(b.name));
 
-  return NextResponse.json({ nodes, edges, timeline });
+  const familyTrees = await loadFamilyTrees(campaign.id, storage, pages);
+
+  return NextResponse.json({ nodes, edges, timeline, familyTrees });
 }

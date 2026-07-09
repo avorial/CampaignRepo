@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CampaignGraphEdge, CampaignGraphNode } from "@/lib/types";
+import type { CampaignFamilyTree, CampaignGraphEdge, CampaignGraphNode } from "@/lib/types";
 import { RELATIONSHIP_TYPES, REL_TYPE_MAP } from "@/lib/relationships";
 
 // === Physics simulation ===
@@ -188,6 +188,8 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
   const svgRef = useRef<SVGSVGElement>(null);
   const [nodes, setNodes] = useState<CampaignGraphNode[]>([]);
   const [edges, setEdges] = useState<CampaignGraphEdge[]>([]);
+  const [familyTrees, setFamilyTrees] = useState<CampaignFamilyTree[]>([]);
+  const [selectedTreeId, setSelectedTreeId] = useState("");
   const [loading, setLoading] = useState(true);
   const [positions, setPositions] = useState<Map<string, Pos>>(new Map());
   const [simDone, setSimDone] = useState(false);
@@ -207,6 +209,7 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
   const [addRelTarget, setAddRelTarget] = useState("");
   const [addRelBusy, setAddRelBusy] = useState(false);
   const [addRelMsg, setAddRelMsg] = useState("");
+  const [createPageBusy, setCreatePageBusy] = useState(false);
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
   const [deleteRelBusy, setDeleteRelBusy] = useState<string | null>(null);
 
@@ -216,6 +219,8 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
       .catch(() => ({ nodes: [], edges: [] }));
     setNodes(data.nodes || []);
     setEdges(data.edges || []);
+    setFamilyTrees(data.familyTrees || []);
+    setSelectedTreeId((current) => current || data.familyTrees?.[0]?.id || "");
     setLoading(false);
   }, [campaignId]);
 
@@ -235,9 +240,42 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
     }
     return slugs;
   }, [familyEdges]);
+  const selectedFamilyTree = useMemo(
+    () => (isFamilyMode ? familyTrees.find((tree) => tree.id === selectedTreeId) || familyTrees[0] : undefined),
+    [isFamilyMode, familyTrees, selectedTreeId]
+  );
+  const familyTreeNodes = useMemo<CampaignGraphNode[]>(() => {
+    if (!selectedFamilyTree) return [];
+    return selectedFamilyTree.nodes.map((node) => ({
+      slug: `family:${selectedFamilyTree.id}:${node.id}`,
+      familyId: node.id,
+      pageSlug: node.pageSlug,
+      missingPage: !node.pageSlug,
+      name: node.name,
+      category: node.category || "character",
+      summary: node.pageSlug ? "Linked to a wiki page." : "No wiki page yet.",
+      image: node.image,
+      tags: [],
+      visibility: "players",
+      approvalStatus: "approved",
+      keyLinks: [],
+      outgoingLinks: [],
+      backlinks: []
+    }));
+  }, [selectedFamilyTree]);
+  const familyTreeEdges = useMemo<CampaignGraphEdge[]>(() => {
+    if (!selectedFamilyTree) return [];
+    return selectedFamilyTree.edges.map((edge) => ({
+      source: `family:${selectedFamilyTree.id}:${edge.source}`,
+      target: `family:${selectedFamilyTree.id}:${edge.target}`,
+      label: edge.label || edge.type,
+      missing: false,
+      relType: edge.type
+    }));
+  }, [selectedFamilyTree]);
   const baseNodes = useMemo(
-    () => (isFamilyMode ? nodes.filter((n) => familySlugs.has(n.slug)) : nodes),
-    [isFamilyMode, nodes, familySlugs]
+    () => (selectedFamilyTree ? familyTreeNodes : isFamilyMode ? nodes.filter((n) => familySlugs.has(n.slug)) : nodes),
+    [selectedFamilyTree, familyTreeNodes, isFamilyMode, nodes, familySlugs]
   );
   const visibleNodes = useMemo(
     () => baseNodes.filter((n) => filterCats.has(n.category)),
@@ -246,7 +284,7 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
   const visibleSlugs = useMemo(() => new Set(visibleNodes.map((n) => n.slug)), [visibleNodes]);
   const visibleEdges = useMemo(
     () =>
-      edges.filter(
+      (selectedFamilyTree ? familyTreeEdges : edges).filter(
         (e) =>
           !e.missing &&
           visibleSlugs.has(e.source) &&
@@ -255,7 +293,7 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
           (!showRelOnly || Boolean(e.relType)) &&
           (!e.relType || filterRelCats.has(REL_TYPE_MAP.get(e.relType)?.category ?? "generic"))
       ),
-    [edges, visibleSlugs, isFamilyMode, showRelOnly, filterRelCats]
+    [edges, familyTreeEdges, selectedFamilyTree, visibleSlugs, isFamilyMode, showRelOnly, filterRelCats]
   );
 
   const hierarchyEdges = useMemo(
@@ -359,7 +397,7 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
     setSelected(slug);
   }, []);
 
-  const selectedNode = selected ? nodes.find((n) => n.slug === selected) : null;
+  const selectedNode = selected ? baseNodes.find((n) => n.slug === selected) : null;
   const connectedSlugs = useMemo(() => {
     if (!selected) return new Set<string>();
     const s = new Set<string>([selected]);
@@ -378,16 +416,16 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
     () => (selected ? visibleEdges.filter((e) => e.target === selected) : []),
     [selected, visibleEdges]
   );
-  const nodeMap = useMemo(() => new Map(nodes.map((n) => [n.slug, n])), [nodes]);
+  const nodeMap = useMemo(() => new Map(baseNodes.map((n) => [n.slug, n])), [baseNodes]);
   const usedCats = useMemo(() => [...new Set(baseNodes.map((n) => n.category))].sort(), [baseNodes]);
   const usedRelCats = useMemo(() => {
     const cats = new Set<string>();
-    const sourceEdges = isFamilyMode ? familyEdges : edges;
+    const sourceEdges = selectedFamilyTree ? familyTreeEdges : isFamilyMode ? familyEdges : edges;
     for (const e of sourceEdges) {
       if (e.relType) cats.add(REL_TYPE_MAP.get(e.relType)?.category ?? "generic");
     }
     return [...cats].sort();
-  }, [edges, familyEdges, isFamilyMode]);
+  }, [edges, familyEdges, familyTreeEdges, selectedFamilyTree, isFamilyMode]);
 
   const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -543,6 +581,30 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
     }
   }
 
+  async function createPageForNode(node: CampaignGraphNode) {
+    setCreatePageBusy(true);
+    setAddRelMsg("");
+    const res = await fetch(`/api/campaigns/${campaignId}/pages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: node.name,
+        category: node.category || "character",
+        visibility: "players",
+        content: `# ${node.name}\n\nImported from the family tree. Fill in biography, titles, house, and campaign notes.\n\n## Family\n\nOpen the Family Tree to review relatives and lineage.\n`
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    setCreatePageBusy(false);
+    if (res.ok || res.status === 409) {
+      setAddRelMsg(res.ok ? "Wiki page created." : "A wiki page already exists.");
+      await loadGraph();
+      if (data.slug) window.location.href = `/campaigns/${campaignId}/pages/${data.slug}?edit=1`;
+    } else {
+      setAddRelMsg(data.error || "Could not create wiki page.");
+    }
+  }
+
   const dimmed = (slug: string) => {
     if (searchMatchSlugs) return !searchMatchSlugs.has(slug);
     if (selected) return !connectedSlugs.has(slug);
@@ -552,6 +614,20 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
   return (
     <div className="graph-shell">
       <aside className="graph-filters panel">
+        {isFamilyMode && familyTrees.length > 0 && (
+          <>
+            <h4>Family tree</h4>
+            <select value={selectedTreeId || familyTrees[0]?.id || ""} onChange={(event) => setSelectedTreeId(event.target.value)}>
+              {familyTrees.map((tree) => (
+                <option key={tree.id} value={tree.id}>{tree.name}</option>
+              ))}
+            </select>
+            <p className="muted graph-count">
+              {selectedFamilyTree?.nodes.length || 0} people · {selectedFamilyTree?.edges.length || 0} family links
+            </p>
+            <hr />
+          </>
+        )}
         <div className="graph-search-wrap">
           <input
             className="graph-search-input"
@@ -729,6 +805,46 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
             const initials = node.name.slice(0, 2).toUpperCase();
             const color = catColor(node.category);
             const showImage = isFamilyMode && Boolean(node.image);
+            if (selectedFamilyTree) {
+              return (
+                <g
+                  key={node.slug}
+                  className={["graph-node", "graph-family-card", isSel ? "graph-node-selected" : "", isDim ? "graph-node-dim" : ""].join(" ")}
+                  transform={`translate(${pos.x}, ${pos.y})`}
+                  onPointerDown={(e) => onNodePointerDown(e, node.slug)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <rect
+                    x={-68}
+                    y={-28}
+                    width={136}
+                    height={56}
+                    rx={6}
+                    fill={node.missingPage ? "var(--bg-base)" : "var(--bg-elevated)"}
+                    stroke={isSel ? "var(--gold)" : node.missingPage ? "var(--border-soft)" : color}
+                    strokeDasharray={node.missingPage ? "4 3" : undefined}
+                    strokeWidth={isSel ? 2.5 : 1.2}
+                    opacity={isDim ? 0.35 : 0.98}
+                  />
+                  {showImage ? (
+                    <image href={node.image} x={-58} y={-18} width={36} height={36} preserveAspectRatio="xMidYMid slice" opacity={isDim ? 0.35 : 1} />
+                  ) : (
+                    <circle cx={-40} cy={0} r={18} fill={color} fillOpacity={node.missingPage ? 0.28 : 0.8} />
+                  )}
+                  {!showImage && (
+                    <text x={-40} y={0} textAnchor="middle" dominantBaseline="central" className="graph-node-initials" fillOpacity={isDim ? 0.4 : 1}>
+                      {initials}
+                    </text>
+                  )}
+                  <text x={-12} y={-4} className="graph-node-label graph-family-name" fillOpacity={isDim ? 0.35 : 1}>
+                    {node.name.length > 22 ? node.name.slice(0, 20) + "..." : node.name}
+                  </text>
+                  <text x={-12} y={14} className="graph-edge-label" fillOpacity={isDim ? 0.25 : 0.72}>
+                    {node.missingPage ? "create page" : "wiki page"}
+                  </text>
+                </g>
+              );
+            }
             return (
               <g
                 key={node.slug}
@@ -785,10 +901,15 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
             </button>
           </div>
           <h3>
-            <a href={`/campaigns/${campaignId}/pages/${selectedNode.slug}`} className="quiet-link">
+            {selectedNode.pageSlug || !selectedNode.missingPage ? (
+            <a href={`/campaigns/${campaignId}/pages/${selectedNode.pageSlug || selectedNode.slug}`} className="quiet-link">
               {selectedNode.name}
             </a>
+            ) : (
+              selectedNode.name
+            )}
           </h3>
+          {selectedNode.missingPage && <p className="muted graph-detail-summary">No wiki page yet. Create one when this person is ready for a full entry.</p>}
           {selectedNode.summary && <p className="muted graph-detail-summary">{selectedNode.summary}</p>}
 
           {selectedOutgoing.length > 0 && (
@@ -837,6 +958,7 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
             </div>
           )}
 
+          {!selectedFamilyTree && (
           <div className="graph-detail-section">
             {!addRelOpen ? (
               <button
@@ -876,10 +998,18 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
             )}
             {addRelMsg && !addRelOpen && <p className="muted graph-rel-message">{addRelMsg}</p>}
           </div>
+          )}
 
-          <a href={`/campaigns/${campaignId}/pages/${selectedNode.slug}`} className="button secondary graph-open-btn">
-            Open page
-          </a>
+          {selectedNode.missingPage ? (
+            <button type="button" className="button secondary graph-open-btn" disabled={createPageBusy} onClick={() => createPageForNode(selectedNode)}>
+              {createPageBusy ? "Creating..." : "Create wiki page"}
+            </button>
+          ) : (
+            <a href={`/campaigns/${campaignId}/pages/${selectedNode.pageSlug || selectedNode.slug}`} className="button secondary graph-open-btn">
+              Open page
+            </a>
+          )}
+          {addRelMsg && selectedFamilyTree && <p className="muted graph-rel-message">{addRelMsg}</p>}
         </aside>
       )}
     </div>
