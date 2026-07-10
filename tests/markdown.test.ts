@@ -127,7 +127,7 @@ describe("renderMarkdown", () => {
     expect(html).toContain('alt="Portrait"');
   });
 
-  it("renders sword-chronicle-sheet fenced blocks with derived stats and roll pools", () => {
+  it("renders sword-chronicle-sheet fenced blocks with derived stats", () => {
     const html = renderMarkdown(
       [
         "```sword-chronicle-sheet",
@@ -173,12 +173,16 @@ describe("renderMarkdown", () => {
     expect(html).toContain(">9</span><span class=\"scsheet-stat-key\">Composure");
     expect(html).toContain(">12</span><span class=\"scsheet-stat-key\">Health");
 
-    // Fighting 5 rolls 5d6 keep 3; its Long Blades 2B specialty rolls 7d6 keep 3.
-    expect(html).toContain('data-roll="pool" data-dice="5" data-keep="3" data-label="Fighting 5D"');
-    expect(html).toContain('data-dice="7" data-keep="3" data-label="Fighting (Long Blades) 5D + 2B"');
+    // Specialties render their bonus dice alongside the ability rating.
+    expect(html).toContain("Long Blades <b>2B</b>");
+    expect(html).toContain("Fighting");
 
-    // Unlisted abilities still render at the Chronicle default rating of 2.
-    expect(html).toContain('data-label="Thievery 2D"');
+    // The sheet is display-only: nothing in it is clickable/rollable.
+    expect(html).not.toContain("data-roll");
+
+    // Every printed ability renders, unlisted ones at the Chronicle default of 2.
+    expect(html).toContain("Thievery");
+    expect(html).toContain("Animal Handling");
     expect(html).toContain("Sworn to the Riverlands");
     expect(html).toContain("Grey");
   });

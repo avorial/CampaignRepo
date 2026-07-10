@@ -8893,12 +8893,9 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
 
 .scsheet-ability-main {
   align-items: center;
-  cursor: pointer;
   display: flex;
   gap: 9px;
 }
-
-.scsheet-ability-main:hover .scsheet-rating { background: #f6cf6d; color: #14100a; }
 
 .scsheet-rating {
   align-items: center;
@@ -8923,12 +8920,10 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   border: 1px solid #6f5c2c;
   border-radius: 999px;
   color: #d8c489;
-  cursor: pointer;
   font-size: 11px;
   padding: 2px 8px;
 }
 
-.scsheet-spec:hover { background: #6f5c2c; color: #fff4d7; }
 .scsheet-spec b { color: #f6cf6d; }
 .scsheet-empty-inline { color: #4a3d1e; font-size: 12px; }
 

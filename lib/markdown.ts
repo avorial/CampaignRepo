@@ -1465,10 +1465,6 @@ function normalizeSwordChronicleSheet(input: unknown): SwordChronicleSheet {
   };
 }
 
-/** Chronicle tests roll a pool of d6 and sum the best three. */
-const swordPool = (dice: number, label: string) =>
-  ` data-roll="pool" data-dice="${Math.max(1, dice)}" data-keep="3" data-label="${escapeHtml(label)}"`;
-
 function swordTrack(filled: number, total: number, className: string) {
   return `<span class="scsheet-track ${className}">${Array.from({ length: total }, (_, index) =>
     `<i class="${index < filled ? "on" : ""}"></i>`
@@ -1506,12 +1502,11 @@ function renderSwordChronicleSheetHtml(rawInput: string) {
     const specialties = (ability.specialties || [])
       .map((specialty) => {
         const bonus = specialty.rank ?? 1;
-        const label = `${ability.name} (${specialty.name}) ${rating}D + ${bonus}B`;
-        return `<span class="scsheet-spec"${swordPool(rating + bonus, label)} title="Roll ${rating + bonus}D6, keep best 3">${escapeHtml(specialty.name)} <b>${bonus}B</b></span>`;
+        return `<span class="scsheet-spec">${escapeHtml(specialty.name)} <b>${bonus}B</b></span>`;
       })
       .join("");
     return `<li class="scsheet-ability">
-      <span class="scsheet-ability-main"${swordPool(rating, `${ability.name} ${rating}D`)} title="Roll ${rating}D6, keep best 3">
+      <span class="scsheet-ability-main">
         <span class="scsheet-rating">${rating}</span>
         <span class="scsheet-ability-name">${escapeHtml(ability.name)}</span>
       </span>
@@ -1573,7 +1568,7 @@ function renderSwordChronicleSheetHtml(rawInput: string) {
   </section>
 
   <section class="scsheet-panel">
-    <h4>Abilities <span>Click a rating to roll that many D6 and keep the best 3 · Click a specialty for bonus dice</span></h4>
+    <h4>Abilities <span>Rating is the test dice pool · Specialties add bonus dice</span></h4>
     <div class="scsheet-ability-cols">${abilityColumns
       .map((column) => `<ul class="scsheet-abilities">${column.map(abilityRow).join("")}</ul>`)
       .join("")}</div>
@@ -1782,5 +1777,5 @@ export function renderMarkdown(
     out += renderInline(content.slice(last), resolve, resolveMedia);
     html = out;
   }
-  return DOMPurify.sanitize(html, { ADD_ATTR: ["data-label", "data-missing", "data-target", "data-roll", "data-mod", "data-dice", "data-keep", "style"] });
+  return DOMPurify.sanitize(html, { ADD_ATTR: ["data-label", "data-missing", "data-target", "data-roll", "data-mod", "style"] });
 }
