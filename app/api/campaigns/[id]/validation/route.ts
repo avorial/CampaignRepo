@@ -22,12 +22,13 @@ async function validate(storage: NonNullable<ReturnType<typeof getStorageAdapter
     expectedPaths.map(async (item) => {
       const path = item.path.replace("{gameType}", campaign.gameType);
       try {
-        const content = await storage.getContent(path);
-        const ok = content.type === item.type;
-        return { ...item, path, ok, actualType: content.type, status: ok ? "ok" : "wrong-type" };
+        const content = await storage.getContent(path) as { type?: string } | Array<unknown>;
+        const actualType = Array.isArray(content) ? "dir" : content.type;
+        const ok = actualType === item.type;
+        return { ...item, path, ok, expectedType: item.type, actualType, status: ok ? "ok" : "wrong-type" };
       } catch (error) {
-        if (isNotFoundError(error)) return { ...item, path, ok: false, status: "missing" };
-        return { ...item, path, ok: false, status: "error", error: error instanceof Error ? error.message : "Unknown error" };
+        if (isNotFoundError(error)) return { ...item, path, ok: false, expectedType: item.type, status: "missing" };
+        return { ...item, path, ok: false, expectedType: item.type, status: "error", error: error instanceof Error ? error.message : "Unknown error" };
       }
     })
   );

@@ -13,6 +13,7 @@ type RepoValidationCheck = {
   path: string;
   ok: boolean;
   status: "ok" | "missing" | "wrong-type" | "error";
+  expectedType?: string;
   actualType?: string;
   error?: string;
 };
@@ -1241,7 +1242,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
             <div className="section-heading">
               <div>
                 <h2>Repo validation</h2>
-                <p className="muted">Checks the GitHub repo for the required CampaignRepo folders and starter files.</p>
+                <p className="muted">Checks the GitHub repo for the required CampaignRepo folders and starter files. Wrong type means CampaignRepo expected a file or folder but GitHub reported something else at that path.</p>
               </div>
               <div className="member-actions">
                 <button type="button" className="secondary" onClick={rebuildIndex}>Rebuild search</button>
@@ -1255,7 +1256,11 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
                     <strong>{check.label}</strong>
                     <span>{check.path}</span>
                   </div>
-                  <code>{check.status}{check.actualType && check.status !== "ok" ? `: ${check.actualType}` : ""}</code>
+                  <code>
+                    {check.status}
+                    {check.status !== "ok" && check.expectedType ? ` expected ${check.expectedType}` : ""}
+                    {check.status !== "ok" && check.actualType ? `, found ${check.actualType}` : ""}
+                  </code>
                   {check.error && <p className="error">{check.error}</p>}
                 </article>
               ))}

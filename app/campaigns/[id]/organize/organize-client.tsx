@@ -230,7 +230,29 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
     }
   }
 
-  // ── Media bulk delete ─────────────────────────────────────────────
+  // Page bulk delete
+  async function bulkDeletePages() {
+    if (!selected.size) return;
+    const selectedPages = pages.filter((page) => selected.has(page.slug));
+    const names = selectedPages.slice(0, 8).map((page) => page.frontmatter.name).join(", ");
+    const extra = selectedPages.length > 8 ? `, and ${selectedPages.length - 8} more` : "";
+    if (!window.confirm(`Permanently delete ${selected.size} page${selected.size === 1 ? "" : "s"} from the campaign repo?\n\n${names}${extra}\n\nThis cannot be undone.`)) return;
+
+    setBusy(true);
+    setMessage(`Deleting ${selected.size} page${selected.size === 1 ? "" : "s"}...`);
+    const slugs = [...selected];
+    const results = await Promise.all(slugs.map((slug) =>
+      fetch(`/api/campaigns/${campaign.id}/pages/${encodeURIComponent(slug)}`, { method: "DELETE" })
+        .then((response) => response.ok)
+        .catch(() => false)
+    ));
+    const deleted = results.filter(Boolean).length;
+    setBusy(false);
+    setMessage(`Deleted ${deleted} of ${slugs.length} page${slugs.length === 1 ? "" : "s"}.`);
+    await load();
+  }
+
+  // Media bulk delete
   async function bulkDeleteMedia() {
     if (!mediaSelected.size) return;
     if (!window.confirm(`Permanently delete ${mediaSelected.size} file${mediaSelected.size === 1 ? "" : "s"}? This cannot be undone.`)) return;
@@ -354,6 +376,7 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
                 />
               </label>
               <button type="button" onClick={apply} disabled={busy || !pendingChange}>Apply (1 commit)</button>
+              <button type="button" className="danger" onClick={bulkDeletePages} disabled={busy}>Delete {selected.size} page{selected.size === 1 ? "" : "s"}</button>
               <button type="button" className="secondary" onClick={() => setSelected(new Set())} disabled={busy}>Clear</button>
             </div>
           )}
