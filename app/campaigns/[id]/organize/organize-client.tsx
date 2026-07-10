@@ -246,16 +246,21 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
     setBusy(true);
     setMessage(`Deleting ${selected.size} page${selected.size === 1 ? "" : "s"}...`);
     const slugs = [...selected];
-    const results = await Promise.all(slugs.map((slug) =>
-      fetch(`/api/campaigns/${campaign.id}/pages/${encodeURIComponent(slug)}`, { method: "DELETE" })
-        .then((response) => response.ok)
-        .catch(() => false)
-    ));
-    const deleted = results.filter(Boolean).length;
+    const res = await fetch(`/api/campaigns/${campaign.id}/pages/bulk`, {
+      method: "DELETE",
+      body: JSON.stringify({ slugs })
+    });
+    const data = await res.json();
     setBusy(false);
-    setMessage(`Deleted ${deleted} of ${slugs.length} page${slugs.length === 1 ? "" : "s"}. Refreshing...`);
-    await load({ force: true });
-    setMessage(`Deleted ${deleted} of ${slugs.length} page${slugs.length === 1 ? "" : "s"} and refreshed.`);
+    if (res.ok) {
+      const missing = data.missing ? ` (${data.missing} already missing)` : "";
+      setMessage(`Deleted ${data.deleted} page${data.deleted === 1 ? "" : "s"} in one commit${missing}. Refreshing...`);
+      setSelected(new Set());
+      await load({ force: true });
+      setMessage(`Deleted ${data.deleted} page${data.deleted === 1 ? "" : "s"} and refreshed.`);
+    } else {
+      setMessage(data.error || "Bulk delete failed.");
+    }
   }
 
   // Media bulk delete

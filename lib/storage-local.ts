@@ -160,15 +160,23 @@ export class LocalFolderAdapter implements StorageAdapter {
     }
   }
 
-  async commitFiles(files: { path: string; content: string; encoding?: "utf-8" | "base64" }[], _message: string): Promise<{ commit: string; files: number } | null> {
+  async commitFiles(files: { path: string; content?: string; encoding?: "utf-8" | "base64"; delete?: boolean }[], _message: string): Promise<{ commit: string; files: number } | null> {
     if (!files.length) return null;
     for (const file of files) {
       const full = this.resolve(file.path);
+      if (file.delete) {
+        try {
+          await fs.unlink(full);
+        } catch (e) {
+          if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+        }
+        continue;
+      }
       await fs.mkdir(nodePath.dirname(full), { recursive: true });
       if (file.encoding === "base64") {
-        await fs.writeFile(full, Buffer.from(file.content, "base64"));
+        await fs.writeFile(full, Buffer.from(file.content ?? "", "base64"));
       } else {
-        await fs.writeFile(full, file.content, "utf-8");
+        await fs.writeFile(full, file.content ?? "", "utf-8");
       }
     }
     return { commit: "local", files: files.length };

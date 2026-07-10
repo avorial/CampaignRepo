@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { canManageCampaign, getCampaign } from "@/lib/db";
+import { canManageCampaign, deleteSearchDocument, getCampaign } from "@/lib/db";
 import { getStorageAdapter } from "@/lib/storage";
 import { parsePage, serializePage } from "@/lib/markdown";
+import { removePageFromCache } from "@/lib/page-cache";
 import { rebuildSearchIndex } from "@/lib/search";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,10 @@ const schema = z.object({
   (d) => (d.set && Object.values(d.set).some((v) => v !== undefined)) || (d.addTags?.length ?? 0) > 0 || (d.removeTags?.length ?? 0) > 0,
   { message: "Provide at least one field to change." }
 );
+
+const deleteSchema = z.object({
+  slugs: z.array(z.string().min(1)).min(1)
+});
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -65,4 +70,33 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     await rebuildSearchIndex(storage, campaign);
   }
   return NextResponse.json({ ok: true, updated: updates.length });
+}
+
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await requireUser();
+  const { id } = await params;
+  const campaign = getCampaign(user.id, Number(id));
+  if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const storage = getStorageAdapter(campaign, user.githubToken);
+  if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const input = deleteSchema.parse(await req.json());
+  const wanted = new Set(input.slugs);
+  const files = await storage.listDirectoryTextFiles("wiki/pages");
+  const deletes = files
+    .map((file) => file.name.replace(/\.md$/, ""))
+    .filter((slug) => wanted.has(slug))
+    .map((slug) => ({ path: `wiki/pages/${slug}.md`, delete: true as const }));
+
+  if (deletes.length) {
+    await storage.commitFiles(deletes, `CampaignRepo: bulk delete ${deletes.length} pages`);
+    for (const slug of deletes.map((file) => file.path.replace(/^wiki\/pages\//, "").replace(/\.md$/, ""))) {
+      removePageFromCache(campaign.id, slug);
+      deleteSearchDocument(campaign.id, slug);
+    }
+    await rebuildSearchIndex(storage, campaign);
+  }
+
+  return NextResponse.json({ ok: true, deleted: deletes.length, missing: input.slugs.length - deletes.length });
 }

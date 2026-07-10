@@ -37,7 +37,7 @@ export interface StorageAdapter {
   putFile(filePath: string, content: string, message: string, sha?: string): Promise<{ sha: string }>;
   putBase64File(filePath: string, base64Content: string, message: string, sha?: string): Promise<{ sha: string }>;
   deleteFile(filePath: string, message: string, sha: string): Promise<void>;
-  commitFiles(files: { path: string; content: string; encoding?: "utf-8" | "base64" }[], message: string): Promise<{ commit: string; files: number } | null>;
+  commitFiles(files: { path: string; content?: string; encoding?: "utf-8" | "base64"; delete?: boolean }[], message: string): Promise<{ commit: string; files: number } | null>;
   ensureFile(filePath: string, content: string, message: string): Promise<void>;
 
   listFileCommits(filePath: string, perPage?: number): Promise<StorageCommit[]>;

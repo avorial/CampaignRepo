@@ -304,7 +304,7 @@ export async function mapWithConcurrency<T, R>(items: readonly T[], limit: numbe
   return results;
 }
 
-export type CommitFile = { path: string; content: string; encoding?: "utf-8" | "base64" };
+export type CommitFile = { path: string; content?: string; encoding?: "utf-8" | "base64"; delete?: boolean };
 
 /**
  * Write many files in a SINGLE commit via the Git Data API
@@ -327,9 +327,12 @@ export async function commitFiles(
   const baseCommit = await gh<{ tree: { sha: string } }>(token, `${repoBase}/git/commits/${baseCommitSha}`);
 
   const tree = await mapWithConcurrency(files, 5, async (file) => {
+    if (file.delete) {
+      return { path: file.path, mode: "100644" as const, type: "blob" as const, sha: null };
+    }
     const blob = await gh<{ sha: string }>(token, `${repoBase}/git/blobs`, {
       method: "POST",
-      body: JSON.stringify({ content: file.content, encoding: file.encoding === "base64" ? "base64" : "utf-8" })
+      body: JSON.stringify({ content: file.content ?? "", encoding: file.encoding === "base64" ? "base64" : "utf-8" })
     });
     return { path: file.path, mode: "100644" as const, type: "blob" as const, sha: blob.sha };
   });
