@@ -1375,21 +1375,16 @@ function normalizeSwordAbilities(value: unknown): SwordChronicleAbility[] {
     }
   }
 
-  // Always render the full printed ability list; extras (custom) follow.
-  const standard = swordChronicleAbilities.map((name) => {
-    const existing = found.get(name.toLowerCase());
-    found.delete(name.toLowerCase());
-    return {
-      name,
-      rating: existing?.rating ?? swordChronicleDefaultRating,
-      specialties: existing?.specialties || []
-    };
-  });
-  const extras = [...found.values()].map((ability) => ({
-    ...ability,
-    rating: ability.rating ?? swordChronicleDefaultRating
-  }));
-  return [...standard, ...extras];
+  // A sheet with no abilities is a blank one: show the full printed list. When
+  // abilities *are* given, show exactly those — settings vary the list (Kingdom
+  // Divided swaps Warfare for Warcraft and adds Admiralty/Nautical), so padding
+  // to the stock list would invent ranks the character does not have.
+  if (found.size === 0) {
+    return swordChronicleAbilities.map((name) => ({ name, rating: swordChronicleDefaultRating, specialties: [] }));
+  }
+  return [...found.values()]
+    .map((ability) => ({ ...ability, rating: ability.rating ?? swordChronicleDefaultRating }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function normalizeSwordChronicleSheet(input: unknown): SwordChronicleSheet {

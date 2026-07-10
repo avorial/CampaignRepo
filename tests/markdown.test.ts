@@ -180,11 +180,31 @@ describe("renderMarkdown", () => {
     // The sheet is display-only: nothing in it is clickable/rollable.
     expect(html).not.toContain("data-roll");
 
-    // Every printed ability renders, unlisted ones at the Chronicle default of 2.
-    expect(html).toContain("Thievery");
-    expect(html).toContain("Animal Handling");
+    // Only the abilities the sheet declares are rendered, in alphabetical order.
+    const abilityNames = [...html.matchAll(/scsheet-ability-name">([^<]+)/g)].map((match) => match[1]);
+    expect(abilityNames).toEqual(["Agility", "Athletics", "Awareness", "Cunning", "Endurance", "Fighting", "Status", "Will"]);
+
     expect(html).toContain("Sworn to the Riverlands");
     expect(html).toContain("Grey");
+  });
+
+  it("renders a setting's own ability list rather than padding to the stock one", () => {
+    // Kingdom Divided swaps Warfare for Warcraft and adds Admiralty / Nautical.
+    const html = renderMarkdown(
+      ["```sword-chronicle-sheet", "abilities:", "  Warcraft: 4", "  Admiralty: 2", "  Nautical: 3", "```"].join("\n"),
+      "gm"
+    );
+    expect(html).toContain("Warcraft");
+    expect(html).toContain("Admiralty");
+    expect(html).not.toContain("Warfare");
+    expect(html).not.toContain("Marksmanship");
+  });
+
+  it("renders the full printed ability list for a sheet with no abilities", () => {
+    const html = renderMarkdown("```sword-chronicle-sheet\nname: Blank\n```", "gm");
+    for (const ability of ["Agility", "Animal Handling", "Warfare", "Will", "Thievery"]) {
+      expect(html).toContain(ability);
+    }
   });
 
   it("keeps sword-chronicle sheets safe from injected markup", () => {
