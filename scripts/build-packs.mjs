@@ -191,9 +191,82 @@ Rivals, secrets, obligations, and hooks.
   });
 }
 
+const swordChronicleAbilityRows = [
+  "Agility", "Animal Handling", "Athletics", "Awareness", "Cunning", "Deception",
+  "Endurance", "Fighting", "Healing", "Knowledge", "Language", "Marksmanship",
+  "Persuasion", "Status", "Stealth", "Survival", "Thievery", "Warfare", "Will"
+];
+
+function swordChronicleCharacterSheet() {
+  const abilities = swordChronicleAbilityRows.map((ability) => `  ${ability}: 2`).join("\n");
+  return t("character-sheet", "Character Sheet", "character", ["pc", "character", "sheet", "sword-chronicle"], `
+# Character Sheet
+
+![portrait](/wiki/media/REPLACE.jpg)
+*House • Title • Liege*
+
+\`\`\`sword-chronicle-sheet
+name: Unnamed Character
+age:
+gender:
+house:
+portrait:
+heraldry:
+motto:
+abilities:
+${abilities}
+  # Add specialties (bonus dice) to any ability:
+  # Fighting:
+  #   rating: 4
+  #   specialties: [Long Blades 2]
+defensiveBonus: 0
+destiny: 3
+destinySpent: 0
+qualities: []
+armor:
+  name:
+  rating:
+  penalty: 0
+attacks:
+  # - name: Longsword
+  #   test: Fighting (Long Blades)
+  #   dice: 4D + 2B
+  #   damage: Agility + 3
+  #   qualities: Adaptable
+damage: 0
+injuries: 0
+wounds: 0
+equipment: []
+retainers: []
+allies: []
+enemies: []
+oaths: []
+appearance:
+  height:
+  weight:
+  eyes:
+  hair:
+  mannerisms:
+  features:
+history:
+notes:
+\`\`\`
+
+## Personal History
+
+Where they were born, who raised them, and what they owe.
+
+:::gm
+Secret loyalties, hidden bastards, and the oath they intend to break.
+:::
+`, {
+    summary: "Sword Chronicle character sheet block rendered from editable markdown."
+  });
+}
+
 const packs = {
   "Sword Chronicle": [
-    genericCharacterSheet("Sword Chronicle", "House"),
+    swordChronicleCharacterSheet(),
     t("house", "House", "npc", ["faction", "house"], `
 # House
 

@@ -2,7 +2,7 @@ import matter from "gray-matter";
 import yaml from "yaml";
 import { marked } from "marked";
 import DOMPurify from "isomorphic-dompurify";
-import type { ApprovalStatus, Category, TravellerSheet, WoDRated, WoDSystem, Visibility, WikiLink, WikiPage, WikiPageFrontmatter } from "@/lib/types";
+import type { ApprovalStatus, Category, SwordChronicleAbility, SwordChronicleSheet, SwordChronicleSpecialty, TravellerSheet, WoDRated, WoDSystem, Visibility, WikiLink, WikiPage, WikiPageFrontmatter } from "@/lib/types";
 import { defaultFrontmatter } from "@/lib/templates";
 
 const wikiLinkPattern = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
@@ -1308,6 +1308,324 @@ function expandDnDSheets(content: string) {
   });
 }
 
+// ══ Sword Chronicle sheet (Green Ronin Chronicle System) ══════════════════════
+
+/** Sheet order, matching the printed GRR2750e sheet. */
+const swordChronicleAbilities = [
+  "Agility", "Animal Handling", "Athletics", "Awareness", "Cunning", "Deception",
+  "Endurance", "Fighting", "Healing", "Knowledge", "Language", "Marksmanship",
+  "Persuasion", "Status", "Stealth", "Survival", "Thievery", "Warfare", "Will"
+];
+
+/** Every Chronicle ability starts at rank 2 unless the sheet says otherwise. */
+const swordChronicleDefaultRating = 2;
+
+function normalizeSwordSpecialties(value: unknown): SwordChronicleSpecialty[] {
+  if (!value) return [];
+  const list = Array.isArray(value) ? value : [value];
+  return list
+    .map((entry): SwordChronicleSpecialty | null => {
+      if (typeof entry === "string") {
+        // "Long Blades 3" / "Long Blades" — a trailing integer is the bonus-dice rank.
+        const match = /^(.*?)[\s:]+(\d+)$/.exec(entry.trim());
+        if (match) return { name: match[1].trim(), rank: Number(match[2]) };
+        return { name: entry.trim(), rank: 1 };
+      }
+      if (entry && typeof entry === "object") {
+        const raw = entry as Record<string, unknown>;
+        const name = String(raw.name ?? "").trim();
+        if (!name) return null;
+        const rank = raw.rank ?? raw.rating ?? raw.level ?? raw.bonus;
+        return { name, rank: rank == null ? 1 : Number(rank) };
+      }
+      return null;
+    })
+    .filter((entry): entry is SwordChronicleSpecialty => Boolean(entry?.name));
+}
+
+function normalizeSwordAbilities(value: unknown): SwordChronicleAbility[] {
+  const found = new Map<string, SwordChronicleAbility>();
+  const put = (name: string, rating: unknown, specialties: unknown) => {
+    const clean = String(name).trim();
+    if (!clean) return;
+    const numeric = rating == null || rating === "" ? undefined : Number(rating);
+    found.set(clean.toLowerCase(), {
+      name: clean,
+      rating: Number.isFinite(numeric) ? numeric : undefined,
+      specialties: normalizeSwordSpecialties(specialties)
+    });
+  };
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      if (!entry || typeof entry !== "object") continue;
+      const raw = entry as Record<string, unknown>;
+      put(String(raw.name ?? ""), raw.rating ?? raw.rank ?? raw.value, raw.specialties ?? raw.specialities);
+    }
+  } else if (value && typeof value === "object") {
+    for (const [name, entry] of Object.entries(value as Record<string, unknown>)) {
+      if (entry && typeof entry === "object" && !Array.isArray(entry)) {
+        const raw = entry as Record<string, unknown>;
+        put(name, raw.rating ?? raw.rank ?? raw.value, raw.specialties ?? raw.specialities);
+      } else if (Array.isArray(entry)) {
+        put(name, undefined, entry);
+      } else {
+        put(name, entry, undefined);
+      }
+    }
+  }
+
+  // Always render the full printed ability list; extras (custom) follow.
+  const standard = swordChronicleAbilities.map((name) => {
+    const existing = found.get(name.toLowerCase());
+    found.delete(name.toLowerCase());
+    return {
+      name,
+      rating: existing?.rating ?? swordChronicleDefaultRating,
+      specialties: existing?.specialties || []
+    };
+  });
+  const extras = [...found.values()].map((ability) => ({
+    ...ability,
+    rating: ability.rating ?? swordChronicleDefaultRating
+  }));
+  return [...standard, ...extras];
+}
+
+function normalizeSwordChronicleSheet(input: unknown): SwordChronicleSheet {
+  const raw = input && typeof input === "object" && !Array.isArray(input) ? (input as Record<string, unknown>) : {};
+  const strList = (value: unknown): string[] =>
+    Array.isArray(value) ? value.map((entry) => String(entry)).filter(Boolean) : value ? [String(value)] : [];
+  const num = (value: unknown) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+  const armorRaw = (raw.armor || raw.armour) as Record<string, unknown> | undefined;
+  const appearanceRaw = (raw.appearance || {}) as Record<string, unknown>;
+
+  return {
+    system: "sword-chronicle",
+    name: raw.name ? String(raw.name) : undefined,
+    age: raw.age as number | string | undefined,
+    gender: raw.gender ? String(raw.gender) : undefined,
+    house: raw.house ? String(raw.house) : undefined,
+    portrait: raw.portrait ? String(raw.portrait) : undefined,
+    heraldry: raw.heraldry ? String(raw.heraldry) : undefined,
+    motto: raw.motto ? String(raw.motto) : undefined,
+    abilities: normalizeSwordAbilities(raw.abilities),
+    defensiveBonus: num(raw.defensiveBonus) ?? 0,
+    destiny: num(raw.destiny) ?? 0,
+    destinySpent: num(raw.destinySpent) ?? 0,
+    qualities: strList(raw.qualities),
+    benefits: strList(raw.benefits),
+    drawbacks: strList(raw.drawbacks),
+    armor: armorRaw && typeof armorRaw === "object"
+      ? { name: armorRaw.name ? String(armorRaw.name) : undefined, rating: num(armorRaw.rating), penalty: num(armorRaw.penalty) }
+      : undefined,
+    attacks: Array.isArray(raw.attacks)
+      ? (raw.attacks as Record<string, unknown>[])
+          .filter((entry) => entry && typeof entry === "object")
+          .map((entry) => ({
+            name: String(entry.name ?? ""),
+            test: entry.test ? String(entry.test) : undefined,
+            dice: entry.dice ? String(entry.dice) : undefined,
+            damage: entry.damage ? String(entry.damage) : undefined,
+            qualities: entry.qualities ? String(entry.qualities) : undefined
+          }))
+          .filter((entry) => entry.name)
+      : [],
+    damage: num(raw.damage) ?? 0,
+    injuries: num(raw.injuries) ?? 0,
+    wounds: num(raw.wounds) ?? 0,
+    equipment: strList(raw.equipment),
+    retainers: Array.isArray(raw.retainers)
+      ? (raw.retainers as unknown[])
+          .map((entry) =>
+            typeof entry === "string"
+              ? { name: entry }
+              : entry && typeof entry === "object"
+                ? { name: String((entry as any).name ?? ""), notes: (entry as any).notes ? String((entry as any).notes) : undefined }
+                : null
+          )
+          .filter((entry): entry is { name: string; notes?: string } => Boolean(entry?.name))
+      : [],
+    allies: strList(raw.allies),
+    enemies: strList(raw.enemies),
+    oaths: strList(raw.oaths),
+    appearance: {
+      height: appearanceRaw.height ? String(appearanceRaw.height) : undefined,
+      weight: appearanceRaw.weight ? String(appearanceRaw.weight) : undefined,
+      eyes: appearanceRaw.eyes ? String(appearanceRaw.eyes) : undefined,
+      hair: appearanceRaw.hair ? String(appearanceRaw.hair) : undefined,
+      mannerisms: appearanceRaw.mannerisms ? String(appearanceRaw.mannerisms) : undefined,
+      features: appearanceRaw.features ? String(appearanceRaw.features) : undefined
+    },
+    history: raw.history ? String(raw.history) : undefined,
+    notes: raw.notes ? String(raw.notes) : undefined
+  };
+}
+
+/** Chronicle tests roll a pool of d6 and sum the best three. */
+const swordPool = (dice: number, label: string) =>
+  ` data-roll="pool" data-dice="${Math.max(1, dice)}" data-keep="3" data-label="${escapeHtml(label)}"`;
+
+function swordTrack(filled: number, total: number, className: string) {
+  return `<span class="scsheet-track ${className}">${Array.from({ length: total }, (_, index) =>
+    `<i class="${index < filled ? "on" : ""}"></i>`
+  ).join("")}</span>`;
+}
+
+function renderSwordChronicleSheetHtml(rawInput: string) {
+  let parsed: unknown;
+  try {
+    parsed = yaml.parse(rawInput) || {};
+  } catch (error) {
+    return `<section class="scsheet scsheet-error"><p>Sword Chronicle sheet data could not be parsed: ${escapeHtml(error instanceof Error ? error.message : "invalid YAML")}</p></section>`;
+  }
+  const sheet = normalizeSwordChronicleSheet(parsed);
+  const rate = (name: string) =>
+    sheet.abilities.find((ability) => ability.name.toLowerCase() === name.toLowerCase())?.rating ?? swordChronicleDefaultRating;
+
+  const armorPenalty = sheet.armor?.penalty ?? 0;
+  const intrigueDefense = rate("Awareness") + rate("Cunning") + rate("Status");
+  const combatDefense = rate("Agility") + rate("Athletics") + rate("Awareness") + (sheet.defensiveBonus ?? 0) - armorPenalty;
+  const composure = rate("Will") * 3;
+  const health = rate("Endurance") * 3;
+
+  const destinyTotal = Math.max(sheet.destiny ?? 0, 9);
+  const destinyUsed = sheet.destinySpent ?? 0;
+  const destinyDots = Array.from({ length: destinyTotal }, (_, index) => {
+    const available = index < (sheet.destiny ?? 0);
+    const spent = index < destinyUsed;
+    return `<i class="${spent ? "spent" : available ? "on" : ""}"></i>`;
+  }).join("");
+
+  const abilityColumns = splitColumns(sheet.abilities, 2);
+  const abilityRow = (ability: SwordChronicleAbility) => {
+    const rating = ability.rating ?? swordChronicleDefaultRating;
+    const specialties = (ability.specialties || [])
+      .map((specialty) => {
+        const bonus = specialty.rank ?? 1;
+        const label = `${ability.name} (${specialty.name}) ${rating}D + ${bonus}B`;
+        return `<span class="scsheet-spec"${swordPool(rating + bonus, label)} title="Roll ${rating + bonus}D6, keep best 3">${escapeHtml(specialty.name)} <b>${bonus}B</b></span>`;
+      })
+      .join("");
+    return `<li class="scsheet-ability">
+      <span class="scsheet-ability-main"${swordPool(rating, `${ability.name} ${rating}D`)} title="Roll ${rating}D6, keep best 3">
+        <span class="scsheet-rating">${rating}</span>
+        <span class="scsheet-ability-name">${escapeHtml(ability.name)}</span>
+      </span>
+      <span class="scsheet-specs">${specialties || `<span class="scsheet-empty-inline">—</span>`}</span>
+    </li>`;
+  };
+
+  const portrait = sheet.portrait
+    ? `<img src="${escapeHtml(mediaPath(sheet.portrait))}" alt="${escapeHtml(sheet.name || "Portrait")}" loading="lazy" />`
+    : `<span>Portrait</span>`;
+
+  const listOr = (items: string[], empty: string) =>
+    items.length ? `<ul class="scsheet-list">${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : `<p class="scsheet-empty">${empty}</p>`;
+
+  const attacksHtml = sheet.attacks?.length
+    ? `<table class="scsheet-attacks"><thead><tr><th>Attack Test</th><th>Dice</th><th>Weapon</th><th>Damage &amp; Special Qualities</th></tr></thead><tbody>${sheet.attacks
+        .map(
+          (attack) => `<tr><td>${escapeHtml(attack.test || "-")}</td><td>${escapeHtml(attack.dice || "-")}</td><td>${escapeHtml(attack.name)}</td><td>${escapeHtml(detail([attack.damage, attack.qualities]) || "-")}</td></tr>`
+        )
+        .join("")}</tbody></table>`
+    : `<p class="scsheet-empty">No attacks recorded.</p>`;
+
+  const appearance = sheet.appearance || {};
+  const appearanceRows = [
+    ["Height", appearance.height],
+    ["Weight", appearance.weight],
+    ["Eye Colour", appearance.eyes],
+    ["Hair Colour", appearance.hair],
+    ["Mannerisms", appearance.mannerisms],
+    ["Distinguishing Features", appearance.features]
+  ].filter(([, value]) => Boolean(value));
+
+  return `
+<section class="scsheet">
+  <header class="scsheet-head">
+    <div class="scsheet-portrait">${portrait}</div>
+    <div class="scsheet-ident">
+      <strong class="scsheet-name">${escapeHtml(sheet.name || "Unnamed Character")}</strong>
+      <div class="scsheet-facts">
+        <span><b>Age</b>${escapeHtml(String(sheet.age ?? "-"))}</span>
+        <span><b>Gender</b>${escapeHtml(sheet.gender || "-")}</span>
+        <span><b>House</b>${escapeHtml(sheet.house || "-")}</span>
+      </div>
+      ${sheet.motto ? `<em class="scsheet-motto">“${escapeHtml(sheet.motto)}”</em>` : ""}
+      ${sheet.heraldry ? `<span class="scsheet-heraldry"><b>Heraldry</b> ${escapeHtml(sheet.heraldry)}</span>` : ""}
+    </div>
+  </header>
+
+  <div class="scsheet-derived">
+    <div class="scsheet-stat"><span class="scsheet-stat-val">${intrigueDefense}</span><span class="scsheet-stat-key">Intrigue Defense</span><span class="scsheet-stat-formula">Awareness + Cunning + Status</span></div>
+    <div class="scsheet-stat"><span class="scsheet-stat-val">${combatDefense}</span><span class="scsheet-stat-key">Combat Defense</span><span class="scsheet-stat-formula">Agility + Athletics + Awareness${sheet.defensiveBonus ? " + Bonus" : ""}${armorPenalty ? " − Armor Penalty" : ""}</span></div>
+    <div class="scsheet-stat"><span class="scsheet-stat-val">${composure}</span><span class="scsheet-stat-key">Composure</span><span class="scsheet-stat-formula">Will ranks × 3</span></div>
+    <div class="scsheet-stat"><span class="scsheet-stat-val">${health}</span><span class="scsheet-stat-key">Health</span><span class="scsheet-stat-formula">Endurance ranks × 3</span></div>
+  </div>
+
+  <section class="scsheet-panel">
+    <h4>Destiny Points <span>${sheet.destiny ?? 0} earned · ${destinyUsed} spent</span></h4>
+    <span class="scsheet-track scsheet-destiny">${destinyDots}</span>
+  </section>
+
+  <section class="scsheet-panel">
+    <h4>Abilities <span>Click a rating to roll that many D6 and keep the best 3 · Click a specialty for bonus dice</span></h4>
+    <div class="scsheet-ability-cols">${abilityColumns
+      .map((column) => `<ul class="scsheet-abilities">${column.map(abilityRow).join("")}</ul>`)
+      .join("")}</div>
+  </section>
+
+  <section class="scsheet-panel">
+    <h4>Combat <span>${sheet.armor?.name ? `${escapeHtml(sheet.armor.name)} · AR ${sheet.armor.rating ?? "-"} · Penalty ${armorPenalty}` : "No armor worn"}</span></h4>
+    ${attacksHtml}
+    <div class="scsheet-tracks">
+      <div><b>Damage</b>${swordTrack(sheet.damage ?? 0, Math.max(health, 1), "scsheet-damage")}<span class="scsheet-track-count">${sheet.damage ?? 0} / ${health}</span></div>
+      <div><b>Injuries</b>${swordTrack(sheet.injuries ?? 0, 7, "scsheet-injuries")}<span class="scsheet-track-count">${sheet.injuries ?? 0} / 7</span></div>
+      <div><b>Wounds</b>${swordTrack(sheet.wounds ?? 0, 7, "scsheet-wounds")}<span class="scsheet-track-count">${sheet.wounds ?? 0} / 7</span></div>
+    </div>
+  </section>
+
+  <section class="scsheet-panel">
+    <div class="scsheet-cols">
+      <div>
+        <h4>Ancestry &amp; Other Qualities</h4>
+        ${listOr([...(sheet.qualities || []), ...(sheet.benefits || []), ...(sheet.drawbacks || [])], "No qualities recorded.")}
+        <h4>Equipment</h4>
+        ${listOr(sheet.equipment || [], "No equipment recorded.")}
+        <h4>Retainers</h4>
+        ${sheet.retainers?.length
+          ? `<ul class="scsheet-list">${sheet.retainers.map((retainer) => `<li><span>${escapeHtml(retainer.name)}</span><span>${escapeHtml(retainer.notes || "")}</span></li>`).join("")}</ul>`
+          : `<p class="scsheet-empty">No retainers recorded.</p>`}
+      </div>
+      <div>
+        <h4>Allies</h4>${listOr(sheet.allies || [], "None recorded.")}
+        <h4>Enemies</h4>${listOr(sheet.enemies || [], "None recorded.")}
+        <h4>Oaths</h4>${listOr(sheet.oaths || [], "None sworn.")}
+      </div>
+    </div>
+  </section>
+
+  ${appearanceRows.length || sheet.history || sheet.notes
+    ? `<section class="scsheet-panel">
+        ${appearanceRows.length ? `<h4>Appearance</h4><div class="scsheet-appearance">${appearanceRows.map(([label, value]) => `<span><b>${escapeHtml(String(label))}</b>${escapeHtml(String(value))}</span>`).join("")}</div>` : ""}
+        ${sheet.history ? `<h4>Personal History</h4><p class="scsheet-prose">${escapeHtml(sheet.history)}</p>` : ""}
+        ${sheet.notes ? `<h4>Notes</h4><p class="scsheet-prose">${escapeHtml(sheet.notes)}</p>` : ""}
+      </section>`
+    : ""}
+</section>`;
+}
+
+/** Expand fenced `sword-chronicle-sheet` YAML blocks into the Sword Chronicle sheet. */
+function expandSwordChronicleSheets(content: string) {
+  return content.replace(/```sword-chronicle-sheet\s*\n([\s\S]*?)```/g, (_match, inner) => {
+    return `\n\n${renderSwordChronicleSheetHtml(String(inner))}\n\n`;
+  });
+}
+
 // ══ Inventory block ═══════════════════════════════════════════════════════════
 
 type InventoryItem = { name?: string; qty?: number | string; weight?: number | string; value?: string; notes?: string };
@@ -1436,6 +1754,7 @@ export function renderMarkdown(
   content = expandTravellerSheets(content);
   content = expandWoDSheets(content);
   content = expandDnDSheets(content);
+  content = expandSwordChronicleSheets(content);
   content = expandInventory(content);
   content = expandTrackers(content);
   content = expandTraits(content);
@@ -1463,5 +1782,5 @@ export function renderMarkdown(
     out += renderInline(content.slice(last), resolve, resolveMedia);
     html = out;
   }
-  return DOMPurify.sanitize(html, { ADD_ATTR: ["data-label", "data-missing", "data-target", "data-roll", "data-mod", "style"] });
+  return DOMPurify.sanitize(html, { ADD_ATTR: ["data-label", "data-missing", "data-target", "data-roll", "data-mod", "data-dice", "data-keep", "style"] });
 }

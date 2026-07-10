@@ -127,6 +127,74 @@ describe("renderMarkdown", () => {
     expect(html).toContain('alt="Portrait"');
   });
 
+  it("renders sword-chronicle-sheet fenced blocks with derived stats and roll pools", () => {
+    const html = renderMarkdown(
+      [
+        "```sword-chronicle-sheet",
+        "name: Ser Aldric Vane",
+        "age: 32",
+        "house: House Vane",
+        "motto: Cut Once",
+        "portrait: aldric.png",
+        "defensiveBonus: 2",
+        "destiny: 4",
+        "destinySpent: 1",
+        "abilities:",
+        "  Awareness: 4",
+        "  Cunning: 3",
+        "  Status: 5",
+        "  Agility: 3",
+        "  Athletics: 4",
+        "  Endurance: 4",
+        "  Will: 3",
+        "  Fighting:",
+        "    rating: 5",
+        "    specialties: [Long Blades 2]",
+        "armor: { name: Mail, rating: 6, penalty: 2 }",
+        "damage: 2",
+        "injuries: 1",
+        "oaths: [Sworn to the Riverlands]",
+        "appearance: { eyes: Grey }",
+        "```"
+      ].join("\n"),
+      "gm"
+    );
+
+    expect(html).toContain('class="scsheet"');
+    expect(html).toContain("Ser Aldric Vane");
+    expect(html).toContain("House Vane");
+    expect(html).toContain('src="/wiki/media/aldric.png"');
+
+    // Intrigue Defense = Awareness 4 + Cunning 3 + Status 5 = 12
+    expect(html).toContain(">12</span><span class=\"scsheet-stat-key\">Intrigue Defense");
+    // Combat Defense = Agility 3 + Athletics 4 + Awareness 4 + bonus 2 - penalty 2 = 11
+    expect(html).toContain(">11</span><span class=\"scsheet-stat-key\">Combat Defense");
+    // Composure = Will 3 x 3 = 9 ; Health = Endurance 4 x 3 = 12
+    expect(html).toContain(">9</span><span class=\"scsheet-stat-key\">Composure");
+    expect(html).toContain(">12</span><span class=\"scsheet-stat-key\">Health");
+
+    // Fighting 5 rolls 5d6 keep 3; its Long Blades 2B specialty rolls 7d6 keep 3.
+    expect(html).toContain('data-roll="pool" data-dice="5" data-keep="3" data-label="Fighting 5D"');
+    expect(html).toContain('data-dice="7" data-keep="3" data-label="Fighting (Long Blades) 5D + 2B"');
+
+    // Unlisted abilities still render at the Chronicle default rating of 2.
+    expect(html).toContain('data-label="Thievery 2D"');
+    expect(html).toContain("Sworn to the Riverlands");
+    expect(html).toContain("Grey");
+  });
+
+  it("keeps sword-chronicle sheets safe from injected markup", () => {
+    const html = renderMarkdown("```sword-chronicle-sheet\nname: \"<img src=x onerror=alert(1)>\"\n```", "gm");
+    // The payload survives only as escaped text, never as a live tag/attribute.
+    expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
+    expect(html).not.toContain("<img src=x");
+  });
+
+  it("reports invalid sword-chronicle YAML instead of throwing", () => {
+    const html = renderMarkdown("```sword-chronicle-sheet\n  : : bad\n\tnope\n```", "gm");
+    expect(html).toContain("scsheet-error");
+  });
+
   it("renders traveller-sheet fenced blocks as designed sheet HTML", () => {
     const html = renderMarkdown("Before\n\n```traveller-sheet\nheader:\n  left: Third Imperium\n  center: Muster File\n  right: TAS-7\nportrait: Avery.png\nname: Avery Stone\nspecies: Racial Solomani\ncharacteristics:\n  STR: 12\nskills:\n  Advocate: 0\n  Diplomat: 2\n  \"Tactics (Naval)\": 1\nitems:\n  Vacc suit patches: 3, Field kit\ngear:\n  Spare Filter: 2, backup\nweapons:\n  Laser Pistol: 3D, Medium, sidearm\narmour:\n  Cloth: 8, jacket\nholdings:\n  Ship Share: collateral\npeople:\n  Fixer: ally\npsionics:\n  Telepathy: 1, trained\n```\n\nAfter", "gm");
 

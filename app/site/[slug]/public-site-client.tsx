@@ -5,6 +5,7 @@ import type { WikiPage } from "@/lib/types";
 import type { Quest } from "@/lib/quests";
 import { renderMarkdown, type IncludeResolver, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
+import { rollFromElement } from "@/lib/dice";
 import { themeToCssVars, type CampaignTheme } from "@/lib/theme";
 import Logo from "@/app/components/logo";
 
@@ -197,21 +198,7 @@ export default function PublicSiteClient({
       const rollEl = (event.target as HTMLElement).closest("[data-roll]");
       if (rollEl) {
         event.preventDefault();
-        const dice = rollEl.getAttribute("data-roll") || "2d6";
-        const mod = parseInt(rollEl.getAttribute("data-mod") || "0", 10);
-        const label = rollEl.getAttribute("data-label") || "Roll";
-        if (dice === "2d6") {
-          const d1 = Math.floor(Math.random() * 6) + 1;
-          const d2 = Math.floor(Math.random() * 6) + 1;
-          const total = d1 + d2 + mod;
-          const modStr = mod === 0 ? "" : mod > 0 ? ` + ${mod}` : ` − ${Math.abs(mod)}`;
-          setDiceRoll({ label, detail: `${d1} + ${d2}${modStr} = ${total}`, total });
-        } else {
-          const d = Math.floor(Math.random() * 20) + 1;
-          const total = d + mod;
-          const modStr = mod === 0 ? "" : mod > 0 ? ` + ${mod}` : ` − ${Math.abs(mod)}`;
-          setDiceRoll({ label, detail: `${d}${modStr} = ${total}`, total });
-        }
+        setDiceRoll(rollFromElement(rollEl));
         return;
       }
       const galleryAnchor = (event.target as HTMLElement).closest("a.gallery-item");

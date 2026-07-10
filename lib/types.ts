@@ -220,6 +220,42 @@ export type TravellerSheet = {
   notes?: string;
 };
 
+/** Green Ronin Chronicle System (Sword Chronicle) — abilities are rated in d6 dice. */
+export type SwordChronicleSpecialty = { name: string; rank?: number };
+export type SwordChronicleAbility = { name: string; rating?: number; specialties?: SwordChronicleSpecialty[] };
+export type SwordChronicleSheet = {
+  system: "sword-chronicle";
+  name?: string;
+  age?: number | string;
+  gender?: string;
+  house?: string;
+  portrait?: string;
+  heraldry?: string;
+  motto?: string;
+  abilities: SwordChronicleAbility[];
+  /** Shield/other bonus added to Combat Defense. */
+  defensiveBonus?: number;
+  destiny?: number;
+  destinySpent?: number;
+  qualities?: string[];
+  benefits?: string[];
+  drawbacks?: string[];
+  armor?: { name?: string; rating?: number; penalty?: number };
+  attacks?: { name: string; test?: string; dice?: string; damage?: string; qualities?: string }[];
+  /** Current damage / injuries / wounds marked on the tracks. */
+  damage?: number;
+  injuries?: number;
+  wounds?: number;
+  equipment?: string[];
+  retainers?: { name: string; notes?: string }[];
+  allies?: string[];
+  enemies?: string[];
+  oaths?: string[];
+  appearance?: { height?: string; weight?: string; eyes?: string; hair?: string; mannerisms?: string; features?: string };
+  history?: string;
+  notes?: string;
+};
+
 export type DnDAbilityKey = "str" | "dex" | "con" | "int" | "wis" | "cha";
 export type DnDSheet = {
   system: "dnd5e" | "pathfinder2";

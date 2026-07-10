@@ -6,6 +6,7 @@ import { Bold, Code2, Heading1, Heading2, Heading3, Italic, Link2, List, ListOrd
 import type { Campaign, CampaignMedia, WikiPage } from "@/lib/types";
 import { renderMarkdown, type IncludeResolver, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
+import { rollFromElement } from "@/lib/dice";
 import { RELATIONSHIP_TYPES, REL_TYPE_MAP } from "@/lib/relationships";
 
 type CategoryProperty = {
@@ -62,6 +63,18 @@ function travellerSheetSnippet(name: string) {
     return `  ${JSON.stringify(label)}:`;
   }).join("\n");
   return `\n\n\`\`\`traveller-sheet\nheader:\n  left: \n  center: \n  right: \nportrait: \nname: ${JSON.stringify(name || "")}\nspecies: \nage: \nhomeworld: \ncareer: \nrank: \ndossier: \nstatus: \nconditions: []\nspeciesTraits: []\ncharacteristics:\n  STR: \n  DEX: \n  END: \n  INT: \n  EDU: \n  SOC: \nskills:\n${skills}\nweapons:\n  # Laser Pistol: 3D, Medium, notes\narmour:\n  # Cloth: 8, notes\nitems:\n  # Medkit: 1, notes\nholdings:\n  # Ship Share: notes\npeople:\n  # Contact Name: notes\npsionics:\n  # Telepathy: 1, notes\nnotes: \n\`\`\`\n\n`;
+}
+
+/** Printed sheet order for Sword Chronicle (Chronicle System) abilities. */
+const swordChronicleAbilityRows = [
+  "Agility", "Animal Handling", "Athletics", "Awareness", "Cunning", "Deception",
+  "Endurance", "Fighting", "Healing", "Knowledge", "Language", "Marksmanship",
+  "Persuasion", "Status", "Stealth", "Survival", "Thievery", "Warfare", "Will"
+];
+
+function swordChronicleSheetSnippet(name: string) {
+  const abilities = swordChronicleAbilityRows.map((ability) => `  ${ability}: 2`).join("\n");
+  return `\n\n\`\`\`sword-chronicle-sheet\nname: ${JSON.stringify(name || "")}\nage: \ngender: \nhouse: \nportrait: \nheraldry: \nmotto: \nabilities:\n${abilities}\n  # Give a rating, or add specialties:\n  # Fighting:\n  #   rating: 4\n  #   specialties: [Long Blades 2]\ndefensiveBonus: 0\ndestiny: 3\ndestinySpent: 0\nqualities: []\narmor:\n  name: \n  rating: \n  penalty: 0\nattacks:\n  # - name: Longsword\n  #   test: Fighting (Long Blades)\n  #   dice: 4D + 2B\n  #   damage: Agility + 3\n  #   qualities: Adaptable\ndamage: 0\ninjuries: 0\nwounds: 0\nequipment: []\nretainers:\n  # - { name: Squire, notes: Loyal }\nallies: []\nenemies: []\noaths: []\nappearance:\n  height: \n  weight: \n  eyes: \n  hair: \n  mannerisms: \n  features: \nhistory: \nnotes: \n\`\`\`\n\n`;
 }
 
 type DiffLine = { tag: "eq" | "add" | "del"; text: string };
@@ -356,21 +369,7 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
       const rollEl = (event.target as HTMLElement).closest("[data-roll]");
       if (rollEl) {
         event.preventDefault();
-        const dice = rollEl.getAttribute("data-roll") || "2d6";
-        const mod = parseInt(rollEl.getAttribute("data-mod") || "0", 10);
-        const label = rollEl.getAttribute("data-label") || "Roll";
-        if (dice === "2d6") {
-          const d1 = Math.floor(Math.random() * 6) + 1;
-          const d2 = Math.floor(Math.random() * 6) + 1;
-          const total = d1 + d2 + mod;
-          const modStr = mod === 0 ? "" : mod > 0 ? ` + ${mod}` : ` − ${Math.abs(mod)}`;
-          setDiceRoll({ label, detail: `${d1} + ${d2}${modStr} = ${total}`, total });
-        } else {
-          const d = Math.floor(Math.random() * 20) + 1;
-          const total = d + mod;
-          const modStr = mod === 0 ? "" : mod > 0 ? ` + ${mod}` : ` − ${Math.abs(mod)}`;
-          setDiceRoll({ label, detail: `${d}${modStr} = ${total}`, total });
-        }
+        setDiceRoll(rollFromElement(rollEl));
         return;
       }
       const galleryAnchor = (event.target as HTMLElement).closest("a.gallery-item");
@@ -476,6 +475,13 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
     setIsEditing(true);
     insertSnippet(travellerSheetSnippet(frontmatter.name));
     setMessage("Character sheet block inserted in the markdown. Edit the values there, then save.");
+  }
+
+  function insertSwordChronicleSheetBlock() {
+    setMode("gm");
+    setIsEditing(true);
+    insertSnippet(swordChronicleSheetSnippet(frontmatter.name));
+    setMessage("Sword Chronicle sheet block inserted in the markdown. Edit the values there, then save.");
   }
 
   function wodSheetSnippet(name: string) {
@@ -1155,7 +1161,9 @@ notes: ""
   ];
   const isWoD = WOD_GAME_TYPES.includes(campaign.gameType);
   const canUseWoDSheet = isWoD && (frontmatter.category === "character" || frontmatter.category === "npc");
-  const hasPrintableSheet = /```(?:traveller-sheet|dnd-sheet|wod-sheet)\b/.test(content);
+  const isSwordChronicle = campaign.gameType === "Sword Chronicle";
+  const canUseSwordChronicleSheet = isSwordChronicle && isCharacterOrNpc;
+  const hasPrintableSheet = /```(?:traveller-sheet|dnd-sheet|wod-sheet|sword-chronicle-sheet)\b/.test(content);
 
   // Ancestor chain (breadcrumbs) + cycle-safe parent options.
   const pageBySlug = new Map(knownPages.map((p) => [p.slug, p]));
@@ -1853,6 +1861,7 @@ notes: ""
           {fieldsEditable && canUseTravellerSheet && <button type="button" onClick={insertTravellerSheetBlock}>Insert character sheet</button>}
           {fieldsEditable && canUseWoDSheet && <button type="button" onClick={insertWoDSheetBlock}>Insert WoD sheet</button>}
           {fieldsEditable && canUseDnDSheet && <button type="button" onClick={insertDnDSheetBlock}>{campaign.gameType === "Pathfinder" ? "Insert Pathfinder sheet" : "Insert D&D sheet"}</button>}
+          {fieldsEditable && canUseSwordChronicleSheet && <button type="button" onClick={insertSwordChronicleSheetBlock}>Insert Sword Chronicle sheet</button>}
           {fieldsEditable && <button type="button" onClick={() => insertSnippet("```inventory\ntitle: Inventory\nitems:\n  - name: Item name\n    qty: 1\n    weight: 1\n    value: \"\"\n    notes: \"\"\n```\n\n")}>Insert inventory</button>}
           {fieldsEditable && <button type="button" onClick={() => insertSnippet("```tracker\ntitle: Resources\nresources:\n  - name: Hit Points\n    current: 10\n    max: 10\n    color: \"#e74c3c\"\n  - name: Mana\n    current: 5\n    max: 5\n    color: \"#3498db\"\n```\n\n")}>Insert tracker</button>}
           {fieldsEditable && <button type="button" onClick={() => insertSnippet("```traits\ntitle: Traits & Abilities\ntraits:\n  - name: Trait name\n    value: \"\"\n    description: Optional tooltip\n    type: \"\"\n```\n\n")}>Insert traits</button>}

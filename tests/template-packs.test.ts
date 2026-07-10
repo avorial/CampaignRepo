@@ -31,4 +31,16 @@ describe("template packs", () => {
     expect(template?.body).not.toContain("Racial Solomani");
     expect(template?.body).not.toContain('name: "Advocate", level: 0');
   });
+
+  it("seeds Sword Chronicle character sheets as editable markdown blocks", () => {
+    const template = packFor("Sword Chronicle").find((item) => item.slug === "character-sheet");
+
+    expect(template?.body).toContain("```sword-chronicle-sheet");
+    expect(template?.body).toContain("house:\n");
+    expect(template?.body).toContain("  Agility: 2");
+    expect(template?.body).toContain("  Animal Handling: 2");
+    expect(template?.body).toContain("  Will: 2");
+    expect(template?.body).toContain("destiny: 3");
+    expect(template?.body).toContain("oaths: []");
+  });
 });

@@ -6,11 +6,12 @@
         "category": "character",
         "type": "character",
         "name": "Character Sheet",
-        "summary": "Sword Chronicle character sheet template.",
+        "summary": "Sword Chronicle character sheet block rendered from editable markdown.",
         "tags": [
           "pc",
           "character",
-          "sheet"
+          "sheet",
+          "sword-chronicle"
         ],
         "visibility": "gm",
         "approvalStatus": "approved",
@@ -19,7 +20,7 @@
         "aliases": [],
         "lastEditedBy": "CampaignRepo"
       },
-      "body": "# Character Sheet\n\n![portrait](/wiki/media/REPLACE.jpg)\n*Sword Chronicle House Character*\n\n**Player:**\n**Pronouns:**\n**Concept:**\n**Status:** active\n\n## Identity\n\n- **Ancestry / Species:**\n- **Culture / Home:**\n- **Calling / Career:**\n- **Affiliation:** [[Faction]]\n\n## Core Stats\n\n| Trait | Value | Notes |\n| --- | --- | --- |\n| Primary attribute |  |  |\n| Secondary attribute |  |  |\n| Defense / Save |  |  |\n| Health / Harm |  |  |\n| Resource |  |  |\n\n## Skills & Edges\n\n- Skill / edge - rating - note\n\n## Gear\n\n- Item - note\n\n## Bonds\n\n- [[NPC]] - relationship\n- [[Location]] - tie\n\n## Goals\n\n- Short-term:\n- Long-term:\n\n:::gm\n## GM Notes\n\nSecrets, flags, hooks, and pressure points.\n:::\n"
+      "body": "# Character Sheet\n\n![portrait](/wiki/media/REPLACE.jpg)\n*House • Title • Liege*\n\n```sword-chronicle-sheet\nname: Unnamed Character\nage:\ngender:\nhouse:\nportrait:\nheraldry:\nmotto:\nabilities:\n  Agility: 2\n  Animal Handling: 2\n  Athletics: 2\n  Awareness: 2\n  Cunning: 2\n  Deception: 2\n  Endurance: 2\n  Fighting: 2\n  Healing: 2\n  Knowledge: 2\n  Language: 2\n  Marksmanship: 2\n  Persuasion: 2\n  Status: 2\n  Stealth: 2\n  Survival: 2\n  Thievery: 2\n  Warfare: 2\n  Will: 2\n  # Add specialties (bonus dice) to any ability:\n  # Fighting:\n  #   rating: 4\n  #   specialties: [Long Blades 2]\ndefensiveBonus: 0\ndestiny: 3\ndestinySpent: 0\nqualities: []\narmor:\n  name:\n  rating:\n  penalty: 0\nattacks:\n  # - name: Longsword\n  #   test: Fighting (Long Blades)\n  #   dice: 4D + 2B\n  #   damage: Agility + 3\n  #   qualities: Adaptable\ndamage: 0\ninjuries: 0\nwounds: 0\nequipment: []\nretainers: []\nallies: []\nenemies: []\noaths: []\nappearance:\n  height:\n  weight:\n  eyes:\n  hair:\n  mannerisms:\n  features:\nhistory:\nnotes:\n```\n\n## Personal History\n\nWhere they were born, who raised them, and what they owe.\n\n:::gm\nSecret loyalties, hidden bastards, and the oath they intend to break.\n:::\n"
     },
     {
       "slug": "house",
