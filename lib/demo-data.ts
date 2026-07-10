@@ -31,6 +31,8 @@ export type DemoKit = {
   lists?: DemoList[];          // reference lists (ancestries, classes, conditions, gear, …)
   researchStatus?: DemoResearchStatus;
   sheetBrief?: DemoSheetBrief;
+  /** True when `sheet` is a generated design brief (GM/dev-facing), not a real filled-in sheet. */
+  sheetIsBrief?: boolean;
 };
 
 export type DemoPage = {
@@ -518,7 +520,8 @@ export function demoKitFor(gameType: GameType): DemoKit {
     sheet: base.sheet || demoSheetMarkdown(gameType, research.sheetBrief),
     lists: [...(base.lists || []), ...research.lists],
     researchStatus: research.status,
-    sheetBrief: research.sheetBrief
+    sheetBrief: research.sheetBrief,
+    sheetIsBrief: !base.sheet
   };
 }
 
@@ -620,7 +623,7 @@ export function demoPagesFor(gameType: GameType): DemoPage[] {
       visibility: "players",
       summary: `${pc.role}. A sample player character.`,
       tags: [tag, "pc"],
-      body: `# ${pc.name}\n\n> ${pc.role} — a sample player character.\n\n## Concept\n\n${pc.blurb}\n\n## Hooks\n\n- Has unfinished business with [[${fac.name}]].\n- Is chasing the [[${item.name}]].\n- Crossed paths once with [[${npc.name}]].\n${kit.sheet ? `\n${kit.sheet}\n` : ""}\n_Demo player character — edit or delete freely._\n`
+      body: `# ${pc.name}\n\n> ${pc.role} — a sample player character.\n\n## Concept\n\n${pc.blurb}\n\n## Hooks\n\n- Has unfinished business with [[${fac.name}]].\n- Is chasing the [[${item.name}]].\n- Crossed paths once with [[${npc.name}]].\n${kit.sheet ? (kit.sheetIsBrief ? `\n:::gm\n${kit.sheet}\n:::\n` : `\n${kit.sheet}\n`) : ""}\n_Demo player character — edit or delete freely._\n`
     },
     {
       slug: demoSlug(threat.name),
@@ -712,12 +715,12 @@ Use this page as scaffolding, not canon. Rewrite the facts after session one and
       .join("\n\n");
     pages.push({
       slug: demoSlug(`${gameType} Primer`),
-      name: `${gameType} — Player Primer`,
+      name: `${gameType} — GM Primer & Checklist`,
       category: "lore",
-      visibility: "players",
+      visibility: "gm",
       summary: kit.concept ? `${kit.concept.split(". ")[0]}.` : `Quick reference for ${gameType}.`,
       tags: [tag, "reference"],
-      body: `# ${gameType} — Player Primer\n\n> A quick reference for this system: concept, and the lists you'll reach for most.\n\n## Concept\n\n${kit.concept || kit.premise}\n\n${listMd}\n\n_Demo content — edit or delete freely._\n`
+      body: `# ${gameType} — GM Primer & Checklist\n\n> GM-side reference for this system: the concept, the reformatting checklist, and the lists you'll reach for most.\n\n## Concept\n\n${kit.concept || kit.premise}\n\n${listMd}\n\n_Demo content — edit or delete freely._\n`
     });
   }
 
