@@ -3,6 +3,7 @@ import "./globals.css";
 import "./theme-presets.css";
 import CommandPalette from "./components/command-palette";
 import MobileTabBar from "./components/mobile-tab-bar";
+import RepoRefreshButton from "./components/repo-refresh-button";
 import ThemePicker from "./components/theme-picker";
 
 export const metadata: Metadata = {
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <a href="#main-content" className="skip-link">Skip to content</a>
         {children}
+        <RepoRefreshButton />
         <ThemePicker />
         <MobileTabBar />
         <CommandPalette />

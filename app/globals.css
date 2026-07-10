@@ -3692,6 +3692,59 @@ button.nav-link.active {
   color: var(--gold-bright);
 }
 
+.repo-refresh-fab {
+  position: fixed;
+  left: 18px;
+  bottom: 64px;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+}
+
+.repo-refresh-btn {
+  min-height: 0;
+  padding: 8px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text-primary);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: var(--shadow-pop);
+  cursor: pointer;
+}
+
+.repo-refresh-btn:hover:not(:disabled) {
+  border-color: var(--gold);
+  color: var(--gold-bright);
+}
+
+.repo-refresh-btn:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.repo-refresh-status {
+  max-width: 220px;
+  padding: 6px 9px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  font-size: 11px;
+  box-shadow: var(--shadow-pop);
+  white-space: nowrap;
+}
+
+.repo-refresh-status.error {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 @media (max-width: 980px) {
   .dashboard-grid,
   .admin-grid,
@@ -3884,6 +3937,12 @@ button.nav-link.active {
 
   /* Floating overlays clear the tab bar */
   .toast-fixed { right: 12px; bottom: 90px; }
+  .theme-switch-fab { bottom: 86px; }
+  .repo-refresh-fab {
+    bottom: 132px;
+    left: 12px;
+  }
+  .repo-refresh-status { display: none; }
 
   /* Bottom tab bar */
   .mtabs {
