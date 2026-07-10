@@ -805,17 +805,28 @@ function renderWoDSheetHtml(rawInput: string) {
 </div>`;
 }
 
+/**
+ * Sheet templates are written multi-line and indented for readability, but
+ * Markdown reads a 4-space-indented line as a code block and a blank line as the
+ * end of a raw-HTML block. Either one shreds the sheet into escaped source text
+ * (it only bites when optional sections render empty). Collapsing the whitespace
+ * between tags leaves one HTML block that `marked` passes through untouched.
+ */
+function compactSheetHtml(html: string) {
+  return html.replace(/>\s+</g, "><").trim();
+}
+
 /** Expand fenced `traveller-sheet` YAML blocks into the designed sheet. */
 function expandTravellerSheets(content: string) {
   return content.replace(/```traveller-sheet\s*\n([\s\S]*?)```/g, (_match, inner) => {
-    return `\n\n${renderTravellerSheetHtml(String(inner))}\n\n`;
+    return `\n\n${compactSheetHtml(renderTravellerSheetHtml(String(inner)))}\n\n`;
   });
 }
 
 /** Expand fenced `wod-sheet` YAML blocks into the WoD character sheet. */
 function expandWoDSheets(content: string) {
   return content.replace(/```wod-sheet\s*\n([\s\S]*?)```/g, (_match, inner) => {
-    return `\n\n${renderWoDSheetHtml(String(inner))}\n\n`;
+    return `\n\n${compactSheetHtml(renderWoDSheetHtml(String(inner)))}\n\n`;
   });
 }
 
@@ -1304,7 +1315,7 @@ function renderDnDSheetHtml(rawInput: string) {
 /** Expand fenced `dnd-sheet` YAML blocks into the D&D 5e character sheet. */
 function expandDnDSheets(content: string) {
   return content.replace(/```dnd-sheet\s*\n([\s\S]*?)```/g, (_match, inner) => {
-    return `\n\n${renderDnDSheetHtml(String(inner))}\n\n`;
+    return `\n\n${compactSheetHtml(renderDnDSheetHtml(String(inner)))}\n\n`;
   });
 }
 
@@ -1612,7 +1623,7 @@ function renderSwordChronicleSheetHtml(rawInput: string) {
 /** Expand fenced `sword-chronicle-sheet` YAML blocks into the Sword Chronicle sheet. */
 function expandSwordChronicleSheets(content: string) {
   return content.replace(/```sword-chronicle-sheet\s*\n([\s\S]*?)```/g, (_match, inner) => {
-    return `\n\n${renderSwordChronicleSheetHtml(String(inner))}\n\n`;
+    return `\n\n${compactSheetHtml(renderSwordChronicleSheetHtml(String(inner)))}\n\n`;
   });
 }
 

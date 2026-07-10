@@ -200,6 +200,22 @@ describe("renderMarkdown", () => {
     expect(html).not.toContain("Marksmanship");
   });
 
+  it("does not let Markdown mangle a sheet whose optional sections are empty", () => {
+    // No motto/heraldry/appearance: those conditionals collapse to "", leaving
+    // blank + indented lines that Markdown would otherwise read as a code block.
+    const sheets: Record<string, string> = {
+      "sword-chronicle-sheet": 'name: Carrick\nabilities:\n  Agility: 2\nhistory: "Saltblood 1"\nnotes: "Disposition 4"',
+      "traveller-sheet": "name: Avery\ncharacteristics:\n  STR: 7",
+      "dnd-sheet": "name: Bram\nclass: Fighter\nlevel: 3",
+      "wod-sheet": "name: Nadia"
+    };
+    for (const [kind, body] of Object.entries(sheets)) {
+      const html = renderMarkdown("```" + kind + "\n" + body + "\n```", "gm");
+      expect(html, kind).not.toMatch(/&lt;(\/)?(div|section|h4|p)/);
+      expect(html, kind).not.toContain("<pre>");
+    }
+  });
+
   it("renders the full printed ability list for a sheet with no abilities", () => {
     const html = renderMarkdown("```sword-chronicle-sheet\nname: Blank\n```", "gm");
     for (const ability of ["Agility", "Animal Handling", "Warfare", "Will", "Thievery"]) {
