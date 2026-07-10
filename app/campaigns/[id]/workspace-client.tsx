@@ -146,14 +146,6 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
       setCampaignCategories(categoriesData.categories);
       if (!categoriesData.categories.some((category: { id: string }) => category.id === pageCategory)) setPageCategory(categoriesData.categories[0].id);
     }
-    if (pagesData.cache?.cached) {
-      void fetch(`/api/campaigns/${campaign.id}/pages?refresh=wait`)
-        .then((response) => response.ok ? response.json() : null)
-        .then((fresh) => {
-          if (fresh?.pages) setPages(fresh.pages);
-        })
-        .catch(() => undefined);
-    }
   }
 
   async function saveTheme(event: FormEvent<HTMLFormElement>) {

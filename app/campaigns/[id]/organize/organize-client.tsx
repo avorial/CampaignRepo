@@ -64,7 +64,7 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
   // ── Pages loading ─────────────────────────────────────────────────
   async function load() {
     setLoading(true);
-    const res = await fetch(`/api/campaigns/${campaign.id}/pages?refresh=wait`);
+    const res = await fetch(`/api/campaigns/${campaign.id}/pages`);
     const data = await res.json();
     setPages(data.pages || []);
     setSelected(new Set());
@@ -75,9 +75,13 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
   // ── Media loading (lazy) ──────────────────────────────────────────
   async function loadMedia() {
     setMediaLoading(true);
-    const res = await fetch(`/api/campaigns/${campaign.id}/media`);
-    const data = await res.json();
-    setMedia(data.media || []);
+    const [mediaRes, pagesRes] = await Promise.all([
+      fetch(`/api/campaigns/${campaign.id}/media`),
+      fetch(`/api/campaigns/${campaign.id}/pages?body=1`)
+    ]);
+    const [mediaData, pagesData] = await Promise.all([mediaRes.json(), pagesRes.json()]);
+    setMedia(mediaData.media || []);
+    setPages(pagesData.pages || []);
     setMediaSelected(new Set());
     setMediaLoading(false);
     setMediaLoaded(true);

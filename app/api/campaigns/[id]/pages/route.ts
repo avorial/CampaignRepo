@@ -8,7 +8,7 @@ import { sanitizePlayerPage } from "@/lib/public-site";
 import { defaultFrontmatter, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
-import { readPageCache, refreshPageCache, refreshPageCacheInBackground } from "@/lib/page-cache";
+import { readPageCache, readSearchIndexPageSnapshot, refreshPageCache, refreshPageCacheInBackground } from "@/lib/page-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +28,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const storage = getStorageAdapter(campaign);
   if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const url = new URL(req.url);
-  const cached = readPageCache(campaign.id);
-  const waitForRefresh = url.searchParams.get("refresh") === "wait" || cached.pages.length === 0;
+  const includeBodies = url.searchParams.get("body") === "1" || url.searchParams.get("full") === "1";
+  const cached = includeBodies ? readPageCache(campaign.id) : ((await readSearchIndexPageSnapshot(storage)) || readPageCache(campaign.id));
+  const waitForRefresh = cached.pages.length === 0 || url.searchParams.get("refresh") === "wait";
   let snapshot;
   try {
     snapshot = waitForRefresh ? await refreshPageCache(storage, campaign) : cached;
@@ -39,7 +40,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       { status: cached.pages.length ? 200 : 503 }
     );
   }
-  if (!waitForRefresh) refreshPageCacheInBackground(storage, campaign);
+  if (includeBodies && !waitForRefresh) refreshPageCacheInBackground(storage, campaign);
   const pages = snapshot.pages;
   const mode = url.searchParams.get("mode");
   const isPlayerMode = campaign.role === "player" || mode === "player";
@@ -56,6 +57,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     pages: visiblePages,
     cache: {
       cached: !waitForRefresh,
+      source: snapshot.source,
       refreshedAt: snapshot.refreshedAt,
       refreshError: snapshot.refreshError
     }

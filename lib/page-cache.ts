@@ -1,7 +1,7 @@
 import type { Campaign, WikiPage } from "@/lib/types";
 import { getDb } from "@/lib/db";
 import type { StorageAdapter } from "@/lib/storage";
-import { parsePage } from "@/lib/markdown";
+import { normalizeFrontmatter, parsePage } from "@/lib/markdown";
 
 type CacheRow = {
   slug: string;
@@ -13,6 +13,7 @@ export type PageCacheSnapshot = {
   pages: WikiPage[];
   refreshedAt: string | null;
   refreshError: string | null;
+  source?: "cache" | "search-index" | "full-refresh";
 };
 
 const refreshes = new Map<number, Promise<PageCacheSnapshot>>();
@@ -35,8 +36,70 @@ export function readPageCache(campaignId: number): PageCacheSnapshot {
   return {
     pages,
     refreshedAt: state?.refreshedAt || null,
-    refreshError: state?.refreshError || null
+    refreshError: state?.refreshError || null,
+    source: "cache"
   };
+}
+
+type SearchIndexDocument = {
+  sha?: string;
+  slug: string;
+  title?: string;
+  category?: string;
+  summary?: string;
+  tags?: string[];
+  aliases?: string[];
+  visibility?: "gm" | "players";
+  approvalStatus?: "approved" | "unapproved" | "rejected";
+  links?: string[];
+  backlinks?: string[];
+  keyLinks?: string[];
+};
+
+function pageFromSearchDocument(doc: SearchIndexDocument): WikiPage {
+  const name = doc.title || doc.slug.replace(/-/g, " ");
+  const frontmatter = normalizeFrontmatter({
+    name,
+    title: name,
+    category: doc.category || "npc",
+    type: doc.category || "npc",
+    summary: doc.summary || "",
+    tags: doc.tags || [],
+    aliases: doc.aliases || [],
+    visibility: doc.visibility || "gm",
+    approvalStatus: doc.approvalStatus || "approved",
+    knownToPlayers: doc.visibility === "players",
+    keyLinks: doc.keyLinks || []
+  }, name);
+  return {
+    slug: doc.slug,
+    sha: doc.sha,
+    frontmatter,
+    content: "",
+    raw: "",
+    outgoingLinks: (doc.links || []).map((target) => ({ target, label: target })),
+    backlinks: doc.backlinks || []
+  };
+}
+
+export async function readSearchIndexPageSnapshot(storage: StorageAdapter): Promise<PageCacheSnapshot | null> {
+  try {
+    const file = await storage.getTextFile("wiki/search/index.json");
+    const docs = JSON.parse(file.text) as Array<SearchIndexDocument & { category?: string }>;
+    const pages = docs
+      .filter((doc) => doc?.slug && doc.category !== "media" && !doc.slug.startsWith("media/"))
+      .map(pageFromSearchDocument)
+      .sort((a, b) => a.slug.localeCompare(b.slug));
+    if (!pages.length) return null;
+    return {
+      pages,
+      refreshedAt: null,
+      refreshError: null,
+      source: "search-index"
+    };
+  } catch {
+    return null;
+  }
 }
 
 async function refresh(storage: StorageAdapter, campaign: Campaign): Promise<PageCacheSnapshot> {
@@ -84,7 +147,8 @@ async function refresh(storage: StorageAdapter, campaign: Campaign): Promise<Pag
       `).run(campaign.id);
     });
     replace(pages);
-    return readPageCache(campaign.id);
+    const snapshot = readPageCache(campaign.id);
+    return { ...snapshot, source: "full-refresh" };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Page refresh failed.";
     db.prepare(`

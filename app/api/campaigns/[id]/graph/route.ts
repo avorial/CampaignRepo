@@ -3,7 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { getCampaign } from "@/lib/db";
 import { parsePage, stripGmBlocks } from "@/lib/markdown";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
-import { readPageCache, refreshPageCache, refreshPageCacheInBackground } from "@/lib/page-cache";
+import { readPageCache, readSearchIndexPageSnapshot, refreshPageCache } from "@/lib/page-cache";
 import { getStorageAdapter } from "@/lib/storage";
 import type { CampaignFamilyTree, CampaignGraphEdge, CampaignGraphNode, CampaignTimelineItem, WikiPage } from "@/lib/types";
 
@@ -96,9 +96,8 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const storage = getStorageAdapter(campaign);
   if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const cached = readPageCache(campaign.id);
+  const cached = (await readSearchIndexPageSnapshot(storage)) || readPageCache(campaign.id);
   const snapshot = cached.pages.length ? cached : await refreshPageCache(storage, campaign);
-  if (cached.pages.length) refreshPageCacheInBackground(storage, campaign);
   const allPages =
     campaign.role === "player"
       ? snapshot.pages.map((page) => parsePage(page.slug, stripGmBlocks(page.raw), page.sha))
