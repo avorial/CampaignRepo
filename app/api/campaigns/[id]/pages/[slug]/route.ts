@@ -4,8 +4,8 @@ import { requireUser } from "@/lib/auth";
 import { canManageCampaign, createNotifications, getCampaign, getCampaignGmUserIds, getCampaignMemberUsers, getMemberGroups, getPageWatcherUserIds, getUserIdByEmail } from "@/lib/db";
 import { getStorageAdapter, isConflictError, isNotFoundError } from "@/lib/storage";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
-import { scheduleSearchIndexRebuild } from "@/lib/search";
-import { readPageCache, refreshPageCache } from "@/lib/page-cache";
+import { removePageFromSearchIndex, scheduleSearchIndexRebuild } from "@/lib/search";
+import { readPageCache, refreshPageCache, removePageFromCache } from "@/lib/page-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -182,10 +182,17 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   try {
     const file = await storage.getTextFile(path);
     await storage.deleteFile(path, `CampaignRepo: delete ${slug}`, file.sha);
+    removePageFromCache(campaign.id, slug);
+    await removePageFromSearchIndex(storage, campaign, slug);
     scheduleSearchIndexRebuild(campaign);
     return NextResponse.json({ ok: true });
   } catch (error) {
-    if (isNotFoundError(error)) return NextResponse.json({ ok: true, alreadyMissing: true });
+    if (isNotFoundError(error)) {
+      removePageFromCache(campaign.id, slug);
+      await removePageFromSearchIndex(storage, campaign, slug);
+      scheduleSearchIndexRebuild(campaign);
+      return NextResponse.json({ ok: true, alreadyMissing: true });
+    }
     const message = error instanceof Error ? error.message : "Delete failed.";
     return NextResponse.json({ error: message }, { status: 400 });
   }

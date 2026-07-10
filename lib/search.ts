@@ -1,7 +1,7 @@
 import { stripGmBlocks } from "@/lib/markdown";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import type { Campaign, SearchDocument, WikiPage } from "@/lib/types";
-import { upsertSearchDocuments } from "@/lib/db";
+import { deleteSearchDocument, upsertSearchDocuments } from "@/lib/db";
 import { getStorageAdapter, type StorageAdapter } from "@/lib/storage";
 import { refreshPageCache } from "@/lib/page-cache";
 
@@ -100,6 +100,24 @@ export async function rebuildSearchIndex(storage: StorageAdapter, campaign: Camp
   }
   await storage.putFile("wiki/search/index.json", JSON.stringify(docs, null, 2) + "\n", "CampaignRepo: update search snapshot", sha);
   return docs;
+}
+
+export async function removePageFromSearchIndex(storage: StorageAdapter, campaign: Campaign, slug: string) {
+  deleteSearchDocument(campaign.id, slug);
+  try {
+    const existing = await storage.getTextFile("wiki/search/index.json");
+    const docs = JSON.parse(existing.text) as SearchDocument[];
+    const next = docs.filter((doc) => doc.slug !== slug || doc.category === "media");
+    if (next.length === docs.length) return;
+    await storage.putFile(
+      "wiki/search/index.json",
+      JSON.stringify(next, null, 2) + "\n",
+      `CampaignRepo: remove ${slug} from search snapshot`,
+      existing.sha
+    );
+  } catch (error) {
+    console.error(`Could not remove ${slug} from search snapshot for campaign ${campaign.id}.`, error);
+  }
 }
 
 const scheduledRebuilds = new Map<number, ReturnType<typeof setTimeout>>();

@@ -41,6 +41,11 @@ export function readPageCache(campaignId: number): PageCacheSnapshot {
   };
 }
 
+export function removePageFromCache(campaignId: number, slug: string) {
+  const db = getDb();
+  db.prepare("DELETE FROM campaign_page_cache WHERE campaignId = ? AND slug = ?").run(campaignId, slug);
+}
+
 type SearchIndexDocument = {
   sha?: string;
   slug: string;

@@ -952,6 +952,10 @@ export function upsertSearchDocuments(campaignId: number, docs: SearchDocument[]
   tx();
 }
 
+export function deleteSearchDocument(campaignId: number, slug: string) {
+  db.prepare("DELETE FROM search_index WHERE campaignId = ? AND slug = ?").run(campaignId, slug);
+}
+
 export type Notification = {
   id: number;
   userId: number;
