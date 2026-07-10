@@ -37,6 +37,8 @@ CampaignRepo currently ships:
 - Relationship graph with typed relationship frontmatter, inverse labels,
   hierarchy/family layout, dense-campaign clusters, graph editing, search, and
   health checks.
+- Dedicated family tree view with an editable tree builder, imported-genealogy
+  datasets rendered Family Echo-style, and fullscreen viewing.
 - Full-text search plus a global command palette.
 - Player portal and public no-login sites for approved player-visible content.
 - Public campaign gallery, custom public link names, ratings, recently-updated
@@ -44,13 +46,16 @@ CampaignRepo currently ships:
   compare/PR handoff, and public quest display.
 - Sessions, quests, fantasy calendar, overview widgets, boards, manuscripts, and
   lexicon/naming tools.
-- Traveller, D&D 5e, Pathfinder 2e, and World of Darkness character-sheet
-  renderers, with Traveller rolling and editor controls.
+- Traveller, D&D 5e, Pathfinder 2e, World of Darkness, and Sword Chronicle
+  character-sheet renderers, with Traveller rolling, editor controls, and a
+  print/PDF action on sheet-bearing pages.
 - Reusable category property schemas, custom typed fields, inventories,
   abilities, resources, and safe formula fields stored in campaign YAML/page
   frontmatter.
-- Review queue, campaign health center, bulk page organization, notifications,
-  assignments, mentions, page watches, and page history/diff/restore workflow.
+- Review queue, campaign health center, bulk page organization (including
+  one-commit bulk delete), manual repo refresh, snapshot-backed page lists,
+  notifications, assignments, mentions, page watches, and page
+  history/diff/restore workflow.
 - Importers for Foundry actors, generic character JSON, Obsidian, Notion,
   OneNote, Google Docs, CSV, journals, Roll20, LegendKeeper, World Anvil, full
   ZIP/JSON backup export, and character re-import diffing — consolidated in one
@@ -106,6 +111,24 @@ belong in the git repo directly. OneNote import joined the hub. The Create page
 form was expanded and now remembers the last category/template/visibility per
 campaign.
 
+### 37. Family trees - shipped
+
+A dedicated family tree view with an editable tree builder, Family Echo-style
+rendering for imported genealogy datasets, and fullscreen viewing. Trees are
+repo files like everything else, and the relationship graph's family layout
+remains for quick looks.
+
+### 38. Sword Chronicle character sheet - shipped
+
+A display-only `sword-chronicle-sheet` fenced block renders the printed Green
+Ronin sheet: the full ability list (honoring a setting's variant list, e.g.
+Kingdom Divided's Admiralty/Nautical/Warcraft), specialties with bonus dice,
+derived Intrigue Defense / Combat Defense / Composure / Health computed by the
+printed formulas, destiny and damage/injury/wound tracks, attacks, armor,
+retainers, appearance, and history. The Sword Chronicle template pack seeds the
+real sheet, and the sheet-mangling Markdown bug this surfaced was fixed for the
+D&D and WoD sheets too.
+
 ## The 1.2 Centerpiece: Per-Game Sheet & Template Pass - L
 
 This is the main effort for the next release. The demo system exists precisely
@@ -126,15 +149,16 @@ means, per game:
 Suggested working order (status-driven):
 
 - **Tier 1 — already `ready-for-polish`, verify and close:** Dungeons &
-  Dragons, Traveller, Vampire: The Masquerade, Werewolf: The Apocalypse, Mage:
-  The Ascension, Call of Cthulhu, Delta Green, Blades in the Dark, Alien RPG,
-  Cyberpunk RED, Mothership, Fate Core.
+  Dragons, Traveller, Sword Chronicle (renderer + template shipped in 1.1),
+  Vampire: The Masquerade, Werewolf: The Apocalypse, Mage: The Ascension, Call
+  of Cthulhu, Delta Green, Blades in the Dark, Alien RPG, Cyberpunk RED,
+  Mothership, Fate Core.
 - **Tier 2 — popular systems needing reference work:** Pathfinder, Warhammer
   Fantasy Roleplay, Warhammer 40,000 Roleplay, Starfinder, The One Ring,
   Dragonbane, Shadowdark RPG, Mörk Borg, Old-School Essentials, Savage Worlds.
 - **Tier 3 — the long tail:** Dark Ages line, Pendragon, Reign, Burning Wheel,
-  Fabula Ultima, Sword Chronicle, Candela Obscura, Changeling, Demon, Hunter,
-  Mummy, Wraith, The King in Yellow, Twilight: 2000, 2300AD, Coriolis.
+  Fabula Ultima, Candela Obscura, Changeling, Demon, Hunter, Mummy, Wraith,
+  The King in Yellow, Twilight: 2000, 2300AD, Coriolis.
 
 Note on research: bulk automated research of all systems at once proved a poor
 token/value trade. Work game-by-game against the in-app checklist instead,

@@ -88,6 +88,13 @@ Per-player journal space in the portal (visible to that player + GM), stored
 under `wiki/journals/<player>/`. Plus GM "whisper handouts" — reveal a page or
 secret block to one named player rather than a group.
 
+### 2.6 Per-Player Character Hub - M
+
+A "my character" home in the portal for each player: their sheet, journal,
+inventory, relationships, arc notes, and the secrets *they* know, in one
+place. Everything already exists as scattered pieces; this is the assembly.
+The GM sees every hub; each player sees their own.
+
 ---
 
 ## 3. World & Canon (the repo's superpowers)
@@ -145,6 +152,28 @@ Styled, printable in-world documents from markdown templates: letters, wanted
 posters, ship manifests, newspaper clippings — themed by the campaign's genre
 theme, exported to PDF or pushed to Foundry as journal handouts via the bridge.
 
+### 4.4 World Book / Codex Export - M
+
+Compile the wiki (or a manuscript) into a finished artifact: a print-ready PDF
+world book with cover, table of contents, cross-reference index, and the
+campaign's theme — plus an EPUB codex players can read on an e-reader.
+Manuscripts already stitch pages into chapters; this is the bindery.
+
+### 4.5 Paper Notebook OCR Import - M-L
+
+Photograph handwritten session notes or an old campaign notebook; OCR them into
+draft pages in the review queue, with wiki-link suggestions for names the
+search index already knows. Completes the capture story (4.1/4.2) for the GM
+whose real campaign archive is a stack of spiral notebooks.
+
+### 4.6 Campaign Art Pipeline - M
+
+AI portrait and scene generation with a consistent per-campaign art style: the
+campaign defines a style brief once (genre, palette, medium), every generated
+NPC portrait or location vista honors it, and results land in the media
+manager as drafts for approval. Ends the "every portrait looks like a
+different artist" problem.
+
 ---
 
 ## 5. Community & Integrations
@@ -175,6 +204,44 @@ is already language-agnostic markdown; only the chrome needs work.
 
 ---
 
+## 6. Canon Intelligence & GM Memory
+
+The GM's real job between sessions is remembering: who knows what, which
+threads are live, whether the world still adds up. These make the repo do the
+remembering.
+
+### 6.1 Secret & Reveal Ledger - M
+
+A first-class record of who knows what: every `:::gm` block and named secret
+group gets a reveal history — revealed to whom, in which session, by what
+means. The GM view answers "does Elena know about the cult yet?" instantly;
+flipping a secret to revealed posts it to the timeline. Builds directly on the
+existing visibility groups.
+
+### 6.2 Plot Thread & Foreshadowing Tracker - M
+
+Track narrative threads as repo data: a thread has a seed ("the merchant's odd
+coin, session 3"), escalations, and a payoff state (unfired / building /
+paid off / abandoned). A GM dashboard surfaces unfired Chekhov's guns and
+threads gone quiet for N sessions. Quests track *tasks*; this tracks *meaning*.
+
+### 6.3 AI Canon Consistency Sweep - M
+
+An on-demand AI pass over the wiki that hunts contradictions: mismatched
+dates, characters alive after their death page, allegiances that changed
+without an event, name-spelling drift. Findings arrive as review-queue items
+with suggested fixes, never silent edits. The graph health checks catch broken
+structure; this catches broken *story*.
+
+### 6.4 Party Knowledge Map - M
+
+The world map as the *party* knows it: regions, pins, and routes are marked
+discovered as the party learns them, and the portal map shows only that. Not
+fog of war — no live play, just knowledge state between sessions, advancing
+when a session report or reveal says so.
+
+---
+
 ## Explicitly Out of Scope (Foundry's lane)
 
 Recorded so they don't creep back in:
@@ -194,13 +261,16 @@ above (recaps, journals, handouts, clocks) — not a half-VTT inside the wiki.
 ## Suggested Sequencing
 
 1. **The Loop Wave** — recaps (2.1), scheduling (2.2), player journals (2.5),
-   broadsheet (3.4). Small pieces, immediate weekly payoff, zero Foundry
-   overlap.
-2. **The Bridge Wave** — post-session harvest (1.2), scene/map handoff (1.4),
+   character hub (2.6), broadsheet (3.4). Small pieces, immediate weekly
+   payoff, zero Foundry overlap.
+2. **The Memory Wave** — reveal ledger (6.1), plot threads (6.2), consistency
+   sweep (6.3), knowledge map (6.4). The repo starts doing the GM's
+   remembering; everything builds on data already in the wiki.
+3. **The Bridge Wave** — post-session harvest (1.2), scene/map handoff (1.4),
    then two-way journal sync (1.3) and the wiki-in-Foundry module (1.1).
-3. **The World Wave** — downtime actions (2.3), faction clocks (2.4), canon
+4. **The World Wave** — downtime actions (2.3), faction clocks (2.4), canon
    snapshots (3.3).
-4. **The Canon Wave** — alternate timelines (3.1), shared-world canon (3.2).
-5. **The Reach Wave** — Discord (5.1), quick capture (4.1), handout designer
-   (4.3), exchange (5.2), analytics (5.3), transcription (4.2),
-   localization (5.4).
+5. **The Canon Wave** — alternate timelines (3.1), shared-world canon (3.2).
+6. **The Reach Wave** — Discord (5.1), quick capture (4.1), handout designer
+   (4.3), world book export (4.4), notebook OCR (4.5), art pipeline (4.6),
+   exchange (5.2), analytics (5.3), transcription (4.2), localization (5.4).
