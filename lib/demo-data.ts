@@ -140,50 +140,86 @@ const DEMO_KITS: Record<GameType, DemoKit> = {
     item: x("The Sword of the First Dawn", "An old blade that kindles with light in the presence of true evil."),
     concept:
       "Dungeons & Dragons is heroic sword-and-sorcery fantasy. A party of diverse adventurers explores dungeons and wildlands, battles monsters, and shapes the fate of a frontier realm. Play swings between exploration, roleplay, and tactical d20 combat, with characters growing in power across levels. Themes: heroism, discovery, escalating danger, and treasure hard-won.",
-    sheet: `## Character Sheet — D&D 5e
+    sheet: `## Character Sheet
 
-**Ancestry:** Half-Elf · **Class & Level:** Ranger 5 · **Background:** Outlander · **Alignment:** Neutral Good
-**Proficiency Bonus:** +3 · **Passive Perception:** 15 · **Inspiration:** ( )
+\`\`\`dnd-sheet
+system: dnd5e
+name: Rilla Windmere
+race: Half-Elf
+class: Ranger
+subclass: Hunter
+level: 5
+background: Outlander
+alignment: Neutral Good
+xp: 6500
+inspiration: false
+personality_traits: "Watches the treeline even indoors. Speaks little, and only when it matters."
+ideals: "The wild does not forgive carelessness, and neither do I."
+bonds: "The war-band that burned Thornwatch still rides. I will find them."
+flaws: "I trust animals long before I trust people."
+age: "27"
+eyes: Grey
+hair: Chestnut
 
-### Ability Scores
+ability_scores:
+  str: 12
+  dex: 17
+  con: 14
+  int: 10
+  wis: 15
+  cha: 11
 
-| Ability | Score | Mod | Save |
-| --- | --- | --- | --- |
-| Strength | 12 | +1 | +1 |
-| Dexterity | 17 | +3 | +6 |
-| Constitution | 14 | +2 | +2 |
-| Intelligence | 10 | +0 | +0 |
-| Wisdom | 15 | +2 | +5 |
-| Charisma | 11 | +0 | +0 |
+saving_throw_proficiencies: [str, dex]
+skill_proficiencies: [Perception, Survival, Stealth, Nature, Animal Handling, Insight]
 
-### Combat
+ac: 15
+speed: 30
+hp_max: 44
+hp_current: 44
+hit_dice: "5d10"
 
-| AC | Initiative | Speed | Max HP | Hit Dice |
-| --- | --- | --- | --- | --- |
-| 15 | +3 | 30 ft. | 44 | 5d10 |
+attacks:
+  - name: Longbow
+    bonus: "+6"
+    damage: "1d8+3 piercing"
+  - name: Shortsword
+    bonus: "+6"
+    damage: "1d6+3 piercing"
 
-**Death Saves:** Successes ( )( )( ) · Failures ( )( )( )
+spellcasting:
+  ability: wis
+  spell_save_dc: 13
+  spell_attack: "+5"
+  spells:
+    - level: 1
+      slots: 4
+      list: [Hunter's Mark, Cure Wounds, Longstrider]
+    - level: 2
+      slots: 2
+      list: [Pass without Trace, Spike Growth]
 
-### Skills (proficient)
-
-Perception +5 · Survival +5 · Stealth +6 · Nature +3 · Animal Handling +5 · Insight +5
-
-### Attacks
-
-| Weapon | Attack | Damage |
-| --- | --- | --- |
-| Longbow | +6 | 1d8+3 piercing |
-| Shortsword | +6 | 1d6+3 piercing |
-
-### Features & Traits
-
-- **Ranger:** Favored Enemy, Natural Explorer, Fighting Style (Archery), Spellcasting, Primeval Awareness.
-- **Half-Elf:** Darkvision, Fey Ancestry, Skill Versatility.
-
-### Equipment & Languages
-
-- Studded leather, longbow with 20 arrows, two shortswords, explorer's pack, hunting trap.
-- **Languages:** Common, Elvish, Sylvan.`,
+features:
+  - Favored Enemy (Orcs)
+  - Natural Explorer (Forest)
+  - Fighting Style (Archery)
+  - Primeval Awareness
+  - Extra Attack
+  - "Hunter: Colossus Slayer"
+  - "Half-Elf: Darkvision, Fey Ancestry, Skill Versatility"
+languages: [Common, Elvish, Sylvan]
+equipment:
+  - name: Studded leather armor
+  - name: Longbow
+  - name: Arrows
+    quantity: 20
+  - name: Shortsword
+    quantity: 2
+  - name: Explorer's pack
+  - name: Hunting trap
+coins:
+  gp: 42
+backstory: "Rilla tracked the war-band that razed Thornwatch for two winters before the trail went cold at Redhollow."
+\`\`\``,
     lists: [
       { title: "Classes", items: ["Barbarian", "Bard", "Cleric", "Druid", "Fighter", "Monk", "Paladin", "Ranger", "Rogue", "Sorcerer", "Warlock", "Wizard", "Artificer"] },
       { title: "Core Ancestries", items: ["Human", "Elf", "Dwarf", "Halfling", "Dragonborn", "Gnome", "Half-Elf", "Half-Orc", "Tiefling"] },
@@ -261,7 +297,53 @@ Perception +5 · Survival +5 · Stealth +6 · Nature +3 · Animal Handling +5 ·
     npc: e("Maester Corwin", "House maester", "Loyal counsel, keeper of secrets, and quietly playing his own long game."),
     pc: e("Lady Elyse Vaelor", "House heir", "Sharp-tongued heir balancing duty, ambition, and a dangerous betrothal."),
     threat: x("The War of Succession", "A dead king, three claimants, and every house forced to choose a side."),
-    item: x("Winter's Tooth", "The house's ancestral blade — losing it would shame the line for generations.")
+    item: x("Winter's Tooth", "The house's ancestral blade — losing it would shame the line for generations."),
+    sheet: `## Character Sheet
+
+\`\`\`sword-chronicle-sheet
+name: Lady Elyse Vaelor
+age: 22
+gender: Female
+house: House Vaelor
+motto: We Do Not Kneel
+destiny: 4
+destinySpent: 1
+abilities:
+  Awareness: 4
+  Cunning: 4
+  Deception: 3
+  Persuasion: 4
+  Status: 5
+  Will: 4
+  Knowledge: 3
+  Fighting:
+    rating: 3
+    specialties: [Long Blades 1]
+  Endurance: 3
+  Agility: 3
+  Athletics: 2
+armor:
+  name: Riding Leathers
+  rating: 2
+  penalty: 0
+attacks:
+  - name: Winter's Tooth (ancestral longsword)
+    test: Fighting (Long Blades)
+    dice: 3D + 1B
+    damage: Agility + 3
+    qualities: Vicious
+qualities: [Blood of the Vaelors]
+benefits:
+  - Heir
+  - Sworn Sword (her shield, Ser Domeric)
+  - Silver Tongue
+drawbacks:
+  - Betrothed (to a rival house)
+appearance:
+  mannerisms: Never raises her voice; the quieter she gets, the more danger you are in.
+  features: Vaelor grey eyes, a duelist's callused hands.
+history: Raised to rule a house that cannot afford her ambitions — and betrothed to seal a peace she never agreed to.
+\`\`\``
   },
   "The One Ring": {
     premise: "Wanderers brave the Wild as a long shadow lengthens over the North.",
@@ -344,7 +426,78 @@ Perception +5 · Survival +5 · Stealth +6 · Nature +3 · Animal Handling +5 ·
     npc: e("Cypher", "Void Engineer defector", "Fled the Technocracy with its secrets and a target on her back."),
     pc: e("Jax", "Virtual Adept", "A hacker-mage who edits reality like unsecured code."),
     threat: x("The Technocracy", "An order enforcing a rational world, one erased miracle at a time."),
-    item: x("The Talisman Drive", "An enchanted device storing a paradigm-shaking working — if it doesn't backfire.")
+    item: x("The Talisman Drive", "An enchanted device storing a paradigm-shaking working — if it doesn't backfire."),
+    sheet: `## Character Sheet
+
+\`\`\`wod-sheet
+system: mage-ascension
+name: Jax
+tradition: Virtual Adepts
+affiliation: The Traditions
+essence: Dynamic
+nature: Visionary
+demeanor: Rebel
+concept: Hacker who found the source code of reality and started committing patches
+chronicle: The Loft Chantry
+attributes:
+  strength: 2
+  dexterity: 3
+  stamina: 2
+  charisma: 3
+  manipulation: 3
+  appearance: 2
+  perception: 3
+  intelligence: 4
+  wits: 3
+abilities:
+  - Alertness: 2
+  - Awareness: 2
+  - Dodge: 2
+  - Subterfuge: 2
+  - Drive: 1
+  - Technology: 4
+  - Academics: 2
+  - Computer: 4
+  - Enigmas: 2
+  - Investigation: 2
+  - Occult: 2
+  - Science: 3
+spheres:
+  - name: Correspondence
+    score: 3
+  - name: Forces
+    score: 2
+  - name: Mind
+    score: 2
+  - name: Data
+    score: 3
+  - name: Prime
+    score: 1
+backgrounds:
+  - Arcane: 2
+  - Node: 2
+  - Library: 2
+  - Contacts: 3
+virtues:
+  conscience: 3
+  self_control: 2
+  courage: 3
+willpower: 5
+willpower_current: 5
+arete: 3
+quintessence: 5
+quintessence_current: 5
+paradox: 0
+focus:
+  - Cybernetic ritual (code as incantation)
+  - Belief that reality is an editable system
+rotes:
+  - name: Ping of Presence
+    notes: "Correspondence 2 — sense anyone on the network"
+  - name: Hotfix
+    notes: "Forces 2, Prime 1 — reroute power around a lock"
+notes: Talks to the Digital Web like it talks back. Sometimes it does.
+\`\`\``
   },
   "Mummy: The Resurrection": {
     premise: "Deathless immortals pursue ancient purpose across recurring lifetimes.",
@@ -380,7 +533,80 @@ Perception +5 · Survival +5 · Stealth +6 · Nature +3 · Animal Handling +5 ·
     npc: e("Prince Valindra", "Camarilla prince", "Rules the city's undead with poise, patience, and utter ruthlessness."),
     pc: e("Nico Alvarez", "Neonate", "A freshly-embraced fledgling still clinging to a mortal conscience."),
     threat: x("The Second Inquisition", "Mortal agents who have learned vampires are real — and how to hunt them."),
-    item: x("The Prince's Edict", "A signed decree of vampiric law; defying it is a death sentence.")
+    item: x("The Prince's Edict", "A signed decree of vampiric law; defying it is a death sentence."),
+    sheet: `## Character Sheet
+
+\`\`\`wod-sheet
+system: vampire-masquerade
+name: Nico Alvarez
+clan: Brujah
+generation: 12
+sire: Marisol
+sect: Anarch
+nature: Rebel
+demeanor: Caregiver
+concept: Community organizer who woke up dead and angry
+chronicle: Ashford by Night
+attributes:
+  strength: 3
+  dexterity: 3
+  stamina: 3
+  charisma: 3
+  manipulation: 2
+  appearance: 2
+  perception: 2
+  intelligence: 2
+  wits: 3
+abilities:
+  - Alertness: 2
+  - Brawl: 3
+  - Dodge: 2
+  - Empathy: 2
+  - Intimidation: 2
+  - Streetwise: 3
+  - Subterfuge: 1
+  - Drive: 1
+  - Firearms: 1
+  - Leadership: 2
+  - Academics: 1
+  - Politics: 2
+disciplines:
+  - name: Potence
+    score: 2
+    descriptions:
+      - "Prowess"
+  - name: Celerity
+    score: 1
+  - name: Presence
+    score: 1
+    descriptions:
+      - "Awe"
+backgrounds:
+  - Allies: 2
+  - Contacts: 2
+  - Herd: 1
+virtues:
+  conscience: 4
+  self_control: 2
+  courage: 4
+willpower: 5
+willpower_current: 5
+blood: 11
+blood_current: 6
+humanity: 7
+merits:
+  - Fifth-Generation Loyalist: 0
+flaws:
+  - Short Fuse: 0
+weapons:
+  - name: Fists
+    damage: "Str (bashing)"
+  - name: Tire Iron
+    damage: "Str+2 (bashing)"
+history:
+  - "Embraced three months ago after a protest turned into a massacre he was never meant to survive."
+notes: Still pays his mortal sister's rent. Still believes the living are worth protecting.
+\`\`\``
   },
   "Werewolf: The Apocalypse": {
     premise: "Shapeshifter warriors defend a wounded Earth against corporate corruption.",
@@ -389,7 +615,70 @@ Perception +5 · Survival +5 · Stealth +6 · Nature +3 · Animal Handling +5 ·
     npc: e("Elder Stone-Sings", "Theurge elder", "Speaks with spirits and despairs at how few of them remain."),
     pc: e("Ash Redhand", "Young Garou", "New to the rage, quick to fight, slow to see the bigger war."),
     threat: x("Vyre Corporation", "A polluting conglomerate that is far more than it appears — and far worse."),
-    item: x("The Klaive Fetish", "A silver war-blade housing a bound spirit that hungers for the Wyrm's servants.")
+    item: x("The Klaive Fetish", "A silver war-blade housing a bound spirit that hungers for the Wyrm's servants."),
+    sheet: `## Character Sheet
+
+\`\`\`wod-sheet
+system: werewolf-apocalypse
+name: Ash Redhand
+tribe: Get of Fenris
+rank: Cliath
+auspice: Ahroun
+breed: Homid
+concept: Factory-town kid who Changed the night the river caught fire
+chronicle: The Riverside Caern
+attributes:
+  strength: 4
+  dexterity: 3
+  stamina: 3
+  charisma: 2
+  manipulation: 2
+  appearance: 2
+  perception: 3
+  intelligence: 2
+  wits: 3
+abilities:
+  - Alertness: 2
+  - Athletics: 2
+  - Brawl: 3
+  - Dodge: 2
+  - Intimidation: 2
+  - Primal-Urge: 2
+  - Melee: 2
+  - Survival: 2
+  - Occult: 1
+  - Rituals: 1
+gifts:
+  - name: "Razor Claws (Rank 1)"
+    score: 1
+  - name: "Falling Touch (Rank 1)"
+    score: 1
+  - name: "Master of Fire (Rank 1)"
+    score: 1
+backgrounds:
+  - Kinfolk: 2
+  - Fetish: 1
+  - Pure Breed: 1
+virtues:
+  conscience: 3
+  self_control: 2
+  courage: 4
+willpower: 4
+willpower_current: 4
+rage: 5
+rage_current: 5
+gnosis: 4
+gnosis_current: 4
+renown: 3
+weapons:
+  - name: Klaive (silver)
+    damage: "Str+3 (aggravated)"
+  - name: Claws
+    damage: "Str+1 (aggravated)"
+history:
+  - "First Changed the night Vyre's runoff set the Riverside on fire; the pack found him standing in it, unburned."
+notes: Quick to the rage, slow to trust the elders who keep telling him to wait.
+\`\`\``
   },
   "Wraith: The Oblivion": {
     premise: "The restless dead cling to memory in a decaying land beyond life.",
@@ -463,7 +752,53 @@ Perception +5 · Survival +5 · Stealth +6 · Nature +3 · Animal Handling +5 ·
     npc: e("Captain Halvorsen", "Free trader", "Owes three mortgages on one ship and always has 'one more job'."),
     pc: e("Renner", "Ex-scout", "Mustered out with piloting skills, a survey scanner, and wanderlust."),
     threat: x("The Border Dispute", "Two neighbouring worlds sliding toward a war that will close the trade lanes."),
-    item: x("The Free Trader 'Beowulf'", "A patched-together merchant ship — home, livelihood, and constant headache.")
+    item: x("The Free Trader 'Beowulf'", "A patched-together merchant ship — home, livelihood, and constant headache."),
+    sheet: `## Character Sheet
+
+\`\`\`traveller-sheet
+header:
+  left: Scout Service
+  center: Discharge File
+  right: TAS-Regina
+name: Renner
+species: Human
+age: 34
+homeworld: Regina (A788899-C)
+career: Scout
+rank: Ex-Scout
+dossier: Detached Duty — Survey & Courier
+status: Active
+characteristics:
+  STR: 7
+  DEX: 9
+  END: 8
+  INT: 10
+  EDU: 9
+  SOC: 6
+skills:
+  "Pilot (Small Craft)": 2
+  "Astrogation": 1
+  "Sensors": 2
+  "Vacc Suit": 1
+  "Gun Combat (Slug)": 1
+  "Recon": 2
+  "Survival": 1
+  "Mechanic": 1
+  "Comms": 1
+weapons:
+  Snub Pistol: 3D, Close, sidearm
+armour:
+  Vacc Suit: 6, patched
+equipment:
+  Survey Scanner: 1, mustering-out benefit
+  Hand Computer: 1, loaded with subsector charts
+holdings:
+  Ship Share: one share in the Beowulf
+people:
+  Captain Halvorsen: former crewmate, still calls in favours
+credits: 4200
+notes: Detached-duty scout with a scanner, a grudge against paperwork, and nowhere he has to be.
+\`\`\``
   },
   "Warhammer 40,000 Roleplay": {
     premise: "The Emperor's servants root out heresy in a vast, cruel, gothic galaxy.",

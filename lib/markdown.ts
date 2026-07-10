@@ -522,12 +522,16 @@ function normalizeWoDSheet(input: unknown) {
     },
     willpower: asOptionalNumber(raw.willpower),
     willpower_current: asOptionalNumber(raw.willpower_current),
-    blood: asOptionalNumber(raw.blood ?? raw.blood_pool ?? raw.quintessence),
-    blood_current: asOptionalNumber(raw.blood_current ?? raw.blood_pool_current ?? raw.quintessence_current),
+    // Each line names its main pool differently; they all drive the same track.
+    blood: asOptionalNumber(raw.blood ?? raw.blood_pool ?? raw.rage ?? raw.quintessence),
+    blood_current: asOptionalNumber(raw.blood_current ?? raw.blood_pool_current ?? raw.rage_current ?? raw.quintessence_current),
+    gnosis: asOptionalNumber(raw.gnosis),
+    gnosis_current: asOptionalNumber(raw.gnosis_current),
     quintessence: asOptionalNumber(raw.quintessence),
     quintessence_current: asOptionalNumber(raw.quintessence_current),
     paradox: asOptionalNumber(raw.paradox),
-    humanity: asOptionalNumber(raw.humanity ?? raw.road_rating ?? raw.arete),
+    // ...and its own name for the morality trait.
+    humanity: asOptionalNumber(raw.humanity ?? raw.road_rating ?? raw.renown ?? raw.arete),
     health: {
       bruised: Boolean(health.bruised), hurt: Boolean(health.hurt), injured: Boolean(health.injured),
       wounded: Boolean(health.wounded), mauled: Boolean(health.mauled), crippled: Boolean(health.crippled),
@@ -581,6 +585,8 @@ function renderWoDSheetHtml(rawInput: string) {
   const wpc = sheet.willpower_current ?? wp;
   const bp = sheet.blood ?? 0;
   const bpc = sheet.blood_current ?? bp;
+  const gn = sheet.gnosis ?? 0;
+  const gnc = sheet.gnosis_current ?? gn;
   const hum = sheet.humanity ?? 0;
   const morality = sheet.road || info.morality;
 
@@ -792,6 +798,7 @@ function renderWoDSheetHtml(rawInput: string) {
       <div style="text-align:center;">${boxRow(wpc, wp)}<div style="color:#ff3834;font-size:22px;margin-top:10px;">${wpc}</div></div>
     </section>
     ${bp > 0 ? `<section style="${sS}"><h3 style="${hS}">${escapeHtml(info.poolLabel)}</h3><div style="text-align:center;">${boxRow(bpc, bp)}<div style="color:#ff3834;font-family:Consolas,monospace;font-size:12px;margin-top:10px;">${bpc} / ${bp}</div></div></section>` : `<section style="${sS}"><h3 style="${hS}">${escapeHtml(info.poolLabel)}</h3><div style="text-align:center;color:#4a5562;font-size:11px;">Track in play</div></section>`}
+    ${gn > 0 ? `<section style="${sS}"><h3 style="${hS}">Gnosis</h3><div style="text-align:center;">${boxRow(gnc, gn)}<div style="color:#ff3834;font-family:Consolas,monospace;font-size:12px;margin-top:10px;">${gnc} / ${gn}</div></div></section>` : ""}
     <section style="${sS}">
       <h3 style="${hS}">${escapeHtml(morality)}</h3>
       <div style="text-align:center;">${hum > 0 ? `<div style="color:#ff3834;font-size:28px;">${hum}</div>${diamonds(hum, 10)}` : `<div style="color:#4a5562;font-size:11px;">Set value</div>`}</div>

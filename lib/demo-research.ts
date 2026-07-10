@@ -305,6 +305,7 @@ const SYSTEM_PROFILES: Partial<Record<GameType, DemoResearchProfile>> = {
     ]
   },
   "Sword Chronicle": {
+    status: "ready-for-polish",
     concept: "Sword Chronicle demos should make noble houses playable: status, intrigue, warfare, holdings, heirs, alliances, and scandal. The character sheet should connect personal abilities to house resources and long-term political stakes.",
     fields: ["Name", "House", "Status", "Abilities", "Specialties", "Destiny", "Health", "Intrigue Defense", "Combat Defense", "Armor", "Weapons", "Holdings", "Relationships"],
     lists: [

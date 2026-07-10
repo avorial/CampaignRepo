@@ -148,11 +148,15 @@ means, per game:
 
 Suggested working order (status-driven):
 
-- **Tier 1 — already `ready-for-polish`, verify and close:** Dungeons &
-  Dragons, Traveller, Sword Chronicle (renderer + template shipped in 1.1),
-  Vampire: The Masquerade, Werewolf: The Apocalypse, Mage: The Ascension, Call
-  of Cthulhu, Delta Green, Blades in the Dark, Alien RPG, Cyberpunk RED,
-  Mothership, Fate Core.
+- **Tier 1a — renderer + filled demo sheet, closed:** Dungeons & Dragons,
+  Traveller, Sword Chronicle, Vampire: The Masquerade, Werewolf: The
+  Apocalypse, Mage: The Ascension. Each ships a dedicated sheet renderer and a
+  real, filled-in demo sample PC (Rilla Windmere, Renner, Lady Elyse Vaelor,
+  Nico Alvarez, Ash Redhand, Jax) rather than a design brief.
+- **Tier 1b — `ready-for-polish`, still need a sheet:** Call of Cthulhu, Delta
+  Green, Blades in the Dark, Alien RPG, Cyberpunk RED, Mothership, Fate Core.
+  Concept, template, and demo kit are ready; each needs either a dedicated
+  renderer or a template-pack sheet page, then a filled demo sample PC.
 - **Tier 2 — popular systems needing reference work:** Pathfinder, Warhammer
   Fantasy Roleplay, Warhammer 40,000 Roleplay, Starfinder, The One Ring,
   Dragonbane, Shadowdark RPG, Mörk Borg, Old-School Essentials, Savage Worlds.
@@ -220,10 +224,13 @@ non-technical groups, but should not compromise the own-your-data model.
 
 ### Release 1.2 - Game system depth (the checklist pass)
 
-1. Tier 1 systems: verify sheets, close checklists, fill demo sheets.
-2. Tier 2 systems: reference work + sheet/template reformatting.
-3. Sheet editor/print polish for each system as it lands (backlog B).
-4. Demo status page or dashboard widget showing per-game progress.
+1. Tier 1a closed: D&D, Traveller, Sword Chronicle, Vampire, Werewolf, Mage
+   ship a renderer and a filled demo sample PC.
+2. Tier 1b: give the seven `ready-for-polish` systems a sheet (renderer or
+   template-pack page), then fill their demo PCs.
+3. Tier 2 systems: reference work + sheet/template reformatting.
+4. Sheet editor/print polish for each system as it lands (backlog B).
+5. Demo status page or dashboard widget showing per-game progress.
 
 ### Release 1.3 - Scale and access
 

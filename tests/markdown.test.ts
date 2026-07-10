@@ -282,4 +282,28 @@ describe("renderMarkdown", () => {
     expect(html).not.toContain("<script");
     expect(html).not.toContain("onerror");
   });
+
+  it("reads the werewolf sheet's own pool and morality names", () => {
+    const html = renderMarkdown(
+      [
+        "```wod-sheet",
+        "system: werewolf-apocalypse",
+        "name: Fenn",
+        "rage: 5",
+        "rage_current: 4",
+        "gnosis: 5",
+        "gnosis_current: 3",
+        "renown: 3",
+        "```"
+      ].join("\n"),
+      "gm"
+    );
+    // Rage (the pool) and Renown (the morality) must show values, not the
+    // "Track in play" / "Set value" empty-state placeholders.
+    expect(html).toContain(">Rage</h3>");
+    expect(html).toContain(">Gnosis</h3>");
+    expect(html).toContain(">Renown</h3>");
+    expect(html).not.toContain("Track in play");
+    expect(html).not.toContain("Set value");
+  });
 });
