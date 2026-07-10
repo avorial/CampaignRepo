@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getStorageAdapter } from "@/lib/storage";
 import { parsePage, serializePage } from "@/lib/markdown";
-import { scheduleSearchIndexRebuild } from "@/lib/search";
+import { rebuildSearchIndex } from "@/lib/search";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +62,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   if (updates.length) {
     await storage.commitFiles(updates, `CampaignRepo: bulk edit ${updates.length} pages`);
-    scheduleSearchIndexRebuild(campaign);
+    await rebuildSearchIndex(storage, campaign);
   }
   return NextResponse.json({ ok: true, updated: updates.length });
 }

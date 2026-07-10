@@ -62,9 +62,9 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
   const catLabel = useMemo(() => new Map(categories.map((c) => [c.id, c.label])), [categories]);
 
   // ── Pages loading ─────────────────────────────────────────────────
-  async function load() {
+  async function load(options: { force?: boolean } = {}) {
     setLoading(true);
-    const res = await fetch(`/api/campaigns/${campaign.id}/pages`);
+    const res = await fetch(`/api/campaigns/${campaign.id}/pages${options.force ? "?refresh=wait" : ""}`);
     const data = await res.json();
     setPages(data.pages || []);
     setSelected(new Set());
@@ -227,8 +227,9 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
     if (res.ok) {
       setSetCategory(""); setSetVisibility(""); setSetApproval(""); setSetParent("");
       setAddTagInput(""); setRemoveTagInput("");
-      setMessage(`Updated ${data.updated} page${data.updated === 1 ? "" : "s"} in one commit.`);
-      await load();
+      setMessage(`Updated ${data.updated} page${data.updated === 1 ? "" : "s"} in one commit. Refreshing...`);
+      await load({ force: true });
+      setMessage(`Updated ${data.updated} page${data.updated === 1 ? "" : "s"} and refreshed.`);
     } else {
       setMessage(data.error || "Bulk edit failed.");
     }
@@ -252,8 +253,9 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
     ));
     const deleted = results.filter(Boolean).length;
     setBusy(false);
-    setMessage(`Deleted ${deleted} of ${slugs.length} page${slugs.length === 1 ? "" : "s"}.`);
-    await load();
+    setMessage(`Deleted ${deleted} of ${slugs.length} page${slugs.length === 1 ? "" : "s"}. Refreshing...`);
+    await load({ force: true });
+    setMessage(`Deleted ${deleted} of ${slugs.length} page${slugs.length === 1 ? "" : "s"} and refreshed.`);
   }
 
   // Media bulk delete
