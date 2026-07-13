@@ -25,6 +25,42 @@ function makeCampaign(): Campaign {
 }
 
 describe("public site quests", () => {
+  it("prefers the repository manifest for public page navigation", async () => {
+    storageMock = {
+      getTextFile: vi.fn(async (path: string) => {
+        if (path !== ".campaignrepo/index.json") throw new Error(`unexpected read: ${path}`);
+        return {
+          sha: "manifest-sha",
+          text: JSON.stringify({
+            schemaVersion: 1,
+            generatedAt: "2026-07-13T18:00:00.000Z",
+            pages: [
+              {
+                id: "lore-public",
+                title: "Manifest Public Page",
+                path: "wiki/pages/manifest-public-page.md",
+                type: "lore",
+                tags: ["manifest"],
+                links: [],
+                summary: "Listed from manifest",
+                visibility: "players",
+                approvalStatus: "approved"
+              }
+            ]
+          })
+        };
+      }),
+      listDirectory: vi.fn()
+    };
+
+    const pages = await loadPublicPages(makeCampaign());
+
+    expect(pages).toHaveLength(1);
+    expect(pages[0].frontmatter.name).toBe("Manifest Public Page");
+    expect(storageMock.getTextFile).toHaveBeenCalledTimes(1);
+    expect(storageMock.listDirectory).not.toHaveBeenCalled();
+  });
+
   it("loads public pages from the search snapshot without downloading every markdown page", async () => {
     storageMock = {
       getTextFile: vi.fn(async (path: string) => {
@@ -78,10 +114,10 @@ describe("public site quests", () => {
 
     expect(pages).toHaveLength(1);
     expect(pages[0].slug).toBe("public-page");
-    expect(pages[0].content).toBe("Visible summary");
+    expect(pages[0].content).toBe("");
     expect(pages[0].content).not.toContain("Secret.");
     expect(storageMock.listDirectory).not.toHaveBeenCalled();
-    expect(storageMock.getTextFile).toHaveBeenCalledTimes(1);
+    expect(storageMock.getTextFile).toHaveBeenCalledTimes(2);
   });
 
   it("loads only player-visible quests and strips GM blocks", async () => {

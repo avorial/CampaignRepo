@@ -10,8 +10,10 @@ const mocks = vi.hoisted(() => {
     GitHubError,
     getTextFile: vi.fn(),
     putFile: vi.fn(),
+    commitFiles: vi.fn(),
     scheduleSearchIndexRebuild: vi.fn(),
     readPageCache: vi.fn(),
+    readManifestPageSnapshot: vi.fn(),
     readSearchIndexPageSnapshot: vi.fn(),
     refreshPageCache: vi.fn(),
     refreshPageCacheInBackground: vi.fn()
@@ -35,7 +37,8 @@ vi.mock("@/lib/github", () => ({
 vi.mock("@/lib/storage", () => ({
   getStorageAdapter: vi.fn(() => ({
     getTextFile: mocks.getTextFile,
-    putFile: mocks.putFile
+    putFile: mocks.putFile,
+    commitFiles: mocks.commitFiles
   })),
   isConflictError: (error: unknown) => Boolean((error as { status?: number })?.status === 409 || (error as { status?: number })?.status === 422),
   isNotFoundError: (error: unknown) => Boolean((error as { status?: number })?.status === 404)
@@ -43,6 +46,7 @@ vi.mock("@/lib/storage", () => ({
 vi.mock("@/lib/search", () => ({ scheduleSearchIndexRebuild: mocks.scheduleSearchIndexRebuild }));
 vi.mock("@/lib/page-cache", () => ({
   readPageCache: mocks.readPageCache,
+  readManifestPageSnapshot: mocks.readManifestPageSnapshot,
   readSearchIndexPageSnapshot: mocks.readSearchIndexPageSnapshot,
   refreshPageCache: mocks.refreshPageCache,
   refreshPageCacheInBackground: mocks.refreshPageCacheInBackground
@@ -64,8 +68,11 @@ describe("page creation", () => {
   beforeEach(() => {
     mocks.getTextFile.mockReset();
     mocks.putFile.mockReset();
+    mocks.commitFiles.mockReset();
     mocks.scheduleSearchIndexRebuild.mockClear();
     mocks.readPageCache.mockReset();
+    mocks.readManifestPageSnapshot.mockReset();
+    mocks.readManifestPageSnapshot.mockResolvedValue(null);
     mocks.readSearchIndexPageSnapshot.mockReset();
     mocks.readSearchIndexPageSnapshot.mockResolvedValue(null);
     mocks.refreshPageCache.mockReset();
@@ -107,15 +114,17 @@ describe("page creation", () => {
 
   it("creates a page when the generated slug is unused", async () => {
     mocks.getTextFile.mockRejectedValueOnce(new mocks.GitHubError("Not Found", 404));
-    mocks.putFile.mockResolvedValueOnce({});
+    mocks.commitFiles.mockResolvedValueOnce({ commit: "commit", files: 2 });
 
     const response = await createPage("New Contact");
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ slug: "New-Contact" });
-    expect(mocks.putFile).toHaveBeenCalledWith(
-      "wiki/pages/New-Contact.md",
-      expect.any(String),
+    expect(mocks.commitFiles).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ path: "wiki/pages/New-Contact.md", content: expect.any(String) }),
+        expect.objectContaining({ path: ".campaignrepo/index.json", content: expect.any(String) })
+      ]),
       "CampaignRepo: create New Contact"
     );
     expect(mocks.scheduleSearchIndexRebuild).toHaveBeenCalledOnce();
@@ -130,12 +139,12 @@ describe("page creation", () => {
     expect(response.status).toBe(409);
     expect(body.error).toContain("already exists");
     expect(body.slug).toBe("Existing-Contact");
-    expect(mocks.putFile).not.toHaveBeenCalled();
+    expect(mocks.commitFiles).not.toHaveBeenCalled();
   });
 
   it("translates a concurrent GitHub create collision into the same conflict", async () => {
     mocks.getTextFile.mockRejectedValueOnce(new mocks.GitHubError("Not Found", 404));
-    mocks.putFile.mockRejectedValueOnce(new mocks.GitHubError("Invalid request. 'sha' wasn't supplied.", 422));
+    mocks.commitFiles.mockRejectedValueOnce(new mocks.GitHubError("Invalid request. 'sha' wasn't supplied.", 422));
 
     const response = await createPage("Racing Contact");
     const body = await response.json();

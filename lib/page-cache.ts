@@ -2,6 +2,7 @@ import type { Campaign, WikiPage } from "@/lib/types";
 import { getDb } from "@/lib/db";
 import type { StorageAdapter } from "@/lib/storage";
 import { normalizeFrontmatter, parsePage } from "@/lib/markdown";
+import { readRepositoryManifestSnapshot } from "@/lib/repository-manifest";
 
 type CacheRow = {
   slug: string;
@@ -13,7 +14,7 @@ export type PageCacheSnapshot = {
   pages: WikiPage[];
   refreshedAt: string | null;
   refreshError: string | null;
-  source?: "cache" | "search-index" | "full-refresh";
+  source?: "cache" | "manifest" | "search-index" | "full-refresh";
 };
 
 const refreshes = new Map<number, Promise<PageCacheSnapshot>>();
@@ -98,6 +99,21 @@ export async function readSearchIndexPageSnapshot(storage: StorageAdapter): Prom
     if (!pages.length) return null;
     return {
       pages,
+      refreshedAt: null,
+      refreshError: null,
+      source: "manifest"
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function readManifestPageSnapshot(storage: StorageAdapter): Promise<PageCacheSnapshot | null> {
+  try {
+    const snapshot = await readRepositoryManifestSnapshot(storage);
+    if (!snapshot.pages.length) return null;
+    return {
+      pages: snapshot.pages,
       refreshedAt: null,
       refreshError: null,
       source: "search-index"

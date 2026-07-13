@@ -5,6 +5,7 @@ import { getStorageAdapter, type StorageAdapter } from "@/lib/storage";
 import { normalizeFrontmatter, parsePage, stripGmBlocks } from "@/lib/markdown";
 import { parseQuest, type Quest } from "@/lib/quests";
 import { sanitizeTheme, type CampaignTheme } from "@/lib/theme";
+import { readRepositoryManifestSnapshot } from "@/lib/repository-manifest";
 
 /** Strip GM-only content and internal import metadata from a page before it leaves the server. */
 export function sanitizePlayerPage(page: WikiPage, visibleGroups?: Set<string>): WikiPage {
@@ -35,8 +36,8 @@ function publicPageFromSearchDocument(doc: SearchDocument): WikiPage | null {
       knownToPlayers: true,
       keyLinks: doc.keyLinks || []
     }, name),
-    content: doc.summary || "",
-    raw: doc.summary || "",
+    content: "",
+    raw: "",
     outgoingLinks: (doc.links || []).map((target) => ({ target, label: target })),
     backlinks: doc.backlinks || []
   });
@@ -57,6 +58,19 @@ async function loadPublicPagesFromSearchIndex(storage: StorageAdapter): Promise<
   }
 }
 
+async function loadPublicPagesFromManifest(storage: StorageAdapter): Promise<WikiPage[] | null> {
+  try {
+    const snapshot = await readRepositoryManifestSnapshot(storage);
+    const pages = snapshot.pages
+      .filter((page) => page.frontmatter.visibility === "players" && page.frontmatter.approvalStatus === "approved")
+      .map((page) => sanitizePlayerPage(page));
+    if (!pages.length) return null;
+    return pages.sort((a, b) => a.frontmatter.name.localeCompare(b.frontmatter.name));
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Load the player-safe pages for a campaign straight from its storage —
  * only pages that are player-visible AND approved, with GM blocks stripped.
@@ -65,6 +79,8 @@ async function loadPublicPagesFromSearchIndex(storage: StorageAdapter): Promise<
 export async function loadPublicPages(campaign: Campaign, userToken?: string | null): Promise<WikiPage[]> {
   const storage = getStorageAdapter(campaign, userToken);
   if (!storage) return [];
+  const manifestPages = await loadPublicPagesFromManifest(storage);
+  if (manifestPages) return manifestPages;
   const snapshotPages = await loadPublicPagesFromSearchIndex(storage);
   if (snapshotPages) return snapshotPages;
   const entries = await storage.listDirectory("wiki/pages");

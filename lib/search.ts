@@ -4,6 +4,7 @@ import type { Campaign, SearchDocument, WikiPage } from "@/lib/types";
 import { deleteSearchDocument, upsertSearchDocuments } from "@/lib/db";
 import { getStorageAdapter, type StorageAdapter } from "@/lib/storage";
 import { refreshPageCache } from "@/lib/page-cache";
+import { buildRepositoryManifestFromSearchDocuments, repositoryManifestPath, serializeRepositoryManifest } from "@/lib/repository-manifest";
 
 type MediaMetadata = {
   alt?: string;
@@ -91,14 +92,14 @@ export async function buildSearchDocuments(storage: StorageAdapter, campaign: Ca
 export async function rebuildSearchIndex(storage: StorageAdapter, campaign: Campaign) {
   const docs = await buildSearchDocuments(storage, campaign);
   upsertSearchDocuments(campaign.id, docs);
-  let sha: string | undefined;
-  try {
-    const existing = await storage.getTextFile("wiki/search/index.json");
-    sha = existing.sha;
-  } catch {
-    sha = undefined;
-  }
-  await storage.putFile("wiki/search/index.json", JSON.stringify(docs, null, 2) + "\n", "CampaignRepo: update search snapshot", sha);
+  const manifest = buildRepositoryManifestFromSearchDocuments(docs);
+  await storage.commitFiles(
+    [
+      { path: "wiki/search/index.json", content: JSON.stringify(docs, null, 2) + "\n" },
+      { path: repositoryManifestPath, content: serializeRepositoryManifest(manifest) }
+    ],
+    "CampaignRepo: update repository index"
+  );
   return docs;
 }
 

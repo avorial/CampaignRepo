@@ -8,7 +8,14 @@ import { sanitizePlayerPage } from "@/lib/public-site";
 import { defaultFrontmatter, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
-import { readPageCache, readSearchIndexPageSnapshot, refreshPageCache, refreshPageCacheInBackground } from "@/lib/page-cache";
+import { readManifestPageSnapshot, readPageCache, readSearchIndexPageSnapshot, refreshPageCache, refreshPageCacheInBackground } from "@/lib/page-cache";
+import {
+  manifestPageFromWikiPage,
+  readRepositoryManifestText,
+  repositoryManifestPath,
+  serializeRepositoryManifest,
+  upsertManifestPage
+} from "@/lib/repository-manifest";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +36,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const url = new URL(req.url);
   const includeBodies = url.searchParams.get("body") === "1" || url.searchParams.get("full") === "1";
-  const cached = includeBodies ? readPageCache(campaign.id) : ((await readSearchIndexPageSnapshot(storage)) || readPageCache(campaign.id));
+  const cached = includeBodies ? readPageCache(campaign.id) : ((await readManifestPageSnapshot(storage)) || (await readSearchIndexPageSnapshot(storage)) || readPageCache(campaign.id));
   const waitForRefresh = cached.pages.length === 0 || url.searchParams.get("refresh") === "wait";
   let snapshot;
   try {
@@ -103,7 +110,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       };
       content = parsedTemplate.content.replace(/^# .*/m, `# ${input.name}`);
     }
-    await storage.putFile(pagePath, serializePage(frontmatter, content), `CampaignRepo: create ${input.name}`);
+    const pageText = serializePage(frontmatter, content);
+    const parsedPage = parsePage(slug, pageText);
+    let manifest = null;
+    try {
+      const existingManifest = await storage.getTextFile(repositoryManifestPath);
+      manifest = readRepositoryManifestText(existingManifest.text);
+    } catch {
+      manifest = null;
+    }
+    const nextManifest = upsertManifestPage(manifest, manifestPageFromWikiPage(slug, pagePath, parsedPage));
+    await storage.commitFiles(
+      [
+        { path: pagePath, content: pageText },
+        { path: repositoryManifestPath, content: serializeRepositoryManifest(nextManifest) }
+      ],
+      `CampaignRepo: create ${input.name}`
+    );
     scheduleSearchIndexRebuild(campaign);
     return NextResponse.json({ slug });
   } catch (error) {
