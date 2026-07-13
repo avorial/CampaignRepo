@@ -8,7 +8,7 @@ import { sanitizePlayerPage } from "@/lib/public-site";
 import { defaultFrontmatter, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
-import { readManifestPageSnapshot, readPageCache, readSearchIndexPageSnapshot, refreshPageCache, refreshPageCacheInBackground } from "@/lib/page-cache";
+import { readManifestPageSnapshot, readPageCache, readSearchIndexPageSnapshot, refreshPageCache, refreshPageCacheInBackground, upsertPageInCache } from "@/lib/page-cache";
 import {
   manifestPageFromWikiPage,
   readRepositoryManifestText,
@@ -127,6 +127,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       ],
       `CampaignRepo: create ${input.name}`
     );
+    upsertPageInCache(campaign.id, parsedPage);
     scheduleSearchIndexRebuild(campaign);
     return NextResponse.json({ slug });
   } catch (error) {

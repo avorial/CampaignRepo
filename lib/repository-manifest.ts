@@ -235,3 +235,35 @@ export function serializeRepositoryManifest(manifest: RepositoryManifest) {
   if (!validation.ok) throw new Error(`Cannot write invalid CampaignRepo index: ${validation.errors.join("; ")}`);
   return `${JSON.stringify(manifest, null, 2)}\n`;
 }
+
+/**
+ * Best-effort removal of a deleted page from the repository index. Page lists
+ * prefer the manifest, so waiting on the delayed search rebuild would make a
+ * deleted page reappear in the sidebar until that rebuild lands (or forever if
+ * it fails). Errors are swallowed: a missing manifest means nothing to purge,
+ * and a write conflict will be reconciled by the scheduled rebuild.
+ */
+export async function removePageFromRepositoryManifest(storage: StorageAdapter, slug: string) {
+  try {
+    const file = await storage.getTextFile(repositoryManifestPath);
+    const manifest = readRepositoryManifestText(file.text);
+    const removedIds = new Set(
+      manifest.pages
+        .filter((page) => slugFromManifestPath(page.path) === slug || page.id === slug)
+        .map((page) => page.id.toLowerCase())
+    );
+    if (!removedIds.size) return;
+    // Links into the removed page must degrade to unresolved markers — leaving
+    // them as dangling ids would fail manifest validation and skip the write.
+    const pages = manifest.pages
+      .filter((page) => !removedIds.has(page.id.toLowerCase()))
+      .map((page) => ({
+        ...page,
+        links: page.links.map((link) => (removedIds.has(String(link).toLowerCase()) ? `unresolved:${slugify(slug) || "link"}` : link))
+      }));
+    const next: RepositoryManifest = { ...manifest, generatedAt: new Date().toISOString(), pages };
+    await storage.putFile(repositoryManifestPath, serializeRepositoryManifest(next), `CampaignRepo: remove ${slug} from index`, file.sha);
+  } catch {
+    // Reconciled by the scheduled rebuild.
+  }
+}

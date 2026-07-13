@@ -435,7 +435,14 @@ export default function PublicSiteClient({
                     </div>
                   )}
                 </header>
-                <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
+                {selectedPage.content ? (
+                  <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
+                ) : (
+                  // Index-backed lists carry no bodies; the full article lives on its own page.
+                  <p className="muted">
+                    <a href={`/site/${slug}/pages/${selectedPage.slug}`}>Read {selectedPage.frontmatter.name} →</a>
+                  </p>
+                )}
               </>
             ) : (
               <div className="public-empty">

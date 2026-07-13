@@ -5,8 +5,8 @@ import { canManageCampaign, createNotifications, getCampaign, getCampaignGmUserI
 import { getStorageAdapter, isConflictError, isNotFoundError } from "@/lib/storage";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { removePageFromSearchIndex, scheduleSearchIndexRebuild } from "@/lib/search";
-import { readPageCache, refreshPageCache, removePageFromCache } from "@/lib/page-cache";
-import { findRepositoryManifestPage } from "@/lib/repository-manifest";
+import { readPageCache, refreshPageCache, removePageFromCache, upsertPageInCache } from "@/lib/page-cache";
+import { findRepositoryManifestPage, removePageFromRepositoryManifest } from "@/lib/repository-manifest";
 
 export const dynamic = "force-dynamic";
 
@@ -96,6 +96,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   }
   try {
     const saved = await storage.putFile(`wiki/pages/${slug}.md`, raw, `CampaignRepo: update ${frontmatter.name || slug}`, sha);
+    upsertPageInCache(campaign.id, parsePage(slug, raw, saved.sha));
     scheduleSearchIndexRebuild(campaign);
 
     // Notify GMs when a player-visible page is submitted for review
@@ -201,12 +202,14 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     await storage.deleteFile(path, `CampaignRepo: delete ${slug}`, file.sha);
     removePageFromCache(campaign.id, slug);
     await removePageFromSearchIndex(storage, campaign, slug);
+    await removePageFromRepositoryManifest(storage, slug);
     scheduleSearchIndexRebuild(campaign);
     return NextResponse.json({ ok: true });
   } catch (error) {
     if (isNotFoundError(error)) {
       removePageFromCache(campaign.id, slug);
       await removePageFromSearchIndex(storage, campaign, slug);
+      await removePageFromRepositoryManifest(storage, slug);
       scheduleSearchIndexRebuild(campaign);
       return NextResponse.json({ ok: true, alreadyMissing: true });
     }

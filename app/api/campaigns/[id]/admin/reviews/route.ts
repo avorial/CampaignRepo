@@ -6,6 +6,7 @@ import { getStorageAdapter } from "@/lib/storage";
 import { parsePage, serializePage } from "@/lib/markdown";
 import { listReviewPages } from "@/lib/reviews";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
+import { upsertPageInCache } from "@/lib/page-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -46,11 +47,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       .filter((page) => page.frontmatter.approvalStatus !== "approved")
       .map((page) => ({ path: `wiki/pages/${page.slug}.md`, content: serializePage({ ...page.frontmatter, approvalStatus: input.decision, lastEditedBy: `${user.name} via GM review` }, page.content) }));
     if (updates.length) await storage.commitFiles(updates, `CampaignRepo: ${verb} ${updates.length} pages (bulk)`);
+    for (const update of updates) {
+      const slug = update.path.replace(/^wiki\/pages\//, "").replace(/\.md$/, "");
+      upsertPageInCache(campaign.id, parsePage(slug, update.content));
+    }
     updated = updates.length;
   } else if (input.slug) {
     const file = await storage.getTextFile(`wiki/pages/${input.slug}.md`);
     const page = parsePage(input.slug, file.text, file.sha);
-    await storage.putFile(`wiki/pages/${input.slug}.md`, serializePage({ ...page.frontmatter, approvalStatus: input.decision, lastEditedBy: `${user.name} via GM review` }, page.content), `CampaignRepo: ${verb} ${page.frontmatter.name}`, file.sha);
+    const nextText = serializePage({ ...page.frontmatter, approvalStatus: input.decision, lastEditedBy: `${user.name} via GM review` }, page.content);
+    const saved = await storage.putFile(`wiki/pages/${input.slug}.md`, nextText, `CampaignRepo: ${verb} ${page.frontmatter.name}`, file.sha);
+    upsertPageInCache(campaign.id, parsePage(input.slug, nextText, saved.sha));
     updated = 1;
   } else {
     return NextResponse.json({ error: "Provide a slug or set all: true." }, { status: 400 });

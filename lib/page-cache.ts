@@ -47,6 +47,24 @@ export function removePageFromCache(campaignId: number, slug: string) {
   db.prepare("DELETE FROM campaign_page_cache WHERE campaignId = ? AND slug = ?").run(campaignId, slug);
 }
 
+/**
+ * Write a just-saved page straight into the cache so single-page reads return
+ * the new body immediately. Without this, a saved page's stale cache row is
+ * served until the next full refresh — the scheduled search rebuild does not
+ * touch this table.
+ */
+export function upsertPageInCache(campaignId: number, page: WikiPage) {
+  const db = getDb();
+  db.prepare(`
+    INSERT INTO campaign_page_cache (campaignId, slug, sha, pageJson, updatedAt)
+    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(campaignId, slug) DO UPDATE SET
+      sha = excluded.sha,
+      pageJson = excluded.pageJson,
+      updatedAt = CURRENT_TIMESTAMP
+  `).run(campaignId, page.slug, page.sha || "", JSON.stringify(page));
+}
+
 type SearchIndexDocument = {
   sha?: string;
   slug: string;
@@ -101,7 +119,7 @@ export async function readSearchIndexPageSnapshot(storage: StorageAdapter): Prom
       pages,
       refreshedAt: null,
       refreshError: null,
-      source: "manifest"
+      source: "search-index"
     };
   } catch {
     return null;
@@ -116,7 +134,7 @@ export async function readManifestPageSnapshot(storage: StorageAdapter): Promise
       pages: snapshot.pages,
       refreshedAt: null,
       refreshError: null,
-      source: "search-index"
+      source: "manifest"
     };
   } catch {
     return null;

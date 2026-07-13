@@ -6,6 +6,7 @@ import { categoryIds, defaultFrontmatter, gameTypes, starterBody } from "@/lib/t
 import { slugify } from "@/lib/slug";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
+import { upsertPageInCache } from "@/lib/page-cache";
 import { getStorageAdapter, isNotFoundError, type StorageAdapter } from "@/lib/storage";
 import type { Campaign, CampaignGraphEdge, CampaignGraphNode, CampaignMedia, CampaignTimelineItem, Category, GameType, WikiPage, WikiTemplate } from "@/lib/types";
 
@@ -297,7 +298,9 @@ export async function POST(req: Request) {
       const slug = slugify(title);
       const fm = { ...defaultFrontmatter(title, args.category || "npc", "gm"), approvalStatus: "unapproved" as const, lastEditedBy: "AI via MCP" };
       const content = args.content || starterBody(title, fm.category, campaign.gameType as any);
-      await storage.putFile(`wiki/pages/${slug}.md`, serializePage(fm, content), `CampaignRepo MCP: create unapproved ${title}`);
+      const pageText = serializePage(fm, content);
+      const saved = await storage.putFile(`wiki/pages/${slug}.md`, pageText, `CampaignRepo MCP: create unapproved ${title}`);
+      upsertPageInCache(campaign.id, parsePage(slug, pageText, saved?.sha));
       scheduleSearchIndexRebuild(campaign);
       return toolResult(body.id, { slug, approvalStatus: "unapproved" });
     }
@@ -354,7 +357,9 @@ export async function POST(req: Request) {
       const current = await storage.getTextFile(`wiki/pages/${args.slug}.md`);
       const page = parsePage(args.slug, current.text, current.sha);
       const fm = { ...page.frontmatter, ...(args.frontmatter || {}), approvalStatus: "unapproved" as const, lastEditedBy: "AI via MCP" };
-      await storage.putFile(`wiki/pages/${args.slug}.md`, serializePage(fm, args.content || page.content), `CampaignRepo MCP: propose update ${fm.name}`, current.sha);
+      const pageText = serializePage(fm, args.content || page.content);
+      const saved = await storage.putFile(`wiki/pages/${args.slug}.md`, pageText, `CampaignRepo MCP: propose update ${fm.name}`, current.sha);
+      upsertPageInCache(campaign.id, parsePage(args.slug, pageText, saved?.sha));
       scheduleSearchIndexRebuild(campaign);
       return toolResult(body.id, { ok: true, approvalStatus: "unapproved" });
     }
@@ -436,7 +441,9 @@ export async function POST(req: Request) {
       const current = await storage.getTextFile(`wiki/pages/${args.slug}.md`);
       const page = parsePage(args.slug, current.text, current.sha);
       const frontmatter = { ...page.frontmatter, approvalStatus: decision as "approved" | "rejected", lastEditedBy: "GM review via MCP" };
-      await storage.putFile(`wiki/pages/${args.slug}.md`, serializePage(frontmatter, page.content), `CampaignRepo MCP: ${decision} ${frontmatter.name}`, current.sha);
+      const pageText = serializePage(frontmatter, page.content);
+      const saved = await storage.putFile(`wiki/pages/${args.slug}.md`, pageText, `CampaignRepo MCP: ${decision} ${frontmatter.name}`, current.sha);
+      upsertPageInCache(campaign.id, parsePage(args.slug, pageText, saved?.sha));
       scheduleSearchIndexRebuild(campaign);
       return toolResult(body.id, { ok: true, approvalStatus: decision });
     }

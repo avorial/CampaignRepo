@@ -49,7 +49,8 @@ vi.mock("@/lib/page-cache", () => ({
   readManifestPageSnapshot: mocks.readManifestPageSnapshot,
   readSearchIndexPageSnapshot: mocks.readSearchIndexPageSnapshot,
   refreshPageCache: mocks.refreshPageCache,
-  refreshPageCacheInBackground: mocks.refreshPageCacheInBackground
+  refreshPageCacheInBackground: mocks.refreshPageCacheInBackground,
+  upsertPageInCache: vi.fn()
 }));
 
 import { GET, POST } from "@/app/api/campaigns/[id]/pages/route";
