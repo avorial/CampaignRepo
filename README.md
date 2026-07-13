@@ -54,6 +54,7 @@ Players see only pages that are both approved and marked player-visible. GM-only
 ## What CampaignRepo Does
 
 - Stores everything in Git: pages, media, maps, sessions, quests, templates, calendar config, and campaign settings as Markdown and YAML.
+- Loads campaign navigation from a generated `.campaignrepo/index.json` manifest, so large repos do not need to enumerate every folder or download every Markdown file on startup.
 - Renders wiki pages with `[[links]]`, aliases, backlinks, covers, galleries, transclusion, and `:::gm` secret blocks.
 - Provides an interactive map viewer with pins, player/GM layers, nested map links, and article panels.
 - Shows a force-directed relationship graph with typed edges, category filters, and a detail panel.
@@ -199,7 +200,7 @@ Players see only pages that are both approved and marked player-visible. GM-only
 - Foundry journal, Obsidian, Notion, Google Docs, CSV, Roll20, LegendKeeper, World Anvil, and world export import routes.
 - Basic export downloads as ZIP or JSON from the import/export hub.
 - Media upload, rename, delete, captions, alt text, tags, and repo-persisted metadata.
-- SQLite full-text search and portable `/wiki/search/index.json` snapshots.
+- SQLite full-text search, portable `/wiki/search/index.json` snapshots, and the repository navigation manifest at `/.campaignrepo/index.json`.
 - MCP JSON-RPC endpoint at `/api/mcp` with tools for search, page reads/creates/updates, templates, media, graph data, review queues, and setup instructions.
 
 ### AI Tools
@@ -290,6 +291,8 @@ After adding the `GITHUB_APP_*` environment variables and restarting the app, us
 CampaignRepo creates and expects this structure inside each campaign repo:
 
 ```text
+/.campaignrepo
+  index.json
 /wiki
   /pages
   /media
@@ -306,6 +309,32 @@ README.md
 ```
 
 Manual edits are welcome. Preserve YAML frontmatter and CampaignRepo conventions for wiki links, visibility, approvals, and GM-only blocks.
+
+### Repository Manifest
+
+CampaignRepo repositories include a generated manifest at:
+
+```text
+.campaignrepo/index.json
+```
+
+The manifest is the fast navigation/index layer for CampaignRepo. It stores page IDs, titles, paths, types, tags, aliases, summaries, visibility, approval status, and link metadata. Markdown files remain the canonical source for page content and frontmatter; the manifest does not duplicate full Markdown bodies.
+
+Normal repository loading uses this pattern:
+
+```text
+Open campaign:
+1. Fetch .campaignrepo/index.json
+2. Build sidebar, tags, links, backlinks, and public navigation from the manifest
+
+Open page:
+1. Fetch that one Markdown file
+2. Render the page body
+```
+
+If `.campaignrepo/index.json` is missing, CampaignRepo falls back to `wiki/search/index.json` and older cache/rebuild paths. Rebuilding the search index also writes the repository manifest. Creating a page through CampaignRepo commits the Markdown file and manifest update together, keeping the repository index consistent.
+
+The Git Trees API is used for recovery and rebuild paths, not as the normal navigation source. The GitHub Contents API remains suitable for reading or writing a single known file.
 
 ## Visibility Rules
 
