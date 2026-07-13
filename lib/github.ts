@@ -23,10 +23,34 @@ export type GitHubAppManifestConversion = {
 const installationTokenCache = new Map<string, InstallationToken>();
 
 export class GitHubError extends Error {
-  constructor(message: string, public status?: number) {
+  constructor(message: string, public status?: number, public rateLimit?: GitHubRateLimit) {
     super(message);
   }
 }
+
+export type GitHubRateLimit = {
+  limit?: string | null;
+  remaining?: string | null;
+  reset?: string | null;
+};
+
+type GitTreeEntry = {
+  path: string;
+  mode?: string;
+  type: string;
+  sha: string;
+  size?: number;
+  url?: string;
+};
+
+type GitTreeResponse = {
+  sha: string;
+  url?: string;
+  tree: GitTreeEntry[];
+  truncated: boolean;
+};
+
+const repositoryTreeCache = new Map<string, GitTreeEntry[]>();
 
 function base64url(input: string | Buffer) {
   return Buffer.from(input).toString("base64url");
@@ -117,8 +141,13 @@ async function gh<T>(token: string, path: string, init: RequestInit = {}, resolv
       return (await res.json()) as T;
     }
     const text = await res.text();
+    const rateLimit: GitHubRateLimit = {
+      limit: res.headers.get("x-ratelimit-limit"),
+      remaining: res.headers.get("x-ratelimit-remaining"),
+      reset: res.headers.get("x-ratelimit-reset")
+    };
     const retryAfter = Number(res.headers.get("retry-after"));
-    const remaining = res.headers.get("x-ratelimit-remaining");
+    const remaining = rateLimit.remaining;
     const rateLimited =
       res.status === 429 ||
       (res.status === 403 && (retryAfter > 0 || remaining === "0" || /secondary rate limit|rate limit/i.test(text)));
@@ -128,7 +157,7 @@ async function gh<T>(token: string, path: string, init: RequestInit = {}, resolv
       await sleep(waitMs);
       continue;
     }
-    throw new GitHubError(text || res.statusText, res.status);
+    throw new GitHubError(text || res.statusText, res.status, rateLimit);
   }
 }
 
@@ -211,6 +240,77 @@ export async function getTextFile(token: string, campaign: Campaign, filePath: s
   };
 }
 
+function normalizeDir(dir: string) {
+  return dir.replace(/^\/+|\/+$/g, "");
+}
+
+function treeCacheKey(campaign: Pick<Campaign, "owner" | "repo" | "branch">, treeSha: string) {
+  return `${campaign.owner}/${campaign.repo}:${campaign.branch}:${treeSha}`;
+}
+
+async function getBranchTreeSha(token: string, campaign: Pick<Campaign, "owner" | "repo" | "branch">) {
+  const branch = encodeURIComponent(campaign.branch);
+  const data = await gh<{ commit: { sha: string; commit: { tree: { sha: string } } } }>(
+    token,
+    `/repos/${campaign.owner}/${campaign.repo}/branches/${branch}`
+  );
+  return {
+    commitSha: data.commit.sha,
+    treeSha: data.commit.commit.tree.sha
+  };
+}
+
+async function getGitTree(token: string, campaign: Pick<Campaign, "owner" | "repo">, treeSha: string, recursive = false) {
+  const query = recursive ? "?recursive=1" : "";
+  return gh<GitTreeResponse>(token, `/repos/${campaign.owner}/${campaign.repo}/git/trees/${encodeURIComponent(treeSha)}${query}`);
+}
+
+async function walkSubtrees(
+  token: string,
+  campaign: Pick<Campaign, "owner" | "repo">,
+  treeSha: string,
+  prefix = "",
+  seen = new Set<string>()
+): Promise<GitTreeEntry[]> {
+  if (seen.has(treeSha)) return [];
+  seen.add(treeSha);
+
+  const response = await getGitTree(token, campaign, treeSha, false);
+  if (response.truncated) {
+    throw new GitHubError(
+      "This repository is too large to index safely. CampaignRepo received a truncated Git tree while walking repository subtrees.",
+      502
+    );
+  }
+
+  const entries: GitTreeEntry[] = [];
+  for (const entry of response.tree) {
+    const fullPath = `${prefix}${entry.path}`;
+    const normalized = { ...entry, path: fullPath };
+    entries.push(normalized);
+    if (entry.type === "tree") {
+      entries.push(...(await walkSubtrees(token, campaign, entry.sha, `${fullPath}/`, seen)));
+    }
+  }
+  return entries;
+}
+
+export async function getRepositoryTreeEntries(token: string, campaign: Pick<Campaign, "owner" | "repo" | "branch">) {
+  const { treeSha } = await getBranchTreeSha(token, campaign);
+  const key = treeCacheKey(campaign, treeSha);
+  const cached = repositoryTreeCache.get(key);
+  if (cached) return cached;
+
+  const response = await getGitTree(token, campaign, treeSha, true);
+  const entries = response.truncated ? await walkSubtrees(token, campaign, treeSha) : response.tree;
+  repositoryTreeCache.set(key, entries);
+  return entries;
+}
+
+export function clearRepositoryTreeCacheForTests() {
+  repositoryTreeCache.clear();
+}
+
 export async function putFile(token: string, campaign: Pick<Campaign, "owner" | "repo" | "branch">, filePath: string, content: string, message: string, sha?: string) {
   return putBase64File(token, campaign, filePath, Buffer.from(content, "utf8").toString("base64"), message, sha);
 }
@@ -241,58 +341,39 @@ export async function deleteFile(token: string, campaign: Pick<Campaign, "owner"
 }
 
 export async function listDirectory(token: string, campaign: Campaign, dir: string) {
-  const encoded = dir.split("/").map(encodeURIComponent).join("/");
-  try {
-    return await gh<Array<{ name: string; path: string; sha: string; type: string }>>(token, `/repos/${campaign.owner}/${campaign.repo}/contents/${encoded}?ref=${campaign.branch}`);
-  } catch (error) {
-    if (error instanceof GitHubError && error.status === 404) return [];
-    throw error;
-  }
+  const directory = normalizeDir(dir);
+  const prefix = directory ? `${directory}/` : "";
+  const entries = await getRepositoryTreeEntries(token, campaign);
+  return entries
+    .filter((entry) => {
+      if (!entry.path.startsWith(prefix)) return false;
+      const rest = entry.path.slice(prefix.length);
+      return Boolean(rest) && !rest.includes("/");
+    })
+    .map((entry) => ({
+      name: entry.path.slice(prefix.length),
+      path: entry.path,
+      sha: entry.sha,
+      type: entry.type,
+      size: entry.size
+    }));
 }
 
-/**
- * Read every text file in one directory with a single GraphQL request.
- * This avoids one REST request per wiki page when warming the local cache.
- */
 export async function listDirectoryTextFiles(token: string, campaign: Campaign, dir: string, extension = ".md") {
-  type TreeResult = {
-    repository: {
-      object: {
-        entries: Array<{
-          name: string;
-          type: string;
-          oid: string;
-          object?: { text?: string | null } | null;
-        }>;
-      } | null;
-    } | null;
-  };
-  const data = await ghGraphql<TreeResult>(
-    token,
-    `query DirectoryTextFiles($owner: String!, $repo: String!, $expression: String!) {
-      repository(owner: $owner, name: $repo) {
-        object(expression: $expression) {
-          ... on Tree {
-            entries {
-              name
-              type
-              oid
-              object { ... on Blob { text } }
-            }
-          }
-        }
-      }
-    }`,
-    { owner: campaign.owner, repo: campaign.repo, expression: `${campaign.branch}:${dir}` }
-  );
-  const entries = data.repository?.object?.entries || [];
+  const directory = normalizeDir(dir);
+  const prefix = directory ? `${directory}/` : "";
+  const entries = await getRepositoryTreeEntries(token, campaign);
   return entries
-    .filter((entry) => entry.type === "blob" && entry.name.endsWith(extension))
+    .filter((entry) => {
+      if (entry.type !== "blob" || !entry.path.endsWith(extension) || !entry.path.startsWith(prefix)) return false;
+      const rest = entry.path.slice(prefix.length);
+      return Boolean(rest) && !rest.includes("/");
+    })
     .map((entry) => ({
-      name: entry.name,
-      path: `${dir}/${entry.name}`,
-      sha: entry.oid,
-      text: entry.object?.text ?? null
+      name: entry.path.slice(prefix.length),
+      path: entry.path,
+      sha: entry.sha,
+      text: null
     }));
 }
 
