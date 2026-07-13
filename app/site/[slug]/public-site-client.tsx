@@ -224,6 +224,10 @@ export default function PublicSiteClient({
   const cover = selectedPage?.frontmatter.cover ? resolveMedia(selectedPage.frontmatter.cover) : "";
   const themeVars = useMemo(() => themeToCssVars(theme) as CSSProperties, [theme]);
   const selectPublicPage = (page: WikiPage) => {
+    if (!page.content) {
+      window.location.href = `/site/${slug}/pages/${page.slug}`;
+      return;
+    }
     setSelectedSlug(page.slug);
     setSelectedQuestSlug("");
     window.history.replaceState(null, "", `#${page.slug}`);

@@ -35,8 +35,8 @@ function publicPageFromSearchDocument(doc: SearchDocument): WikiPage | null {
       knownToPlayers: true,
       keyLinks: doc.keyLinks || []
     }, name),
-    content: doc.playerText || stripGmBlocks(doc.text || ""),
-    raw: doc.playerText || stripGmBlocks(doc.text || ""),
+    content: doc.summary || "",
+    raw: doc.summary || "",
     outgoingLinks: (doc.links || []).map((target) => ({ target, label: target })),
     backlinks: doc.backlinks || []
   });

@@ -78,7 +78,7 @@ describe("public site quests", () => {
 
     expect(pages).toHaveLength(1);
     expect(pages[0].slug).toBe("public-page");
-    expect(pages[0].content).toContain("Visible.");
+    expect(pages[0].content).toBe("Visible summary");
     expect(pages[0].content).not.toContain("Secret.");
     expect(storageMock.listDirectory).not.toHaveBeenCalled();
     expect(storageMock.getTextFile).toHaveBeenCalledTimes(1);
