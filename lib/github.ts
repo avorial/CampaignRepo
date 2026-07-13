@@ -354,7 +354,7 @@ export async function listDirectory(token: string, campaign: Campaign, dir: stri
       name: entry.path.slice(prefix.length),
       path: entry.path,
       sha: entry.sha,
-      type: entry.type,
+      type: entry.type === "blob" ? "file" : entry.type === "tree" ? "dir" : entry.type,
       size: entry.size
     }));
 }

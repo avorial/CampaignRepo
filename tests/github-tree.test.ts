@@ -82,7 +82,24 @@ describe("GitHub repository tree loading", () => {
     });
 
     await expect(listDirectory("token", makeCampaign(), "characters")).resolves.toEqual([
-      { name: "alain.md", path: "characters/alain.md", sha: "blob-1", type: "blob", size: undefined }
+      { name: "alain.md", path: "characters/alain.md", sha: "blob-1", type: "file", size: undefined }
+    ]);
+  });
+
+  it("normalizes Git tree entry types to storage directory entry types", async () => {
+    mockGitHub("root-types", {
+      "root-types:recursive": {
+        truncated: false,
+        tree: [
+          { path: "wiki", type: "tree", sha: "tree-wiki" },
+          { path: "README.md", type: "blob", sha: "blob-readme" }
+        ]
+      }
+    });
+
+    await expect(listDirectory("token", makeCampaign(), "")).resolves.toEqual([
+      { name: "wiki", path: "wiki", sha: "tree-wiki", type: "dir", size: undefined },
+      { name: "README.md", path: "README.md", sha: "blob-readme", type: "file", size: undefined }
     ]);
   });
 
