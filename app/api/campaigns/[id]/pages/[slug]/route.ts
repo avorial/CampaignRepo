@@ -6,6 +6,7 @@ import { getStorageAdapter, isConflictError, isNotFoundError } from "@/lib/stora
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { removePageFromSearchIndex, scheduleSearchIndexRebuild } from "@/lib/search";
 import { readPageCache, refreshPageCache, removePageFromCache } from "@/lib/page-cache";
+import { findRepositoryManifestPage } from "@/lib/repository-manifest";
 
 export const dynamic = "force-dynamic";
 
@@ -34,8 +35,24 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
   let page = readPageCache(campaign.id).pages.find((candidate) => candidate.slug === slug);
   if (!page) {
+    const manifestPage = await findRepositoryManifestPage(storage, slug);
+    const candidatePaths = [
+      manifestPage?.path,
+      `wiki/pages/${slug}.md`
+    ].filter(Boolean) as string[];
     try {
-      page = (await refreshPageCache(storage, campaign)).pages.find((candidate) => candidate.slug === slug);
+      for (const path of candidatePaths) {
+        try {
+          const file = await storage.getTextFile(path);
+          page = parsePage(slug, file.text, file.sha);
+          break;
+        } catch {
+          // Try the next known path before falling back to an index refresh.
+        }
+      }
+      if (!page) {
+        page = (await refreshPageCache(storage, campaign)).pages.find((candidate) => candidate.slug === slug);
+      }
     } catch (error) {
       return NextResponse.json(
         { error: error instanceof Error ? error.message : "Could not refresh campaign pages." },

@@ -142,6 +142,16 @@ export async function readRepositoryManifestSnapshot(storage: StorageAdapter) {
   };
 }
 
+export async function findRepositoryManifestPage(storage: StorageAdapter, slug: string): Promise<RepositoryManifestPage | null> {
+  try {
+    const file = await storage.getTextFile(repositoryManifestPath);
+    const manifest = readRepositoryManifestText(file.text);
+    return manifest.pages.find((page) => slugFromManifestPath(page.path) === slug || page.id === slug) || null;
+  } catch {
+    return null;
+  }
+}
+
 export function manifestPageFromSearchDocument(doc: SearchDocument): RepositoryManifestPage | null {
   if (!doc.slug || doc.category === "media" || doc.slug.startsWith("media/")) return null;
   const type = String(doc.category || "lore");
