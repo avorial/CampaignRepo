@@ -1,13 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { loadPublicQuests } from "@/lib/public-site";
+import { loadPublicPages, loadPublicQuests } from "@/lib/public-site";
 import type { Campaign } from "@/lib/types";
 
 let questFiles: Array<{ name: string; text: string }> = [];
+let storageMock: any;
 
 vi.mock("@/lib/storage", () => ({
-  getStorageAdapter: () => ({
-    listDirectoryTextFiles: vi.fn(async () => questFiles.map((file) => ({ ...file, path: `wiki/quests/${file.name}`, sha: file.name })))
-  })
+  getStorageAdapter: () => storageMock
 }));
 
 function makeCampaign(): Campaign {
@@ -26,7 +25,69 @@ function makeCampaign(): Campaign {
 }
 
 describe("public site quests", () => {
+  it("loads public pages from the search snapshot without downloading every markdown page", async () => {
+    storageMock = {
+      getTextFile: vi.fn(async (path: string) => {
+        if (path !== "wiki/search/index.json") throw new Error(`unexpected read: ${path}`);
+        return {
+          sha: "index-sha",
+          text: JSON.stringify([
+            {
+              id: "1:public-page",
+              campaignId: 1,
+              campaignName: "Public Test",
+              slug: "public-page",
+              title: "Public Page",
+              category: "lore",
+              summary: "Visible summary",
+              tags: ["visible"],
+              aliases: [],
+              visibility: "players",
+              approvalStatus: "approved",
+              text: "Visible.\n\n:::gm\nSecret.\n:::\n",
+              playerText: "Visible.\n",
+              links: [],
+              backlinks: [],
+              keyLinks: []
+            },
+            {
+              id: "1:private-page",
+              campaignId: 1,
+              campaignName: "Public Test",
+              slug: "private-page",
+              title: "Private Page",
+              category: "lore",
+              summary: "",
+              tags: [],
+              aliases: [],
+              visibility: "gm",
+              approvalStatus: "approved",
+              text: "Secret.",
+              playerText: "",
+              links: [],
+              backlinks: [],
+              keyLinks: []
+            }
+          ])
+        };
+      }),
+      listDirectory: vi.fn()
+    };
+
+    const pages = await loadPublicPages(makeCampaign());
+
+    expect(pages).toHaveLength(1);
+    expect(pages[0].slug).toBe("public-page");
+    expect(pages[0].content).toContain("Visible.");
+    expect(pages[0].content).not.toContain("Secret.");
+    expect(storageMock.listDirectory).not.toHaveBeenCalled();
+    expect(storageMock.getTextFile).toHaveBeenCalledTimes(1);
+  });
+
   it("loads only player-visible quests and strips GM blocks", async () => {
+    storageMock = {
+      listDirectoryTextFiles: vi.fn(async () => questFiles.map((file) => ({ ...file, path: `wiki/quests/${file.name}`, sha: file.name })))
+    };
     questFiles = [
       {
         name: "public.md",

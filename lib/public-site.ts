@@ -1,8 +1,8 @@
 import YAML from "yaml";
-import type { Campaign, WikiPage } from "@/lib/types";
+import type { Campaign, SearchDocument, WikiPage } from "@/lib/types";
 import { themePresetForGame, categoryPresetForGame } from "@/lib/game-pack-branding";
-import { getStorageAdapter } from "@/lib/storage";
-import { parsePage, stripGmBlocks } from "@/lib/markdown";
+import { getStorageAdapter, type StorageAdapter } from "@/lib/storage";
+import { normalizeFrontmatter, parsePage, stripGmBlocks } from "@/lib/markdown";
 import { parseQuest, type Quest } from "@/lib/quests";
 import { sanitizeTheme, type CampaignTheme } from "@/lib/theme";
 
@@ -16,6 +16,47 @@ export function sanitizePlayerPage(page: WikiPage, visibleGroups?: Set<string>):
   };
 }
 
+function publicPageFromSearchDocument(doc: SearchDocument): WikiPage | null {
+  if (!doc.slug || doc.category === "media" || doc.slug.startsWith("media/")) return null;
+  if (doc.visibility !== "players" || doc.approvalStatus !== "approved") return null;
+  const name = doc.title || doc.slug.replace(/-/g, " ");
+  return sanitizePlayerPage({
+    slug: doc.slug,
+    frontmatter: normalizeFrontmatter({
+      name,
+      title: name,
+      category: doc.category || "lore",
+      type: doc.category || "lore",
+      summary: doc.summary || "",
+      tags: doc.tags || [],
+      aliases: doc.aliases || [],
+      visibility: doc.visibility,
+      approvalStatus: doc.approvalStatus,
+      knownToPlayers: true,
+      keyLinks: doc.keyLinks || []
+    }, name),
+    content: doc.playerText || stripGmBlocks(doc.text || ""),
+    raw: doc.playerText || stripGmBlocks(doc.text || ""),
+    outgoingLinks: (doc.links || []).map((target) => ({ target, label: target })),
+    backlinks: doc.backlinks || []
+  });
+}
+
+async function loadPublicPagesFromSearchIndex(storage: StorageAdapter): Promise<WikiPage[] | null> {
+  try {
+    const file = await storage.getTextFile("wiki/search/index.json");
+    const docs = JSON.parse(file.text) as SearchDocument[];
+    const pages = docs.flatMap((doc) => {
+      const page = publicPageFromSearchDocument(doc);
+      return page ? [page] : [];
+    });
+    if (!pages.length) return null;
+    return pages.sort((a, b) => a.frontmatter.name.localeCompare(b.frontmatter.name));
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Load the player-safe pages for a campaign straight from its storage —
  * only pages that are player-visible AND approved, with GM blocks stripped.
@@ -24,6 +65,8 @@ export function sanitizePlayerPage(page: WikiPage, visibleGroups?: Set<string>):
 export async function loadPublicPages(campaign: Campaign, userToken?: string | null): Promise<WikiPage[]> {
   const storage = getStorageAdapter(campaign, userToken);
   if (!storage) return [];
+  const snapshotPages = await loadPublicPagesFromSearchIndex(storage);
+  if (snapshotPages) return snapshotPages;
   const entries = await storage.listDirectory("wiki/pages");
   const pages = await Promise.all(
     entries
