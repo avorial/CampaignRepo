@@ -198,6 +198,13 @@ export async function getRawFile(token: string, campaign: Pick<Campaign, "owner"
 
 export async function getTextFile(token: string, campaign: Campaign, filePath: string) {
   const item = await getContent(token, campaign, filePath);
+  if (!item.content) {
+    const raw = await getRawFile(token, campaign, filePath);
+    return {
+      sha: item.sha,
+      text: Buffer.from(raw.bytes).toString("utf8")
+    };
+  }
   return {
     sha: item.sha,
     text: Buffer.from(item.content, "base64").toString("utf8")

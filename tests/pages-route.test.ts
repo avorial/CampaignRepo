@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => {
     putFile: vi.fn(),
     scheduleSearchIndexRebuild: vi.fn(),
     readPageCache: vi.fn(),
+    readSearchIndexPageSnapshot: vi.fn(),
     refreshPageCache: vi.fn(),
     refreshPageCacheInBackground: vi.fn()
   };
@@ -42,6 +43,7 @@ vi.mock("@/lib/storage", () => ({
 vi.mock("@/lib/search", () => ({ scheduleSearchIndexRebuild: mocks.scheduleSearchIndexRebuild }));
 vi.mock("@/lib/page-cache", () => ({
   readPageCache: mocks.readPageCache,
+  readSearchIndexPageSnapshot: mocks.readSearchIndexPageSnapshot,
   refreshPageCache: mocks.refreshPageCache,
   refreshPageCacheInBackground: mocks.refreshPageCacheInBackground
 }));
@@ -64,11 +66,13 @@ describe("page creation", () => {
     mocks.putFile.mockReset();
     mocks.scheduleSearchIndexRebuild.mockClear();
     mocks.readPageCache.mockReset();
+    mocks.readSearchIndexPageSnapshot.mockReset();
+    mocks.readSearchIndexPageSnapshot.mockResolvedValue(null);
     mocks.refreshPageCache.mockReset();
     mocks.refreshPageCacheInBackground.mockReset();
   });
 
-  it("returns cached pages immediately and starts a background refresh", async () => {
+  it("returns cached pages immediately", async () => {
     const page = {
       slug: "Cached-Page",
       sha: "cached-sha",
@@ -85,7 +89,7 @@ describe("page creation", () => {
 
     expect(body.pages).toEqual([page]);
     expect(body.cache.cached).toBe(true);
-    expect(mocks.refreshPageCacheInBackground).toHaveBeenCalledOnce();
+    expect(mocks.refreshPageCacheInBackground).not.toHaveBeenCalled();
     expect(mocks.refreshPageCache).not.toHaveBeenCalled();
   });
 
