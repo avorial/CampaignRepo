@@ -225,8 +225,16 @@ export function upsertManifestPage(manifest: RepositoryManifest | null, entry: R
     ? { ...manifest, generatedAt: new Date().toISOString(), pages: [...manifest.pages] }
     : { schemaVersion: repositoryManifestSchemaVersion, generatedAt: new Date().toISOString(), pages: [] };
   const existing = next.pages.findIndex((page) => page.id === entry.id || page.path === entry.path);
-  if (existing >= 0) next.pages[existing] = { ...next.pages[existing], ...entry };
-  else next.pages.push(entry);
+  if (existing >= 0) {
+    const previousId = next.pages[existing].id;
+    next.pages[existing] = { ...next.pages[existing], ...entry };
+    if (previousId !== entry.id) {
+      next.pages = next.pages.map((page) => ({
+        ...page,
+        links: page.links.map((link) => (link === previousId ? entry.id : link))
+      }));
+    }
+  } else next.pages.push(entry);
   return next;
 }
 

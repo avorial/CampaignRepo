@@ -5,6 +5,7 @@ import {
   removePageFromRepositoryManifest,
   repositoryManifestPath,
   serializeRepositoryManifest,
+  upsertManifestPage,
   validateRepositoryManifest
 } from "@/lib/repository-manifest";
 import type { StorageAdapter } from "@/lib/storage";
@@ -77,6 +78,25 @@ describe("repository manifest", () => {
   it("serializes only valid manifests", () => {
     const manifest = readRepositoryManifestText(manifestText());
     expect(serializeRepositoryManifest(manifest)).toContain("\"schemaVersion\": 1");
+  });
+
+  it("rewrites internal links when an upsert changes a page id", () => {
+    const manifest = readRepositoryManifestText(manifestText());
+    manifest.pages[1].links = ["npc-alain"];
+    const next = upsertManifestPage(manifest, {
+      id: "organization-alain",
+      title: "Alain",
+      path: "wiki/pages/alain.md",
+      type: "organization",
+      tags: ["ally"],
+      links: ["location-jardin"],
+      visibility: "players",
+      approvalStatus: "approved"
+    });
+
+    expect(next.pages[0].id).toBe("organization-alain");
+    expect(next.pages[1].links).toEqual(["organization-alain"]);
+    expect(serializeRepositoryManifest(next)).toContain("organization-alain");
   });
 
   it("removes a deleted page from the manifest immediately", async () => {

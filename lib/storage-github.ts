@@ -4,6 +4,7 @@ import {
   getContent, getTextFile, getRawFile, putFile, putBase64File, deleteFile,
   listDirectory, listDirectoryTextFiles, commitFiles, ensureFile,
   listFileCommits, listRecentCommits, initializeRepo,
+  clearRepositoryTreeCache,
   type CommitFile
 } from "@/lib/github";
 
@@ -35,20 +36,25 @@ export class GitHubAdapter implements StorageAdapter {
 
   async putFile(filePath: string, content: string, message: string, sha?: string): Promise<{ sha: string }> {
     const result = (await putFile(this.token, this.campaign, filePath, content, message, sha)) as any;
+    clearRepositoryTreeCache(this.campaign);
     return { sha: result?.content?.sha || "" };
   }
 
   async putBase64File(filePath: string, base64Content: string, message: string, sha?: string): Promise<{ sha: string }> {
     const result = (await putBase64File(this.token, this.campaign, filePath, base64Content, message, sha)) as any;
+    clearRepositoryTreeCache(this.campaign);
     return { sha: result?.content?.sha || "" };
   }
 
   async deleteFile(filePath: string, message: string, sha: string): Promise<void> {
     await deleteFile(this.token, this.campaign, filePath, message, sha);
+    clearRepositoryTreeCache(this.campaign);
   }
 
   async commitFiles(files: CommitFile[], message: string) {
-    return commitFiles(this.token, this.campaign, files, message);
+    const result = await commitFiles(this.token, this.campaign, files, message);
+    clearRepositoryTreeCache(this.campaign);
+    return result;
   }
 
   async ensureFile(filePath: string, content: string, message: string): Promise<void> {

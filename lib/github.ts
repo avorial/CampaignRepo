@@ -311,6 +311,13 @@ export function clearRepositoryTreeCacheForTests() {
   repositoryTreeCache.clear();
 }
 
+export function clearRepositoryTreeCache(campaign: Pick<Campaign, "owner" | "repo" | "branch">) {
+  const prefix = `${campaign.owner}/${campaign.repo}:${campaign.branch}:`;
+  for (const key of repositoryTreeCache.keys()) {
+    if (key.startsWith(prefix)) repositoryTreeCache.delete(key);
+  }
+}
+
 export async function putFile(token: string, campaign: Pick<Campaign, "owner" | "repo" | "branch">, filePath: string, content: string, message: string, sha?: string) {
   return putBase64File(token, campaign, filePath, Buffer.from(content, "utf8").toString("base64"), message, sha);
 }

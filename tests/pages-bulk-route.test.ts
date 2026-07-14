@@ -72,6 +72,19 @@ const manifestText = JSON.stringify({
       visibility: "players",
       approvalStatus: "approved",
       keyLinks: []
+    },
+    {
+      id: "lore-sparks-background",
+      title: "Sparks Background",
+      path: "wiki/pages/sparks-background.md",
+      type: "lore",
+      tags: [],
+      links: ["npc-sparks-guild"],
+      aliases: [],
+      summary: "",
+      visibility: "players",
+      approvalStatus: "approved",
+      keyLinks: []
     }
   ]
 });
@@ -118,6 +131,7 @@ describe("bulk page edits", () => {
       visibility: "players",
       approvalStatus: "approved"
     });
+    expect(manifest.pages[1].links).toEqual(["organization-sparks-guild"]);
     expect(mocks.upsertPageInCache).toHaveBeenCalledOnce();
     expect(mocks.rebuildSearchIndex).toHaveBeenCalledOnce();
   });
