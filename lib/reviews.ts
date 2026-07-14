@@ -30,7 +30,7 @@ export async function listReviewPages(storage: StorageAdapter, _campaign: Campai
         visibility: doc.visibility,
         approvalStatus: doc.approvalStatus,
         summary: doc.summary,
-        excerpt: (doc.playerText || doc.text || "").replace(/\s+/g, " ").trim().slice(0, 260)
+        excerpt: (doc.excerpt || doc.playerText || doc.text || "").replace(/\s+/g, " ").trim().slice(0, 260)
       }));
     if (reviews.length || docs.length) return reviews;
   } catch {

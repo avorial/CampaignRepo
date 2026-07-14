@@ -498,6 +498,8 @@ export type SearchDocument = {
   approvalStatus: ApprovalStatus;
   text: string;
   playerText: string;
+  /** Short player-safe preview kept in the committed snapshot, which carries no full bodies. */
+  excerpt?: string;
   links: string[];
   backlinks: string[];
   keyLinks: string[];

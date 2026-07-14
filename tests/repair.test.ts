@@ -3,7 +3,7 @@ import { repairCampaignIndexes } from "@/lib/repair";
 import { readPageCache, upsertPageInCache } from "@/lib/page-cache";
 import { readRepositoryManifestText, repositoryManifestPath } from "@/lib/repository-manifest";
 import { parsePage } from "@/lib/markdown";
-import { getDb } from "@/lib/db";
+import { getDb, searchDocs } from "@/lib/db";
 import { StorageError, type StorageAdapter, type StorageDirEntry, type StorageTextEntry } from "@/lib/storage";
 import type { Campaign } from "@/lib/types";
 
@@ -66,10 +66,12 @@ function page(name: string, body: string, extra = "") {
 }
 
 let campaign: Campaign;
+let ownerId = 0;
 
 beforeEach(() => {
   const db = getDb();
   const userId = Number(db.prepare("INSERT INTO users (email, name, passwordHash) VALUES (?, ?, ?)").run(`repair-${Date.now()}-${Math.random()}@test`, "R", "x").lastInsertRowid);
+  ownerId = userId;
   const campaignId = Number(
     db.prepare("INSERT INTO campaigns (userId, name, owner, repo, gameType) VALUES (?, ?, ?, ?, ?)").run(userId, "Repair Test", "o", `repair-${Date.now()}-${Math.random()}`, "Traveller").lastInsertRowid
   );
@@ -131,6 +133,22 @@ describe("repairCampaignIndexes", () => {
     expect(report.counts.emptySourcePages).toBe(1);
     // The page source itself is untouched — still an empty body.
     expect(parsePage("Blank", files.get("wiki/pages/Blank.md")!).content.trim()).toBe("");
+  });
+
+  it("commits a lean snapshot: excerpts instead of full bodies, while SQLite keeps full-text search", async () => {
+    const files = seedFiles();
+
+    await repairCampaignIndexes(makeStorage(files), campaign);
+
+    const committed = JSON.parse(files.get("wiki/search/index.json")!) as Array<{ slug: string; text: string; playerText: string; excerpt?: string }>;
+    const alainDoc = committed.find((doc) => doc.slug === "Alain")!;
+    // No full bodies in the committed file — it is a navigation index, not a content store.
+    expect(alainDoc.text).toBe("");
+    expect(alainDoc.playerText).toBe("");
+    expect(alainDoc.excerpt).toContain("Alain body");
+    // Live full-text search still finds body words via SQLite.
+    const hits = searchDocs(ownerId, "body", campaign.id, "gm");
+    expect(hits.map((hit) => hit.slug).sort()).toEqual(["Alain", "Jardin"]);
   });
 
   it("names the failed step and keeps going when the snapshot write fails", async () => {

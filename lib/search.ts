@@ -90,13 +90,34 @@ export async function buildSearchDocuments(storage: StorageAdapter, campaign: Ca
   return [...pageDocs, ...mediaDocs];
 }
 
+const SNAPSHOT_EXCERPT_LENGTH = 300;
+
+/**
+ * The committed snapshot is a navigation/search index, not a content store.
+ * Full page bodies live in the Markdown files (canonical) and the SQLite FTS
+ * table (live search); committing them here doubled every page body into a
+ * multi-megabyte JSON blob that was rewritten wholesale on every rebuild,
+ * bloating repo history and blowing past GitHub's 1 MB contents responses.
+ * A short player-safe excerpt is kept for review lists and previews.
+ */
+export function leanSnapshotDocs(docs: SearchDocument[]): SearchDocument[] {
+  return docs.map((doc) => ({
+    ...doc,
+    excerpt: (doc.playerText || "").replace(/\s+/g, " ").trim().slice(0, SNAPSHOT_EXCERPT_LENGTH),
+    text: "",
+    playerText: ""
+  }));
+}
+
 export async function rebuildSearchIndex(storage: StorageAdapter, campaign: Campaign) {
   const docs = await buildSearchDocuments(storage, campaign);
+  // SQLite keeps the full bodies for live full-text search; the repo gets the
+  // lean, portable form.
   upsertSearchDocuments(campaign.id, docs);
   const manifest = buildRepositoryManifestFromSearchDocuments(docs);
   await storage.commitFiles(
     [
-      { path: "wiki/search/index.json", content: JSON.stringify(docs, null, 2) + "\n" },
+      { path: "wiki/search/index.json", content: JSON.stringify(leanSnapshotDocs(docs), null, 2) + "\n" },
       { path: repositoryManifestPath, content: serializeRepositoryManifest(manifest) }
     ],
     "CampaignRepo: update repository index"
