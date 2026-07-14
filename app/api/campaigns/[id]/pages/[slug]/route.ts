@@ -37,21 +37,28 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   let page = refreshMode === "wait"
     ? (await refreshPageCache(storage, campaign)).pages.find((candidate) => candidate.slug === slug)
     : readPageCache(campaign.id).pages.find((candidate) => candidate.slug === slug);
-  if (!page) {
-    const manifestPage = await findRepositoryManifestPage(storage, slug);
-    const candidatePaths = [
-      manifestPage?.path,
-      `wiki/pages/${slug}.md`
-    ].filter(Boolean) as string[];
+
+  const cachedPageWasEmpty = Boolean(page && !page.content.trim() && !page.raw.trim());
+  if (!page || cachedPageWasEmpty) {
     try {
+      const manifestPage = await findRepositoryManifestPage(storage, slug);
+      const candidatePaths = [
+        manifestPage?.path,
+        `wiki/pages/${slug}.md`
+      ].filter(Boolean) as string[];
+      let freshPage: typeof page | undefined;
       for (const path of candidatePaths) {
         try {
           const file = await storage.getTextFile(path);
-          page = parsePage(slug, file.text, file.sha);
+          freshPage = parsePage(slug, file.text, file.sha);
           break;
         } catch {
           // Try the next known path before falling back to an index refresh.
         }
+      }
+      if (freshPage && (!cachedPageWasEmpty || freshPage.content.trim() || freshPage.raw.trim())) {
+        page = freshPage;
+        upsertPageInCache(campaign.id, freshPage);
       }
       if (!page) {
         page = (await refreshPageCache(storage, campaign)).pages.find((candidate) => candidate.slug === slug);

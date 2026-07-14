@@ -44,7 +44,8 @@ describe("public site quests", () => {
                 links: [],
                 summary: "Listed from manifest",
                 visibility: "players",
-                approvalStatus: "approved"
+                approvalStatus: "approved",
+                parent: "jardin"
               }
             ]
           })
@@ -57,6 +58,7 @@ describe("public site quests", () => {
 
     expect(pages).toHaveLength(1);
     expect(pages[0].frontmatter.name).toBe("Manifest Public Page");
+    expect(pages[0].frontmatter.parent).toBe("jardin");
     expect(storageMock.getTextFile).toHaveBeenCalledTimes(1);
     expect(storageMock.listDirectory).not.toHaveBeenCalled();
   });
@@ -84,7 +86,8 @@ describe("public site quests", () => {
               playerText: "Visible.\n",
               links: [],
               backlinks: [],
-              keyLinks: []
+              keyLinks: [],
+              parent: "jardin"
             },
             {
               id: "1:private-page",
@@ -114,6 +117,7 @@ describe("public site quests", () => {
 
     expect(pages).toHaveLength(1);
     expect(pages[0].slug).toBe("public-page");
+    expect(pages[0].frontmatter.parent).toBe("jardin");
     expect(pages[0].content).toBe("");
     expect(pages[0].content).not.toContain("Secret.");
     expect(storageMock.listDirectory).not.toHaveBeenCalled();

@@ -166,7 +166,8 @@ export function manifestPageFromSearchDocument(doc: SearchDocument): RepositoryM
     summary: doc.summary || "",
     visibility: doc.visibility,
     approvalStatus: doc.approvalStatus,
-    keyLinks: doc.keyLinks || []
+    keyLinks: doc.keyLinks || [],
+    parent: doc.parent
   };
 }
 

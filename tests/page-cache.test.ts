@@ -40,18 +40,24 @@ describe("snapshot source labels", () => {
         text: JSON.stringify({
           schemaVersion: 1,
           generatedAt: "2026-07-13T18:00:00.000Z",
-          pages: [{ id: "npc-a", title: "A", path: "wiki/pages/a.md", type: "npc", tags: [], links: [] }]
+          pages: [{ id: "npc-a", title: "A", path: "wiki/pages/a.md", type: "npc", tags: [], links: [], parent: "jardin" }]
         })
       }))
     } as unknown as StorageAdapter;
     const searchStorage = {
       getTextFile: vi.fn(async () => ({
         sha: "s",
-        text: JSON.stringify([{ slug: "a", title: "A", category: "npc" }])
+        text: JSON.stringify([{ slug: "a", title: "A", category: "npc", parent: "jardin" }])
       }))
     } as unknown as StorageAdapter;
 
-    await expect(readManifestPageSnapshot(manifestStorage)).resolves.toMatchObject({ source: "manifest" });
-    await expect(readSearchIndexPageSnapshot(searchStorage)).resolves.toMatchObject({ source: "search-index" });
+    await expect(readManifestPageSnapshot(manifestStorage)).resolves.toMatchObject({
+      source: "manifest",
+      pages: [expect.objectContaining({ frontmatter: expect.objectContaining({ parent: "jardin" }) })]
+    });
+    await expect(readSearchIndexPageSnapshot(searchStorage)).resolves.toMatchObject({
+      source: "search-index",
+      pages: [expect.objectContaining({ frontmatter: expect.objectContaining({ parent: "jardin" }) })]
+    });
   });
 });

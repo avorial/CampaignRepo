@@ -78,6 +78,7 @@ type SearchIndexDocument = {
   links?: string[];
   backlinks?: string[];
   keyLinks?: string[];
+  parent?: string;
 };
 
 function pageFromSearchDocument(doc: SearchIndexDocument): WikiPage {
@@ -93,7 +94,8 @@ function pageFromSearchDocument(doc: SearchIndexDocument): WikiPage {
     visibility: doc.visibility || "gm",
     approvalStatus: doc.approvalStatus || "approved",
     knownToPlayers: doc.visibility === "players",
-    keyLinks: doc.keyLinks || []
+    keyLinks: doc.keyLinks || [],
+    parent: doc.parent
   }, name);
   return {
     slug: doc.slug,

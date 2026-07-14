@@ -501,4 +501,5 @@ export type SearchDocument = {
   links: string[];
   backlinks: string[];
   keyLinks: string[];
+  parent?: string;
 };

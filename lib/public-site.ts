@@ -34,7 +34,8 @@ function publicPageFromSearchDocument(doc: SearchDocument): WikiPage | null {
       visibility: doc.visibility,
       approvalStatus: doc.approvalStatus,
       knownToPlayers: true,
-      keyLinks: doc.keyLinks || []
+      keyLinks: doc.keyLinks || [],
+      parent: doc.parent
     }, name),
     content: "",
     raw: "",

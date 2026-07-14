@@ -83,7 +83,8 @@ export async function buildSearchDocuments(storage: StorageAdapter, campaign: Ca
     playerText: stripGmBlocks(page.content),
     links: page.outgoingLinks.map((link) => link.target),
     backlinks: page.backlinks,
-    keyLinks: page.frontmatter.keyLinks
+    keyLinks: page.frontmatter.keyLinks,
+    parent: page.frontmatter.parent
   }));
   const mediaDocs = await buildMediaSearchDocuments(storage, campaign);
   return [...pageDocs, ...mediaDocs];

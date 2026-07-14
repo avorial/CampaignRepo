@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getTextFile: vi.fn(),
   readPageCache: vi.fn(),
-  refreshPageCache: vi.fn()
+  refreshPageCache: vi.fn(),
+  upsertPageInCache: vi.fn()
 }));
 
 vi.mock("@/lib/auth", () => ({ requireUser: vi.fn(async () => ({ id: 1 })) }));
@@ -28,7 +29,8 @@ vi.mock("@/lib/storage", () => ({
 vi.mock("@/lib/search", () => ({ scheduleSearchIndexRebuild: vi.fn() }));
 vi.mock("@/lib/page-cache", () => ({
   readPageCache: mocks.readPageCache,
-  refreshPageCache: mocks.refreshPageCache
+  refreshPageCache: mocks.refreshPageCache,
+  upsertPageInCache: mocks.upsertPageInCache
 }));
 
 import { GET } from "@/app/api/campaigns/[id]/pages/[slug]/route";
@@ -38,6 +40,7 @@ describe("page detail reads", () => {
     mocks.getTextFile.mockReset();
     mocks.readPageCache.mockReset();
     mocks.refreshPageCache.mockReset();
+    mocks.upsertPageInCache.mockReset();
   });
 
   it("serves a valid linked page from the local cache without a GitHub REST request", async () => {
@@ -108,6 +111,67 @@ describe("page detail reads", () => {
     expect(response.status).toBe(200);
     expect(body.page.frontmatter.name).toBe("Broseus");
     expect(body.page.content).toBe("Broseus body.");
+    expect(mocks.refreshPageCache).not.toHaveBeenCalled();
+  });
+
+  it("replaces an empty cached page with the repository file body", async () => {
+    const emptyCachedPage = {
+      slug: "Arcosphere-Rousseau",
+      sha: "empty-cache-sha",
+      frontmatter: {
+        name: "Arcosphere Rousseau",
+        category: "location",
+        visibility: "players",
+        approvalStatus: "approved",
+        parent: "Jardin"
+      },
+      content: "",
+      raw: "",
+      outgoingLinks: [],
+      backlinks: []
+    };
+    mocks.readPageCache.mockReturnValue({ pages: [emptyCachedPage], refreshedAt: "2026-07-14", refreshError: null });
+    mocks.getTextFile.mockImplementation(async (path: string) => {
+      if (path === ".campaignrepo/index.json") {
+        return {
+          sha: "manifest-sha",
+          text: JSON.stringify({
+            schemaVersion: 1,
+            generatedAt: "2026-07-14T18:00:00.000Z",
+            pages: [
+              {
+                id: "location-arcosphere-rousseau",
+                title: "Arcosphere Rousseau",
+                path: "wiki/pages/Arcosphere-Rousseau.md",
+                type: "location",
+                tags: ["location"],
+                links: [],
+                visibility: "players",
+                approvalStatus: "approved",
+                parent: "Jardin"
+              }
+            ]
+          })
+        };
+      }
+      if (path === "wiki/pages/Arcosphere-Rousseau.md") {
+        return {
+          sha: "fresh-sha",
+          text: "---\nname: Arcosphere Rousseau\ncategory: location\nvisibility: players\napprovalStatus: approved\nparent: Jardin\n---\n\nReal location body."
+        };
+      }
+      throw new Error(`unexpected path: ${path}`);
+    });
+
+    const response = await GET(new Request("http://localhost/api/campaigns/4/pages/Arcosphere-Rousseau"), {
+      params: Promise.resolve({ id: "4", slug: "Arcosphere-Rousseau" })
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.page.content).toBe("Real location body.");
+    expect(body.page.frontmatter.parent).toBe("Jardin");
+    expect(mocks.upsertPageInCache).toHaveBeenCalledWith(4, expect.objectContaining({ slug: "Arcosphere-Rousseau", sha: "fresh-sha" }));
     expect(mocks.refreshPageCache).not.toHaveBeenCalled();
   });
 });
