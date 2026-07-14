@@ -6,18 +6,27 @@ GMs get version history, private notes, a review queue, and full control over wh
 
 ## Where We Are Now
 
-CampaignRepo is now at **1.0**: a usable campaign management app, not just a
-wiki prototype.
-The current app supports local-folder and GitHub-backed campaigns; private GM
+CampaignRepo is now a usable campaign management app, not just a wiki
+prototype. It supports local-folder and GitHub-backed campaigns; private GM
 workspaces; player-safe portals; public published worlds; public campaign
 discovery and cloning; session planning; quest tracking; fantasy calendars;
 maps; relationship graphs; manuscripts; boards; lexicons; AI tools; MCP access;
 full ZIP/JSON campaign backups; and Docker/GHCR deployment.
 
-The biggest remaining product gaps are sheet editor polish beyond Traveller,
-Maps 2.0 persistence, mobile/accessibility polish, offline/PWA support, and the
-public-world pull-request ecosystem. See [ROADMAP.md](ROADMAP.md) for the
-cleaned-up shipped/partial/open status.
+The next priority is reliability. CampaignRepo's long-term shape is
+**app-first, Git-backed**:
+
+- CampaignRepo should feel fast even when GitHub is slow.
+- Markdown and repo files remain portable and durable.
+- The app should keep a local working copy for live editing.
+- Git commits should be batched sync operations, not the hot path for every
+  sidebar move, approval, or page edit.
+- Generated files such as `.campaignrepo/index.json` and
+  `wiki/search/index.json` should be rebuildable snapshots, not irreplaceable
+  sources of truth.
+
+See [ROADMAP.md](ROADMAP.md) for the reliability and sync roadmap, including
+testing, fallbacks, and the biggest hidden risks.
 
 ## Product Tour
 
@@ -82,7 +91,12 @@ Players see only pages that are both approved and marked player-visible. GM-only
 ### Storage Backends
 
 - **Local folder** - no GitHub account required; works offline; compatible with Dropbox, Syncthing, Nextcloud, or OneDrive for optional sync.
-- **GitHub** (recommended) - version history, free offsite backup, collaboration, multi-machine access via GitHub App or personal token.
+- **GitHub** - version history, offsite backup, collaboration, multi-machine access via GitHub App or personal token.
+
+GitHub-backed campaigns are powerful, but GitHub is not a low-latency database.
+The roadmap moves routine editing toward a local DB working copy with queued
+Git sync, so page organization and approvals stay fast while repositories
+remain the durable archive.
 
 ### Wiki and Editor
 
@@ -318,7 +332,7 @@ CampaignRepo repositories include a generated manifest at:
 .campaignrepo/index.json
 ```
 
-The manifest is the fast navigation/index layer for CampaignRepo. It stores page IDs, titles, paths, types, tags, aliases, summaries, visibility, approval status, and link metadata. Markdown files remain the canonical source for page content and frontmatter; the manifest does not duplicate full Markdown bodies.
+The manifest is the fast navigation/index layer for CampaignRepo. It stores page IDs, titles, paths, types, tags, aliases, summaries, visibility, approval status, parent metadata, and link metadata. Markdown files remain the canonical source for page content and frontmatter; the manifest does not duplicate full Markdown bodies.
 
 Normal repository loading uses this pattern:
 
@@ -333,6 +347,11 @@ Open page:
 ```
 
 If `.campaignrepo/index.json` is missing, CampaignRepo falls back to `wiki/search/index.json` and older cache/rebuild paths. Rebuilding the search index also writes the repository manifest. Creating a page through CampaignRepo commits the Markdown file and manifest update together, keeping the repository index consistent.
+
+Generated indexes are disposable. If a manifest, search snapshot, or DB cache
+disagrees with real page content, the repair path should rebuild generated
+state from the canonical page source rather than treating the generated file as
+truth.
 
 The Git Trees API is used for recovery and rebuild paths, not as the normal navigation source. The GitHub Contents API remains suitable for reading or writing a single known file.
 
@@ -425,8 +444,9 @@ Recommended stack settings:
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the current shipped/partial/open feature status
-and the recommended next release sequence.
+See [ROADMAP.md](ROADMAP.md) for the current shipped/partial/open feature
+status, the reliability/sync architecture plan, and the recommended next
+release sequence.
 
 ## License
 

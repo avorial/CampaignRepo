@@ -1,19 +1,255 @@
 # CampaignRepo Roadmap
 
-CampaignRepo is past **1.0** and into the **1.1 polish wave**. The platform
-surface is broad — wiki, maps, sessions, quests, publishing, dashboards,
-imports, AI tools, and local/GitHub storage — so the focus has shifted from
-adding surfaces to making every game system feel first-class on the surfaces
-that exist.
+CampaignRepo is past **1.0** and into the reliability wave. The platform
+surface is broad - wiki, maps, sessions, quests, publishing, dashboards,
+imports, AI tools, and local/GitHub storage - so the focus has shifted from
+adding surfaces to making the existing app trustworthy at scale.
 
-The guiding promise remains the same: every campaign is a portable folder of
-Markdown, YAML, JSON, and media files. CampaignRepo makes that folder feel like
-a modern worldbuilding app, but the repo stays the source of truth.
+The guiding promise remains the same: every campaign remains a portable folder
+of Markdown, YAML, JSON, and media files. CampaignRepo makes that folder feel
+like a modern worldbuilding app, while Git acts as durable archive and sync
+layer instead of the live database for every small UI action.
 
 Effort key: **S** = days, **M** = about a week, **L** = multi-week.
 
 > Looking for what comes *after* this roadmap? New, not-yet-scheduled feature
 > directions live in [ROADMAP-IDEAS.md](ROADMAP-IDEAS.md).
+
+## Reliability and Sync Roadmap
+
+The next critical work is architectural reliability. CampaignRepo should keep
+the "own your repo" promise, but GitHub should not be the live database for
+every small app action.
+
+Current risk: page state can be represented in several places at once:
+
+- Markdown page files.
+- SQLite page cache.
+- `.campaignrepo/index.json`.
+- `wiki/search/index.json`.
+- Sidebar/list snapshots.
+- Public-site snapshots.
+- GitHub repository state.
+
+That creates failure modes where page content is intact but the UI shows an
+empty body, a stale sidebar, missing children, or public/GM views that disagree.
+It also makes GitHub latency and merge conflicts visible during ordinary work
+such as organizing pages or approving player-visible content.
+
+Target model:
+
+```text
+User edit
+  -> local DB working copy
+  -> instant UI update
+  -> queued rebuild/sync
+  -> batched Git commit and push
+```
+
+Markdown/repo files remain portable. Generated files are disposable snapshots.
+The app must always be able to rebuild generated state from the canonical page
+source.
+
+### R1. Repair, Health, and Guardrails - S-M
+
+Add an admin repair action that rebuilds generated state from page source:
+
+1. Read canonical pages.
+2. Rebuild `.campaignrepo/index.json`.
+3. Rebuild `wiki/search/index.json`.
+4. Refresh the SQLite page cache.
+5. Report counts and failures.
+
+Health checks should show Markdown/page count, manifest count, search document
+count, cache count, empty page bodies, invalid parents, public/GM visibility
+mismatches, unsynced local changes, and last successful Git sync.
+
+Fallbacks:
+
+- If a cache row has an empty body but the page source has content, replace the
+  cache row from source.
+- If generated indexes disagree with page source, prefer the page source and
+  mark indexes stale.
+- If repair cannot complete, leave content untouched and report the exact
+  failed step.
+
+Tests:
+
+- Corrupt cache page -> detail view recovers from source.
+- Delete manifest -> repair recreates it.
+- Delete search index -> repair recreates it.
+- Parent in page source -> sidebar and public site nest correctly after repair.
+- Empty real source page remains empty and is reported, not silently filled.
+
+### R2. Stop Hand-Editing Generated Files - M
+
+Bulk organize should update page frontmatter first, then rebuild generated
+snapshots from those pages. Generated JSON should be output, not the main edit
+target.
+
+Flow:
+
+```text
+bulk edit selected pages
+  -> update page source/frontmatter
+  -> rebuild manifest/search from page source
+  -> commit changed page files and snapshots together
+```
+
+Fallbacks:
+
+- If page writes succeed but snapshot rebuild fails, keep the page writes, mark
+  indexes stale, and show a repair action.
+- If GitHub commit fails, preserve the intended local changes for retry.
+
+Tests:
+
+- Move 10 locations under a parent and verify page frontmatter, manifest,
+  search index, sidebar, and public site.
+- Bulk approval updates player and public views consistently.
+- GitHub file listings with missing file text never produce blank pages.
+- Generated rebuilds do not drop page bodies, media docs, aliases, parent
+  metadata, approval state, or visibility.
+
+### R3. DB Working Copy for Live Editing - L
+
+Introduce a page working-copy table that the app reads first:
+
+- slug
+- title
+- category/type
+- parent
+- visibility
+- approvalStatus
+- content
+- raw markdown
+- frontmatter JSON
+- updatedAt
+- dirty flag
+- lastSyncedSha
+- lastSyncError
+
+The UI should read from the DB working copy for page lists, detail pages,
+organize, approval queues, public preview, and health checks. GitHub becomes a
+sync backend, not the hot path.
+
+Fallbacks:
+
+- If a page is missing from DB, hydrate it from Git/local storage once.
+- If DB and Git disagree and the DB row is dirty, keep the DB row and surface a
+  sync warning.
+- If DB is unavailable, existing local/Git-backed read paths still work in a
+  degraded mode.
+
+Tests:
+
+- Edit page while GitHub is unreachable; UI keeps the edit and marks it dirty.
+- Reload app; dirty edits survive.
+- Organize parent changes are instant without GitHub requests.
+- Public preview reads the same working copy as GM view, filtered by player
+  safety rules.
+
+### R4. Batched Git Sync Queue - L
+
+Create a queue for durable sync work:
+
+- page created/updated/deleted
+- page parent/category/approval changed
+- media metadata changed
+- generated index rebuild needed
+- campaign settings changed
+
+Sync should batch changes into one commit after a debounce or explicit
+**Sync Now** action.
+
+Flow:
+
+```text
+collect dirty records
+  -> serialize Markdown/YAML/JSON
+  -> rebuild generated snapshots
+  -> commit once
+  -> push
+  -> clear dirty flags
+```
+
+Fallbacks:
+
+- If GitHub times out, leave dirty rows intact with retry.
+- If push is rejected, fetch remote and enter conflict handling.
+- If generated snapshot write fails, do not clear dirty flags.
+
+Tests:
+
+- 20 edits produce one commit.
+- Timeout during sync leaves all edits in DB.
+- Restart during sync resumes safely.
+- Generated indexes match the synced page set.
+
+### R5. Conflict Handling - M-L
+
+GitHub remains valuable for collaboration, so conflicts need explicit UX.
+
+Conflict policy:
+
+- If remote changed a clean page, hydrate the new remote version.
+- If local DB row is dirty and remote changed the same page, create a conflict
+  record.
+- Use three-way merge where possible: last synced version, local DB version,
+  and remote Git version.
+- Never silently overwrite page content.
+
+Fallbacks:
+
+- If merge is uncertain, preserve both versions.
+- If generated files conflict, regenerate them from the resolved page set
+  instead of asking the user to merge JSON.
+
+Tests:
+
+- Remote edit after local edit.
+- Remote delete after local edit.
+- Local rename while remote page changes.
+- Generated index conflict after page conflict resolution.
+
+### R6. Disposable Generated State Everywhere - M
+
+Make this rule true across the app:
+
+> Manifest, search index, sidebar snapshots, public-site snapshots, and DB cache
+> are rebuildable outputs.
+
+Add a CLI/admin command:
+
+```text
+campaignrepo repair --campaign <id>
+```
+
+Tests:
+
+- Corrupt every generated file and repair from source.
+- Large repo repair completes without GitHub directory walking in the common
+  path.
+- Repair reports exact skipped/failed pages.
+
+## Hidden Risks To Track
+
+- **Generated files overwriting good data.** A stale snapshot can make good page
+  files look missing or empty.
+- **GitHub latency and timeouts.** GitHub is excellent as durable storage but
+  poor as the database for live editing.
+- **Parent/title/slug mismatch.** Relationships should store stable page IDs or
+  slugs, while the UI displays names.
+- **Renames.** A rename touches filenames, slugs, links, backlinks, parents,
+  public URLs, manifest IDs, search docs, and history.
+- **Public and GM view drift.** Both should derive from the same working
+  source, then apply visibility filters.
+- **Media repo size.** Large media makes pulls, tree reads, and generated
+  snapshots slower. Media may need object storage or stricter lazy loading.
+- **Silent partial success.** The app must say "content saved, Git sync failed"
+  instead of making users guess whether data was lost.
+- **Bad cache poisoning.** An empty or malformed cache row must never outrank a
+  non-empty canonical page source.
 
 ## Current Product State
 
@@ -129,12 +365,12 @@ retainers, appearance, and history. The Sword Chronicle template pack seeds the
 real sheet, and the sheet-mangling Markdown bug this surfaced was fixed for the
 D&D and WoD sheets too.
 
-## The 1.2 Centerpiece: Per-Game Sheet & Template Pass - L
+## Deferred Feature Track: Per-Game Sheet & Template Pass - L
 
-This is the main effort for the next release. The demo system exists precisely
-to drive it: each game's GM Primer & Checklist page lists the field groups,
-layout direction, and cleanup notes for that system. Working the checklist
-means, per game:
+This remains important, but it should resume after the reliability and sync
+work above. The demo system exists precisely to drive it: each game's GM Primer
+& Checklist page lists the field groups, layout direction, and cleanup notes
+for that system. Working the checklist means, per game:
 
 1. **Confirm vocabulary** — replace generic stat names with the system's exact
    terms (careers vs. classes, dots vs. dice, hunger vs. stress).
@@ -181,8 +417,9 @@ keyboard-accessible reordering.
 ### B. Sheet editor and print polish - M
 
 Full field editors for D&D 5e, Pathfinder 2e, and World of Darkness sheets,
-plus deeper print/theme polish. Feeds directly into the 1.2 centerpiece: each
-Tier 1 system that gets a real sheet should also get editor + print treatment.
+plus deeper print/theme polish. Feeds directly into the deferred sheet pass:
+each Tier 1 system that gets a real sheet should also get editor + print
+treatment.
 Print/PDF is already exposed in the editor toolbar for sheet-bearing pages.
 
 ### C. Deeper VTT sync - L
@@ -222,31 +459,47 @@ non-technical groups, but should not compromise the own-your-data model.
 
 ## Recommended Next Release Sequence
 
-### Release 1.2 - Game system depth (the checklist pass)
+### Release 1.2 - Reliability and repair
 
-1. Tier 1a closed: D&D, Traveller, Sword Chronicle, Vampire, Werewolf, Mage
-   ship a renderer and a filled demo sample PC.
-2. Tier 1b: give the seven `ready-for-polish` systems a sheet (renderer or
-   template-pack page), then fill their demo PCs.
-3. Tier 2 systems: reference work + sheet/template reformatting.
-4. Sheet editor/print polish for each system as it lands (backlog B).
-5. Demo status page or dashboard widget showing per-game progress.
+1. Ship the repair/rebuild action for manifest, search index, and page cache.
+2. Expand health checks for empty bodies, stale generated state, invalid
+   parents, mismatched counts, and last Git sync status.
+3. Make page detail reads recover from empty cache when source content exists.
+4. Make generated indexes explicitly disposable and rebuildable.
+5. Add regression tests for blank cache, parent nesting, public/GM drift, and
+   generated-index rebuilds.
 
-### Release 1.3 - Scale and access
+### Release 1.3 - Bulk edit safety
 
-1. Keyboard/screen-reader accessibility pass.
-2. Performance budgets, virtualized lists, thumbnails, large-campaign testing.
-3. Onboarding path tightening (backlog G remainder).
+1. Rework bulk organize to update page source first.
+2. Rebuild generated snapshots from page source after bulk changes.
+3. Commit page changes and generated snapshots together when Git sync succeeds.
+4. Preserve local intent and mark indexes stale when Git sync or rebuild fails.
+5. Add large-campaign tests for parent moves, approvals, category changes, and
+   GitHub listings with missing file text.
 
-### Release 1.4 - Sync and extensions
+### Release 1.4 - DB working copy and sync queue
 
-1. Re-import previews across all importers.
-2. Foundry module sync research/prototype.
-3. VTT/export mappings for reusable properties/components.
-4. Extension and automation rules.
+1. Introduce the page working-copy table.
+2. Move page list/detail/organize/review/public preview reads to the working
+   copy.
+3. Add dirty flags, last sync SHA, and last sync error.
+4. Batch Git writes behind a sync queue and explicit Sync Now action.
+5. Show "saved locally, Git sync failed" instead of making failed pushes look
+   like lost edits.
 
-### Release 1.5 - Offline and hosted options
+### Release 1.5 - Conflict handling and offline foundations
 
-1. Offline/PWA foundations.
-2. Sync/conflict queueing for local drafts.
-3. Managed hosting research.
+1. Add three-way page conflict records for local dirty vs. remote changed pages.
+2. Regenerate generated JSON after conflict resolution instead of manually
+   merging snapshot files.
+3. Make dirty local edits survive restart and network outage.
+4. Lay the foundation for offline/PWA work.
+
+### Release 1.6 - Game system depth and scale polish
+
+1. Resume the per-game sheet/template checklist pass.
+2. Keyboard/screen-reader accessibility pass.
+3. Performance budgets, virtualized lists, thumbnails, and large-campaign
+   testing.
+4. Re-import previews, Foundry module sync research, and extension rules.
