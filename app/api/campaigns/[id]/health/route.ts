@@ -5,7 +5,7 @@ import { getStorageAdapter } from "@/lib/storage";
 import { parsePage } from "@/lib/markdown";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import { REL_TYPE_MAP } from "@/lib/relationships";
-import { readPageCache } from "@/lib/page-cache";
+import { readPageCache, readRemoteCheckState } from "@/lib/page-cache";
 import { readRepositoryManifestText, repositoryManifestPath } from "@/lib/repository-manifest";
 
 export const dynamic = "force-dynamic";
@@ -191,7 +191,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     searchDocs: null as number | null,
     cacheRows: 0,
     cacheRefreshedAt: null as string | null,
-    cacheRefreshError: null as string | null
+    cacheRefreshError: null as string | null,
+    remoteCheckedAt: null as string | null,
+    remoteHeadSha: null as string | null
   };
   try {
     const manifestFile = await storage.getTextFile(repositoryManifestPath);
@@ -243,9 +245,12 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     });
   }
   const cache = readPageCache(campaign.id);
+  const remoteCheck = readRemoteCheckState(campaign.id);
   generated.cacheRows = cache.pages.length;
   generated.cacheRefreshedAt = cache.refreshedAt;
   generated.cacheRefreshError = cache.refreshError;
+  generated.remoteCheckedAt = remoteCheck.remoteCheckedAt;
+  generated.remoteHeadSha = remoteCheck.remoteHeadSha;
   if (cache.refreshError) {
     findings.push({
       type: "cache-refresh-error",

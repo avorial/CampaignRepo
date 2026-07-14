@@ -96,7 +96,23 @@ Tests:
 - Parent in page source -> sidebar and public site nest correctly after repair.
 - Empty real source page remains empty and is reported, not silently filled.
 
-### R2. Stop Hand-Editing Generated Files - M
+### R2. Stop Hand-Editing Generated Files - M - largely shipped
+
+Shipped: bulk organize updates page frontmatter first, upserts the manifest in
+the same commit as the page files, updates the cache in-request, and rebuilds
+the search snapshot from source afterward. The R2 fallback is in place: when
+the snapshot rebuild fails after page writes landed, the response reports
+`indexesStale` with the reason instead of failing the edit, and health/Repair
+reconciles. The committed snapshot is now lean (metadata + excerpt, no full
+bodies) — full text lives in Markdown (canonical) and SQLite FTS (live search).
+
+Also shipped toward R3/R4: local-first page lists. Reads serve the SQLite
+cache with zero GitHub calls inside a 5-minute remote-check window; once
+stale, one HEAD lookup either re-arms the window or hydrates remote changes
+with a background refresh. Remote outages degrade to the local copy. Health
+reports the last remote check and HEAD sha.
+
+The original R2 plan, for reference:
 
 Bulk organize should update page frontmatter first, then rebuild generated
 snapshots from those pages. Generated JSON should be output, not the main edit

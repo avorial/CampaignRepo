@@ -139,7 +139,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
     await storage.commitFiles(updates, `CampaignRepo: bulk edit ${updatedCount} pages`);
     for (const page of updatedPages) upsertPageInCache(campaign.id, page);
-    await rebuildSearchIndex(storage, campaign);
+    // The page writes above are the source of truth and have already landed.
+    // A failed snapshot rebuild must not turn a successful edit into an error —
+    // report the stale indexes instead; health/Repair reconciles them.
+    try {
+      await rebuildSearchIndex(storage, campaign);
+    } catch (error) {
+      return NextResponse.json({
+        ok: true,
+        updated: updatedCount,
+        indexesStale: true,
+        staleReason: error instanceof Error ? error.message : "Search/manifest rebuild failed."
+      });
+    }
     return NextResponse.json({ ok: true, updated: updatedCount });
   }
   return NextResponse.json({ ok: true, updated: 0 });
@@ -196,7 +208,19 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       removePageFromCache(campaign.id, slug);
       deleteSearchDocument(campaign.id, slug);
     }
-    await rebuildSearchIndex(storage, campaign);
+    // Deletes have landed; a failed snapshot rebuild is stale indexes, not a
+    // failed delete.
+    try {
+      await rebuildSearchIndex(storage, campaign);
+    } catch (error) {
+      return NextResponse.json({
+        ok: true,
+        deleted: deletes.length,
+        missing: input.slugs.length - deletes.length,
+        indexesStale: true,
+        staleReason: error instanceof Error ? error.message : "Search/manifest rebuild failed."
+      });
+    }
   }
 
   return NextResponse.json({ ok: true, deleted: deletes.length, missing: input.slugs.length - deletes.length });

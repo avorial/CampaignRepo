@@ -153,6 +153,33 @@ describe("bulk page edits", () => {
     expect(mocks.rebuildSearchIndex).toHaveBeenCalledOnce();
   });
 
+  it("reports stale indexes instead of failing when the rebuild breaks after pages landed", async () => {
+    mocks.listDirectoryTextFiles.mockResolvedValueOnce([
+      { name: "sparks-guild.md", path: "wiki/pages/sparks-guild.md", text: pageText, sha: "page-sha" }
+    ]);
+    mocks.getTextFile.mockResolvedValueOnce({ text: manifestText, sha: "manifest-sha" });
+    mocks.commitFiles.mockResolvedValueOnce({ commit: "commit", files: 2 });
+    mocks.rebuildSearchIndex.mockRejectedValueOnce(new Error("GitHub timeout"));
+
+    const response = await PATCH(
+      new Request("http://localhost/api/campaigns/7/pages/bulk", {
+        method: "PATCH",
+        body: JSON.stringify({ slugs: ["sparks-guild"], set: { visibility: "gm" } })
+      }),
+      { params: Promise.resolve({ id: "7" }) }
+    );
+    const body = await response.json();
+
+    // The page commit succeeded — a broken snapshot rebuild is stale indexes,
+    // never a failed edit.
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.updated).toBe(1);
+    expect(body.indexesStale).toBe(true);
+    expect(body.staleReason).toContain("GitHub timeout");
+    expect(mocks.upsertPageInCache).toHaveBeenCalledOnce();
+  });
+
   it("resolves parent names to slugs when bulk editing GitHub-listed pages", async () => {
     mocks.listDirectoryTextFiles.mockResolvedValueOnce([
       { name: "sparks-guild.md", path: "wiki/pages/sparks-guild.md", text: null, sha: "parent-sha" },
