@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { canManageCampaign, deleteSearchDocument, getCampaign } from "@/lib/db";
 import { getStorageAdapter } from "@/lib/storage";
 import { parsePage, serializePage } from "@/lib/markdown";
+import { slugify } from "@/lib/slug";
 import { removePageFromCache, upsertPageInCache } from "@/lib/page-cache";
 import { rebuildSearchIndex } from "@/lib/search";
 import {
@@ -45,24 +46,70 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!canManageCampaign(user.id, campaign.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const storage = getStorageAdapter(campaign, user.githubToken);
   if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const activeStorage = storage;
 
   const input = schema.parse(await req.json());
   const wanted = new Set(input.slugs);
 
   const files = await storage.listDirectoryTextFiles("wiki/pages");
+  const fullFileCache = new Map<string, { text: string; sha: string }>();
+  async function getFullFile(file: (typeof files)[number]) {
+    const cached = fullFileCache.get(file.path);
+    if (cached) return cached;
+    const fullFile = file.text === null ? await activeStorage.getTextFile(file.path) : { text: file.text, sha: file.sha };
+    fullFileCache.set(file.path, fullFile);
+    return fullFile;
+  }
+  const parentByInput = new Map<string, string>();
+  for (const file of files) {
+    const slug = file.name.replace(/\.md$/, "");
+    parentByInput.set(slug.toLowerCase(), slug);
+    parentByInput.set(slugify(slug), slug);
+    if (file.text) {
+      const page = parsePage(slug, file.text, file.sha);
+      parentByInput.set(page.frontmatter.name.toLowerCase(), slug);
+      parentByInput.set(slugify(page.frontmatter.name), slug);
+      for (const alias of page.frontmatter.aliases || []) {
+        parentByInput.set(String(alias).toLowerCase(), slug);
+        parentByInput.set(slugify(String(alias)), slug);
+      }
+    }
+  }
+  const requestedParent = input.set?.parent?.trim();
+  if (requestedParent && requestedParent !== "__clear__" && !parentByInput.has(requestedParent.toLowerCase()) && !parentByInput.has(slugify(requestedParent))) {
+    for (const file of files) {
+      const slug = file.name.replace(/\.md$/, "");
+      const fullFile = await getFullFile(file);
+      const page = parsePage(slug, fullFile.text, fullFile.sha);
+      parentByInput.set(page.frontmatter.name.toLowerCase(), slug);
+      parentByInput.set(slugify(page.frontmatter.name), slug);
+      for (const alias of page.frontmatter.aliases || []) {
+        parentByInput.set(String(alias).toLowerCase(), slug);
+        parentByInput.set(slugify(String(alias)), slug);
+      }
+      if (parentByInput.has(requestedParent.toLowerCase()) || parentByInput.has(slugify(requestedParent))) break;
+    }
+  }
   const updates: { path: string; content: string }[] = [];
   const updatedPages: ReturnType<typeof parsePage>[] = [];
   for (const file of files) {
     const slug = file.name.replace(/\.md$/, "");
     if (!wanted.has(slug)) continue;
-    const page = parsePage(slug, file.text ?? "", file.sha);
+    const fullFile = await getFullFile(file);
+    const page = parsePage(slug, fullFile.text, fullFile.sha);
+    parentByInput.set(page.frontmatter.name.toLowerCase(), slug);
+    parentByInput.set(slugify(page.frontmatter.name), slug);
     const fm = { ...page.frontmatter, lastEditedBy: `${user.name} via bulk edit` };
     if (input.set?.category) { fm.category = input.set.category; fm.type = input.set.category; }
     if (input.set?.visibility) { fm.visibility = input.set.visibility; fm.knownToPlayers = input.set.visibility === "players"; }
     if (input.set?.approvalStatus) fm.approvalStatus = input.set.approvalStatus;
     if (input.set?.parent !== undefined) {
       if (input.set.parent === "") delete fm.parent;
-      else fm.parent = input.set.parent;
+      else {
+        const requestedParent = input.set.parent.trim();
+        const resolvedParent = parentByInput.get(requestedParent.toLowerCase()) || parentByInput.get(slugify(requestedParent));
+        fm.parent = resolvedParent || requestedParent;
+      }
     }
     if (input.addTags?.length || input.removeTags?.length) {
       const existing = new Set(fm.tags || []);
@@ -73,7 +120,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const path = `wiki/pages/${slug}.md`;
     const content = serializePage(fm, page.content);
     updates.push({ path, content });
-    updatedPages.push(parsePage(slug, content, file.sha));
+    updatedPages.push(parsePage(slug, content, fullFile.sha));
   }
 
   if (updates.length) {

@@ -43,6 +43,15 @@ function categoryIdInput(value: string) {
     .toLowerCase();
 }
 
+function pageLookupKey(value: string) {
+  return value
+    .trim()
+    .replace(/['"]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase();
+}
+
 // Reserved slug for the pinned "Campaign" home page, kept out of the category tree.
 const CAMPAIGN_PAGE_SLUG = "campaign";
 
@@ -571,14 +580,25 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
 
   // Sidebar: category sections, each with the parent->child hierarchy nested inside.
   const navFilterLc = navFilter.trim().toLowerCase();
-  const pageBySlug = new Map(pages.map((page) => [page.slug, page]));
+  const pageByParentRef = new Map<string, WikiPage>();
+  for (const page of pages) {
+    pageByParentRef.set(page.slug.toLowerCase(), page);
+    pageByParentRef.set(pageLookupKey(page.slug), page);
+    pageByParentRef.set(page.frontmatter.name.toLowerCase(), page);
+    pageByParentRef.set(pageLookupKey(page.frontmatter.name), page);
+    for (const alias of page.frontmatter.aliases || []) {
+      pageByParentRef.set(String(alias).toLowerCase(), page);
+      pageByParentRef.set(pageLookupKey(String(alias)), page);
+    }
+  }
+  const parentPageFor = (parent?: string) => parent ? pageByParentRef.get(parent.toLowerCase()) || pageByParentRef.get(pageLookupKey(parent)) : undefined;
   const sortedPages = [...pages].sort((a, b) => a.frontmatter.name.localeCompare(b.frontmatter.name));
   // A child nests under its parent only when both share a category.
   const childrenByParent = new Map<string, WikiPage[]>();
   for (const page of sortedPages) {
-    const parentPage = page.frontmatter.parent ? pageBySlug.get(page.frontmatter.parent) : undefined;
+    const parentPage = parentPageFor(page.frontmatter.parent);
     if (parentPage && parentPage.frontmatter.category === page.frontmatter.category) {
-      childrenByParent.set(page.frontmatter.parent!, [...(childrenByParent.get(page.frontmatter.parent!) || []), page]);
+      childrenByParent.set(parentPage.slug, [...(childrenByParent.get(parentPage.slug) || []), page]);
     }
   }
   const catDot = (page: WikiPage) => <span className="cat-dot" style={{ background: `var(--cat-${page.frontmatter.category}, var(--gold))` }} />;
@@ -625,7 +645,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     if (navFilterLc && visible.length === 0) return null;
     const open = navFilterLc ? true : (openCats[cat.id] ?? catPages.length > 0);
     const roots = catPages.filter((page) => {
-      const parentPage = page.frontmatter.parent ? pageBySlug.get(page.frontmatter.parent) : undefined;
+      const parentPage = parentPageFor(page.frontmatter.parent);
       return !(parentPage && parentPage.frontmatter.category === cat.id);
     });
     return (

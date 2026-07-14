@@ -358,17 +358,15 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
                 </select>
               </label>
               <label>Parent
-                <input
-                  list="organize-page-slugs"
+                <select
                   value={setParent}
                   onChange={(e) => setSetParent(e.target.value)}
-                  placeholder="slug or empty"
                   style={{ width: "140px" }}
-                />
-                <datalist id="organize-page-slugs">
+                >
+                  <option value="">— keep —</option>
                   <option value="__clear__">— clear parent —</option>
-                  {pages.map((p) => <option key={p.slug} value={p.slug}>{p.frontmatter.name}</option>)}
-                </datalist>
+                  {pages.map((p) => <option key={p.slug} value={p.slug}>{p.frontmatter.name} · {p.frontmatter.category}</option>)}
+                </select>
               </label>
               <label>Add tags
                 <input

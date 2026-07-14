@@ -56,6 +56,23 @@ aliases: []
 The sparks are organizing.
 `;
 
+const childPageText = `---
+name: Arcology Hall
+category: location
+type: location
+summary: Child page
+visibility: players
+approvalStatus: approved
+knownToPlayers: true
+tags: []
+aliases: []
+---
+
+## Notes
+
+A place that should nest.
+`;
+
 const manifestText = JSON.stringify({
   schemaVersion: 1,
   generatedAt: "2026-07-14T00:00:00.000Z",
@@ -134,5 +151,33 @@ describe("bulk page edits", () => {
     expect(manifest.pages[1].links).toEqual(["organization-sparks-guild"]);
     expect(mocks.upsertPageInCache).toHaveBeenCalledOnce();
     expect(mocks.rebuildSearchIndex).toHaveBeenCalledOnce();
+  });
+
+  it("resolves parent names to slugs when bulk editing GitHub-listed pages", async () => {
+    mocks.listDirectoryTextFiles.mockResolvedValueOnce([
+      { name: "sparks-guild.md", path: "wiki/pages/sparks-guild.md", text: null, sha: "parent-sha" },
+      { name: "arcology-hall.md", path: "wiki/pages/arcology-hall.md", text: null, sha: "child-sha" }
+    ]);
+    mocks.getTextFile
+      .mockResolvedValueOnce({ text: pageText, sha: "parent-sha" })
+      .mockResolvedValueOnce({ text: childPageText, sha: "child-sha" })
+      .mockResolvedValueOnce({ text: manifestText, sha: "manifest-sha" });
+    mocks.commitFiles.mockResolvedValueOnce({ commit: "commit", files: 2 });
+    mocks.rebuildSearchIndex.mockResolvedValueOnce([]);
+
+    const response = await PATCH(
+      new Request("http://localhost/api/campaigns/7/pages/bulk", {
+        method: "PATCH",
+        body: JSON.stringify({ slugs: ["arcology-hall"], set: { parent: "Sparks Guild" } })
+      }),
+      { params: Promise.resolve({ id: "7" }) }
+    );
+
+    await expect(response.json()).resolves.toEqual({ ok: true, updated: 1 });
+    const files = mocks.commitFiles.mock.calls[0][0] as Array<{ path: string; content?: string }>;
+    const pageUpdate = files.find((file) => file.path === "wiki/pages/arcology-hall.md");
+    expect(pageUpdate?.content).toContain("parent: sparks-guild");
+    expect(pageUpdate?.content).not.toContain("parent: Sparks Guild");
+    expect(pageUpdate?.content).toContain("A place that should nest.");
   });
 });
