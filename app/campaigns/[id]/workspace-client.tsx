@@ -554,6 +554,18 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     }
   }
 
+  async function repairIndexes() {
+    setMessage("Rebuilding manifest, search snapshot, and page cache from page source…");
+    const res = await fetch(`/api/campaigns/${campaign.id}/repair`, { method: "POST" });
+    const report = await res.json().catch(() => null);
+    if (report && Array.isArray(report.steps)) {
+      setMessage(report.steps.map((step: { ok: boolean; detail: string }) => `${step.ok ? "✓" : "✕"} ${step.detail}`).join(" "));
+      await load();
+    } else {
+      setMessage(report?.error || "Repair failed to run.");
+    }
+  }
+
   async function copyText(text: string) {
     await navigator.clipboard.writeText(text);
     setMessage("Copied Markdown link.");
@@ -1258,6 +1270,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
               </div>
               <div className="member-actions">
                 <button type="button" className="secondary" onClick={rebuildIndex}>Rebuild search</button>
+                <button type="button" className="secondary" onClick={repairIndexes} title="Rebuild the repository manifest, search snapshot, and page cache from the Markdown page source">Repair indexes</button>
                 <button type="button" className="secondary" onClick={repairRepo}>Repair structure</button>
               </div>
             </div>

@@ -4,10 +4,31 @@ import { useEffect, useState } from "react";
 import type { Campaign } from "@/lib/types";
 
 type Finding = { type: string; severity: "error" | "warn" | "info"; slug?: string; title: string; detail: string };
-type Health = { pageCount: number; mediaCount?: number; findings: Finding[]; counts: Record<string, number> };
+type Generated = {
+  pageFiles: number;
+  manifestPages: number | null;
+  searchDocs: number | null;
+  cacheRows: number;
+  cacheRefreshedAt: string | null;
+  cacheRefreshError: string | null;
+};
+type Health = { pageCount: number; mediaCount?: number; findings: Finding[]; counts: Record<string, number>; generated?: Generated };
+type RepairReport = {
+  ok: boolean;
+  steps: { step: string; ok: boolean; detail: string; error?: string }[];
+  counts: { pageFiles: number; cacheRows: number; manifestPages: number; searchDocs: number; emptySourcePages: number; emptyCacheBodies: number };
+  emptySourceSlugs: string[];
+};
 
 // Display order + friendly labels for each finding type.
 const GROUPS: { type: string; label: string }[] = [
+  { type: "empty-cache-body", label: "Cached pages missing their body" },
+  { type: "invalid-manifest", label: "Invalid repository manifest" },
+  { type: "stale-manifest", label: "Repository manifest drift" },
+  { type: "stale-search-index", label: "Search snapshot drift" },
+  { type: "missing-manifest", label: "Missing repository manifest" },
+  { type: "missing-search-index", label: "Missing search snapshot" },
+  { type: "cache-refresh-error", label: "Page cache refresh errors" },
   { type: "broken-link", label: "Broken wiki links" },
   { type: "invalid-parent", label: "Invalid parents" },
   { type: "parent-mismatch", label: "Parent category mismatch" },
@@ -45,6 +66,23 @@ export default function HealthClient({ campaign }: { campaign: Campaign }) {
     load();
   }, []);
 
+  async function repairIndexes() {
+    setMessage("Rebuilding indexes from page source…");
+    const res = await fetch(`/api/campaigns/${campaign.id}/repair`, { method: "POST" });
+    const report = (await res.json().catch(() => null)) as RepairReport | null;
+    if (!report || !Array.isArray(report.steps)) {
+      setMessage("Repair failed to run.");
+      return;
+    }
+    const summary = report.steps.map((step) => `${step.ok ? "✓" : "✕"} ${step.detail}${step.error && !step.ok ? ` (${step.error})` : ""}`).join(" ");
+    const empties = report.counts.emptySourcePages
+      ? ` ${report.counts.emptySourcePages} page${report.counts.emptySourcePages === 1 ? " is" : "s are"} genuinely empty in source: ${report.emptySourceSlugs.slice(0, 5).join(", ")}${report.emptySourceSlugs.length > 5 ? "…" : ""}.`
+      : "";
+    setMessage(`${summary}${empties} Re-scanning…`);
+    await load();
+    setMessage(`${summary}${empties}`);
+  }
+
   async function bulkRepair(slugs: string[], set: Record<string, string>, label: string) {
     setRepairing((prev) => new Set([...prev, ...slugs]));
     setMessage(`${label}…`);
@@ -78,8 +116,17 @@ export default function HealthClient({ campaign }: { campaign: Campaign }) {
         ) : (
           <p className="muted">{total} finding{total === 1 ? "" : "s"} across {data.pageCount} pages{data.mediaCount ? ` and ${data.mediaCount} media files` : ""}.</p>
         )}
-        <button type="button" className="secondary" onClick={load}>Re-scan</button>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button type="button" className="secondary" onClick={repairIndexes} title="Rebuild the repository manifest, search snapshot, and page cache from the Markdown page source">Repair indexes</button>
+          <button type="button" className="secondary" onClick={load}>Re-scan</button>
+        </div>
       </div>
+      {data.generated && (
+        <p className="muted">
+          Generated state: {data.generated.pageFiles} page files · manifest {data.generated.manifestPages ?? "—"} · search {data.generated.searchDocs ?? "—"} · cache {data.generated.cacheRows}
+          {data.generated.cacheRefreshedAt ? ` (refreshed ${data.generated.cacheRefreshedAt})` : ""}
+        </p>
+      )}
       {message && <p className="toast">{message}</p>}
 
       {groupsWithFindings.map((group) => {

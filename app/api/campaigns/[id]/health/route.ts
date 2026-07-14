@@ -5,6 +5,8 @@ import { getStorageAdapter } from "@/lib/storage";
 import { parsePage } from "@/lib/markdown";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import { REL_TYPE_MAP } from "@/lib/relationships";
+import { readPageCache } from "@/lib/page-cache";
+import { readRepositoryManifestText, repositoryManifestPath } from "@/lib/repository-manifest";
 
 export const dynamic = "force-dynamic";
 
@@ -180,9 +182,94 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     }
   } catch { /* maps not found */ }
 
+  // Generated state: the manifest, search snapshot, and page cache are
+  // disposable outputs rebuilt from page source. When they disagree with the
+  // source, the source is right — report the drift and point at Repair.
+  const generated = {
+    pageFiles: pages.length,
+    manifestPages: null as number | null,
+    searchDocs: null as number | null,
+    cacheRows: 0,
+    cacheRefreshedAt: null as string | null,
+    cacheRefreshError: null as string | null
+  };
+  try {
+    const manifestFile = await storage.getTextFile(repositoryManifestPath);
+    try {
+      generated.manifestPages = readRepositoryManifestText(manifestFile.text).pages.length;
+      if (generated.manifestPages !== pages.length) {
+        findings.push({
+          type: "stale-manifest",
+          severity: "warn",
+          title: "Repository manifest drift",
+          detail: `The manifest lists ${generated.manifestPages} pages but the repo has ${pages.length} page files. Run Repair indexes to rebuild it from source.`
+        });
+      }
+    } catch (error) {
+      findings.push({
+        type: "invalid-manifest",
+        severity: "error",
+        title: "Repository manifest invalid",
+        detail: `${error instanceof Error ? error.message : "Manifest could not be parsed."} Run Repair indexes to rebuild it from source.`
+      });
+    }
+  } catch {
+    findings.push({
+      type: "missing-manifest",
+      severity: "info",
+      title: "Repository manifest missing",
+      detail: "This repo has no .campaignrepo/index.json yet; navigation falls back to slower paths. Run Repair indexes to generate it."
+    });
+  }
+  try {
+    const searchFile = await storage.getTextFile("wiki/search/index.json");
+    const docs = JSON.parse(searchFile.text) as Array<{ slug?: string; category?: string }>;
+    const pageDocs = docs.filter((doc) => doc?.slug && doc.category !== "media" && !String(doc.slug).startsWith("media/"));
+    generated.searchDocs = pageDocs.length;
+    if (pageDocs.length !== pages.length) {
+      findings.push({
+        type: "stale-search-index",
+        severity: "warn",
+        title: "Search snapshot drift",
+        detail: `The search snapshot has ${pageDocs.length} page documents but the repo has ${pages.length} page files. Run Repair indexes to rebuild it from source.`
+      });
+    }
+  } catch {
+    findings.push({
+      type: "missing-search-index",
+      severity: "info",
+      title: "Search snapshot missing",
+      detail: "wiki/search/index.json is missing or unreadable. Run Repair indexes to regenerate it."
+    });
+  }
+  const cache = readPageCache(campaign.id);
+  generated.cacheRows = cache.pages.length;
+  generated.cacheRefreshedAt = cache.refreshedAt;
+  generated.cacheRefreshError = cache.refreshError;
+  if (cache.refreshError) {
+    findings.push({
+      type: "cache-refresh-error",
+      severity: "warn",
+      title: "Page cache refresh failed",
+      detail: `Last refresh error: ${cache.refreshError}`
+    });
+  }
+  const sourceBodies = new Map(pages.map((page) => [page.slug, Boolean(page.content.trim())]));
+  for (const row of cache.pages) {
+    if (!row.content.trim() && sourceBodies.get(row.slug)) {
+      findings.push({
+        type: "empty-cache-body",
+        severity: "error",
+        slug: row.slug,
+        title: row.frontmatter.name || row.slug,
+        detail: "The cached copy of this page lost its body while the source still has content. Opening the page or running Repair indexes fixes the cached copy."
+      });
+    }
+  }
+
   const counts = findings.reduce<Record<string, number>>((acc, f) => {
     acc[f.type] = (acc[f.type] || 0) + 1;
     return acc;
   }, {});
-  return NextResponse.json({ pageCount: pages.length, mediaCount: media.filter((e) => e.type === "file").length, findings, counts });
+  return NextResponse.json({ pageCount: pages.length, mediaCount: media.filter((e) => e.type === "file").length, findings, counts, generated });
 }

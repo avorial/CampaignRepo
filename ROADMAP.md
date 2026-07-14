@@ -50,9 +50,24 @@ Markdown/repo files remain portable. Generated files are disposable snapshots.
 The app must always be able to rebuild generated state from the canonical page
 source.
 
-### R1. Repair, Health, and Guardrails - S-M
+### R1. Repair, Health, and Guardrails - S-M - shipped
 
-Add an admin repair action that rebuilds generated state from page source:
+Shipped: `POST /api/campaigns/[id]/repair` rebuilds the SQLite page cache,
+`wiki/search/index.json`, and `.campaignrepo/index.json` from canonical page
+source with a per-step report (the cache rebuild re-parses every page rather
+than trusting sha-matching rows, so poisoned rows cannot survive). "Repair
+indexes" buttons live in the Health center and campaign Settings. Health now
+reports generated-state drift: manifest/search/cache counts vs page files,
+missing or invalid manifest and snapshot, cache refresh errors, and cached
+pages that lost their body while source has content. Empty source pages are
+reported, never silently filled. Page detail reads already recover from empty
+cache rows. Regression tests cover manifest/snapshot recreation, poisoned
+cache rows, empty source pages, and named-step failures.
+
+Remaining for later waves: last-Git-sync status surfacing (R4 territory) and
+the `campaignrepo repair` CLI form (R6).
+
+The original R1 plan, for reference:
 
 1. Read canonical pages.
 2. Rebuild `.campaignrepo/index.json`.
