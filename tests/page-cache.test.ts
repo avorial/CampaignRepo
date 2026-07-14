@@ -32,6 +32,20 @@ describe("page cache upserts", () => {
   });
 });
 
+describe("remote freshness window", () => {
+  it("round-trips the remote check stamp and reports freshness", async () => {
+    const { isRemoteCheckFresh, readRemoteCheckState, stampRemoteCheck } = await import("@/lib/page-cache");
+    expect(isRemoteCheckFresh(CAMPAIGN_ID)).toBe(false);
+
+    stampRemoteCheck(CAMPAIGN_ID, "head-abc");
+
+    expect(readRemoteCheckState(CAMPAIGN_ID).remoteHeadSha).toBe("head-abc");
+    expect(isRemoteCheckFresh(CAMPAIGN_ID)).toBe(true);
+    // A zero-length window is immediately stale.
+    expect(isRemoteCheckFresh(CAMPAIGN_ID, 0)).toBe(false);
+  });
+});
+
 describe("snapshot source labels", () => {
   it("labels each snapshot with the source it actually came from", async () => {
     const manifestStorage = {

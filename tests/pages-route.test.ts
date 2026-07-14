@@ -11,12 +11,16 @@ const mocks = vi.hoisted(() => {
     getTextFile: vi.fn(),
     putFile: vi.fn(),
     commitFiles: vi.fn(),
+    listRecentCommits: vi.fn(),
     scheduleSearchIndexRebuild: vi.fn(),
     readPageCache: vi.fn(),
     readManifestPageSnapshot: vi.fn(),
     readSearchIndexPageSnapshot: vi.fn(),
     refreshPageCache: vi.fn(),
-    refreshPageCacheInBackground: vi.fn()
+    refreshPageCacheInBackground: vi.fn(),
+    isRemoteCheckFresh: vi.fn(),
+    readRemoteCheckState: vi.fn(),
+    stampRemoteCheck: vi.fn()
   };
 });
 
@@ -36,9 +40,11 @@ vi.mock("@/lib/github", () => ({
 }));
 vi.mock("@/lib/storage", () => ({
   getStorageAdapter: vi.fn(() => ({
+    isLocal: false,
     getTextFile: mocks.getTextFile,
     putFile: mocks.putFile,
-    commitFiles: mocks.commitFiles
+    commitFiles: mocks.commitFiles,
+    listRecentCommits: mocks.listRecentCommits
   })),
   isConflictError: (error: unknown) => Boolean((error as { status?: number })?.status === 409 || (error as { status?: number })?.status === 422),
   isNotFoundError: (error: unknown) => Boolean((error as { status?: number })?.status === 404)
@@ -50,6 +56,9 @@ vi.mock("@/lib/page-cache", () => ({
   readSearchIndexPageSnapshot: mocks.readSearchIndexPageSnapshot,
   refreshPageCache: mocks.refreshPageCache,
   refreshPageCacheInBackground: mocks.refreshPageCacheInBackground,
+  isRemoteCheckFresh: mocks.isRemoteCheckFresh,
+  readRemoteCheckState: mocks.readRemoteCheckState,
+  stampRemoteCheck: mocks.stampRemoteCheck,
   upsertPageInCache: vi.fn()
 }));
 
@@ -78,26 +87,80 @@ describe("page creation", () => {
     mocks.readSearchIndexPageSnapshot.mockResolvedValue(null);
     mocks.refreshPageCache.mockReset();
     mocks.refreshPageCacheInBackground.mockReset();
+    mocks.listRecentCommits.mockReset();
+    mocks.isRemoteCheckFresh.mockReset();
+    mocks.isRemoteCheckFresh.mockReturnValue(true);
+    mocks.readRemoteCheckState.mockReset();
+    mocks.readRemoteCheckState.mockReturnValue({ remoteCheckedAt: null, remoteHeadSha: null });
+    mocks.stampRemoteCheck.mockReset();
   });
 
-  it("returns cached pages immediately", async () => {
-    const page = {
-      slug: "Cached-Page",
-      sha: "cached-sha",
-      frontmatter: { name: "Cached Page", visibility: "players", approvalStatus: "approved" },
-      content: "cached",
-      raw: "cached",
-      outgoingLinks: [],
-      backlinks: []
-    };
-    mocks.readPageCache.mockReturnValue({ pages: [page], refreshedAt: "2026-06-23 12:00:00", refreshError: null });
+  const cachedPage = {
+    slug: "Cached-Page",
+    sha: "cached-sha",
+    frontmatter: { name: "Cached Page", visibility: "players", approvalStatus: "approved" },
+    content: "cached",
+    raw: "cached",
+    outgoingLinks: [],
+    backlinks: []
+  };
+
+  it("serves a fresh local cache with zero remote calls", async () => {
+    mocks.readPageCache.mockReturnValue({ pages: [cachedPage], refreshedAt: "2026-06-23 12:00:00", refreshError: null });
 
     const response = await GET(new Request("http://localhost/api/campaigns/2/pages"), { params: Promise.resolve({ id: "2" }) });
     const body = await response.json();
 
-    expect(body.pages).toEqual([page]);
+    expect(body.pages).toEqual([cachedPage]);
     expect(body.cache.cached).toBe(true);
+    expect(mocks.listRecentCommits).not.toHaveBeenCalled();
+    expect(mocks.readManifestPageSnapshot).not.toHaveBeenCalled();
     expect(mocks.refreshPageCacheInBackground).not.toHaveBeenCalled();
+    expect(mocks.refreshPageCache).not.toHaveBeenCalled();
+  });
+
+  it("re-arms the window with one HEAD check when the remote is unchanged", async () => {
+    mocks.readPageCache.mockReturnValue({ pages: [cachedPage], refreshedAt: "2026-06-23 12:00:00", refreshError: null });
+    mocks.isRemoteCheckFresh.mockReturnValue(false);
+    mocks.listRecentCommits.mockResolvedValue([{ sha: "head-1" }]);
+    mocks.readRemoteCheckState.mockReturnValue({ remoteCheckedAt: "2026-06-23 11:00:00", remoteHeadSha: "head-1" });
+
+    const response = await GET(new Request("http://localhost/api/campaigns/2/pages"), { params: Promise.resolve({ id: "2" }) });
+    const body = await response.json();
+
+    expect(body.pages).toEqual([cachedPage]);
+    expect(mocks.listRecentCommits).toHaveBeenCalledOnce();
+    expect(mocks.stampRemoteCheck).toHaveBeenCalledWith(2, "head-1");
+    expect(mocks.readManifestPageSnapshot).not.toHaveBeenCalled();
+    expect(mocks.refreshPageCacheInBackground).not.toHaveBeenCalled();
+  });
+
+  it("hydrates from the remote index when HEAD moved", async () => {
+    mocks.readPageCache.mockReturnValue({ pages: [cachedPage], refreshedAt: "2026-06-23 12:00:00", refreshError: null });
+    mocks.isRemoteCheckFresh.mockReturnValue(false);
+    mocks.listRecentCommits.mockResolvedValue([{ sha: "head-2" }]);
+    mocks.readRemoteCheckState.mockReturnValue({ remoteCheckedAt: "2026-06-23 11:00:00", remoteHeadSha: "head-1" });
+    const manifestPage = { ...cachedPage, slug: "From-Manifest", frontmatter: { ...cachedPage.frontmatter, name: "From Manifest" } };
+    mocks.readManifestPageSnapshot.mockResolvedValue({ pages: [manifestPage], refreshedAt: null, refreshError: null, source: "manifest" });
+
+    const response = await GET(new Request("http://localhost/api/campaigns/2/pages"), { params: Promise.resolve({ id: "2" }) });
+    const body = await response.json();
+
+    expect(body.pages.map((page: { slug: string }) => page.slug)).toEqual(["From-Manifest"]);
+    expect(mocks.stampRemoteCheck).toHaveBeenCalledWith(2, "head-2");
+    expect(mocks.refreshPageCacheInBackground).toHaveBeenCalledOnce();
+  });
+
+  it("degrades to the local cache when the remote is unreachable", async () => {
+    mocks.readPageCache.mockReturnValue({ pages: [cachedPage], refreshedAt: "2026-06-23 12:00:00", refreshError: null });
+    mocks.isRemoteCheckFresh.mockReturnValue(false);
+    mocks.listRecentCommits.mockRejectedValue(new Error("GitHub unreachable"));
+
+    const response = await GET(new Request("http://localhost/api/campaigns/2/pages"), { params: Promise.resolve({ id: "2" }) });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.pages).toEqual([cachedPage]);
     expect(mocks.refreshPageCache).not.toHaveBeenCalled();
   });
 

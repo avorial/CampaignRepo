@@ -179,6 +179,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS users_google_id_idx ON users(googleId) WHERE g
 CREATE UNIQUE INDEX IF NOT EXISTS users_github_id_idx ON users(githubId) WHERE githubId IS NOT NULL AND githubId != '';
 `);
 
+const cacheStateColumns = db.prepare("PRAGMA table_info(campaign_page_cache_state)").all() as Array<{ name: string }>;
+if (!cacheStateColumns.some((c) => c.name === "remoteCheckedAt")) {
+  try { db.exec("ALTER TABLE campaign_page_cache_state ADD COLUMN remoteCheckedAt TEXT"); } catch { /* already migrated */ }
+}
+if (!cacheStateColumns.some((c) => c.name === "remoteHeadSha")) {
+  try { db.exec("ALTER TABLE campaign_page_cache_state ADD COLUMN remoteHeadSha TEXT"); } catch { /* already migrated */ }
+}
+
 const campaignColumns = db.prepare("PRAGMA table_info(campaigns)").all() as Array<{ name: string }>;
 if (!campaignColumns.some((c) => c.name === "storageBackend")) {
   db.exec("ALTER TABLE campaigns ADD COLUMN storageBackend TEXT NOT NULL DEFAULT 'github'");

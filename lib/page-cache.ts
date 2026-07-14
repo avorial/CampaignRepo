@@ -47,6 +47,35 @@ export function removePageFromCache(campaignId: number, slug: string) {
   db.prepare("DELETE FROM campaign_page_cache WHERE campaignId = ? AND slug = ?").run(campaignId, slug);
 }
 
+/** How long a remote-head check stays fresh: local reads are served with zero
+ * remote calls inside this window, so external edits appear within it. */
+export const REMOTE_FRESH_WINDOW_MS = 5 * 60 * 1000;
+
+export type RemoteCheckState = { remoteCheckedAt: string | null; remoteHeadSha: string | null };
+
+export function readRemoteCheckState(campaignId: number): RemoteCheckState {
+  const row = getDb()
+    .prepare("SELECT remoteCheckedAt, remoteHeadSha FROM campaign_page_cache_state WHERE campaignId = ?")
+    .get(campaignId) as { remoteCheckedAt?: string | null; remoteHeadSha?: string | null } | undefined;
+  return { remoteCheckedAt: row?.remoteCheckedAt || null, remoteHeadSha: row?.remoteHeadSha || null };
+}
+
+export function stampRemoteCheck(campaignId: number, headSha: string) {
+  getDb().prepare(`
+    INSERT INTO campaign_page_cache_state (campaignId, remoteCheckedAt, remoteHeadSha)
+    VALUES (?, CURRENT_TIMESTAMP, ?)
+    ON CONFLICT(campaignId) DO UPDATE SET remoteCheckedAt = CURRENT_TIMESTAMP, remoteHeadSha = excluded.remoteHeadSha
+  `).run(campaignId, headSha);
+}
+
+export function isRemoteCheckFresh(campaignId: number, windowMs = REMOTE_FRESH_WINDOW_MS): boolean {
+  const state = readRemoteCheckState(campaignId);
+  if (!state.remoteCheckedAt) return false;
+  // SQLite CURRENT_TIMESTAMP is UTC without a zone suffix.
+  const checked = Date.parse(`${state.remoteCheckedAt.replace(" ", "T")}Z`);
+  return Number.isFinite(checked) && Date.now() - checked < windowMs;
+}
+
 /**
  * Write a just-saved page straight into the cache so single-page reads return
  * the new body immediately. Without this, a saved page's stale cache row is

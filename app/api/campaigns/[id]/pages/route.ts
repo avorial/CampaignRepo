@@ -8,7 +8,18 @@ import { sanitizePlayerPage } from "@/lib/public-site";
 import { defaultFrontmatter, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
-import { readManifestPageSnapshot, readPageCache, readSearchIndexPageSnapshot, refreshPageCache, refreshPageCacheInBackground, upsertPageInCache } from "@/lib/page-cache";
+import {
+  isRemoteCheckFresh,
+  readManifestPageSnapshot,
+  readPageCache,
+  readRemoteCheckState,
+  readSearchIndexPageSnapshot,
+  refreshPageCache,
+  refreshPageCacheInBackground,
+  stampRemoteCheck,
+  upsertPageInCache,
+  type PageCacheSnapshot
+} from "@/lib/page-cache";
 import {
   manifestPageFromWikiPage,
   readRepositoryManifestText,
@@ -18,6 +29,42 @@ import {
 } from "@/lib/repository-manifest";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Local-first page lists: serve the SQLite cache with zero remote calls while
+ * the last remote check is fresh (5 minutes). Once stale, one cheap HEAD
+ * lookup decides everything — unchanged HEAD re-arms the window; a changed
+ * HEAD serves the remote index and refreshes the cache in the background, so
+ * edits made outside CampaignRepo appear within the window. Remote outages
+ * degrade to the local copy instead of failing the list.
+ */
+async function listSnapshotLocalFirst(storage: import("@/lib/storage").StorageAdapter, campaign: NonNullable<ReturnType<typeof getCampaign>>): Promise<PageCacheSnapshot> {
+  const local = readPageCache(campaign.id);
+  if (storage.isLocal) {
+    // Local folders have no remote latency to hide; keep the index-first path.
+    return (await readManifestPageSnapshot(storage)) || (await readSearchIndexPageSnapshot(storage)) || local;
+  }
+  if (local.pages.length && isRemoteCheckFresh(campaign.id)) return local;
+  if (local.pages.length) {
+    try {
+      const head = (await storage.listRecentCommits(1))[0]?.sha || "";
+      const known = readRemoteCheckState(campaign.id).remoteHeadSha;
+      stampRemoteCheck(campaign.id, head);
+      if (head && head === known) return local;
+      refreshPageCacheInBackground(storage, campaign);
+      return (await readManifestPageSnapshot(storage)) || (await readSearchIndexPageSnapshot(storage)) || local;
+    } catch {
+      return local;
+    }
+  }
+  const snapshot = (await readManifestPageSnapshot(storage)) || (await readSearchIndexPageSnapshot(storage));
+  if (snapshot) {
+    // Warm the local cache so the local-first window can take over.
+    refreshPageCacheInBackground(storage, campaign);
+    return snapshot;
+  }
+  return local;
+}
 
 const schema = z.object({
   name: z.string().min(1),
@@ -36,7 +83,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const url = new URL(req.url);
   const includeBodies = url.searchParams.get("body") === "1" || url.searchParams.get("full") === "1";
-  const cached = includeBodies ? readPageCache(campaign.id) : ((await readManifestPageSnapshot(storage)) || (await readSearchIndexPageSnapshot(storage)) || readPageCache(campaign.id));
+  const cached = includeBodies ? readPageCache(campaign.id) : await listSnapshotLocalFirst(storage, campaign);
   const waitForRefresh = cached.pages.length === 0 || url.searchParams.get("refresh") === "wait";
   let snapshot;
   try {
