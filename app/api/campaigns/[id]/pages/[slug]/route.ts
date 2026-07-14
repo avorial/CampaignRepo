@@ -33,7 +33,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const storage = getStorageAdapter(campaign);
   if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  let page = readPageCache(campaign.id).pages.find((candidate) => candidate.slug === slug);
+  const refreshMode = new URL(req.url).searchParams.get("refresh");
+  let page = refreshMode === "wait"
+    ? (await refreshPageCache(storage, campaign)).pages.find((candidate) => candidate.slug === slug)
+    : readPageCache(campaign.id).pages.find((candidate) => candidate.slug === slug);
   if (!page) {
     const manifestPage = await findRepositoryManifestPage(storage, slug);
     const candidatePaths = [

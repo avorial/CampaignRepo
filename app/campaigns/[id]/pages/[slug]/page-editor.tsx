@@ -282,8 +282,9 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
     { id: "include",  label: "Include page", snippet: ":::include [[Page Name]]:::"                                   },
   ];
 
-  const loadPage = useCallback(() => {
-    return fetch(`/api/campaigns/${campaign.id}/pages/${slug}`)
+  const loadPage = useCallback((forceRefresh = false) => {
+    const suffix = forceRefresh ? "?refresh=wait" : "";
+    return fetch(`/api/campaigns/${campaign.id}/pages/${slug}${suffix}`, { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (data.page) {
@@ -317,6 +318,12 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
       .then((res) => res.ok ? res.json() : null)
       .then((data) => data?.calendar && setPageCalendar(data.calendar));
   }, [campaign.id, canManage, loadPage, slug]);
+
+  useEffect(() => {
+    const handler = () => { void loadPage(); };
+    window.addEventListener("campaignrepo:repo-refreshed", handler);
+    return () => window.removeEventListener("campaignrepo:repo-refreshed", handler);
+  }, [loadPage]);
 
   const resolveLink = useMemo<WikiLinkResolver>(() => {
     const aliasMap = buildAliasMap(

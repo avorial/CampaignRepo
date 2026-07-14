@@ -28,6 +28,7 @@ export default function RepoRefreshButton() {
       const pages = await fetch(`/api/campaigns/${campaignId}/pages?refresh=wait`, { cache: "no-store" });
       if (!pages.ok) throw new Error("Page refresh failed.");
       await fetch(`/api/campaigns/${campaignId}/graph`, { cache: "no-store" }).catch(() => undefined);
+      window.dispatchEvent(new CustomEvent("campaignrepo:repo-refreshed"));
       router.refresh();
       setMessage("Repo refreshed.");
       window.setTimeout(() => setMessage(""), 3000);
