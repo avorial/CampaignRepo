@@ -177,14 +177,24 @@ async function refresh(storage: StorageAdapter, campaign: Campaign): Promise<Pag
   try {
     const entries = await storage.listDirectoryTextFiles("wiki/pages");
     const cached = new Map(
-      (db.prepare("SELECT slug, sha, pageJson FROM campaign_page_cache WHERE campaignId = ?").all(campaign.id) as CacheRow[]).map(
+      (db.prepare("SELECT slug, sha, pageJson, dirty FROM campaign_page_cache WHERE campaignId = ?").all(campaign.id) as Array<CacheRow & { dirty?: number }>).map(
         (row) => [row.slug, row]
       )
     );
+    const dirtySlugs = new Set([...cached.values()].filter((row) => row.dirty).map((row) => row.slug));
     const pages = await Promise.all(
       entries.map(async (entry) => {
         const slug = entry.name.replace(/\.md$/, "");
         const existing = cached.get(slug);
+        // A dirty row is an unsynced local edit — it outranks the remote copy
+        // until the sync queue flushes or a conflict is resolved.
+        if (existing?.dirty) {
+          try {
+            return { ...(JSON.parse(existing.pageJson) as WikiPage), sha: existing.sha };
+          } catch {
+            // Corrupt dirty row — fall through to source.
+          }
+        }
         if (existing?.sha === entry.sha) {
           try {
             return { ...(JSON.parse(existing.pageJson) as WikiPage), sha: existing.sha };
@@ -199,7 +209,7 @@ async function refresh(storage: StorageAdapter, campaign: Campaign): Promise<Pag
     );
     const replace = db.transaction((nextPages: WikiPage[]) => {
       const slugs = new Set(nextPages.map((page) => page.slug));
-      const deleteRow = db.prepare("DELETE FROM campaign_page_cache WHERE campaignId = ? AND slug = ?");
+      const deleteRow = db.prepare("DELETE FROM campaign_page_cache WHERE campaignId = ? AND slug = ? AND dirty = 0");
       for (const slug of cached.keys()) if (!slugs.has(slug)) deleteRow.run(campaign.id, slug);
       const upsert = db.prepare(`
         INSERT INTO campaign_page_cache (campaignId, slug, sha, pageJson, updatedAt)

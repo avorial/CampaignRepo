@@ -142,7 +142,18 @@ Tests:
 - Generated rebuilds do not drop page bodies, media docs, aliases, parent
   metadata, approval state, or visibility.
 
-### R3. DB Working Copy for Live Editing - L
+### R3. DB Working Copy for Live Editing - L - core shipped
+
+Shipped: the page cache is now a true working copy. Rows carry `dirty`,
+`lastSyncedSha`, and `lastSyncError`; a save that cannot reach Git lands in the
+working copy as dirty and the editor reports "saved locally — Git sync failed
+and will retry" instead of losing the edit. Dirty rows survive full cache
+refreshes and Repair (local edits outrank the remote copy until synced or
+resolved), and reads already serve the cache first with the 5-minute remote
+window. Remaining: moving organize/review/public-preview reads fully onto
+working-copy queries and a dirty-state badge in page lists.
+
+The original R3 plan, for reference:
 
 Introduce a page working-copy table that the app reads first:
 
@@ -180,7 +191,18 @@ Tests:
 - Public preview reads the same working copy as GM view, filtered by player
   safety rules.
 
-### R4. Batched Git Sync Queue - L
+### R4. Batched Git Sync Queue - L - shipped
+
+Shipped: `lib/sync-queue.ts` flushes every dirty page in one commit
+("CampaignRepo: sync N pages"), with a conflict guard per page before writing.
+Commit failure keeps all dirty flags and records the error per row; success
+clears flags and schedules the index rebuild. Sync Now lives in the Health
+center, campaign Settings, and `POST /api/campaigns/[id]/sync` (API-token
+capable). Failed local saves schedule a 60-second background retry. Health
+shows the dirty count. Note: the retry timer is in-process — a restart drops
+it, and the manual Sync Now or next failed-save reschedules.
+
+The original R4 plan, for reference:
 
 Create a queue for durable sync work:
 
@@ -217,7 +239,17 @@ Tests:
 - Restart during sync resumes safely.
 - Generated indexes match the synced page set.
 
-### R5. Conflict Handling - M-L
+### R5. Conflict Handling - M-L - minimal shipped
+
+Shipped: when a flush finds the remote moved past a dirty page's base sha with
+different content, the page is excluded from the commit and recorded in
+`page_conflicts` (base sha, local raw, remote text) — content is never silently
+overwritten in either direction. The Health center lists conflicts with
+"Keep local" (writes the local version against the remote sha, an explicit
+choice) and "Take remote" (adopts the remote copy, discards the local edit).
+Remaining: a side-by-side three-way merge view instead of whole-page choice.
+
+The original R5 plan, for reference:
 
 GitHub remains valuable for collaboration, so conflicts need explicit UX.
 
@@ -243,7 +275,16 @@ Tests:
 - Local rename while remote page changes.
 - Generated index conflict after page conflict resolution.
 
-### R6. Disposable Generated State Everywhere - M
+### R6. Disposable Generated State Everywhere - M - shipped
+
+Shipped: repair rebuilds every generated artifact from page source (R1),
+preserves unsynced local edits, and is scriptable headless via
+`node scripts/repair-campaign.mjs --campaign <id> --token <api-token> [--sync]`
+against a running instance (the repair and sync endpoints accept API tokens).
+The disposable rule holds app-wide: manifest, search snapshot, and cache are
+outputs; dirty working-copy rows and Markdown are the inputs.
+
+The original R6 plan, for reference:
 
 Make this rule true across the app:
 

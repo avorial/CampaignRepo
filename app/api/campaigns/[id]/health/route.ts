@@ -6,6 +6,7 @@ import { parsePage } from "@/lib/markdown";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import { REL_TYPE_MAP } from "@/lib/relationships";
 import { readPageCache, readRemoteCheckState } from "@/lib/page-cache";
+import { countDirtyPages, listPageConflicts } from "@/lib/sync-queue";
 import { readRepositoryManifestText, repositoryManifestPath } from "@/lib/repository-manifest";
 
 export const dynamic = "force-dynamic";
@@ -251,6 +252,26 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   generated.cacheRefreshError = cache.refreshError;
   generated.remoteCheckedAt = remoteCheck.remoteCheckedAt;
   generated.remoteHeadSha = remoteCheck.remoteHeadSha;
+  const dirtyPages = countDirtyPages(campaign.id);
+  const conflicts = listPageConflicts(campaign.id);
+  (generated as { dirtyPages?: number }).dirtyPages = dirtyPages;
+  if (dirtyPages) {
+    findings.push({
+      type: "unsynced-local-edits",
+      severity: "warn",
+      title: `${dirtyPages} unsynced local edit${dirtyPages === 1 ? "" : "s"}`,
+      detail: "These pages are saved locally but not yet committed to Git. Run Sync now, or wait for the background retry."
+    });
+  }
+  for (const conflict of conflicts) {
+    findings.push({
+      type: "page-conflict",
+      severity: "error",
+      slug: conflict.slug,
+      title: conflict.slug,
+      detail: "This page was edited locally and remotely. Resolve the conflict by keeping the local edit or adopting the remote version."
+    });
+  }
   if (cache.refreshError) {
     findings.push({
       type: "cache-refresh-error",

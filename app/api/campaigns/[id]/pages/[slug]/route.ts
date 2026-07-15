@@ -7,6 +7,7 @@ import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { removePageFromSearchIndex, scheduleSearchIndexRebuild } from "@/lib/search";
 import { readPageCache, refreshPageCache, removePageFromCache, upsertPageInCache } from "@/lib/page-cache";
 import { findRepositoryManifestPage, removePageFromRepositoryManifest } from "@/lib/repository-manifest";
+import { markPageDirty, scheduleCampaignSync } from "@/lib/sync-queue";
 
 export const dynamic = "force-dynamic";
 
@@ -193,8 +194,16 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         { status: 409 }
       );
     }
-    const message = error instanceof Error ? error.message : "Save failed.";
-    return NextResponse.json({ error: message }, { status: 400 });
+    // Git is unreachable or errored — the edit must not be lost. Save it to
+    // the local working copy as dirty; the sync queue retries in the
+    // background and Sync Now flushes on demand.
+    markPageDirty(campaign.id, parsePage(slug, raw, sha), sha);
+    scheduleCampaignSync(campaign);
+    return NextResponse.json({
+      ok: true,
+      syncPending: true,
+      message: `Saved locally — Git sync failed (${error instanceof Error ? error.message : "unknown error"}) and will retry.`
+    });
   }
 }
 

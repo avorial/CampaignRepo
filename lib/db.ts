@@ -179,6 +179,31 @@ CREATE UNIQUE INDEX IF NOT EXISTS users_google_id_idx ON users(googleId) WHERE g
 CREATE UNIQUE INDEX IF NOT EXISTS users_github_id_idx ON users(githubId) WHERE githubId IS NOT NULL AND githubId != '';
 `);
 
+const cacheColumns = db.prepare("PRAGMA table_info(campaign_page_cache)").all() as Array<{ name: string }>;
+if (!cacheColumns.some((c) => c.name === "dirty")) {
+  try { db.exec("ALTER TABLE campaign_page_cache ADD COLUMN dirty INTEGER NOT NULL DEFAULT 0"); } catch { /* already migrated */ }
+}
+if (!cacheColumns.some((c) => c.name === "lastSyncedSha")) {
+  try { db.exec("ALTER TABLE campaign_page_cache ADD COLUMN lastSyncedSha TEXT"); } catch { /* already migrated */ }
+}
+if (!cacheColumns.some((c) => c.name === "lastSyncError")) {
+  try { db.exec("ALTER TABLE campaign_page_cache ADD COLUMN lastSyncError TEXT"); } catch { /* already migrated */ }
+}
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS page_conflicts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  campaignId INTEGER NOT NULL,
+  slug TEXT NOT NULL,
+  baseSha TEXT,
+  localRaw TEXT NOT NULL,
+  remoteText TEXT NOT NULL,
+  remoteSha TEXT NOT NULL,
+  createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(campaignId, slug)
+);
+`);
+
 const cacheStateColumns = db.prepare("PRAGMA table_info(campaign_page_cache_state)").all() as Array<{ name: string }>;
 if (!cacheStateColumns.some((c) => c.name === "remoteCheckedAt")) {
   try { db.exec("ALTER TABLE campaign_page_cache_state ADD COLUMN remoteCheckedAt TEXT"); } catch { /* already migrated */ }

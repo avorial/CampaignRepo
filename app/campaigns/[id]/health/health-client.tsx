@@ -22,6 +22,8 @@ type RepairReport = {
 
 // Display order + friendly labels for each finding type.
 const GROUPS: { type: string; label: string }[] = [
+  { type: "page-conflict", label: "Page conflicts (local vs remote)" },
+  { type: "unsynced-local-edits", label: "Unsynced local edits" },
   { type: "empty-cache-body", label: "Cached pages missing their body" },
   { type: "invalid-manifest", label: "Invalid repository manifest" },
   { type: "stale-manifest", label: "Repository manifest drift" },
@@ -83,6 +85,27 @@ export default function HealthClient({ campaign }: { campaign: Campaign }) {
     setMessage(`${summary}${empties}`);
   }
 
+  async function syncNow() {
+    setMessage("Flushing unsynced edits to Git…");
+    const res = await fetch(`/api/campaigns/${campaign.id}/sync`, { method: "POST" });
+    const result = await res.json().catch(() => null);
+    if (result?.error) setMessage(`Sync failed: ${result.error} — edits are still saved locally.`);
+    else if (result?.conflicts?.length) setMessage(`Synced ${result.committed} pages; ${result.conflicts.length} conflict${result.conflicts.length === 1 ? "" : "s"} need resolution below.`);
+    else setMessage(`Synced ${result?.committed ?? 0} page${result?.committed === 1 ? "" : "s"} to Git.`);
+    await load();
+  }
+
+  async function resolveConflict(slug: string, resolution: "local" | "remote") {
+    setMessage(`Resolving ${slug} (${resolution === "local" ? "keep local" : "take remote"})…`);
+    const res = await fetch(`/api/campaigns/${campaign.id}/sync`, {
+      method: "PATCH",
+      body: JSON.stringify({ slug, resolution })
+    });
+    const result = await res.json().catch(() => null);
+    setMessage(result?.ok ? `Resolved ${slug}.` : result?.error || "Could not resolve conflict.");
+    await load();
+  }
+
   async function bulkRepair(slugs: string[], set: Record<string, string>, label: string) {
     setRepairing((prev) => new Set([...prev, ...slugs]));
     setMessage(`${label}…`);
@@ -138,6 +161,9 @@ export default function HealthClient({ campaign }: { campaign: Campaign }) {
             <div className="section-heading">
               <h2>{group.label}</h2>
               <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                {group.type === "unsynced-local-edits" && (
+                  <button type="button" className="secondary" onClick={syncNow}>Sync now</button>
+                )}
                 {group.type === "unapproved" && (
                   <button type="button" className="secondary"
                     disabled={repairing.size > 0}
@@ -170,6 +196,14 @@ export default function HealthClient({ campaign }: { campaign: Campaign }) {
                     <p>{f.detail}</p>
                   </div>
                   <div style={{ display: "flex", gap: "6px", alignItems: "center", flexShrink: 0 }}>
+                    {group.type === "page-conflict" && f.slug && (
+                      <>
+                        <button type="button" className="secondary" style={{ fontSize: "11px", padding: "2px 8px" }}
+                          onClick={() => resolveConflict(f.slug!, "local")}>Keep local</button>
+                        <button type="button" className="secondary" style={{ fontSize: "11px", padding: "2px 8px" }}
+                          onClick={() => resolveConflict(f.slug!, "remote")}>Take remote</button>
+                      </>
+                    )}
                     {(group.type === "invalid-parent" || group.type === "parent-mismatch") && f.slug && (
                       <button type="button" className="secondary"
                         style={{ fontSize: "11px", padding: "2px 8px" }}

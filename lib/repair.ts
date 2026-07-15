@@ -46,15 +46,22 @@ export async function repairCampaignIndexes(storage: StorageAdapter, campaign: C
 
   // Step 1 — rebuild the page cache from source. The incremental refresh trusts
   // rows whose sha still matches, which would preserve a corrupted row; repair
-  // must re-parse everything, so drop the campaign's rows first.
+  // must re-parse everything, so drop the campaign's rows first. Dirty rows are
+  // unsynced local edits — repair never destroys them.
+  const preservedDirty = (getDb().prepare("SELECT COUNT(*) AS n FROM campaign_page_cache WHERE campaignId = ? AND dirty = 1").get(campaign.id) as { n: number }).n;
   try {
-    getDb().prepare("DELETE FROM campaign_page_cache WHERE campaignId = ?").run(campaign.id);
+    getDb().prepare("DELETE FROM campaign_page_cache WHERE campaignId = ? AND dirty = 0").run(campaign.id);
     const snapshot = await refreshPageCache(storage, campaign);
-    counts.pageFiles = snapshot.pages.length;
+    // The snapshot includes preserved dirty rows; pageFiles counts source files.
+    counts.pageFiles = snapshot.pages.length - (getDb().prepare("SELECT COUNT(*) AS n FROM campaign_page_cache WHERE campaignId = ? AND dirty = 1 AND lastSyncedSha IS NULL").get(campaign.id) as { n: number }).n;
     sourceBodies = new Map(snapshot.pages.map((page) => [page.slug, Boolean(page.content.trim())]));
     emptySourceSlugs = snapshot.pages.filter((page) => !page.content.trim()).map((page) => page.slug).sort();
     counts.emptySourcePages = emptySourceSlugs.length;
-    steps.push({ step: "page-cache", ok: true, detail: `Re-parsed ${snapshot.pages.length} pages from source.` });
+    steps.push({
+      step: "page-cache",
+      ok: true,
+      detail: `Re-parsed ${snapshot.pages.length} pages from source.${preservedDirty ? ` Preserved ${preservedDirty} unsynced local edit${preservedDirty === 1 ? "" : "s"}.` : ""}`
+    });
   } catch (error) {
     steps.push({
       step: "page-cache",
@@ -90,7 +97,9 @@ export async function repairCampaignIndexes(storage: StorageAdapter, campaign: C
       counts.manifestPages = 0;
     }
     const problems: string[] = [];
-    if (counts.pageFiles && counts.cacheRows !== counts.pageFiles) problems.push(`cache has ${counts.cacheRows} rows for ${counts.pageFiles} pages`);
+    // Dirty rows may legitimately exceed the source set (unsynced creates).
+    const cleanRows = (getDb().prepare("SELECT COUNT(*) AS n FROM campaign_page_cache WHERE campaignId = ? AND dirty = 0").get(campaign.id) as { n: number }).n;
+    if (counts.pageFiles && cleanRows !== counts.pageFiles) problems.push(`cache has ${cleanRows} synced rows for ${counts.pageFiles} pages`);
     if (counts.pageFiles && counts.manifestPages !== counts.pageFiles) problems.push(`manifest lists ${counts.manifestPages} pages for ${counts.pageFiles} page files`);
     if (counts.emptyCacheBodies) problems.push(`${counts.emptyCacheBodies} cache rows lost their body`);
     steps.push({

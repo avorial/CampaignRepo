@@ -554,6 +554,15 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     }
   }
 
+  async function syncNow() {
+    setMessage("Flushing unsynced local edits to Git…");
+    const res = await fetch(`/api/campaigns/${campaign.id}/sync`, { method: "POST" });
+    const result = await res.json().catch(() => null);
+    if (result?.error) setMessage(`Sync failed: ${result.error} — edits are still saved locally.`);
+    else if (result?.conflicts?.length) setMessage(`Synced ${result.committed}; ${result.conflicts.length} conflict(s) — resolve them in the Health center.`);
+    else setMessage(`Synced ${result?.committed ?? 0} page${result?.committed === 1 ? "" : "s"} to Git.`);
+  }
+
   async function repairIndexes() {
     setMessage("Rebuilding manifest, search snapshot, and page cache from page source…");
     const res = await fetch(`/api/campaigns/${campaign.id}/repair`, { method: "POST" });
@@ -1270,6 +1279,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
               </div>
               <div className="member-actions">
                 <button type="button" className="secondary" onClick={rebuildIndex}>Rebuild search</button>
+                <button type="button" className="secondary" onClick={syncNow} title="Commit unsynced local edits to Git in one commit">Sync now</button>
                 <button type="button" className="secondary" onClick={repairIndexes} title="Rebuild the repository manifest, search snapshot, and page cache from the Markdown page source">Repair indexes</button>
                 <button type="button" className="secondary" onClick={repairRepo}>Repair structure</button>
               </div>

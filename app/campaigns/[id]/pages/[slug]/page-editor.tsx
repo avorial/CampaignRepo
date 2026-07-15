@@ -424,7 +424,7 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
       if (res.ok) {
         setConflictPage(null);
         setPage((current) => (current ? { ...current, sha: data.sha || current.sha } : current));
-        setMessage(finish ? "Saved and finished." : "Saved. Keep working when ready.");
+        setMessage(data.syncPending ? data.message || "Saved locally — Git sync failed and will retry." : finish ? "Saved and finished." : "Saved. Keep working when ready.");
         if (finish) setIsEditing(false);
         return;
       }
