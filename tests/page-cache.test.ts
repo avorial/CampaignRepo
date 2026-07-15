@@ -75,3 +75,29 @@ describe("snapshot source labels", () => {
     });
   });
 });
+
+describe("refresh sweep guard", () => {
+  it("refuses to shrink a populated cache when the listing collapses", async () => {
+    const { refreshPageCache, upsertPageInCache, readPageCache } = await import("@/lib/page-cache");
+    const { parsePage } = await import("@/lib/markdown");
+    // Seed 20 clean rows.
+    for (let i = 0; i < 20; i++) {
+      upsertPageInCache(CAMPAIGN_ID, parsePage(`Guard-${i}`, `---\nname: Guard ${i}\ncategory: npc\n---\n\nBody ${i}.`, `sha-${i}`));
+    }
+    // A broken listing returns only 2 files.
+    const brokenStorage = {
+      isLocal: true,
+      async listDirectoryTextFiles() {
+        return [
+          { name: "Guard-0.md", path: "wiki/pages/Guard-0.md", sha: "sha-0", text: "---\nname: Guard 0\ncategory: npc\n---\n\nBody 0." },
+          { name: "Guard-1.md", path: "wiki/pages/Guard-1.md", sha: "sha-1", text: "---\nname: Guard 1\ncategory: npc\n---\n\nBody 1." }
+        ];
+      },
+      async getTextFile() { throw new Error("unused"); }
+    } as unknown as Parameters<typeof refreshPageCache>[0];
+
+    await expect(refreshPageCache(brokenStorage, { id: CAMPAIGN_ID } as any)).rejects.toThrow(/Refusing to shrink/);
+    // The good rows are still there.
+    expect(readPageCache(CAMPAIGN_ID).pages.length).toBe(20);
+  });
+});

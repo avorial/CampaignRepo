@@ -211,6 +211,9 @@ if (!cacheStateColumns.some((c) => c.name === "remoteCheckedAt")) {
 if (!cacheStateColumns.some((c) => c.name === "remoteHeadSha")) {
   try { db.exec("ALTER TABLE campaign_page_cache_state ADD COLUMN remoteHeadSha TEXT"); } catch { /* already migrated */ }
 }
+if (!cacheStateColumns.some((c) => c.name === "remoteManifestPages")) {
+  try { db.exec("ALTER TABLE campaign_page_cache_state ADD COLUMN remoteManifestPages INTEGER"); } catch { /* already migrated */ }
+}
 
 const campaignColumns = db.prepare("PRAGMA table_info(campaigns)").all() as Array<{ name: string }>;
 if (!campaignColumns.some((c) => c.name === "storageBackend")) {

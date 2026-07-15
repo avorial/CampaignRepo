@@ -51,21 +51,38 @@ export function removePageFromCache(campaignId: number, slug: string) {
  * remote calls inside this window, so external edits appear within it. */
 export const REMOTE_FRESH_WINDOW_MS = 5 * 60 * 1000;
 
-export type RemoteCheckState = { remoteCheckedAt: string | null; remoteHeadSha: string | null };
+export type RemoteCheckState = { remoteCheckedAt: string | null; remoteHeadSha: string | null; remoteManifestPages: number | null };
 
 export function readRemoteCheckState(campaignId: number): RemoteCheckState {
   const row = getDb()
-    .prepare("SELECT remoteCheckedAt, remoteHeadSha FROM campaign_page_cache_state WHERE campaignId = ?")
-    .get(campaignId) as { remoteCheckedAt?: string | null; remoteHeadSha?: string | null } | undefined;
-  return { remoteCheckedAt: row?.remoteCheckedAt || null, remoteHeadSha: row?.remoteHeadSha || null };
+    .prepare("SELECT remoteCheckedAt, remoteHeadSha, remoteManifestPages FROM campaign_page_cache_state WHERE campaignId = ?")
+    .get(campaignId) as { remoteCheckedAt?: string | null; remoteHeadSha?: string | null; remoteManifestPages?: number | null } | undefined;
+  return {
+    remoteCheckedAt: row?.remoteCheckedAt || null,
+    remoteHeadSha: row?.remoteHeadSha || null,
+    remoteManifestPages: row?.remoteManifestPages ?? null
+  };
 }
 
-export function stampRemoteCheck(campaignId: number, headSha: string) {
+/** Record a remote check; when the remote index was read, also record how many pages it lists. */
+export function stampRemoteCheck(campaignId: number, headSha: string, manifestPages?: number) {
   getDb().prepare(`
-    INSERT INTO campaign_page_cache_state (campaignId, remoteCheckedAt, remoteHeadSha)
-    VALUES (?, CURRENT_TIMESTAMP, ?)
-    ON CONFLICT(campaignId) DO UPDATE SET remoteCheckedAt = CURRENT_TIMESTAMP, remoteHeadSha = excluded.remoteHeadSha
-  `).run(campaignId, headSha);
+    INSERT INTO campaign_page_cache_state (campaignId, remoteCheckedAt, remoteHeadSha, remoteManifestPages)
+    VALUES (?, CURRENT_TIMESTAMP, ?, ?)
+    ON CONFLICT(campaignId) DO UPDATE SET
+      remoteCheckedAt = CURRENT_TIMESTAMP,
+      remoteHeadSha = excluded.remoteHeadSha,
+      remoteManifestPages = COALESCE(excluded.remoteManifestPages, campaign_page_cache_state.remoteManifestPages)
+  `).run(campaignId, headSha, manifestPages ?? null);
+}
+
+/** Record how many pages the remote index lists, without touching the freshness clock. */
+export function stampRemoteManifestPages(campaignId: number, manifestPages: number) {
+  getDb().prepare(`
+    INSERT INTO campaign_page_cache_state (campaignId, remoteManifestPages)
+    VALUES (?, ?)
+    ON CONFLICT(campaignId) DO UPDATE SET remoteManifestPages = excluded.remoteManifestPages
+  `).run(campaignId, manifestPages);
 }
 
 export function isRemoteCheckFresh(campaignId: number, windowMs = REMOTE_FRESH_WINDOW_MS): boolean {
@@ -182,6 +199,15 @@ async function refresh(storage: StorageAdapter, campaign: Campaign): Promise<Pag
       )
     );
     const dirtySlugs = new Set([...cached.values()].filter((row) => row.dirty).map((row) => row.slug));
+    // Guardrail: a repository listing that suddenly shrinks by more than half
+    // is far more likely a broken tree, truncated listing, or transient fault
+    // than a real mass deletion. Refusing the sweep keeps the cache serving
+    // good content; Repair indexes clears rows first and remains the override.
+    if (cached.size >= 10 && entries.length * 2 < cached.size) {
+      throw new Error(
+        `Refusing to shrink the page cache from ${cached.size} to ${entries.length} pages — the repository listing looks incomplete. Run Repair indexes to rebuild from source if this is intentional.`
+      );
+    }
     const pages = await Promise.all(
       entries.map(async (entry) => {
         const slug = entry.name.replace(/\.md$/, "");

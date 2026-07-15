@@ -20,7 +20,8 @@ const mocks = vi.hoisted(() => {
     refreshPageCacheInBackground: vi.fn(),
     isRemoteCheckFresh: vi.fn(),
     readRemoteCheckState: vi.fn(),
-    stampRemoteCheck: vi.fn()
+    stampRemoteCheck: vi.fn(),
+    stampRemoteManifestPages: vi.fn()
   };
 });
 
@@ -59,6 +60,7 @@ vi.mock("@/lib/page-cache", () => ({
   isRemoteCheckFresh: mocks.isRemoteCheckFresh,
   readRemoteCheckState: mocks.readRemoteCheckState,
   stampRemoteCheck: mocks.stampRemoteCheck,
+  stampRemoteManifestPages: mocks.stampRemoteManifestPages,
   upsertPageInCache: vi.fn()
 }));
 
@@ -91,8 +93,9 @@ describe("page creation", () => {
     mocks.isRemoteCheckFresh.mockReset();
     mocks.isRemoteCheckFresh.mockReturnValue(true);
     mocks.readRemoteCheckState.mockReset();
-    mocks.readRemoteCheckState.mockReturnValue({ remoteCheckedAt: null, remoteHeadSha: null });
+    mocks.readRemoteCheckState.mockReturnValue({ remoteCheckedAt: null, remoteHeadSha: null, remoteManifestPages: null });
     mocks.stampRemoteCheck.mockReset();
+    mocks.stampRemoteManifestPages.mockReset();
   });
 
   const cachedPage = {
@@ -123,7 +126,7 @@ describe("page creation", () => {
     mocks.readPageCache.mockReturnValue({ pages: [cachedPage], refreshedAt: "2026-06-23 12:00:00", refreshError: null });
     mocks.isRemoteCheckFresh.mockReturnValue(false);
     mocks.listRecentCommits.mockResolvedValue([{ sha: "head-1" }]);
-    mocks.readRemoteCheckState.mockReturnValue({ remoteCheckedAt: "2026-06-23 11:00:00", remoteHeadSha: "head-1" });
+    mocks.readRemoteCheckState.mockReturnValue({ remoteCheckedAt: "2026-06-23 11:00:00", remoteHeadSha: "head-1", remoteManifestPages: 1 });
 
     const response = await GET(new Request("http://localhost/api/campaigns/2/pages"), { params: Promise.resolve({ id: "2" }) });
     const body = await response.json();
@@ -139,7 +142,7 @@ describe("page creation", () => {
     mocks.readPageCache.mockReturnValue({ pages: [cachedPage], refreshedAt: "2026-06-23 12:00:00", refreshError: null });
     mocks.isRemoteCheckFresh.mockReturnValue(false);
     mocks.listRecentCommits.mockResolvedValue([{ sha: "head-2" }]);
-    mocks.readRemoteCheckState.mockReturnValue({ remoteCheckedAt: "2026-06-23 11:00:00", remoteHeadSha: "head-1" });
+    mocks.readRemoteCheckState.mockReturnValue({ remoteCheckedAt: "2026-06-23 11:00:00", remoteHeadSha: "head-1", remoteManifestPages: 1 });
     const manifestPage = { ...cachedPage, slug: "From-Manifest", frontmatter: { ...cachedPage.frontmatter, name: "From Manifest" } };
     mocks.readManifestPageSnapshot.mockResolvedValue({ pages: [manifestPage], refreshedAt: null, refreshError: null, source: "manifest" });
 
@@ -148,6 +151,24 @@ describe("page creation", () => {
 
     expect(body.pages.map((page: { slug: string }) => page.slug)).toEqual(["From-Manifest"]);
     expect(mocks.stampRemoteCheck).toHaveBeenCalledWith(2, "head-2");
+    expect(mocks.refreshPageCacheInBackground).toHaveBeenCalledOnce();
+  });
+
+  it("distrusts a cache far thinner than the known remote index, even while fresh", async () => {
+    // Campaign-10 scenario: a bad refresh swept the cache to ~nothing while the
+    // remote index still lists thousands of pages. The fresh 5-minute window
+    // must NOT let the thin cache be served.
+    mocks.readPageCache.mockReturnValue({ pages: [cachedPage], refreshedAt: "2026-06-23 12:00:00", refreshError: null });
+    mocks.isRemoteCheckFresh.mockReturnValue(true);
+    mocks.readRemoteCheckState.mockReturnValue({ remoteCheckedAt: "2026-06-23 12:00:00", remoteHeadSha: "head-1", remoteManifestPages: 2020 });
+    const manifestPages = Array.from({ length: 2020 }, (_, i) => ({ ...cachedPage, slug: `p-${i}`, frontmatter: { ...cachedPage.frontmatter, name: `P ${i}` } }));
+    mocks.readManifestPageSnapshot.mockResolvedValue({ pages: manifestPages, refreshedAt: null, refreshError: null, source: "manifest" });
+
+    const response = await GET(new Request("http://localhost/api/campaigns/2/pages"), { params: Promise.resolve({ id: "2" }) });
+    const body = await response.json();
+
+    expect(body.pages.length).toBe(2020);
+    expect(mocks.readManifestPageSnapshot).toHaveBeenCalled();
     expect(mocks.refreshPageCacheInBackground).toHaveBeenCalledOnce();
   });
 

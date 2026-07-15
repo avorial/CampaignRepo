@@ -18,6 +18,7 @@ import {
   refreshPageCacheInBackground,
   stampRemoteCheck,
   upsertPageInCache,
+  stampRemoteManifestPages,
   type PageCacheSnapshot
 } from "@/lib/page-cache";
 import {
@@ -38,28 +39,42 @@ export const dynamic = "force-dynamic";
  * edits made outside CampaignRepo appear within the window. Remote outages
  * degrade to the local copy instead of failing the list.
  */
+async function remoteSnapshot(storage: import("@/lib/storage").StorageAdapter, campaignId: number): Promise<PageCacheSnapshot | null> {
+  const snapshot = (await readManifestPageSnapshot(storage)) || (await readSearchIndexPageSnapshot(storage));
+  // Remember how many pages the remote index lists, so a later read can notice
+  // the local cache has fallen far below it (a poisoned/thin cache).
+  if (snapshot) stampRemoteManifestPages(campaignId, snapshot.pages.length);
+  return snapshot;
+}
+
 async function listSnapshotLocalFirst(storage: import("@/lib/storage").StorageAdapter, campaign: NonNullable<ReturnType<typeof getCampaign>>): Promise<PageCacheSnapshot> {
   const local = readPageCache(campaign.id);
   if (storage.isLocal) {
     // Local folders have no remote latency to hide; keep the index-first path.
-    return (await readManifestPageSnapshot(storage)) || (await readSearchIndexPageSnapshot(storage)) || local;
+    return (await remoteSnapshot(storage, campaign.id)) || local;
   }
-  if (local.pages.length && isRemoteCheckFresh(campaign.id)) return local;
-  if (local.pages.length) {
+  // Trust the local cache only if it isn't dramatically thinner than the last
+  // remote index we saw. A cache swept to near-empty by a bad refresh must not
+  // be served just because its 5-minute window is still fresh.
+  const known = readRemoteCheckState(campaign.id);
+  const knownPages = known.remoteManifestPages ?? 0;
+  const cacheLooksThin = knownPages >= 10 && local.pages.length * 2 < knownPages;
+  if (local.pages.length && !cacheLooksThin && isRemoteCheckFresh(campaign.id)) return local;
+  if (local.pages.length && !cacheLooksThin) {
     try {
       const head = (await storage.listRecentCommits(1))[0]?.sha || "";
-      const known = readRemoteCheckState(campaign.id).remoteHeadSha;
       stampRemoteCheck(campaign.id, head);
-      if (head && head === known) return local;
+      if (head && head === known.remoteHeadSha) return local;
       refreshPageCacheInBackground(storage, campaign);
-      return (await readManifestPageSnapshot(storage)) || (await readSearchIndexPageSnapshot(storage)) || local;
+      return (await remoteSnapshot(storage, campaign.id)) || local;
     } catch {
       return local;
     }
   }
-  const snapshot = (await readManifestPageSnapshot(storage)) || (await readSearchIndexPageSnapshot(storage));
+  // No cache, or a suspiciously thin one: rebuild from the remote index and
+  // warm the cache so the local-first window can take over next time.
+  const snapshot = await remoteSnapshot(storage, campaign.id);
   if (snapshot) {
-    // Warm the local cache so the local-first window can take over.
     refreshPageCacheInBackground(storage, campaign);
     return snapshot;
   }
