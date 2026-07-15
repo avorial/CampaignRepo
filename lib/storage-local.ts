@@ -4,7 +4,7 @@ import crypto from "node:crypto";
 import type { Campaign, GameType } from "@/lib/types";
 import type { StorageAdapter, StorageCommit, StorageDirEntry, StorageTextEntry } from "@/lib/storage";
 import { StorageError } from "@/lib/storage";
-import { campaignYaml, repoReadme, starterPages } from "@/lib/templates";
+import { campaignYaml, repoReadme, starterPages, templateDirName } from "@/lib/templates";
 import { packFor } from "@/lib/template-packs";
 import { serializePage } from "@/lib/markdown";
 import { emptyRepositoryManifestText, repositoryManifestPath } from "@/lib/repository-manifest";
@@ -210,7 +210,7 @@ export class LocalFolderAdapter implements StorageAdapter {
     await this.ensureFile("wiki/imports/characters/.gitkeep", "", "");
     for (const def of packFor(campaign.gameType)) {
       await this.ensureFile(
-        `wiki/templates/${campaign.gameType}/${def.slug}.md`,
+        `wiki/templates/${templateDirName(campaign.gameType)}/${def.slug}.md`,
         serializePage(def.frontmatter, def.body),
         ""
       );

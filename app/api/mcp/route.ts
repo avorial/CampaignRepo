@@ -2,7 +2,7 @@
 import { requireApiUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign, listCampaigns, searchDocs } from "@/lib/db";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
-import { categoryIds, defaultFrontmatter, gameTypes, starterBody } from "@/lib/templates";
+import { gameTypeFromTemplateDirName, templateDirName, categoryIds, defaultFrontmatter, gameTypes, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
@@ -77,7 +77,7 @@ async function listMcpTemplates(storage: StorageAdapter, campaign: Campaign): Pr
       const file = await storage.getTextFile(entry.path);
       const slug = entry.name.replace(/\.md$/, "");
       const page = parsePage(slug, file.text, file.sha);
-      templates.push({ slug, path: entry.path, sha: file.sha, gameType: dir.name as GameType, category: page.frontmatter.category, name: page.frontmatter.name, summary: page.frontmatter.summary, content: page.content });
+      templates.push({ slug, path: entry.path, sha: file.sha, gameType: gameTypeFromTemplateDirName(dir.name) as GameType, category: page.frontmatter.category, name: page.frontmatter.name, summary: page.frontmatter.summary, content: page.content });
     }
   }
   return templates.sort((a, b) => `${a.gameType}:${a.category}:${a.name}`.localeCompare(`${b.gameType}:${b.category}:${b.name}`));
@@ -380,7 +380,7 @@ export async function POST(req: Request) {
       const slug = slugify(templateName);
       const frontmatter = { ...defaultFrontmatter(templateName, category, "gm"), summary: String(args.summary || ""), tags: Array.isArray(args.tags) ? args.tags.map(String) : ["template", category], approvalStatus: "approved" as const, lastEditedBy: "AI via MCP" };
       const content = String(args.content || starterBody(templateName, category, gameType));
-      const path = `wiki/templates/${gameType}/${slug}.md`;
+      const path = `wiki/templates/${templateDirName(gameType)}/${slug}.md`;
       await storage.putFile(path, serializePage(frontmatter, content), `CampaignRepo MCP: create template ${templateName}`);
       return toolResult(body.id, { template: { slug, path, gameType, category, name: templateName, summary: frontmatter.summary } });
     }
@@ -451,9 +451,9 @@ export async function POST(req: Request) {
       const campaign = getCampaign(user.id, Number(args.campaignId));
       if (!campaign) throw new Error("Campaign not found");
       if (campaign.storageBackend === "local") {
-        return toolResult(body.id, `Local folder campaign at ${campaign.localPath}. Required folders: wiki/pages, wiki/media, wiki/templates/${campaign.gameType}, wiki/imports/characters, wiki/search/index.json, wiki/campaign.yaml.`);
+        return toolResult(body.id, `Local folder campaign at ${campaign.localPath}. Required folders: wiki/pages, wiki/media, wiki/templates/${templateDirName(campaign.gameType)}, wiki/imports/characters, wiki/search/index.json, wiki/campaign.yaml.`);
       }
-      return toolResult(body.id, `Build or connect https://github.com/${campaign.owner}/${campaign.repo}. Required folders: /wiki/pages, /wiki/media, /wiki/templates/${campaign.gameType}, /wiki/imports/characters, /wiki/search/index.json, /wiki/campaign.yaml.`);
+      return toolResult(body.id, `Build or connect https://github.com/${campaign.owner}/${campaign.repo}. Required folders: /wiki/pages, /wiki/media, /wiki/templates/${templateDirName(campaign.gameType)}, /wiki/imports/characters, /wiki/search/index.json, /wiki/campaign.yaml.`);
     }
   }
 

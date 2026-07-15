@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { getAppSetting } from "@/lib/db";
 import type { Campaign, GameType } from "@/lib/types";
-import { campaignYaml, repoReadme, starterPages } from "@/lib/templates";
+import { campaignYaml, repoReadme, starterPages, templateDirName } from "@/lib/templates";
 import { packFor } from "@/lib/template-packs";
 import { serializePage } from "@/lib/markdown";
 import { emptyRepositoryManifestText, repositoryManifestPath } from "@/lib/repository-manifest";
@@ -521,7 +521,7 @@ export async function initializeRepo(token: string, campaign: Campaign) {
     await ensureFile(
       token,
       campaign,
-      `wiki/templates/${campaign.gameType}/${def.slug}.md`,
+      `wiki/templates/${templateDirName(campaign.gameType)}/${def.slug}.md`,
       serializePage(def.frontmatter, def.body),
       `CampaignRepo: add ${campaign.gameType} ${def.slug} template`
     );

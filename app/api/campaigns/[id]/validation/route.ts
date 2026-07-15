@@ -1,4 +1,5 @@
 ﻿import { NextResponse } from "next/server";
+import { templateDirName } from "@/lib/templates";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getStorageAdapter, isNotFoundError } from "@/lib/storage";
@@ -20,7 +21,7 @@ const expectedPaths = [
 async function validate(storage: NonNullable<ReturnType<typeof getStorageAdapter>>, campaign: NonNullable<ReturnType<typeof getCampaign>>) {
   const checks = await Promise.all(
     expectedPaths.map(async (item) => {
-      const path = item.path.replace("{gameType}", campaign.gameType);
+      const path = item.path.replace("{gameType}", templateDirName(campaign.gameType));
       try {
         const content = await storage.getContent(path) as { type?: string } | Array<unknown>;
         const actualType = Array.isArray(content) ? "dir" : content.type;

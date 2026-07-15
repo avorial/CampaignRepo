@@ -44,3 +44,15 @@ describe("template packs", () => {
     expect(template?.body).toContain("oaths: []");
   });
 });
+
+describe("template directory names", () => {
+  it("sanitizes colons for Windows-safe folders and maps both forms back", async () => {
+    const { templateDirName, gameTypeFromTemplateDirName } = await import("@/lib/templates");
+    expect(templateDirName("Vampire: The Masquerade")).toBe("Vampire - The Masquerade");
+    expect(templateDirName("Traveller")).toBe("Traveller");
+    // Both the legacy colon folder and the sanitized folder resolve to the game type.
+    expect(gameTypeFromTemplateDirName("Vampire - The Masquerade")).toBe("Vampire: The Masquerade");
+    expect(gameTypeFromTemplateDirName("Vampire: The Masquerade")).toBe("Vampire: The Masquerade");
+    expect(gameTypeFromTemplateDirName("Some Custom Dir")).toBe("Some Custom Dir");
+  });
+});

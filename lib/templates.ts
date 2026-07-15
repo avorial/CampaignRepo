@@ -190,6 +190,21 @@ export function campaignYaml(name: string, gameType: GameType) {
   return `name: ${JSON.stringify(name)}\ngameType: ${JSON.stringify(gameType)}\ncategories:\n${cats}\nvisibility:\n  default: gm\napprovals:\n  aiDefault: unapproved\ntheme:\n  preset: ${JSON.stringify(themePresetForGame(gameType))}\n  accent: "#d4a957"\n  accent2: "#a075ff"\n  displayFont: "Fraunces"\n  banner: ""\n`;
 }
 
+/**
+ * Windows-safe template folder name for a game type. Colons are invalid in
+ * NTFS paths, so "Vampire: The Masquerade" as a directory name breaks
+ * `git clone` on every Windows machine ("Vampire - The Masquerade" instead).
+ */
+export function templateDirName(gameType: string) {
+  return gameType.replace(/:\s*/g, " - ").replace(/[*?"<>|\\/]/g, "").replace(/\s+/g, " ").trim();
+}
+
+/** Map a template folder name (legacy colon form or sanitized) back to its game type. */
+export function gameTypeFromTemplateDirName(dirName: string): string {
+  const match = gameTypes.find((type) => type === dirName || templateDirName(type) === dirName);
+  return match || dirName;
+}
+
 export function repoReadme(name: string) {
   return `# ${name}\n\nThis campaign repository is managed by CampaignRepo.\n\n## Structure\n\n- Pages live in \`/wiki/pages\`.\n- Media lives in \`/wiki/media\`.\n- Templates live in \`/wiki/templates\`.\n- Character imports live in \`/wiki/imports/characters\`.\n- The portable search snapshot lives in \`/wiki/search/index.json\`.\n- Campaign settings live in \`/wiki/campaign.yaml\`.\n\nManual edits are welcome. Preserve YAML frontmatter and CampaignRepo conventions for wiki links, visibility, and approvals.\n\n## Links\n\n- GitHub docs: https://docs.github.com/repositories/creating-and-managing-repositories/creating-a-new-repository\n- CampaignRepo wiki links: use \`[[Page Name]]\` or \`[[Page Name|label]]\`.\n- GM-only sections: wrap secret content in \`:::gm\` blocks.\n`;
 }

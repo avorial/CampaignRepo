@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getStorageAdapter, type StorageAdapter } from "@/lib/storage";
 import { parsePage, serializePage } from "@/lib/markdown";
-import { defaultFrontmatter, gameTypes, starterBody } from "@/lib/templates";
+import { gameTypeFromTemplateDirName, templateDirName, defaultFrontmatter, gameTypes, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
 import type { GameType, WikiTemplate } from "@/lib/types";
 
@@ -31,7 +31,7 @@ async function listTemplates(storage: StorageAdapter, campaign: CampaignRow) {
       const file = await storage.getTextFile(entry.path);
       const slug = entry.name.replace(/\.md$/, "");
       const page = parsePage(slug, file.text, file.sha);
-      templates.push({ slug, path: entry.path, sha: file.sha, gameType: dir.name as GameType, category: page.frontmatter.category, name: page.frontmatter.name, summary: page.frontmatter.summary, content: page.content });
+      templates.push({ slug, path: entry.path, sha: file.sha, gameType: gameTypeFromTemplateDirName(dir.name) as GameType, category: page.frontmatter.category, name: page.frontmatter.name, summary: page.frontmatter.summary, content: page.content });
     }
   }
   return templates.sort((a, b) => `${a.gameType}:${a.category}:${a.name}`.localeCompare(`${b.gameType}:${b.category}:${b.name}`));
@@ -60,7 +60,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const slug = slugify(input.name);
   const frontmatter = { ...defaultFrontmatter(input.name, input.category, "gm"), summary: input.summary || "", tags: input.tags.length ? input.tags : ["template", input.category] };
   const content = input.content?.trim() || starterBody(input.name, input.category, input.gameType as GameType);
-  const path = `wiki/templates/${input.gameType}/${slug}.md`;
+  const path = `wiki/templates/${templateDirName(input.gameType)}/${slug}.md`;
   await storage.putFile(path, serializePage(frontmatter, content), `CampaignRepo: create ${input.gameType} template ${input.name}`);
   return NextResponse.json({ template: { slug, path, gameType: input.gameType, category: input.category, name: input.name, summary: frontmatter.summary, content } });
 }
