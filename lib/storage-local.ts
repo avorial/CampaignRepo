@@ -7,6 +7,7 @@ import { StorageError } from "@/lib/storage";
 import { campaignYaml, repoReadme, starterPages } from "@/lib/templates";
 import { packFor } from "@/lib/template-packs";
 import { serializePage } from "@/lib/markdown";
+import { emptyRepositoryManifestText, repositoryManifestPath } from "@/lib/repository-manifest";
 
 function contentHash(data: string | Buffer): string {
   return crypto.createHash("sha1").update(data).digest("hex");

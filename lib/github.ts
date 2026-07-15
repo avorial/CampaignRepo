@@ -4,6 +4,7 @@ import type { Campaign, GameType } from "@/lib/types";
 import { campaignYaml, repoReadme, starterPages } from "@/lib/templates";
 import { packFor } from "@/lib/template-packs";
 import { serializePage } from "@/lib/markdown";
+import { emptyRepositoryManifestText, repositoryManifestPath } from "@/lib/repository-manifest";
 
 const apiBase = "https://api.github.com";
 const appTokenPrefix = "github-app:";
@@ -510,6 +511,9 @@ export async function initializeRepo(token: string, campaign: Campaign) {
   await ensureFile(token, campaign, "wiki/campaign.yaml", campaignYaml(campaign.name, campaign.gameType as GameType), "CampaignRepo: add campaign config");
   await ensureFile(token, campaign, "wiki/pages/.gitkeep", "", "CampaignRepo: add pages folder");
   await ensureFile(token, campaign, "wiki/search/index.json", "[]\n", "CampaignRepo: add search snapshot");
+  // New repos start with a valid (empty) navigation manifest, so the indexed
+  // path works from the first page onward.
+  await ensureFile(token, campaign, repositoryManifestPath, emptyRepositoryManifestText(), "CampaignRepo: add repository index");
   await ensureFile(token, campaign, "wiki/media/.gitkeep", "", "CampaignRepo: add media folder");
   await ensureFile(token, campaign, "wiki/media/media.json", "{}\n", "CampaignRepo: add media metadata");
   await ensureFile(token, campaign, "wiki/imports/characters/.gitkeep", "", "CampaignRepo: add imports folder");

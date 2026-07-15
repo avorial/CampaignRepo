@@ -239,6 +239,11 @@ export function upsertManifestPage(manifest: RepositoryManifest | null, entry: R
   return next;
 }
 
+/** A valid, empty manifest — seeded into new repos so the indexed path works from page one. */
+export function emptyRepositoryManifestText() {
+  return serializeRepositoryManifest({ schemaVersion: repositoryManifestSchemaVersion, generatedAt: new Date().toISOString(), pages: [] });
+}
+
 export function serializeRepositoryManifest(manifest: RepositoryManifest) {
   const validation = validateRepositoryManifest(manifest);
   if (!validation.ok) throw new Error(`Cannot write invalid CampaignRepo index: ${validation.errors.join("; ")}`);
