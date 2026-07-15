@@ -14,6 +14,10 @@ export const dynamic = "force-dynamic";
 type Severity = "error" | "warn" | "info";
 type Finding = { type: string; severity: Severity; slug?: string; title: string; detail: string };
 
+function slugFromPagePath(path: string) {
+  return (path.split("/").pop() || path).replace(/\.md$/i, "");
+}
+
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const { id } = await params;
@@ -199,7 +203,8 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   try {
     const manifestFile = await storage.getTextFile(repositoryManifestPath);
     try {
-      generated.manifestPages = readRepositoryManifestText(manifestFile.text).pages.length;
+      const manifest = readRepositoryManifestText(manifestFile.text);
+      generated.manifestPages = manifest.pages.length;
       if (generated.manifestPages !== pages.length) {
         findings.push({
           type: "stale-manifest",
@@ -207,6 +212,39 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
           title: "Repository manifest drift",
           detail: `The manifest lists ${generated.manifestPages} pages but the repo has ${pages.length} page files. Run Repair indexes to rebuild it from source.`
         });
+      }
+      for (const entry of manifest.pages) {
+        const slug = slugFromPagePath(entry.path);
+        const source = bySlug.get(slug);
+        if (!source) continue;
+        const title = source.frontmatter.name || slug;
+        if (entry.type !== source.frontmatter.category) {
+          findings.push({
+            type: "manifest-source-mismatch",
+            severity: "error",
+            slug,
+            title,
+            detail: `Manifest says category "${entry.type}" but page source says "${source.frontmatter.category}". Run Repair indexes after confirming the page source is correct.`
+          });
+        }
+        if ((entry.parent || "") !== (source.frontmatter.parent || "")) {
+          findings.push({
+            type: "manifest-source-mismatch",
+            severity: "warn",
+            slug,
+            title,
+            detail: `Manifest parent "${entry.parent || ""}" differs from page source parent "${source.frontmatter.parent || ""}". Run Repair indexes after confirming the page source is correct.`
+          });
+        }
+        if ((entry.visibility || "gm") !== source.frontmatter.visibility || (entry.approvalStatus || "approved") !== source.frontmatter.approvalStatus) {
+          findings.push({
+            type: "manifest-source-mismatch",
+            severity: "warn",
+            slug,
+            title,
+            detail: `Manifest visibility/approval (${entry.visibility || "gm"}/${entry.approvalStatus || "approved"}) differs from page source (${source.frontmatter.visibility}/${source.frontmatter.approvalStatus}).`
+          });
+        }
       }
     } catch (error) {
       findings.push({
@@ -226,7 +264,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   }
   try {
     const searchFile = await storage.getTextFile("wiki/search/index.json");
-    const docs = JSON.parse(searchFile.text) as Array<{ slug?: string; category?: string }>;
+    const docs = JSON.parse(searchFile.text) as Array<{ slug?: string; category?: string; parent?: string; visibility?: string; approvalStatus?: string }>;
     const pageDocs = docs.filter((doc) => doc?.slug && doc.category !== "media" && !String(doc.slug).startsWith("media/"));
     generated.searchDocs = pageDocs.length;
     if (pageDocs.length !== pages.length) {
@@ -236,6 +274,40 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
         title: "Search snapshot drift",
         detail: `The search snapshot has ${pageDocs.length} page documents but the repo has ${pages.length} page files. Run Repair indexes to rebuild it from source.`
       });
+    }
+    for (const doc of pageDocs) {
+      if (!doc.slug) continue;
+      const slug = String(doc.slug);
+      const source = bySlug.get(slug);
+      if (!source) continue;
+      const title = source.frontmatter.name || slug;
+      if (doc.category !== source.frontmatter.category) {
+        findings.push({
+          type: "search-source-mismatch",
+          severity: "error",
+          slug,
+          title,
+          detail: `Search snapshot says category "${doc.category}" but page source says "${source.frontmatter.category}". Run Repair indexes after confirming the page source is correct.`
+        });
+      }
+      if ((doc.parent || "") !== (source.frontmatter.parent || "")) {
+        findings.push({
+          type: "search-source-mismatch",
+          severity: "warn",
+          slug,
+          title,
+          detail: `Search snapshot parent "${doc.parent || ""}" differs from page source parent "${source.frontmatter.parent || ""}". Run Repair indexes after confirming the page source is correct.`
+        });
+      }
+      if ((doc.visibility || "gm") !== source.frontmatter.visibility || (doc.approvalStatus || "approved") !== source.frontmatter.approvalStatus) {
+        findings.push({
+          type: "search-source-mismatch",
+          severity: "warn",
+          slug,
+          title,
+          detail: `Search snapshot visibility/approval (${doc.visibility || "gm"}/${doc.approvalStatus || "approved"}) differs from page source (${source.frontmatter.visibility}/${source.frontmatter.approvalStatus}).`
+        });
+      }
     }
   } catch {
     findings.push({
