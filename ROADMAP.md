@@ -319,9 +319,17 @@ Tests:
 - **Media repo size.** Large media makes pulls, tree reads, and generated
   snapshots slower. Media may need object storage or stricter lazy loading.
 - **Silent partial success.** The app must say "content saved, Git sync failed"
-  instead of making users guess whether data was lost.
+  instead of making users guess whether data was lost — shipped for editor
+  saves (dirty working copy) and bulk edits (`indexesStale`).
 - **Bad cache poisoning.** An empty or malformed cache row must never outrank a
-  non-empty canonical page source.
+  non-empty canonical page source — mitigated: page detail recovers empty
+  cache bodies from source, cache refreshes refuse to sweep a populated cache
+  down by more than half, and page lists distrust a cache far thinner than
+  the last remote index count.
+- **In-process timers.** The rebuild debounce, sync retry, and background
+  refresh dedupe live in process memory; a container restart drops any
+  scheduled work until the next request or manual Sync/Repair. A persisted
+  queue with a boot sweep would close this.
 
 ## Current Product State
 
