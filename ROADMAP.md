@@ -317,7 +317,7 @@ Tests:
 - **Public and GM view drift.** Both should derive from the same working
   source, then apply visibility filters.
 - **Media repo size.** Large media makes pulls, tree reads, and generated
-  snapshots slower. Media may need object storage or stricter lazy loading.
+  snapshots slower. See the media strategy map below.
 - **Silent partial success.** The app must say "content saved, Git sync failed"
   instead of making users guess whether data was lost — shipped for editor
   saves (dirty working copy) and bulk edits (`indexesStale`).
@@ -330,6 +330,37 @@ Tests:
   refresh dedupe live in process memory; a container restart drops any
   scheduled work until the next request or manual Sync/Repair. A persisted
   queue with a boot sweep would close this.
+
+## Media Strategy Map
+
+Today's campaign repos are ~85% media by size (kingdomdivided: ~100 MB of
+portraits in a 147 MB repo). Media is why clones are slow, why history bloat
+hurts, and where GitHub's limits bite first (100 MB/file hard cap, ~1 GB soft
+repo cap). The app already lazy-fetches single files, so *reads* are fine —
+the cost is clone/pull weight and history growth from re-uploaded images.
+
+Options, in the order they should be tried:
+
+1. **Shrink at the door (S, do first regardless).** Convert uploads to WebP
+   and cap dimensions (~1600px) server-side before committing; keep a strict
+   size warning in health (already present). Cuts typical Foundry portrait
+   uploads 5–10× with no architectural change and no portability loss.
+2. **History cleanup, one-time (S, tooling exists).** `git filter-repo` sweep
+   per repo dropping superseded media blobs and old fat snapshots from
+   history, with bundle backups first. Fixes the past; option 1 fixes the
+   future. GitHub shrinks server-side after its own GC.
+3. **Git LFS (M, if 1+2 are not enough).** Media stays "in the repo" from the
+   user's point of view (portability promise intact), clones become pointers +
+   on-demand fetch. Costs: LFS bandwidth quotas on GitHub free tier, extra
+   setup for manual cloners, and the app's raw-media reads need the LFS media
+   endpoint. Good fit only if campaigns start pushing multi-GB.
+4. **Object storage sidecar (L, last resort).** `wiki/media/` holds small
+   pointer files; bytes live in S3/R2/MinIO. Breaks the "one folder is the
+   whole campaign" promise unless export bundles re-inline media — that
+   re-inlining is mandatory if this path is ever taken.
+
+Recommendation: ship 1 now, run 2 opportunistically per repo, and only
+revisit 3/4 when a real campaign outgrows them.
 
 ## Current Product State
 
@@ -469,10 +500,25 @@ Suggested working order (status-driven):
   Apocalypse, Mage: The Ascension. Each ships a dedicated sheet renderer and a
   real, filled-in demo sample PC (Rilla Windmere, Renner, Lady Elyse Vaelor,
   Nico Alvarez, Ash Redhand, Jax) rather than a design brief.
-- **Tier 1b — `ready-for-polish`, still need a sheet:** Call of Cthulhu, Delta
-  Green, Blades in the Dark, Alien RPG, Cyberpunk RED, Mothership, Fate Core.
-  Concept, template, and demo kit are ready; each needs either a dedicated
-  renderer or a template-pack sheet page, then a filled demo sample PC.
+- **Tier 1b — `ready-for-polish`, still need a sheet.** Concept, template, and
+  demo kit are ready; each needs a fenced-block renderer (or a well-shaped
+  template sheet), an editor insert button, and a filled demo sample PC. The
+  work list, easiest first:
+
+  | Game | Block | Core mechanics the sheet must carry | Sheet shape | Demo PC to fill |
+  | --- | --- | --- | --- | --- |
+  | Fate Core | `fate-sheet` | Aspects (high concept, trouble, +3), skill pyramid (+4..+1), stunts, stress boxes (physical/mental), consequences (2/4/6) | Simplest of the seven — aspects list + pyramid grid | the Fate demo PC |
+  | Blades in the Dark | `blades-sheet` | Playbook, action dots in 3 attributes (Insight/Prowess/Resolve), stress (9) + trauma, harm tiers, load, special abilities, crew link | Dot grids + tracks, gothic ink styling | the Blades demo PC |
+  | Mothership | `mothership-sheet` | Stats (Str/Spd/Int/Cbt), saves (Sanity/Fear/Body), stress + panic, class, skills tree picks, wounds, loadout | Terminal/retro-computer look fits the theme presets | the Mothership demo PC |
+  | Delta Green | `dg-sheet` | CoC-derived stats ×5, Sanity + breaking point, bonds with scores (the signature mechanic), professional skills %, unnatural exposure | Percentile skill table + bonds panel | the Delta Green demo PC |
+  | Call of Cthulhu | `coc-sheet` | Characteristics (%), HP/MP/Luck/SAN with maximums, occupation + skill %, weapons table, backstory panel | Percentile table layout; shares bones with Delta Green — build these two together | the CoC demo PC |
+  | Alien RPG | `alien-sheet` | Attributes + skills (Year Zero d6 pools), stress dice, health, talents, gear + consumables (air/food/power), signature item, buddy/rival | Year Zero pool math; stress panel prominent | the Alien demo PC |
+  | Cyberpunk RED | `cyberpunk-sheet` | 10 STATs, role + role ability rank, skills (66, show trained), cyberware with humanity cost, HP/wound state, armor SP, weapons | Densest of the seven; needs collapsible skill groups like Traveller's | the Cyberpunk demo PC |
+
+  Per game, the loop that closed Tier 1a: renderer honoring the system's exact
+  vocabulary → editor insert button + template-pack seeding → filled demo PC →
+  regression render test → mark `ready-for-polish` verified. CoC + Delta Green
+  share a percentile core and should land as one pass.
 - **Tier 2 — popular systems needing reference work:** Pathfinder, Warhammer
   Fantasy Roleplay, Warhammer 40,000 Roleplay, Starfinder, The One Ring,
   Dragonbane, Shadowdark RPG, Mörk Borg, Old-School Essentials, Savage Worlds.

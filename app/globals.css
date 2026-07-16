@@ -8984,3 +8984,8 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   .scsheet-stat { break-inside: avoid; }
   .scsheet-ability-cols { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 }
+
+/* Unsynced/conflicted page badges in the side nav */
+.nav-sync-badge { flex-shrink: 0; font-size: 10px; margin-left: 4px; }
+.nav-sync-dirty { color: #e8b34a; }
+.nav-sync-conflict { color: #e05252; font-size: 12px; }

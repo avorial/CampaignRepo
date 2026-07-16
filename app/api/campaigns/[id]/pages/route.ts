@@ -8,6 +8,8 @@ import { sanitizePlayerPage } from "@/lib/public-site";
 import { defaultFrontmatter, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
+import { sweepPendingJobs } from "@/lib/jobs";
+import { listDirtySlugs, listPageConflicts } from "@/lib/sync-queue";
 import {
   isRemoteCheckFresh,
   readManifestPageSnapshot,
@@ -91,6 +93,8 @@ const schema = z.object({
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
+  // Recover any rebuild/sync work a restart-dropped timer still owes (throttled).
+  sweepPendingJobs();
   const { id } = await params;
   const campaign = getCampaign(user.id, Number(id));
   if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -122,8 +126,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
           .map((page) => sanitizePlayerPage(page, visibleGroups));
       })()
     : pages;
+  // GMs see per-page sync state so unsynced/conflicted pages can be badged.
+  const sync = isPlayerMode
+    ? undefined
+    : { dirty: listDirtySlugs(campaign.id), conflicts: listPageConflicts(campaign.id).map((conflict) => conflict.slug) };
   return NextResponse.json({
     pages: visiblePages,
+    sync,
     cache: {
       cached: !waitForRefresh,
       source: snapshot.source,

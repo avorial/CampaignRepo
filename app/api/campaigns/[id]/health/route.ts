@@ -7,6 +7,7 @@ import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import { REL_TYPE_MAP } from "@/lib/relationships";
 import { readPageCache, readRemoteCheckState } from "@/lib/page-cache";
 import { countDirtyPages, listPageConflicts } from "@/lib/sync-queue";
+import { getLastGitHubRateLimit } from "@/lib/github";
 import { readRepositoryManifestText, repositoryManifestPath } from "@/lib/repository-manifest";
 
 export const dynamic = "force-dynamic";
@@ -198,7 +199,8 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     cacheRefreshedAt: null as string | null,
     cacheRefreshError: null as string | null,
     remoteCheckedAt: null as string | null,
-    remoteHeadSha: null as string | null
+    remoteHeadSha: null as string | null,
+    gitHubRateLimit: getLastGitHubRateLimit()
   };
   try {
     const manifestFile = await storage.getTextFile(repositoryManifestPath);

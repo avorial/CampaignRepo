@@ -51,6 +51,11 @@ vi.mock("@/lib/storage", () => ({
   isNotFoundError: (error: unknown) => Boolean((error as { status?: number })?.status === 404)
 }));
 vi.mock("@/lib/search", () => ({ scheduleSearchIndexRebuild: mocks.scheduleSearchIndexRebuild }));
+vi.mock("@/lib/jobs", () => ({ sweepPendingJobs: vi.fn() }));
+vi.mock("@/lib/sync-queue", () => ({
+  listDirtySlugs: vi.fn(() => []),
+  listPageConflicts: vi.fn(() => [])
+}));
 vi.mock("@/lib/page-cache", () => ({
   readPageCache: mocks.readPageCache,
   readManifestPageSnapshot: mocks.readManifestPageSnapshot,

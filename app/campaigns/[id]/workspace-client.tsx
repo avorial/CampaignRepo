@@ -87,6 +87,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const [openNodes, setOpenNodes] = useState<Record<string, boolean>>({});
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({});
   const [publicSite, setPublicSite] = useState<{ slug: string; enabled: boolean; description?: string | null; tags?: string[]; communityKind?: string; contributionGuidelines?: string | null } | null>(null);
+  const [syncState, setSyncState] = useState<{ dirty: string[]; conflicts: string[] } | null>(null);
   const [publicLinkName, setPublicLinkName] = useState(publicLinkInput(campaign.name));
   const [publicDescription, setPublicDescription] = useState("");
   const [publicTagInput, setPublicTagInput] = useState("");
@@ -139,6 +140,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     const themeData = themeRes && themeRes.ok ? await themeRes.json() : { theme: {} };
     const categoriesData = categoriesRes && categoriesRes.ok ? await categoriesRes.json() : { categories };
     setPages(pagesData.pages || []);
+    setSyncState(pagesData.sync || null);
     setGraph({ nodes: graphData.nodes || [], edges: graphData.edges || [], timeline: graphData.timeline || [] });
     setSetup(setupData.markdown || "");
     setTemplates(templatesData.templates || []);
@@ -652,6 +654,11 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
           <Link className="nav-link nav-tree-link" href={`/campaigns/${campaign.id}/pages/${page.slug}`}>
             {catDot(page)}
             <span className="nav-tree-name">{page.frontmatter.name}</span>
+            {syncState?.conflicts.includes(page.slug) ? (
+              <span className="nav-sync-badge nav-sync-conflict" title="Local and remote versions conflict — resolve in the Health center">⚠</span>
+            ) : syncState?.dirty.includes(page.slug) ? (
+              <span className="nav-sync-badge nav-sync-dirty" title="Saved locally — not yet committed to Git">●</span>
+            ) : null}
             {kids.length > 0 && <span className="nav-tree-child-count" title={`${kids.length} direct child page${kids.length === 1 ? "" : "s"}`}>{kids.length}</span>}
           </Link>
         </div>

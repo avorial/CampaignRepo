@@ -115,6 +115,24 @@ async function appInstallationAccessToken(token: string) {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+let lastRateLimit: { limit: string | null; remaining: string | null; reset: string | null; observedAt: string } | null = null;
+
+/** Last GitHub rate-limit headers seen by this process — health/diagnostics only. */
+export function getLastGitHubRateLimit() {
+  return lastRateLimit;
+}
+
+function recordRateLimit(res: Response) {
+  const limit = res.headers.get("x-ratelimit-limit");
+  if (!limit) return;
+  lastRateLimit = {
+    limit,
+    remaining: res.headers.get("x-ratelimit-remaining"),
+    reset: res.headers.get("x-ratelimit-reset"),
+    observedAt: new Date().toISOString()
+  };
+}
+
 async function gh<T>(token: string, path: string, init: RequestInit = {}, resolveAppToken = true): Promise<T> {
   const authToken = resolveAppToken ? await appInstallationAccessToken(token) : token;
   const headers: Record<string, string> = {
@@ -137,6 +155,7 @@ async function gh<T>(token: string, path: string, init: RequestInit = {}, resolv
       // build a cached directory/file listing would hide a just-saved page.
       cache: "no-store"
     });
+    recordRateLimit(res);
     if (res.ok) {
       if (res.status === 204) return undefined as T;
       return (await res.json()) as T;

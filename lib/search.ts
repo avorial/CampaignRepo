@@ -1,7 +1,7 @@
 import { stripGmBlocks } from "@/lib/markdown";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import type { Campaign, SearchDocument, WikiPage } from "@/lib/types";
-import { deleteSearchDocument, upsertSearchDocuments } from "@/lib/db";
+import { deleteSearchDocument, getDb, upsertSearchDocuments } from "@/lib/db";
 import { getStorageAdapter, type StorageAdapter } from "@/lib/storage";
 import { refreshPageCache } from "@/lib/page-cache";
 import { buildRepositoryManifestFromSearchDocuments, repositoryManifestPath, serializeRepositoryManifest } from "@/lib/repository-manifest";
@@ -148,8 +148,14 @@ const scheduledRebuilds = new Map<number, ReturnType<typeof setTimeout>>();
 export function scheduleSearchIndexRebuild(campaign: Campaign, delayMs = 15_000) {
   const existing = scheduledRebuilds.get(campaign.id);
   if (existing) clearTimeout(existing);
+  // Shadow the timer durably so a restart-dropped rebuild is recovered by the
+  // pending-jobs sweep instead of vanishing.
+  getDb().prepare(
+    "INSERT INTO pending_jobs (campaignId, kind, dueAt) VALUES (?, 'rebuild', ?) ON CONFLICT(campaignId, kind) DO UPDATE SET dueAt = excluded.dueAt"
+  ).run(campaign.id, Date.now() + delayMs);
   const timer = setTimeout(() => {
     scheduledRebuilds.delete(campaign.id);
+    getDb().prepare("DELETE FROM pending_jobs WHERE campaignId = ? AND kind = 'rebuild'").run(campaign.id);
     const storage = getStorageAdapter(campaign);
     if (!storage) return;
     void rebuildSearchIndex(storage, campaign).catch((error) => {

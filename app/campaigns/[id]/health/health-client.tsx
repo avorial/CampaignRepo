@@ -11,6 +11,8 @@ type Generated = {
   cacheRows: number;
   cacheRefreshedAt: string | null;
   cacheRefreshError: string | null;
+  dirtyPages?: number;
+  gitHubRateLimit?: { limit: string | null; remaining: string | null; reset: string | null; observedAt: string } | null;
 };
 type Health = { pageCount: number; mediaCount?: number; findings: Finding[]; counts: Record<string, number>; generated?: Generated };
 type RepairReport = {
@@ -148,6 +150,10 @@ export default function HealthClient({ campaign }: { campaign: Campaign }) {
         <p className="muted">
           Generated state: {data.generated.pageFiles} page files · manifest {data.generated.manifestPages ?? "—"} · search {data.generated.searchDocs ?? "—"} · cache {data.generated.cacheRows}
           {data.generated.cacheRefreshedAt ? ` (refreshed ${data.generated.cacheRefreshedAt})` : ""}
+          {typeof data.generated.dirtyPages === "number" && data.generated.dirtyPages > 0 ? ` · ${data.generated.dirtyPages} unsynced` : ""}
+          {data.generated.gitHubRateLimit?.remaining != null
+            ? ` · GitHub API ${data.generated.gitHubRateLimit.remaining}/${data.generated.gitHubRateLimit.limit}${data.generated.gitHubRateLimit.reset ? ` (resets ${new Date(Number(data.generated.gitHubRateLimit.reset) * 1000).toLocaleTimeString()})` : ""}`
+            : ""}
         </p>
       )}
       {message && <p className="toast">{message}</p>}

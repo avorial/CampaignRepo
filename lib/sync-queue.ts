@@ -57,6 +57,10 @@ export function listDirtyPages(campaignId: number): Array<{ page: WikiPage; base
   });
 }
 
+export function listDirtySlugs(campaignId: number): string[] {
+  return (getDb().prepare("SELECT slug FROM campaign_page_cache WHERE campaignId = ? AND dirty = 1 ORDER BY slug").all(campaignId) as Array<{ slug: string }>).map((row) => row.slug);
+}
+
 export function countDirtyPages(campaignId: number): number {
   const row = getDb().prepare("SELECT COUNT(*) AS n FROM campaign_page_cache WHERE campaignId = ? AND dirty = 1").get(campaignId) as { n: number };
   return row.n;
@@ -197,8 +201,14 @@ const scheduledSyncs = new Map<number, ReturnType<typeof setTimeout>>();
 export function scheduleCampaignSync(campaign: Campaign, delayMs = 60_000) {
   const existing = scheduledSyncs.get(campaign.id);
   if (existing) clearTimeout(existing);
+  // Shadow the timer durably so a restart-dropped retry is recovered by the
+  // pending-jobs sweep instead of leaving dirty rows waiting on manual Sync.
+  getDb().prepare(
+    "INSERT INTO pending_jobs (campaignId, kind, dueAt) VALUES (?, 'sync', ?) ON CONFLICT(campaignId, kind) DO UPDATE SET dueAt = excluded.dueAt"
+  ).run(campaign.id, Date.now() + delayMs);
   const timer = setTimeout(() => {
     scheduledSyncs.delete(campaign.id);
+    getDb().prepare("DELETE FROM pending_jobs WHERE campaignId = ? AND kind = 'sync'").run(campaign.id);
     const storage = getStorageAdapter(campaign);
     if (!storage) return;
     void flushCampaignSync(storage, campaign).catch((error) => {

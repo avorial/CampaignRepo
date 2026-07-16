@@ -191,6 +191,12 @@ if (!cacheColumns.some((c) => c.name === "lastSyncError")) {
 }
 
 db.exec(`
+CREATE TABLE IF NOT EXISTS pending_jobs (
+  campaignId INTEGER NOT NULL,
+  kind TEXT NOT NULL CHECK(kind IN ('rebuild', 'sync')),
+  dueAt INTEGER NOT NULL,
+  PRIMARY KEY (campaignId, kind)
+);
 CREATE TABLE IF NOT EXISTS page_conflicts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   campaignId INTEGER NOT NULL,
@@ -779,6 +785,11 @@ export function getCampaign(userId: number, campaignId: number): Campaign | null
       )
       .get(userId, campaignId) as Campaign | undefined
   ) || null;
+}
+
+/** Campaign row without a user context — for background jobs (sync/rebuild sweeps). */
+export function getCampaignRowById(campaignId: number): Campaign | null {
+  return ((db.prepare("SELECT * FROM campaigns WHERE id = ?").get(campaignId) as Campaign | undefined) || null);
 }
 
 export function getCampaignRepositoryToken(campaignId: number) {
