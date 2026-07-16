@@ -36,7 +36,7 @@
     "typescript": "^5.6.3",
     "vitest": "^4.1.9"
   },
-  "description": "CampaignRepo is a GitHub-backed campaign wiki for tabletop RPGs. It keeps every campaign in a normal GitHub repository while giving GMs and players a purpose-built web app for pages, media, templates, imports, search, review queues, and AI/MCP-assisted editing.",
+  "description": "A self-hosted, Git-backed campaign manager for tabletop RPGs with wiki pages, player-safe portals, maps, sessions, quests, imports, AI tools, and MCP support.",
   "main": "index.js",
   "directories": {
     "doc": "docs",
@@ -47,9 +47,20 @@
     "type": "git",
     "url": "git+https://github.com/avorial/CampaignRepo.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "tabletop-rpg",
+    "ttrpg",
+    "campaign-manager",
+    "campaign-wiki",
+    "game-master",
+    "self-hosted",
+    "git-backed",
+    "nextjs",
+    "typescript",
+    "mcp"
+  ],
+  "author": "Patric Thomas",
+  "license": "MIT",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/avorial/CampaignRepo/issues"
