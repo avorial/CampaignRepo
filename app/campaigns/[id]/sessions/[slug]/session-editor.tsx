@@ -2,6 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Campaign } from "@/lib/types";
+import {
+  analyzeSessionAgenda,
+  defaultSceneDuration,
+  formatMinutes,
+  SCENE_TYPE_LABELS,
+  SCENE_TYPES,
+  type SceneType
+} from "@/lib/session-readiness";
 import { DatePicker, formatDateDisplay } from "../date-picker";
 
 const MOODS = ["investigation", "combat", "political", "travel", "mystery", "downtime", "horror", "social", "heist"];
@@ -18,7 +26,7 @@ type CalendarConfig = { months: CalendarMonth[]; weekdays: string[]; eraName?: s
 
 type Attendee = { name: string; status: "present" | "late" | "left-early" | "absent" };
 type AssetLink = { label: string; url: string };
-type AgendaItem = { text: string; done: boolean };
+type AgendaItem = { text: string; done: boolean; sceneType?: SceneType; duration?: number; externalAction?: boolean };
 type Thread = { text: string; done: boolean };
 type Frontmatter = {
   title: string;
@@ -112,6 +120,7 @@ export default function SessionEditor({ campaign, slug }: { campaign: Campaign; 
   }, [slug]);
 
   const nameBySlug = useMemo(() => new Map(pages.map((p) => [p.slug, p.name])), [pages]);
+  const readiness = useMemo(() => analyzeSessionAgenda(fm?.agenda || []), [fm?.agenda]);
   const patch = (p: Partial<Frontmatter>) => setFm((f) => (f ? { ...f, ...p } : f));
 
   async function save() {
@@ -366,19 +375,63 @@ export default function SessionEditor({ campaign, slug }: { campaign: Campaign; 
 
         {/* Agenda */}
         <div className="panel">
+          <h2>Session readiness</h2>
+          <div className="readiness-grid">
+            <div className="readiness-score">
+              <strong>{readiness.score}</strong>
+              <span>readiness</span>
+            </div>
+            <div className="readiness-metrics">
+              <span><b>{formatMinutes(readiness.expectedMinutes)}</b> expected</span>
+              <span><b>{readiness.typedScenes}/{readiness.totalScenes}</b> typed beats</span>
+              <span><b>{readiness.varietyCount}</b> scene types</span>
+              <span><b>{formatMinutes(readiness.actionMinutes)}</b> action pressure</span>
+            </div>
+          </div>
+          <ul className="readiness-notes">
+            {readiness.notes.map((note) => <li key={note}>{note}</li>)}
+          </ul>
+        </div>
+
+        <div className="panel">
           <h2>Agenda</h2>
           <ul className="steps" style={{ gridTemplateColumns: "1fr" }}>
             {fm.agenda.map((item, i) => (
-              <li key={i} className="check">
-                <input type="checkbox" checked={item.done}
-                  onChange={() => patch({ agenda: fm.agenda.map((a, j) => j === i ? { ...a, done: !a.done } : a) })} />
-                <span style={{
-                  flex: 1,
-                  textDecoration: item.done ? "line-through" : "none",
-                  color: item.done ? "var(--text-tertiary)" : "var(--text-primary)"
-                }}>{item.text}</span>
-                <button type="button" className="linklike"
-                  onClick={() => patch({ agenda: fm.agenda.filter((_, j) => j !== i) })}>remove</button>
+              <li key={i} className="scene-beat">
+                <div className="scene-beat-main">
+                  <input type="checkbox" checked={item.done}
+                    onChange={() => patch({ agenda: fm.agenda.map((a, j) => j === i ? { ...a, done: !a.done } : a) })} />
+                  <input value={item.text}
+                    onChange={(e) => patch({ agenda: fm.agenda.map((a, j) => j === i ? { ...a, text: e.target.value } : a) })}
+                    style={{
+                      textDecoration: item.done ? "line-through" : "none",
+                      color: item.done ? "var(--text-tertiary)" : "var(--text-primary)"
+                    }} />
+                  <button type="button" className="linklike"
+                    onClick={() => patch({ agenda: fm.agenda.filter((_, j) => j !== i) })}>remove</button>
+                </div>
+                <div className="scene-beat-meta">
+                  <label>Type
+                    <select value={item.sceneType || ""}
+                      onChange={(e) => {
+                        const sceneType = (e.target.value || undefined) as SceneType | undefined;
+                        patch({ agenda: fm.agenda.map((a, j) => j === i ? { ...a, sceneType, duration: a.duration || defaultSceneDuration(sceneType) } : a) });
+                      }}>
+                      <option value="">Unspecified</option>
+                      {SCENE_TYPES.map((sceneType) => <option key={sceneType} value={sceneType}>{SCENE_TYPE_LABELS[sceneType]}</option>)}
+                    </select>
+                  </label>
+                  <label>Minutes
+                    <input type="number" min={1} max={360} value={item.duration ?? ""}
+                      placeholder={String(defaultSceneDuration(item.sceneType))}
+                      onChange={(e) => patch({ agenda: fm.agenda.map((a, j) => j === i ? { ...a, duration: e.target.value ? Number(e.target.value) : undefined } : a) })} />
+                  </label>
+                  <label className="scene-beat-check">
+                    <input type="checkbox" checked={Boolean(item.externalAction)}
+                      onChange={() => patch({ agenda: fm.agenda.map((a, j) => j === i ? { ...a, externalAction: !a.externalAction } : a) })} />
+                    External stakes
+                  </label>
+                </div>
               </li>
             ))}
             {!fm.agenda.length && <li className="muted">No planned beats yet.</li>}

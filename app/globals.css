@@ -5000,6 +5000,116 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
   padding: 0 9px;
 }
 
+.readiness-grid {
+  align-items: center;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 104px minmax(0, 1fr);
+}
+
+.readiness-score {
+  align-items: center;
+  aspect-ratio: 1;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  display: grid;
+  justify-items: center;
+  padding: 12px;
+}
+
+.readiness-score strong {
+  color: var(--gold-bright);
+  font-family: var(--font-display);
+  font-size: 34px;
+  line-height: 1;
+}
+
+.readiness-score span {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.readiness-metrics {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+}
+
+.readiness-metrics span {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: 5px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  padding: 8px;
+}
+
+.readiness-metrics b {
+  color: var(--text-primary);
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 15px;
+}
+
+.readiness-notes {
+  color: var(--text-secondary);
+  display: grid;
+  font-size: 13px;
+  gap: 4px;
+  margin: 12px 0 0;
+  padding-left: 18px;
+}
+
+.scene-beat {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+}
+
+.scene-beat-main {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.scene-beat-main input[type="text"],
+.scene-beat-main input:not([type]) {
+  min-width: 0;
+}
+
+.scene-beat-meta {
+  align-items: end;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(150px, 1fr) 96px minmax(130px, auto);
+}
+
+.scene-beat-meta label {
+  font-size: 11px;
+}
+
+.scene-beat-check {
+  align-items: center;
+  color: var(--text-secondary);
+  display: flex;
+  gap: 6px;
+  min-height: 36px;
+}
+
+@media (max-width: 720px) {
+  .readiness-grid,
+  .scene-beat-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ---- Traveller character sheet ---- */
 .tsheet {
   background: #15100c;

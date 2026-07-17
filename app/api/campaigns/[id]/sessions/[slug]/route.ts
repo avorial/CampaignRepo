@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { deleteSession, getSession, saveSession } from "@/lib/sessions";
+import { SCENE_TYPES } from "@/lib/session-readiness";
 import { isNotFoundError } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,14 @@ const assetSchema = z.object({
   url: z.string()
 });
 
+const agendaSchema = z.object({
+  text: z.string(),
+  done: z.boolean(),
+  sceneType: z.enum(SCENE_TYPES).optional(),
+  duration: z.number().int().positive().optional(),
+  externalAction: z.boolean().optional()
+});
+
 const saveSchema = z.object({
   frontmatter: z.object({
     title: z.string().trim().min(1),
@@ -28,12 +37,13 @@ const saveSchema = z.object({
     arc: z.string().trim().optional(),
     attendees: z.array(attendeeSchema).default([]),
     assets: z.array(assetSchema).default([]),
-    agenda: z.array(z.object({ text: z.string(), done: z.boolean() })).default([]),
+    agenda: z.array(agendaSchema).default([]),
     summary: z.string().optional(),
     npcs: z.array(z.string()).default([]),
     locations: z.array(z.string()).default([]),
     threads: z.array(z.object({ text: z.string(), done: z.boolean() })).default([]),
-    pinned: z.array(z.string()).default([])
+    pinned: z.array(z.string()).default([]),
+    handouts: z.array(z.string()).default([])
   }),
   notes: z.string().default("")
 });

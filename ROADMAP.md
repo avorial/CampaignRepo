@@ -476,6 +476,31 @@ retainers, appearance, and history. The Sword Chronicle template pack seeds the
 real sheet, and the sheet-mangling Markdown bug this surfaced was fixed for the
 D&D and WoD sheets too.
 
+### 39. Session readiness and narrative workflow - started
+
+The Obsidian RPG Manager scan surfaced a useful gap: CampaignRepo has strong
+storage, publishing, and player-safety workflows, but it can do more to help
+GMs shape a session before play. First slice: agenda beats can carry scene
+type, expected minutes, and an "external stakes" marker; the session editor
+summarizes expected runtime, typed beats, scene variety, action pressure, and a
+readiness score. Session handouts now round-trip through session frontmatter as
+intended.
+
+Follow-up candidates from the same scan:
+
+- Clues as first-class campaign elements, especially for investigation games:
+  clue source, clue points-to, discovered status, and reveal session.
+- Guided creation wizards for NPCs, chapters/arcs, clue trails, and session
+  prep packets.
+- Optional narrative structure fields in template packs: Story Circle, ABT,
+  Kishotenketsu, conflict, major clues, sensory imprint, NPC want/need/lie,
+  ghost, arc, strengths, and weaknesses.
+- Campaign-level GM task board that unifies prep tasks, review items,
+  unresolved clues, player follow-ups, and health findings.
+- Import adapter for Obsidian RPG Manager vault metadata/codeblocks, mapping
+  their elements into CampaignRepo pages, relationships, sessions, and custom
+  properties.
+
 ## Deferred Feature Track: Per-Game Sheet & Template Pass - L
 
 This remains important, but it should resume after the reliability and sync
@@ -583,6 +608,13 @@ flow.
 Self-hosted Docker remains the core path. A managed option may eventually help
 non-technical groups, but should not compromise the own-your-data model.
 
+### I. Narrative prep and clue workflows - M-L
+
+Build on the started session-readiness work: scene pacing summaries in session
+lists and dashboards, clue trails as first-class prep objects, GM task boards,
+and creation wizards for high-friction prep jobs. Keep the data portable by
+storing these as Markdown/YAML/frontmatter, not opaque app state.
+
 ## Recommended Next Release Sequence
 
 ### Release 1.2 - Reliability and repair
@@ -629,3 +661,5 @@ non-technical groups, but should not compromise the own-your-data model.
 3. Performance budgets, virtualized lists, thumbnails, and large-campaign
    testing.
 4. Re-import previews, Foundry module sync research, and extension rules.
+5. Expand session readiness into clue trails, prep tasks, and guided creation
+   wizards.

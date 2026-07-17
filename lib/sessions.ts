@@ -3,8 +3,9 @@ import { getStorageAdapter } from "@/lib/storage";
 import { slugify } from "@/lib/slug";
 import type { Campaign } from "@/lib/types";
 import type { WorldDate } from "@/lib/calendar";
+import { normalizeSceneType, type SceneType } from "@/lib/session-readiness";
 
-export type AgendaItem = { text: string; done: boolean };
+export type AgendaItem = { text: string; done: boolean; sceneType?: SceneType; duration?: number; externalAction?: boolean };
 export type AssetLink = { label: string; url: string };
 export type Attendee = { name: string; status: "present" | "late" | "left-early" | "absent" };
 export type Thread = { text: string; done: boolean };
@@ -25,6 +26,7 @@ export type SessionFrontmatter = {
   locations: string[];
   threads: Thread[];
   pinned: string[];
+  handouts: string[];
 };
 
 export type Session = { slug: string; sha?: string; frontmatter: SessionFrontmatter; notes: string };
@@ -47,7 +49,18 @@ export function parseSession(slug: string, text: string, sha?: string): Session 
   }
 
   const agenda = Array.isArray(fm.agenda)
-    ? (fm.agenda as unknown[]).map((a) => ({ text: String((a as AgendaItem)?.text ?? ""), done: Boolean((a as AgendaItem)?.done) }))
+    ? (fm.agenda as unknown[]).map((a) => {
+        const raw = a as AgendaItem;
+        const sceneType = normalizeSceneType(raw?.sceneType);
+        const duration = Number(raw?.duration);
+        return {
+          text: String(raw?.text ?? ""),
+          done: Boolean(raw?.done),
+          ...(sceneType ? { sceneType } : {}),
+          ...(Number.isFinite(duration) && duration > 0 ? { duration: Math.round(duration) } : {}),
+          ...(raw?.externalAction ? { externalAction: true } : {})
+        };
+      })
     : [];
 
   const attendees = Array.isArray(fm.attendees)
@@ -92,7 +105,8 @@ export function parseSession(slug: string, text: string, sha?: string): Session 
       npcs: Array.isArray(fm.npcs) ? (fm.npcs as unknown[]).map(String) : [],
       locations: Array.isArray(fm.locations) ? (fm.locations as unknown[]).map(String) : [],
       threads,
-      pinned: Array.isArray(fm.pinned) ? (fm.pinned as unknown[]).map(String) : []
+      pinned: Array.isArray(fm.pinned) ? (fm.pinned as unknown[]).map(String) : [],
+      handouts: Array.isArray(fm.handouts) ? (fm.handouts as unknown[]).map(String) : []
     },
     notes
   };
@@ -108,12 +122,19 @@ export function serializeSession(frontmatter: SessionFrontmatter, notes: string)
   if (frontmatter.arc) fm.arc = frontmatter.arc;
   if (frontmatter.attendees.length) fm.attendees = frontmatter.attendees;
   if (frontmatter.assets.length) fm.assets = frontmatter.assets;
-  fm.agenda = frontmatter.agenda;
+  fm.agenda = frontmatter.agenda.map((item) => ({
+    text: item.text,
+    done: item.done,
+    ...(item.sceneType ? { sceneType: item.sceneType } : {}),
+    ...(item.duration ? { duration: item.duration } : {}),
+    ...(item.externalAction ? { externalAction: true } : {})
+  }));
   if (frontmatter.summary) fm.summary = frontmatter.summary;
   if (frontmatter.npcs.length) fm.npcs = frontmatter.npcs;
   if (frontmatter.locations.length) fm.locations = frontmatter.locations;
   if (frontmatter.threads.length) fm.threads = frontmatter.threads;
   if (frontmatter.pinned.length) fm.pinned = frontmatter.pinned;
+  if (frontmatter.handouts.length) fm.handouts = frontmatter.handouts;
   return `---\n${YAML.stringify(fm)}---\n\n${notes.trim()}\n`;
 }
 
@@ -134,7 +155,7 @@ export async function getSession(campaign: Campaign, slug: string, userToken?: s
 export async function createSession(campaign: Campaign, title: string, date?: string, userToken?: string | null): Promise<Session> {
   const storage = adapterFor(campaign, userToken);
   const slug = slugify(title) || `session-${Date.now()}`;
-  const frontmatter: SessionFrontmatter = { title, date, attendees: [], assets: [], agenda: [], npcs: [], locations: [], threads: [], pinned: [] };
+  const frontmatter: SessionFrontmatter = { title, date, attendees: [], assets: [], agenda: [], npcs: [], locations: [], threads: [], pinned: [], handouts: [] };
   await storage.putFile(`${sessionsDir}/${slug}.md`, serializeSession(frontmatter, ""), `CampaignRepo: create session ${title}`);
   return { slug, frontmatter, notes: "" };
 }
