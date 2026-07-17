@@ -7,6 +7,7 @@ import { slugify } from "@/lib/slug";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
 import { upsertPageInCache } from "@/lib/page-cache";
+import { optimizeImageUpload } from "@/lib/media-optimize";
 import { getStorageAdapter, isNotFoundError, type StorageAdapter } from "@/lib/storage";
 import type { Campaign, CampaignGraphEdge, CampaignGraphNode, CampaignMedia, CampaignTimelineItem, Category, GameType, WikiPage, WikiTemplate } from "@/lib/types";
 
@@ -396,9 +397,11 @@ export async function POST(req: Request) {
       requireManage(user.id, campaign);
       const storage = storageFor(campaign);
       if (!args.base64) throw new Error("base64 file contents are required");
-      const fileName = safeMediaName(args.fileName || "upload");
+      const raw64 = String(args.base64).replace(/^data:[^;]+;base64,/, "");
+      const optimized = await optimizeImageUpload(raw64, safeMediaName(args.fileName || "upload"));
+      const fileName = safeMediaName(optimized.fileName);
       const path = `wiki/media/${fileName}`;
-      const base64 = String(args.base64).replace(/^data:[^;]+;base64,/, "");
+      const base64 = optimized.base64;
       let existingSha: string | undefined;
       try {
         const existing = await storage.getTextFile(path);

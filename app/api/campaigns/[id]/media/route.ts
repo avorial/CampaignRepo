@@ -6,6 +6,7 @@ import { getStorageAdapter, isNotFoundError, type StorageAdapter } from "@/lib/s
 import { slugify } from "@/lib/slug";
 import type { Campaign, CampaignMedia } from "@/lib/types";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
+import { optimizeImageUpload } from "@/lib/media-optimize";
 
 export const dynamic = "force-dynamic";
 
@@ -156,10 +157,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const storage = getStorageAdapter(campaign, user.githubToken);
   if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const input = uploadSchema.parse(await req.json());
-  const name = cleanFileName(input.fileName);
-  const type = mediaType(name, input.mimeType);
+  // Shrink at the door: raster uploads become capped WebP before the repo
+  // ever sees them (media strategy rung 1).
+  const optimized = await optimizeImageUpload(input.base64, cleanFileName(input.fileName));
+  const name = cleanFileName(optimized.fileName);
+  const type = mediaType(name, optimized.converted ? "image/webp" : input.mimeType);
   const path = mediaPathFor(name);
-  await storage.putBase64File(path, input.base64, `CampaignRepo: upload media ${name}`);
+  await storage.putBase64File(path, optimized.base64, `CampaignRepo: upload media ${name}`);
   const uploaded = await storage.getContent(path);
   const metadataFile = await readMetadata(storage);
   const metadata = { ...metadataFile.metadata, [path]: { alt: input.alt || name, caption: input.caption || "", tags: input.tags } };

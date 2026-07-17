@@ -341,10 +341,12 @@ the cost is clone/pull weight and history growth from re-uploaded images.
 
 Options, in the order they should be tried:
 
-1. **Shrink at the door (S, do first regardless).** Convert uploads to WebP
-   and cap dimensions (~1600px) server-side before committing; keep a strict
-   size warning in health (already present). Cuts typical Foundry portrait
-   uploads 5–10× with no architectural change and no portability loss.
+1. **Shrink at the door (S) — shipped.** Raster uploads (png/jpg/webp) are
+   converted to WebP (quality 82) and capped at 1600px on the longest edge
+   before they are committed, in both the app upload and MCP upload_media.
+   Small in-bounds images and files where WebP would not actually shrink them
+   pass through untouched, as do gif/svg/pdf/audio and undecodable data. The
+   repo only ever sees the small version.
 2. **History cleanup, one-time (S, tooling exists).** `git filter-repo` sweep
    per repo dropping superseded media blobs and old fat snapshots from
    history, with bundle backups first. Fixes the past; option 1 fixes the
