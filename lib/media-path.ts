@@ -5,17 +5,20 @@ export function cleanFileName(fileName: string) {
   const lastDot = fileName.lastIndexOf(".");
   const ext = lastDot >= 0 ? fileName.slice(lastDot).toLowerCase().replace(/[^.a-z0-9]/g, "") : "";
   const base = lastDot >= 0 ? fileName.slice(0, lastDot) : fileName;
-  return `${slugify(base)}${ext}`;
+  // "file" keeps a name like ".png" from losing its base entirely.
+  return `${slugify(base, "file")}${ext}`;
 }
 
 /**
  * Sanitize an optional folder path under wiki/media.
  *
- * Segments are filtered *before* slugify() because slugify falls back to
- * "untitled" for input with no usable characters — running it on an absent or
- * empty folder produced a literal `wiki/media/untitled/` directory for every
- * upload, and the returned markdown still pointed at `wiki/media/<file>`, so
- * uploaded images rendered broken.
+ * Segments with no usable characters are dropped before slugify() so an absent
+ * or empty folder yields "" and the file lands directly in wiki/media.
+ *
+ * This previously produced a literal `wiki/media/untitled/` directory for every
+ * upload: slugify() hard-coded an "untitled" fallback, which is truthy and so
+ * survived the filter. The returned markdown still pointed at
+ * `wiki/media/<file>`, so uploaded images rendered broken.
  */
 export function cleanFolder(folder?: string) {
   return String(folder || "")

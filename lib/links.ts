@@ -36,7 +36,7 @@ export function aliasMapFromPages(pages: WikiPage[]): Map<string, string> {
 
 /** Resolve a `[[target]]` to a canonical slug, falling back to slugify. */
 export function resolveTarget(aliasMap: Map<string, string>, target: string): string {
-  return aliasMap.get(target.trim().toLowerCase()) || slugify(target);
+  return aliasMap.get(target.trim().toLowerCase()) || slugify(target, "untitled");
 }
 
 /** Resolve a link target and report whether it points at a known page. */

@@ -92,7 +92,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   for (const file of input.files) {
     const { title, body, category, visibility, approvalStatus } = convertDocument(file, input.category, input.visibility, input.approvalStatus);
-    const slug = slugify(title);
+    const slug = slugify(title) || `gdoc-${Date.now()}`;
     const path = `wiki/pages/${slug}.md`;
     try {
       let sha: string | undefined;
@@ -118,7 +118,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     } catch (err) {
       errors++;
       const msg = isConflictError(err) ? "Conflict — try again" : (err instanceof Error ? err.message : "Unknown error");
-      results.push({ slug: slugify(title), name: title, created: false, error: msg });
+      results.push({ slug, name: title, created: false, error: msg });
     }
   }
 

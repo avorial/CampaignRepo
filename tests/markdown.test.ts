@@ -14,7 +14,9 @@ describe("slug", () => {
   it("slugifies and round-trips a title (case preserved)", () => {
     expect(slugify("Avery Stone")).toBe("Avery-Stone");
     expect(slugify("  The Lantern File!  ")).toBe("The-Lantern-File");
-    expect(slugify("")).toBe("untitled");
+    // Unusable input yields "" so callers' own fallbacks actually run.
+    expect(slugify("")).toBe("");
+    expect(slugify("", "untitled")).toBe("untitled");
     expect(titleFromSlug("Avery-Stone")).toBe("Avery Stone");
   });
 });

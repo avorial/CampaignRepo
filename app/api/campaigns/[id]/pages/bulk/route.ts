@@ -61,33 +61,38 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return fullFile;
   }
   const parentByInput = new Map<string, string>();
+  // slugify() yields "" for input with no usable characters. An empty key would
+  // let an unusable requested parent match an arbitrary page, so never store or
+  // look one up.
+  const rememberParent = (key: string, slug: string) => { if (key) parentByInput.set(key, slug); };
+  const findParent = (key: string) => (key ? parentByInput.get(key) : undefined);
   for (const file of files) {
     const slug = file.name.replace(/\.md$/, "");
-    parentByInput.set(slug.toLowerCase(), slug);
-    parentByInput.set(slugify(slug), slug);
+    rememberParent(slug.toLowerCase(), slug);
+    rememberParent(slugify(slug), slug);
     if (file.text) {
       const page = parsePage(slug, file.text, file.sha);
-      parentByInput.set(page.frontmatter.name.toLowerCase(), slug);
-      parentByInput.set(slugify(page.frontmatter.name), slug);
+      rememberParent(page.frontmatter.name.toLowerCase(), slug);
+      rememberParent(slugify(page.frontmatter.name), slug);
       for (const alias of page.frontmatter.aliases || []) {
-        parentByInput.set(String(alias).toLowerCase(), slug);
-        parentByInput.set(slugify(String(alias)), slug);
+        rememberParent(String(alias).toLowerCase(), slug);
+        rememberParent(slugify(String(alias)), slug);
       }
     }
   }
   const requestedParent = input.set?.parent?.trim();
-  if (requestedParent && requestedParent !== "__clear__" && !parentByInput.has(requestedParent.toLowerCase()) && !parentByInput.has(slugify(requestedParent))) {
+  if (requestedParent && requestedParent !== "__clear__" && !findParent(requestedParent.toLowerCase()) && !findParent(slugify(requestedParent))) {
     for (const file of files) {
       const slug = file.name.replace(/\.md$/, "");
       const fullFile = await getFullFile(file);
       const page = parsePage(slug, fullFile.text, fullFile.sha);
-      parentByInput.set(page.frontmatter.name.toLowerCase(), slug);
-      parentByInput.set(slugify(page.frontmatter.name), slug);
+      rememberParent(page.frontmatter.name.toLowerCase(), slug);
+      rememberParent(slugify(page.frontmatter.name), slug);
       for (const alias of page.frontmatter.aliases || []) {
-        parentByInput.set(String(alias).toLowerCase(), slug);
-        parentByInput.set(slugify(String(alias)), slug);
+        rememberParent(String(alias).toLowerCase(), slug);
+        rememberParent(slugify(String(alias)), slug);
       }
-      if (parentByInput.has(requestedParent.toLowerCase()) || parentByInput.has(slugify(requestedParent))) break;
+      if (findParent(requestedParent.toLowerCase()) || findParent(slugify(requestedParent))) break;
     }
   }
   const updates: { path: string; content: string }[] = [];
@@ -97,8 +102,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!wanted.has(slug)) continue;
     const fullFile = await getFullFile(file);
     const page = parsePage(slug, fullFile.text, fullFile.sha);
-    parentByInput.set(page.frontmatter.name.toLowerCase(), slug);
-    parentByInput.set(slugify(page.frontmatter.name), slug);
+    rememberParent(page.frontmatter.name.toLowerCase(), slug);
+    rememberParent(slugify(page.frontmatter.name), slug);
     const fm = { ...page.frontmatter, lastEditedBy: `${user.name} via bulk edit` };
     if (input.set?.category) { fm.category = input.set.category; fm.type = input.set.category; }
     if (input.set?.visibility) { fm.visibility = input.set.visibility; fm.knownToPlayers = input.set.visibility === "players"; }
@@ -107,7 +112,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       if (input.set.parent === "") delete fm.parent;
       else {
         const requestedParent = input.set.parent.trim();
-        const resolvedParent = parentByInput.get(requestedParent.toLowerCase()) || parentByInput.get(slugify(requestedParent));
+        const resolvedParent = findParent(requestedParent.toLowerCase()) || findParent(slugify(requestedParent));
         fm.parent = resolvedParent || requestedParent;
       }
     }

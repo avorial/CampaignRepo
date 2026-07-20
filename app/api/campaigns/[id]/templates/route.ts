@@ -57,7 +57,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const storage = getStorageAdapter(campaign, user.githubToken);
   if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const input = createSchema.parse(await req.json());
-  const slug = slugify(input.name);
+  const slug = slugify(input.name) || "template";
   const frontmatter = { ...defaultFrontmatter(input.name, input.category, "gm"), summary: input.summary || "", tags: input.tags.length ? input.tags : ["template", input.category] };
   const content = input.content?.trim() || starterBody(input.name, input.category, input.gameType as GameType);
   const path = `wiki/templates/${templateDirName(input.gameType)}/${slug}.md`;

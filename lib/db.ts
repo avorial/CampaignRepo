@@ -456,7 +456,9 @@ export type PublicSiteRow = {
 
 function normalizePublicSlug(value?: string | null) {
   const clean = slugify(value || "").toLowerCase();
-  if (!clean || clean === "untitled") return "";
+  // slugify() now yields "" for unusable input, so the old "untitled"
+  // sentinel check is gone — a link genuinely named "untitled" is fine.
+  if (!clean) return "";
   if (clean.length < 3) throw new Error("Public link name must be at least 3 characters.");
   if (clean === "site" || clean === "api" || clean === "dashboard" || clean === "campaigns") {
     throw new Error("That public link name is reserved.");

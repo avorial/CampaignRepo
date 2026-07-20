@@ -296,7 +296,7 @@ export async function POST(req: Request) {
       if (!canManageCampaign(user.id, campaign.id)) throw new Error("Forbidden");
       const storage = storageFor(campaign);
       const title = String(args.name || "AI Draft");
-      const slug = slugify(title);
+      const slug = slugify(title) || "untitled";
       const fm = { ...defaultFrontmatter(title, args.category || "npc", "gm"), approvalStatus: "unapproved" as const, lastEditedBy: "AI via MCP" };
       const content = args.content || starterBody(title, fm.category, campaign.gameType as any);
       const pageText = serializePage(fm, content);
@@ -315,7 +315,7 @@ export async function POST(req: Request) {
       const slugs: string[] = [];
       const files = input.map((p: any) => {
         const title = String(p?.name || "AI Draft");
-        const slug = slugify(title);
+        const slug = slugify(title) || "untitled";
         slugs.push(slug);
         const fm = { ...defaultFrontmatter(title, p?.category || "npc", "gm"), approvalStatus: "unapproved" as const, lastEditedBy: "AI via MCP" };
         const content = p?.content || starterBody(title, fm.category, campaign.gameType as any);
@@ -378,7 +378,7 @@ export async function POST(req: Request) {
       const templateName = String(args.name || "AI Template");
       const gameType = gameTypes.includes(args.gameType) ? (args.gameType as GameType) : (campaign.gameType as GameType);
       const category = ((categoryIds as readonly string[]).includes(args.category) ? args.category : "npc") as Category;
-      const slug = slugify(templateName);
+      const slug = slugify(templateName) || "template";
       const frontmatter = { ...defaultFrontmatter(templateName, category, "gm"), summary: String(args.summary || ""), tags: Array.isArray(args.tags) ? args.tags.map(String) : ["template", category], approvalStatus: "approved" as const, lastEditedBy: "AI via MCP" };
       const content = String(args.content || starterBody(templateName, category, gameType));
       const path = `wiki/templates/${templateDirName(gameType)}/${slug}.md`;

@@ -152,7 +152,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
   try {
     const input = schema.parse(await req.json());
-    const slug = slugify(input.name);
+    const slug = slugify(input.name) || "untitled";
     const pagePath = `wiki/pages/${slug}.md`;
     try {
       await storage.getTextFile(pagePath);

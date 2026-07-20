@@ -114,7 +114,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const input = upsertSchema.parse(await req.json());
-  const slug = input.slug || slugify(input.name);
+  const slug = input.slug || slugify(input.name) || "map";
   const path = `wiki/maps/${slug}.json`;
   let sha: string | undefined;
   try {

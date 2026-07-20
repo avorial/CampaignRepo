@@ -100,7 +100,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!storage) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const input = schema.parse(await req.json());
   const name = importName(input.sourceJson, input.mapping);
-  const slug = slugify(name);
+  const slug = slugify(name) || `character-${Date.now()}`;
   const sourceId = String(input.sourceJson._id || input.sourceJson.id || slug);
   const sourcePath = `wiki/imports/characters/${input.source}/${sourceId}.json`;
   const hash = sourceHash(input.sourceJson);
