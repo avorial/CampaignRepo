@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getStorageAdapter, isNotFoundError, type StorageAdapter } from "@/lib/storage";
-import { slugify } from "@/lib/slug";
+import { cleanFileName, cleanFolder, mediaNameFromPath, mediaPathFor } from "@/lib/media-path";
 import type { Campaign, CampaignMedia } from "@/lib/types";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
 import { optimizeImageUpload } from "@/lib/media-optimize";
@@ -51,30 +51,6 @@ function mediaType(name: string, mimeType?: string): CampaignMedia["mediaType"] 
   return "other";
 }
 
-function cleanFileName(fileName: string) {
-  const lastDot = fileName.lastIndexOf(".");
-  const ext = lastDot >= 0 ? fileName.slice(lastDot).toLowerCase().replace(/[^.a-z0-9]/g, "") : "";
-  const base = lastDot >= 0 ? fileName.slice(0, lastDot) : fileName;
-  return `${slugify(base)}${ext}`;
-}
-
-function cleanFolder(folder?: string) {
-  return String(folder || "")
-    .split("/")
-    .map((part) => slugify(part.trim()))
-    .filter(Boolean)
-    .join("/");
-}
-
-function mediaNameFromPath(path: string) {
-  return path.replace(/^wiki\/media\//, "");
-}
-
-function mediaPathFor(name: string, folder?: string) {
-  const clean = cleanFolder(folder);
-  return `wiki/media/${clean ? `${clean}/` : ""}${name}`;
-}
-
 function encodeMediaPath(name: string) {
   return name.split("/").map(encodeURIComponent).join("/");
 }
@@ -120,6 +96,9 @@ function proxyMediaUrl(campaignId: number, path: string) {
 
 function toMedia(campaignId: number, entry: { name: string; path: string; sha: string; size?: number; downloadUrl?: string }, metadata: MediaMetadata = {}): CampaignMedia {
   const type = mediaType(entry.name);
+  // Link markdown must carry the folder too — a file in wiki/media/maps/ links
+  // as /wiki/media/maps/<file>, not /wiki/media/<file>.
+  const relative = mediaNameFromPath(entry.path);
   return {
     name: entry.name,
     path: entry.path,
@@ -130,7 +109,7 @@ function toMedia(campaignId: number, entry: { name: string; path: string; sha: s
     alt: metadata.alt,
     caption: metadata.caption,
     tags: metadata.tags || [],
-    markdown: markdownFor(entry.name, type, metadata.alt)
+    markdown: markdownFor(relative, type, metadata.alt)
   };
 }
 
