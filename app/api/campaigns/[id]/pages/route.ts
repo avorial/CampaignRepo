@@ -9,6 +9,7 @@ import { defaultFrontmatter, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
 import { sweepPendingJobs } from "@/lib/jobs";
+import { loadMutedTags } from "@/lib/muted-tags";
 import { listDirtySlugs, listPageConflicts } from "@/lib/sync-queue";
 import {
   isRemoteCheckFresh,
@@ -130,8 +131,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const sync = isPlayerMode
     ? undefined
     : { dirty: listDirtySlugs(campaign.id), conflicts: listPageConflicts(campaign.id).map((conflict) => conflict.slug) };
+  // Muted tags are advisory: every page is still returned, so the graph, bulk
+  // tools, and repair keep seeing the full set. Only nav and search hide them.
+  const mutedTags = await loadMutedTags(campaign, user.githubToken).catch(() => [] as string[]);
   return NextResponse.json({
     pages: visiblePages,
+    mutedTags,
     sync,
     cache: {
       cached: !waitForRefresh,

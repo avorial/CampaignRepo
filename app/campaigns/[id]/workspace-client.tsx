@@ -58,6 +58,8 @@ const CAMPAIGN_PAGE_SLUG = "campaign";
 export default function CampaignClient({ campaign, categories }: { campaign: Campaign; categories: { id: string; label: string }[] }) {
   const [campaignCategories, setCampaignCategories] = useState(categories);
   const [pages, setPages] = useState<WikiPage[]>([]);
+  const [mutedTags, setMutedTags] = useState<string[]>([]);
+  const [showMuted, setShowMuted] = useState(false);
   const [templates, setTemplates] = useState<WikiTemplate[]>([]);
   const [media, setMedia] = useState<CampaignMedia[]>([]);
   const [graph, setGraph] = useState<{ nodes: CampaignGraphNode[]; edges: CampaignGraphEdge[]; timeline: CampaignTimelineItem[] }>({ nodes: [], edges: [], timeline: [] });
@@ -140,6 +142,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     const themeData = themeRes && themeRes.ok ? await themeRes.json() : { theme: {} };
     const categoriesData = categoriesRes && categoriesRes.ok ? await categoriesRes.json() : { categories };
     setPages(pagesData.pages || []);
+    setMutedTags(pagesData.mutedTags || []);
     setSyncState(pagesData.sync || null);
     setGraph({ nodes: graphData.nodes || [], edges: graphData.edges || [], timeline: graphData.timeline || [] });
     setSetup(setupData.markdown || "");
@@ -615,7 +618,15 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     }
   }
   const parentPageFor = (parent?: string) => parent ? pageByParentRef.get(parent.toLowerCase()) || pageByParentRef.get(pageLookupKey(parent)) : undefined;
-  const sortedPages = [...pages].sort((a, b) => a.frontmatter.name.localeCompare(b.frontmatter.name));
+  // Muted tags hide bulk-generated pages from navigation only. `pages` stays
+  // complete so the graph, bulk edit, review queue, and repair see everything.
+  // An entry is a bare tag ("generated") or a category selector ("category:item").
+  const isMuted = (page: WikiPage) => mutedTags.length > 0
+    && (mutedTags.includes(`category:${String(page.frontmatter.category || "").trim().toLowerCase()}`)
+      || (page.frontmatter.tags || []).some((tag) => mutedTags.includes(String(tag).trim().toLowerCase())));
+  const mutedCount = mutedTags.length ? pages.filter(isMuted).length : 0;
+  const navPages = showMuted || !mutedCount ? pages : pages.filter((page) => !isMuted(page));
+  const sortedPages = [...navPages].sort((a, b) => a.frontmatter.name.localeCompare(b.frontmatter.name));
   // A child nests under its parent only when both share a category.
   const childrenByParent = new Map<string, WikiPage[]>();
   for (const page of sortedPages) {
@@ -690,6 +701,14 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
       </div>
     );
   });
+  const mutedNotice = mutedCount > 0 ? (
+    <button type="button" className="nav-muted-toggle" onClick={() => setShowMuted((s) => !s)}
+      title={`Pages tagged ${mutedTags.join(", ")} are hidden from navigation and search. They still exist and open by direct link.`}>
+      {showMuted
+        ? `Hide ${mutedCount.toLocaleString()} muted page${mutedCount === 1 ? "" : "s"}`
+        : `${mutedCount.toLocaleString()} muted page${mutedCount === 1 ? "" : "s"} hidden — show`}
+    </button>
+  ) : null;
   const mediaFilterLc = mediaFilter.trim().toLowerCase();
   const filteredMedia = media.filter((item) =>
     !mediaFilterLc || [item.name, item.path, item.mediaType, item.alt, item.caption, ...(item.tags || [])].filter(Boolean).join(" ").toLowerCase().includes(mediaFilterLc)
@@ -793,6 +812,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
           </button>
         ) : null}
         {navTree}
+        {mutedNotice}
         {canManage && (
           <Link href={`/campaigns/${campaign.id}/boards`} className="nav-link nav-tool-link" aria-label="Boards"><span aria-hidden="true">🗂</span> Boards</Link>
         )}

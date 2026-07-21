@@ -1136,6 +1136,26 @@ button.nav-link.active {
   font-size: var(--text-label-sm);
 }
 
+.nav-muted-toggle {
+  width: 100%;
+  margin-top: 10px;
+  padding: 6px 8px;
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--border-subtle, var(--bg-elevated));
+  border-radius: 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-label-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.nav-muted-toggle:hover {
+  color: var(--gold);
+  border: 0;
+  border-top: 1px solid var(--border-subtle, var(--bg-elevated));
+}
+
 .nav-tree-row {
   display: flex;
   align-items: center;
