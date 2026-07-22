@@ -1634,6 +1634,147 @@ function expandSwordChronicleSheets(content: string) {
   });
 }
 
+// ---- ALIEN RPG (Year Zero) character sheet ----
+
+/**
+ * Four attributes, each parenting three skills, exactly as the printed sheet
+ * groups them. Display-only, like every other sheet renderer here.
+ */
+const ALIEN_ATTRS: { key: string; label: string; skills: { key: string; label: string }[] }[] = [
+  { key: "strength", label: "Strength", skills: [
+    { key: "close_combat", label: "Close Combat" },
+    { key: "heavy_machinery", label: "Heavy Machinery" },
+    { key: "stamina", label: "Stamina" }] },
+  { key: "agility", label: "Agility", skills: [
+    { key: "ranged_combat", label: "Ranged Combat" },
+    { key: "mobility", label: "Mobility" },
+    { key: "piloting", label: "Piloting" }] },
+  { key: "wits", label: "Wits", skills: [
+    { key: "observation", label: "Observation" },
+    { key: "survival", label: "Survival" },
+    { key: "comtech", label: "Comtech" }] },
+  { key: "empathy", label: "Empathy", skills: [
+    { key: "command", label: "Command" },
+    { key: "manipulation", label: "Manipulation" },
+    { key: "medical_aid", label: "Medical Aid" }] }
+];
+
+const ALIEN_CONDITIONS = ["starving", "dehydrated", "exhausted", "freezing"];
+const ALIEN_CONSUMABLES = ["air", "food", "power", "water"];
+
+function alienNum(value: unknown): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function renderAlienSheetHtml(rawInput: string): string {
+  let sheet: Record<string, any>;
+  try {
+    sheet = (yaml.parse(rawInput.trim()) || {}) as Record<string, any>;
+  } catch (error) {
+    return `<section class="alien-sheet alien-sheet-error"><p>ALIEN sheet data could not be parsed: ${escapeHtml(error instanceof Error ? error.message : "invalid YAML")}</p></section>`;
+  }
+
+  const attrs = sheet.attributes || {};
+  const skills = sheet.skills || {};
+  const esc = (v: unknown) => escapeHtml(String(v ?? ""));
+
+  const pips = (filled: number, total: number, cls: string) =>
+    Array.from({ length: total }, (_, i) =>
+      `<span class="alien-pip${i < filled ? ` alien-pip-on ${cls}` : ""}"></span>`).join("");
+
+  const attrBlocks = ALIEN_ATTRS.map((group) => {
+    const rows = group.skills.map((s) =>
+      `<div class="alien-skill"><span>${esc(s.label)}</span><b>${alienNum(skills[s.key])}</b></div>`).join("");
+    return `<div class="alien-attr">
+      <div class="alien-attr-head"><span>${esc(group.label)}</span><b>${alienNum(attrs[group.key])}</b></div>
+      ${rows}
+    </div>`;
+  }).join("");
+
+  const list = (items: unknown, empty: string) => {
+    const arr = Array.isArray(items) ? items.filter(Boolean) : [];
+    if (!arr.length) return `<p class="alien-empty">${esc(empty)}</p>`;
+    return `<ul class="alien-list">${arr.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>`;
+  };
+
+  const weapons = Array.isArray(sheet.weapons) ? sheet.weapons : [];
+  const weaponRows = weapons.length
+    ? weapons.map((w: any) => `<tr><td>${esc(w?.name)}</td><td>${esc(w?.bonus ?? "")}</td><td>${esc(w?.damage ?? "")}</td><td>${esc(w?.range ?? "")}</td></tr>`).join("")
+    : `<tr><td colspan="4" class="alien-empty">No weapons carried.</td></tr>`;
+
+  const conditions = ALIEN_CONDITIONS.map((c) => {
+    const on = Boolean(sheet.conditions && sheet.conditions[c]);
+    return `<span class="alien-cond${on ? " alien-cond-on" : ""}">${esc(c)}</span>`;
+  }).join("");
+
+  const consumables = ALIEN_CONSUMABLES.map((c) => {
+    const v = sheet.consumables ? sheet.consumables[c] : undefined;
+    return `<div class="alien-consumable"><span>${esc(c)}</span><b>${v == null ? "—" : esc(v)}</b></div>`;
+  }).join("");
+
+  const health = alienNum(sheet.health);
+  const healthMax = alienNum(sheet.health_max) || Math.max(health, alienNum(attrs.strength) || 3);
+  const stress = alienNum(sheet.stress);
+  const radiation = alienNum(sheet.radiation);
+
+  return `<section class="alien-sheet">
+  <header class="alien-head">
+    <div>
+      <h3>${esc(sheet.name || "Unnamed Crew")}</h3>
+      <p class="alien-career">${esc(sheet.career || "")}${sheet.appearance ? ` · ${esc(sheet.appearance)}` : ""}</p>
+    </div>
+    <div class="alien-points">
+      <span>XP <b>${alienNum(sheet.experience)}</b></span>
+      <span>Story <b>${alienNum(sheet.story_points)}</b></span>
+    </div>
+  </header>
+
+  <div class="alien-tracks">
+    <div class="alien-track"><span>Health</span><div class="alien-pips">${pips(health, healthMax, "alien-pip-health")}</div><b>${health}/${healthMax}</b></div>
+    <div class="alien-track"><span>Stress</span><div class="alien-pips">${pips(stress, 10, "alien-pip-stress")}</div><b>${stress}</b></div>
+    <div class="alien-track"><span>Radiation</span><div class="alien-pips">${pips(radiation, 10, "alien-pip-rad")}</div><b>${radiation}</b></div>
+  </div>
+
+  <div class="alien-grid">${attrBlocks}</div>
+
+  <div class="alien-cols">
+    <div class="alien-panel"><h4>Talents</h4>${list(sheet.talents, "No talents yet.")}</div>
+    <div class="alien-panel"><h4>Personal Agenda</h4><p>${esc(sheet.agenda || "Undeclared.")}</p></div>
+    <div class="alien-panel"><h4>Relationships</h4>
+      <div class="alien-rel"><span>Buddy</span><b>${esc(sheet.buddy || "—")}</b></div>
+      <div class="alien-rel"><span>Rival</span><b>${esc(sheet.rival || "—")}</b></div>
+    </div>
+  </div>
+
+  <div class="alien-panel">
+    <h4>Weapons</h4>
+    <table class="alien-table"><thead><tr><th>Weapon</th><th>Bonus</th><th>Damage</th><th>Range</th></tr></thead><tbody>${weaponRows}</tbody></table>
+    <div class="alien-armor"><span>Armor</span><b>${esc(sheet.armor || "None")}</b><span>Rating</span><b>${alienNum(sheet.armor_rating)}</b></div>
+  </div>
+
+  <div class="alien-cols">
+    <div class="alien-panel"><h4>Conditions</h4><div class="alien-conds">${conditions}</div></div>
+    <div class="alien-panel"><h4>Consumables</h4><div class="alien-consumables">${consumables}</div></div>
+  </div>
+
+  <div class="alien-cols">
+    <div class="alien-panel"><h4>Gear</h4>${list(sheet.gear, "Nothing but the jumpsuit.")}</div>
+    <div class="alien-panel"><h4>Signature Item</h4><p>${esc(sheet.signature_item || "—")}</p>
+      ${sheet.critical_injuries ? `<h4>Critical Injuries</h4>${list(sheet.critical_injuries, "None.")}` : ""}
+    </div>
+  </div>
+  ${sheet.notes ? `<p class="alien-notes">${esc(sheet.notes)}</p>` : ""}
+</section>`;
+}
+
+/** Expand fenced `alien-sheet` YAML blocks into the ALIEN RPG character sheet. */
+function expandAlienSheets(content: string) {
+  return content.replace(/```alien-sheet\s*\n([\s\S]*?)```/g, (_match, inner) => {
+    return `\n\n${compactSheetHtml(renderAlienSheetHtml(String(inner)))}\n\n`;
+  });
+}
+
 // ══ Inventory block ═══════════════════════════════════════════════════════════
 
 type InventoryItem = { name?: string; qty?: number | string; weight?: number | string; value?: string; notes?: string };
@@ -1763,6 +1904,7 @@ export function renderMarkdown(
   content = expandWoDSheets(content);
   content = expandDnDSheets(content);
   content = expandSwordChronicleSheets(content);
+  content = expandAlienSheets(content);
   content = expandInventory(content);
   content = expandTrackers(content);
   content = expandTraits(content);
