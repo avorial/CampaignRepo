@@ -2081,6 +2081,486 @@ function expandPendragonSheets(content: string) {
     `\n\n${compactSheetHtml(renderPendragonSheetHtml(String(inner)))}\n\n`);
 }
 
+// ---- Shared helpers for the remaining system sheets ----
+
+function sheetYaml(raw: string, cls: string, label: string): { sheet?: Record<string, any>; error?: string } {
+  try {
+    return { sheet: (yaml.parse(raw.trim()) || {}) as Record<string, any> };
+  } catch (error) {
+    return { error: `<section class="${cls} ${cls}-error"><p>${escapeHtml(label)} sheet data could not be parsed: ${escapeHtml(error instanceof Error ? error.message : "invalid YAML")}</p></section>` };
+  }
+}
+
+const shNum = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+const shEsc = (v: unknown) => escapeHtml(String(v ?? ""));
+/** Current value defaults to its maximum: unspecified means unhurt, not dead. */
+const shCurrent = (cur: unknown, max: number) => (cur != null ? shNum(cur) : max);
+
+function shList(items: unknown, empty: string, cls: string) {
+  const arr = Array.isArray(items) ? items.filter(Boolean) : [];
+  return arr.length
+    ? `<ul class="${cls}-list">${arr.map((i) => `<li>${shEsc(i)}</li>`).join("")}</ul>`
+    : `<p class="${cls}-empty">${shEsc(empty)}</p>`;
+}
+
+// ---- Fate Core character sheet ----
+
+const FATE_LADDER: [number, string][] = [
+  [5, "Superb"], [4, "Great"], [3, "Good"], [2, "Fair"], [1, "Average"]
+];
+
+function renderFateSheetHtml(rawInput: string): string {
+  const { sheet, error } = sheetYaml(rawInput, "fate-sheet", "Fate Core");
+  if (error || !sheet) return error!;
+
+  // Skills are grouped by rung so the ladder reads the way the sheet prints it.
+  const skills = sheet.skills || {};
+  const byRank = new Map<number, string[]>();
+  for (const [name, value] of Object.entries(skills)) {
+    const r = shNum(value);
+    if (!byRank.has(r)) byRank.set(r, []);
+    byRank.get(r)!.push(titleize(name));
+  }
+  const ladder = FATE_LADDER.map(([rank, label]) => {
+    const names = (byRank.get(rank) || []).sort();
+    return `<div class="fate-rung"><span>${shEsc(label)} (+${rank})</span><b>${names.length ? shEsc(names.join(", ")) : "—"}</b></div>`;
+  }).join("");
+
+  const consequences = ["mild", "moderate", "severe"].map((slot) => {
+    const v = sheet.consequences ? sheet.consequences[slot] : undefined;
+    const cost = slot === "mild" ? 2 : slot === "moderate" ? 4 : 6;
+    return `<div class="fate-consequence"><span>${shEsc(titleize(slot))} (${cost})</span><b>${v ? shEsc(v) : "—"}</b></div>`;
+  }).join("");
+
+  const boxes = (used: number, total: number) =>
+    Array.from({ length: total }, (_, i) =>
+      `<span class="fate-box${i < used ? " fate-box-on" : ""}">${i + 1}</span>`).join("");
+
+  const other = Array.isArray(sheet.aspects?.other) ? sheet.aspects.other : [];
+
+  return `<section class="fate-sheet">
+  <header class="fate-head">
+    <div>
+      <h3>${shEsc(sheet.name || "Unnamed Character")}</h3>
+      ${sheet.description ? `<p class="fate-sub">${shEsc(sheet.description)}</p>` : ""}
+    </div>
+    <div class="fate-points"><span>Fate</span><b>${shNum(sheet.fate_points)}</b><span>Refresh</span><b>${shNum(sheet.refresh) || 3}</b></div>
+  </header>
+
+  <div class="fate-panel">
+    <h4>Aspects</h4>
+    <div class="fate-aspect"><span>High Concept</span><b>${shEsc(sheet.aspects?.high_concept || "—")}</b></div>
+    <div class="fate-aspect"><span>Trouble</span><b>${shEsc(sheet.aspects?.trouble || "—")}</b></div>
+    ${other.map((a: unknown) => `<div class="fate-aspect"><span>Aspect</span><b>${shEsc(a)}</b></div>`).join("")}
+  </div>
+
+  <div class="fate-panel"><h4>Skills</h4><div class="fate-ladder">${ladder}</div></div>
+
+  <div class="fate-cols">
+    <div class="fate-panel"><h4>Stress</h4>
+      <div class="fate-stress"><span>Physical</span><div class="fate-boxes">${boxes(shNum(sheet.stress?.physical_used), shNum(sheet.stress?.physical) || 4)}</div></div>
+      <div class="fate-stress"><span>Mental</span><div class="fate-boxes">${boxes(shNum(sheet.stress?.mental_used), shNum(sheet.stress?.mental) || 4)}</div></div>
+      <h4>Consequences</h4>${consequences}
+    </div>
+    <div class="fate-panel"><h4>Stunts &amp; Extras</h4>${shList(sheet.stunts, "No stunts yet.", "fate")}</div>
+  </div>
+</section>`;
+}
+
+function expandFateSheets(content: string) {
+  return content.replace(/```fate-sheet\s*\n([\s\S]*?)```/g, (_m, inner) =>
+    `\n\n${compactSheetHtml(renderFateSheetHtml(String(inner)))}\n\n`);
+}
+
+// ---- Mothership character sheet ----
+
+function renderMothershipSheetHtml(rawInput: string): string {
+  const { sheet, error } = sheetYaml(rawInput, "msp-sheet", "Mothership");
+  if (error || !sheet) return error!;
+  const stats = sheet.stats || {};
+  const saves = sheet.saves || {};
+
+  const statRow = ["strength", "speed", "intellect", "combat"].map((k) =>
+    `<div class="msp-stat"><span>${shEsc(k)}</span><b>${shNum(stats[k])}</b></div>`).join("");
+  const saveRow = ["sanity", "fear", "body"].map((k) =>
+    `<div class="msp-stat msp-save"><span>${shEsc(k)}</span><b>${shNum(saves[k])}</b></div>`).join("");
+
+  const tier = (items: unknown, label: string, bonus: string) => {
+    const arr = Array.isArray(items) ? items.filter(Boolean) : [];
+    return `<div class="msp-tier"><h5>${shEsc(label)} <i>${shEsc(bonus)}</i></h5>${
+      arr.length ? `<ul class="msp-list">${arr.map((s) => `<li>${shEsc(s)}</li>`).join("")}</ul>` : `<p class="msp-empty">None.</p>`}</div>`;
+  };
+
+  const healthMax = shNum(sheet.health_max);
+  const woundsMax = shNum(sheet.wounds_max) || 2;
+
+  return `<section class="msp-sheet">
+  <header class="msp-head">
+    <div>
+      <h3>${shEsc(sheet.name || "Unnamed Crew")}</h3>
+      <p class="msp-sub">${shEsc(sheet.class || "")}${sheet.pronouns ? ` · ${shEsc(sheet.pronouns)}` : ""}</p>
+    </div>
+    <div class="msp-credits"><span>Credits</span><b>${shNum(sheet.credits)}</b><span>Armor</span><b>${shNum(sheet.armor_points)}</b></div>
+  </header>
+
+  <div class="msp-stats">${statRow}${saveRow}</div>
+
+  <div class="msp-tracks">
+    <div class="msp-track"><span>Health</span><b>${shCurrent(sheet.health, healthMax)}/${healthMax}</b></div>
+    <div class="msp-track"><span>Wounds</span><b>${shNum(sheet.wounds)}/${woundsMax}</b></div>
+    <div class="msp-track msp-stress"><span>Stress</span><b>${shNum(sheet.stress) || 2}</b></div>
+  </div>
+
+  <div class="msp-panel"><h4>Skills</h4>
+    ${tier(sheet.trained, "Trained", "+10")}
+    ${tier(sheet.expert, "Expert", "+15")}
+    ${tier(sheet.master, "Master", "+20")}
+  </div>
+
+  ${sheet.trauma_response ? `<div class="msp-panel"><h4>Trauma Response</h4><p>${shEsc(sheet.trauma_response)}</p></div>` : ""}
+  <div class="msp-cols">
+    <div class="msp-panel"><h4>Loadout</h4>${shList(sheet.loadout, "Nothing issued.", "msp")}</div>
+    <div class="msp-panel"><h4>Conditions</h4>${shList(sheet.conditions, "None.", "msp")}
+      ${sheet.trinket || sheet.patch ? `<h4>Trinket &amp; Patch</h4><p>${shEsc(sheet.trinket || "—")}${sheet.patch ? ` · ${shEsc(sheet.patch)}` : ""}</p>` : ""}</div>
+  </div>
+  ${sheet.notes ? `<p class="msp-notes">${shEsc(sheet.notes)}</p>` : ""}
+</section>`;
+}
+
+function expandMothershipSheets(content: string) {
+  return content.replace(/```mothership-sheet\s*\n([\s\S]*?)```/g, (_m, inner) =>
+    `\n\n${compactSheetHtml(renderMothershipSheetHtml(String(inner)))}\n\n`);
+}
+
+// ---- Delta Green agent sheet ----
+
+const DG_STATS: [string, string][] = [
+  ["str", "Strength"], ["con", "Constitution"], ["dex", "Dexterity"],
+  ["int", "Intelligence"], ["pow", "Power"], ["cha", "Charisma"]
+];
+
+function renderDeltaGreenSheetHtml(rawInput: string): string {
+  const { sheet, error } = sheetYaml(rawInput, "dg-sheet", "Delta Green");
+  if (error || !sheet) return error!;
+  const stats = sheet.statistics || {};
+
+  // The printed form carries a ×5 column beside every statistic.
+  const statRows = DG_STATS.map(([k, label]) => {
+    const v = shNum(stats[k]);
+    return `<div class="dg-stat"><span>${shEsc(label)}</span><b>${v}</b><em>${v * 5}%</em></div>`;
+  }).join("");
+
+  const skills = sheet.skills || {};
+  const skillRows = Object.keys(skills).length
+    ? Object.entries(skills).sort(([a], [b]) => a.localeCompare(b))
+        .map(([n, v]) => `<div class="dg-skill"><span>${shEsc(titleize(n))}</span><b>${shNum(v)}%</b></div>`).join("")
+    : `<p class="dg-empty">No skills recorded.</p>`;
+
+  const bonds = Array.isArray(sheet.bonds) ? sheet.bonds : [];
+  const bondRows = bonds.length
+    ? bonds.map((b: any) => `<div class="dg-bond"><span>${shEsc(b?.name ?? b)}</span><b>${shNum(b?.score)}</b></div>`).join("")
+    : `<p class="dg-empty">No bonds — which is its own kind of problem.</p>`;
+
+  // Violence and Helplessness each have three incident boxes, then adaptation.
+  const adaptation = ["violence", "helplessness"].map((k) => {
+    const n = shNum(sheet.adaptation?.[k]);
+    const adapted = n >= 3 || Boolean(sheet.adaptation?.[`${k}_adapted`]);
+    const boxes = Array.from({ length: 3 }, (_, i) => `<span class="dg-box${i < n ? " dg-box-on" : ""}"></span>`).join("");
+    return `<div class="dg-adapt"><span>${shEsc(titleize(k))}</span><div class="dg-boxes">${boxes}</div>${adapted ? `<em>adapted</em>` : ""}</div>`;
+  }).join("");
+
+  const weapons = Array.isArray(sheet.weapons) ? sheet.weapons : [];
+  const weaponRows = weapons.length
+    ? weapons.map((w: any) => `<tr><td>${shEsc(w?.name)}</td><td>${shEsc(w?.skill ?? "")}</td><td>${shEsc(w?.damage ?? "")}</td><td>${shEsc(w?.lethality ?? "—")}</td><td>${shEsc(w?.ammo ?? "—")}</td></tr>`).join("")
+    : `<tr><td colspan="5" class="dg-empty">Unarmed.</td></tr>`;
+
+  const track = (label: string, cur: unknown, max: unknown) => {
+    const m = shNum(max);
+    return `<div class="dg-track"><span>${shEsc(label)}</span><b>${shCurrent(cur, m)}/${m}</b></div>`;
+  };
+
+  return `<section class="dg-sheet">
+  <header class="dg-head">
+    <div>
+      <h3>${shEsc(sheet.name || "Unnamed Agent")}</h3>
+      <p class="dg-sub">${shEsc(sheet.profession || "")}${sheet.employer ? ` · ${shEsc(sheet.employer)}` : ""}${sheet.nationality ? ` · ${shEsc(sheet.nationality)}` : ""}</p>
+    </div>
+    <div class="dg-class">Agent Documentation</div>
+  </header>
+
+  <div class="dg-stats"><div class="dg-stat dg-stat-head"><span></span><b>Score</b><em>×5</em></div>${statRows}</div>
+
+  <div class="dg-tracks">
+    ${track("Hit Points", sheet.hp, sheet.hp_max)}
+    ${track("Willpower", sheet.wp, sheet.wp_max)}
+    ${track("Sanity", sheet.san, sheet.san_max)}
+    <div class="dg-track"><span>Breaking Point</span><b>${shNum(sheet.breaking_point)}</b></div>
+  </div>
+
+  <div class="dg-cols">
+    <div class="dg-panel"><h4>Bonds</h4>${bondRows}
+      <h4>Adaptation</h4>${adaptation}</div>
+    <div class="dg-panel"><h4>Motivations &amp; Disorders</h4>${shList(sheet.motivations, "None recorded.", "dg")}</div>
+  </div>
+
+  <div class="dg-panel"><h4>Skills</h4><div class="dg-skills">${skillRows}</div></div>
+
+  <div class="dg-panel"><h4>Weapons</h4>
+    <table class="dg-table"><thead><tr><th>Weapon</th><th>Skill</th><th>Damage</th><th>Lethality</th><th>Ammo</th></tr></thead><tbody>${weaponRows}</tbody></table>
+    ${sheet.armor ? `<p class="dg-armor">Armor: ${shEsc(sheet.armor)}</p>` : ""}
+  </div>
+  ${sheet.notes ? `<p class="dg-notes">${shEsc(sheet.notes)}</p>` : ""}
+</section>`;
+}
+
+function expandDeltaGreenSheets(content: string) {
+  return content.replace(/```delta-green-sheet\s*\n([\s\S]*?)```/g, (_m, inner) =>
+    `\n\n${compactSheetHtml(renderDeltaGreenSheetHtml(String(inner)))}\n\n`);
+}
+
+// ---- Cyberpunk RED character sheet ----
+
+const CPR_STATS = ["int", "ref", "dex", "tech", "cool", "will", "luck", "move", "body", "emp"];
+
+/** The printed sheet groups skills into these categories, each keyed to a stat. */
+const CPR_SKILL_GROUPS: { label: string; skills: [string, string][] }[] = [
+  { label: "Awareness", skills: [["concentration", "WILL"], ["conceal_reveal_object", "INT"], ["lip_reading", "INT"], ["perception", "INT"], ["tracking", "INT"]] },
+  { label: "Body", skills: [["athletics", "DEX"], ["contortionist", "DEX"], ["dance", "DEX"], ["endurance", "WILL"], ["resist_torture_drugs", "WILL"], ["stealth", "DEX"]] },
+  { label: "Control", skills: [["drive_land_vehicles", "REF"], ["pilot_air_vehicles", "REF"], ["pilot_sea_vehicles", "REF"], ["riding", "REF"]] },
+  { label: "Education", skills: [["accounting", "INT"], ["business", "INT"], ["criminology", "INT"], ["cryptography", "INT"], ["deduction", "INT"], ["education", "INT"], ["language", "INT"], ["local_expert", "INT"], ["streetslang", "INT"], ["tactics", "INT"], ["wilderness_survival", "INT"]] },
+  { label: "Fighting", skills: [["brawling", "DEX"], ["evasion", "DEX"], ["martial_arts", "DEX"], ["melee_weapon", "DEX"]] },
+  { label: "Performance", skills: [["acting", "COOL"], ["instrument", "TECH"]] },
+  { label: "Ranged", skills: [["archery", "REF"], ["autofire", "REF"], ["handgun", "REF"], ["heavy_weapon", "REF"], ["shoulder_arm", "REF"]] },
+  { label: "Social", skills: [["bribery", "COOL"], ["conversation", "EMP"], ["human_perception", "EMP"], ["interrogation", "COOL"], ["persuasion", "COOL"], ["personal_grooming", "COOL"], ["streetwise", "COOL"], ["trading", "COOL"], ["wardrobe_style", "COOL"]] },
+  { label: "Technique", skills: [["basic_tech", "TECH"], ["cybertech", "TECH"], ["demolitions", "TECH"], ["electronics_sectech", "TECH"], ["first_aid", "TECH"], ["forgery", "TECH"], ["paramedic", "TECH"], ["pick_lock", "TECH"], ["weaponsmith", "TECH"]] }
+];
+
+function renderCyberpunkSheetHtml(rawInput: string): string {
+  const { sheet, error } = sheetYaml(rawInput, "cpr-sheet", "Cyberpunk RED");
+  if (error || !sheet) return error!;
+  const stats = sheet.stats || {};
+  const skills = sheet.skills || {};
+
+  const statRow = CPR_STATS.map((k) =>
+    `<div class="cpr-stat"><span>${shEsc(k)}</span><b>${shNum(stats[k])}</b></div>`).join("");
+
+  // Only show groups the character actually has levels in; BASE = STAT + LVL.
+  const groups = CPR_SKILL_GROUPS.map((g) => {
+    const rows = g.skills.filter(([key]) => skills[key] != null).map(([key, stat]) => {
+      const lvl = shNum(skills[key]);
+      const base = shNum(stats[stat.toLowerCase()]) + lvl;
+      return `<div class="cpr-skill"><span>${shEsc(titleize(key))}</span><i>${shEsc(stat)}</i><b>${lvl}</b><em>${base}</em></div>`;
+    }).join("");
+    return rows ? `<div class="cpr-group"><h5>${shEsc(g.label)}</h5>
+      <div class="cpr-skill cpr-skill-head"><span></span><i>Stat</i><b>Lvl</b><em>Base</em></div>${rows}</div>` : "";
+  }).join("");
+
+  const weapons = Array.isArray(sheet.weapons) ? sheet.weapons : [];
+  const weaponRows = weapons.length
+    ? weapons.map((w: any) => `<tr><td>${shEsc(w?.name)}</td><td>${shEsc(w?.damage ?? "")}</td><td>${shEsc(w?.rof ?? "")}</td><td>${shEsc(w?.mag ?? "")}</td><td>${shEsc(w?.notes ?? "")}</td></tr>`).join("")
+    : `<tr><td colspan="5" class="cpr-empty">Unarmed.</td></tr>`;
+
+  const cyber = Array.isArray(sheet.cyberware) ? sheet.cyberware : [];
+  const cyberRows = cyber.length
+    ? cyber.map((c: any) => `<div class="cpr-cyber"><span>${shEsc(c?.name ?? c)}</span><b>${c?.hl != null ? `${shNum(c.hl)} HL` : ""}</b></div>`).join("")
+    : `<p class="cpr-empty">Still fully meat.</p>`;
+
+  const hpMax = shNum(sheet.hp_max);
+  const hp = shCurrent(sheet.hp, hpMax);
+  const wound = hp <= 0 ? "Mortally Wounded" : hp < hpMax / 2 ? "Seriously Wounded" : hp < hpMax ? "Lightly Wounded" : "Unhurt";
+
+  return `<section class="cpr-sheet">
+  <header class="cpr-head">
+    <div>
+      <h3>${shEsc(sheet.handle || sheet.name || "Unnamed Edgerunner")}</h3>
+      <p class="cpr-sub">${shEsc(sheet.role || "")}${sheet.role_ability ? ` · ${shEsc(sheet.role_ability)}` : ""}</p>
+    </div>
+    <div class="cpr-money"><span>Cash</span><b>${shNum(sheet.cash)}</b><span>Rep</span><b>${shNum(sheet.rep)}</b></div>
+  </header>
+
+  <div class="cpr-stats">${statRow}</div>
+
+  <div class="cpr-tracks">
+    <div class="cpr-track"><span>Hit Points</span><b>${hp}/${hpMax}</b></div>
+    <div class="cpr-track"><span>Status</span><b>${shEsc(wound)}</b></div>
+    <div class="cpr-track"><span>Humanity</span><b>${shNum(sheet.humanity)}/${shNum(sheet.humanity_max)}</b></div>
+    <div class="cpr-track"><span>Armor SP</span><b>${shNum(sheet.armor_sp)}</b></div>
+  </div>
+
+  <div class="cpr-panel"><h4>Skills</h4><div class="cpr-groups">${groups || `<p class="cpr-empty">No skills recorded.</p>`}</div></div>
+
+  <div class="cpr-panel"><h4>Weapons</h4>
+    <table class="cpr-table"><thead><tr><th>Weapon</th><th>Dmg</th><th>ROF</th><th>Mag</th><th>Notes</th></tr></thead><tbody>${weaponRows}</tbody></table>
+    ${sheet.armor ? `<p class="cpr-armor">Armor: ${shEsc(sheet.armor)}</p>` : ""}
+  </div>
+
+  <div class="cpr-cols">
+    <div class="cpr-panel"><h4>Cyberware</h4>${cyberRows}</div>
+    <div class="cpr-panel"><h4>Gear</h4>${shList(sheet.gear, "Nothing but the jacket.", "cpr")}
+      ${sheet.lifestyle ? `<h4>Lifestyle</h4><p>${shEsc(sheet.lifestyle)}</p>` : ""}</div>
+  </div>
+  ${sheet.notes ? `<p class="cpr-notes">${shEsc(sheet.notes)}</p>` : ""}
+</section>`;
+}
+
+function expandCyberpunkSheets(content: string) {
+  return content.replace(/```cyberpunk-sheet\s*\n([\s\S]*?)```/g, (_m, inner) =>
+    `\n\n${compactSheetHtml(renderCyberpunkSheetHtml(String(inner)))}\n\n`);
+}
+
+// ---- Blades in the Dark character sheet ----
+
+/** Three attributes, four actions each — the Forged-in-the-Dark spine. */
+const BITD_ATTRS: { key: string; label: string; actions: string[] }[] = [
+  { key: "insight", label: "Insight", actions: ["hunt", "study", "survey", "tinker"] },
+  { key: "prowess", label: "Prowess", actions: ["finesse", "prowl", "skirmish", "wreck"] },
+  { key: "resolve", label: "Resolve", actions: ["attune", "command", "consort", "sway"] }
+];
+
+const BITD_TRAUMA = ["cold", "haunted", "obsessed", "paranoid", "reckless", "soft", "unstable", "vicious"];
+
+function renderBladesSheetHtml(rawInput: string): string {
+  const { sheet, error } = sheetYaml(rawInput, "bitd-sheet", "Blades in the Dark");
+  if (error || !sheet) return error!;
+  const actions = sheet.actions || {};
+
+  const dots = (n: number, max = 4) =>
+    Array.from({ length: max }, (_, i) => `<span class="bitd-dot${i < n ? " bitd-dot-on" : ""}"></span>`).join("");
+
+  const attrBlocks = BITD_ATTRS.map((a) => {
+    // An attribute's rating is how many of its actions have at least one dot.
+    const rating = a.actions.filter((act) => shNum(actions[act]) > 0).length;
+    const rows = a.actions.map((act) =>
+      `<div class="bitd-action"><span>${shEsc(titleize(act))}</span><div class="bitd-dots">${dots(shNum(actions[act]))}</div></div>`).join("");
+    return `<div class="bitd-attr"><div class="bitd-attr-head"><span>${shEsc(a.label)}</span><b>${rating}</b></div>${rows}</div>`;
+  }).join("");
+
+  const stressUsed = shNum(sheet.stress);
+  const stressBoxes = Array.from({ length: 9 }, (_, i) =>
+    `<span class="bitd-box${i < stressUsed ? " bitd-box-on" : ""}"></span>`).join("");
+
+  const takenTrauma: string[] = Array.isArray(sheet.trauma) ? sheet.trauma.map(String) : [];
+  const trauma = BITD_TRAUMA.map((t) =>
+    `<span class="bitd-trauma${takenTrauma.includes(t) ? " bitd-trauma-on" : ""}">${shEsc(t)}</span>`).join("");
+
+  const harm = [3, 2, 1].map((lvl) => {
+    const key = lvl === 3 ? "severe" : lvl === 2 ? "moderate" : "lesser";
+    const entries = Array.isArray(sheet.harm?.[key]) ? sheet.harm[key] : (sheet.harm?.[key] ? [sheet.harm[key]] : []);
+    return `<div class="bitd-harm"><span>${lvl}</span><b>${entries.length ? shEsc(entries.join(", ")) : "—"}</b></div>`;
+  }).join("");
+
+  const friends = Array.isArray(sheet.friends) ? sheet.friends : [];
+  const friendRows = friends.length
+    ? friends.map((f: any) => `<div class="bitd-friend"><span>${shEsc(f?.name ?? f)}</span><b>${shEsc(f?.standing ?? "")}</b></div>`).join("")
+    : `<p class="bitd-empty">No one worth trusting yet.</p>`;
+
+  return `<section class="bitd-sheet">
+  <header class="bitd-head">
+    <div>
+      <h3>${shEsc(sheet.name || "Unnamed Scoundrel")}${sheet.alias ? ` <i>"${shEsc(sheet.alias)}"</i>` : ""}</h3>
+      <p class="bitd-sub">${shEsc(sheet.playbook || "")}${sheet.heritage ? ` · ${shEsc(sheet.heritage)}` : ""}${sheet.background ? ` · ${shEsc(sheet.background)}` : ""}</p>
+    </div>
+    <div class="bitd-coin"><span>Coin</span><b>${shNum(sheet.coin)}</b><span>Stash</span><b>${shNum(sheet.stash)}</b></div>
+  </header>
+
+  <div class="bitd-grid">${attrBlocks}</div>
+
+  <div class="bitd-panel">
+    <h4>Stress &amp; Trauma</h4>
+    <div class="bitd-stress"><span>Stress</span><div class="bitd-boxes">${stressBoxes}</div><b>${stressUsed}/9</b></div>
+    <div class="bitd-traumas">${trauma}</div>
+    <h4>Harm</h4>${harm}
+    <div class="bitd-armor"><span>Armor</span><b>${shEsc(sheet.armor || "—")}</b><span>Healing</span><b>${shNum(sheet.healing)}/4</b></div>
+  </div>
+
+  <div class="bitd-cols">
+    <div class="bitd-panel"><h4>Special Abilities</h4>${shList(sheet.abilities, "None yet.", "bitd")}</div>
+    <div class="bitd-panel"><h4>Friends &amp; Rivals</h4>${friendRows}
+      ${sheet.vice ? `<h4>Vice</h4><p>${shEsc(sheet.vice)}${sheet.purveyor ? ` — ${shEsc(sheet.purveyor)}` : ""}</p>` : ""}</div>
+    <div class="bitd-panel"><h4>Load &amp; Items</h4>
+      ${sheet.load ? `<p class="bitd-load">${shEsc(sheet.load)}</p>` : ""}
+      ${shList(sheet.items, "Travelling light.", "bitd")}</div>
+  </div>
+  ${sheet.notes ? `<p class="bitd-notes">${shEsc(sheet.notes)}</p>` : ""}
+</section>`;
+}
+
+function expandBladesSheets(content: string) {
+  return content.replace(/```blades-sheet\s*\n([\s\S]*?)```/g, (_m, inner) =>
+    `\n\n${compactSheetHtml(renderBladesSheetHtml(String(inner)))}\n\n`);
+}
+
+// ---- Coriolis character sheet ----
+
+/** Year Zero attributes, as in ALIEN, but with Coriolis's own sixteen skills. */
+const CORIOLIS_SKILLS: { attr: string; keys: string[] }[] = [
+  { attr: "strength", keys: ["force", "melee"] },
+  { attr: "agility", keys: ["dexterity", "infiltration", "range", "pilot"] },
+  { attr: "wits", keys: ["observation", "survival", "data_djinn", "medicurgy", "technology", "science"] },
+  { attr: "empathy", keys: ["manipulation", "command", "culture", "mystic"] }
+];
+
+function renderCoriolisSheetHtml(rawInput: string): string {
+  const { sheet, error } = sheetYaml(rawInput, "cor-sheet", "Coriolis");
+  if (error || !sheet) return error!;
+  const attrs = sheet.attributes || {};
+  const skills = sheet.skills || {};
+
+  const blocks = CORIOLIS_SKILLS.map((g) => {
+    const rows = g.keys.map((k) =>
+      `<div class="cor-skill"><span>${shEsc(titleize(k))}</span><b>${shNum(skills[k])}</b></div>`).join("");
+    return `<div class="cor-attr">
+      <div class="cor-attr-head"><span>${shEsc(titleize(g.attr))}</span><b>${shNum(attrs[g.attr])}</b></div>${rows}</div>`;
+  }).join("");
+
+  const weapons = Array.isArray(sheet.weapons) ? sheet.weapons : [];
+  const weaponRows = weapons.length
+    ? weapons.map((w: any) => `<tr><td>${shEsc(w?.name)}</td><td>${shEsc(w?.bonus ?? "")}</td><td>${shEsc(w?.damage ?? "")}</td><td>${shEsc(w?.crit ?? "")}</td><td>${shEsc(w?.range ?? "")}</td></tr>`).join("")
+    : `<tr><td colspan="5" class="cor-empty">Unarmed.</td></tr>`;
+
+  const hpMax = shNum(sheet.hp_max);
+  const mpMax = shNum(sheet.mp_max);
+
+  return `<section class="cor-sheet">
+  <header class="cor-head">
+    <div>
+      <h3>${shEsc(sheet.name || "Unnamed Traveller")}</h3>
+      <p class="cor-sub">${shEsc(sheet.concept || "")}${sheet.background ? ` · ${shEsc(sheet.background)}` : ""}${sheet.home_system ? ` · ${shEsc(sheet.home_system)}` : ""}</p>
+    </div>
+    <div class="cor-meta"><span>Icon</span><b>${shEsc(sheet.icon || "—")}</b><span>Rep</span><b>${shNum(sheet.reputation)}</b><span>Birr</span><b>${shNum(sheet.birr)}</b></div>
+  </header>
+
+  <div class="cor-tracks">
+    <div class="cor-track"><span>Hit Points</span><b>${shCurrent(sheet.hp, hpMax)}/${hpMax}</b></div>
+    <div class="cor-track"><span>Mind Points</span><b>${shCurrent(sheet.mp, mpMax)}/${mpMax}</b></div>
+    <div class="cor-track"><span>Radiation</span><b>${shNum(sheet.radiation)}</b></div>
+    <div class="cor-track"><span>XP</span><b>${shNum(sheet.experience)}</b></div>
+  </div>
+
+  <div class="cor-grid">${blocks}</div>
+
+  <div class="cor-cols">
+    <div class="cor-panel"><h4>Talents</h4>${shList(sheet.talents, "None yet.", "cor")}</div>
+    <div class="cor-panel"><h4>Personal Problem</h4><p>${shEsc(sheet.personal_problem || "—")}</p>
+      ${sheet.group_concept ? `<h4>Group</h4><p>${shEsc(sheet.group_concept)}${sheet.group_talent ? ` — ${shEsc(sheet.group_talent)}` : ""}</p>` : ""}</div>
+    <div class="cor-panel"><h4>Critical Wounds</h4>${shList(sheet.critical_wounds, "None.", "cor")}</div>
+  </div>
+
+  <div class="cor-panel"><h4>Weapons</h4>
+    <table class="cor-table"><thead><tr><th>Weapon</th><th>Bonus</th><th>Damage</th><th>Crit</th><th>Range</th></tr></thead><tbody>${weaponRows}</tbody></table>
+    ${sheet.armor ? `<p class="cor-armor">Armor: ${shEsc(sheet.armor)}${sheet.armor_value != null ? ` (${shNum(sheet.armor_value)})` : ""}</p>` : ""}
+  </div>
+
+  <div class="cor-panel"><h4>Equipment</h4>${shList(sheet.equipment, "Nothing of note.", "cor")}</div>
+  ${sheet.notes ? `<p class="cor-notes">${shEsc(sheet.notes)}</p>` : ""}
+</section>`;
+}
+
+function expandCoriolisSheets(content: string) {
+  return content.replace(/```coriolis-sheet\s*\n([\s\S]*?)```/g, (_m, inner) =>
+    `\n\n${compactSheetHtml(renderCoriolisSheetHtml(String(inner)))}\n\n`);
+}
+
 // ══ Inventory block ═══════════════════════════════════════════════════════════
 
 type InventoryItem = { name?: string; qty?: number | string; weight?: number | string; value?: string; notes?: string };
@@ -2214,6 +2694,12 @@ export function renderMarkdown(
   content = expandDragonbaneSheets(content);
   content = expandCoCSheets(content);
   content = expandPendragonSheets(content);
+  content = expandFateSheets(content);
+  content = expandMothershipSheets(content);
+  content = expandDeltaGreenSheets(content);
+  content = expandCyberpunkSheets(content);
+  content = expandBladesSheets(content);
+  content = expandCoriolisSheets(content);
   content = expandInventory(content);
   content = expandTrackers(content);
   content = expandTraits(content);

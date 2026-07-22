@@ -65,7 +65,58 @@ const DEMO_KITS: Record<GameType, DemoKit> = {
     npc: e("Madame Sévrin", "Information broker", "She trades secrets from a velvet booth and always knows who owes whom."),
     pc: e("Quill", "Whisper (occultist)", "A twitchy medium who hears the city's ghosts and pretends it's a gift."),
     threat: x("The Choir of Static", "A knot of angry spirits gathering in the electric hum of the lightning barrier."),
-    item: x("The Cortex Key", "A brass-and-bone rod that briefly opens a spirit well — everyone wants it, no one should hold it.")
+    item: x("The Cortex Key", "A brass-and-bone rod that briefly opens a spirit well — everyone wants it, no one should hold it."),
+    sheet: `## Character Sheet
+
+\`\`\`blades-sheet
+name: Quill
+alias: The Listening Girl
+playbook: Whisper
+heritage: Akoros
+background: Labour
+vice: Obligation
+purveyor: A shrine she maintains for a ghost nobody else remembers
+coin: 3
+stash: 8
+stress: 4
+trauma:
+  - haunted
+harm:
+  lesser:
+    - "Rattled (-1d to Resolve)"
+healing: 1
+armor: Normal
+actions:
+  hunt: 0
+  study: 2
+  survey: 1
+  tinker: 0
+  finesse: 1
+  prowl: 1
+  skirmish: 0
+  wreck: 0
+  attune: 3
+  command: 0
+  consort: 1
+  sway: 1
+abilities:
+  - "Compel — you can force a nearby ghost to obey a command."
+  - "Ritual — you can perform experimental summoning and bindings."
+friends:
+  - name: Setarra (a demon)
+    standing: "+1 close"
+  - name: Madame Sévrin
+    standing: "neutral"
+  - name: Bell, a bluecoat
+    standing: "-1 rival"
+load: Normal (5)
+items:
+  - Fine spirit mask
+  - Ghost key
+  - Spirit bottles (2)
+  - Documents
+notes: Hears the city's dead constantly. Tells the crew it is a gift. It is not.
+\`\`\``
   },
   "Burning Wheel": {
     premise: "Ambition and belief collide in a low-magic realm on the edge of civil war.",
@@ -1006,7 +1057,71 @@ notes: Everyone assumes the pooka is lying. Robin mostly isn't, which is far mor
     npc: e("Handler CROW", "Case officer", "Gives the orders from a burner phone and never says his real name."),
     pc: e("Agent REED", "Federal agent", "A by-the-book investigator whose book has no chapter for this."),
     threat: x("The Kettle County Incident", "An unnatural incursion the Program needs buried before dawn."),
-    item: x("The Green Box", "A dead agent's cache of evidence, weapons, and one very dangerous file.")
+    item: x("The Green Box", "A dead agent's cache of evidence, weapons, and one very dangerous file."),
+    sheet: `## Character Sheet
+
+\`\`\`delta-green-sheet
+name: Agent REED
+profession: Special Agent (FBI)
+employer: Federal Bureau of Investigation
+nationality: USA
+statistics:
+  str: 12
+  con: 13
+  dex: 12
+  int: 15
+  pow: 14
+  cha: 11
+hp: 13
+hp_max: 13
+wp: 14
+wp_max: 14
+san: 51
+san_max: 70
+breaking_point: 51
+bonds:
+  - name: Spouse (Dana)
+    score: 11
+  - name: Sister
+    score: 11
+  - name: Field Office Partner
+    score: 10
+motivations:
+  - "Believes the record should be complete, even when it cannot be filed."
+  - "Cannot leave a missing-person case open."
+adaptation:
+  violence: 1
+  helplessness: 0
+skills:
+  alertness: 50
+  athletics: 40
+  bureaucracy: 50
+  criminology: 60
+  drive: 40
+  firearms: 50
+  first_aid: 30
+  humint: 60
+  law: 40
+  occult: 10
+  persuade: 40
+  search: 60
+  stealth: 30
+  unarmed_combat: 40
+  unnatural: 3
+weapons:
+  - name: Glock 17
+    skill: "50%"
+    damage: 1D10
+    lethality: "—"
+    ammo: 17
+  - name: Combat Knife
+    skill: "40%"
+    damage: 1D4+2
+    lethality: "—"
+    ammo: "—"
+armor: Kevlar vest (Armor 3)
+notes: Has not told the Bureau what happened on Route 9. Has not told Dana either.
+\`\`\``
   },
   "Demon: The Fallen": {
     premise: "Fallen angels reawaken in the modern world, torn between wrath and redemption.",
@@ -1620,7 +1735,73 @@ notes: Has read the mission briefing four times. The holes have not filled thems
     npc: e("Icon-Priest Nadia", "Station cleric", "Blesses ships, reads omens, and knows which docks to avoid tonight."),
     pc: e("Rurik", "Free trader captain", "Owns half a ship, all its debts, and a nose for a risky payday."),
     threat: x("The Dark Between the Stars", "An old dread stirring in the deep, whispering to those who portal too often."),
-    item: x("The Portal Key", "An ancient artifact that opens a jump-gate no chart admits exists.")
+    item: x("The Portal Key", "An ancient artifact that opens a jump-gate no chart admits exists."),
+    sheet: `## Character Sheet
+
+\`\`\`coriolis-sheet
+name: Rurik
+concept: Free trader captain
+background: Stationary
+home_system: Kirmala
+icon: The Merchant
+reputation: 4
+birr: 1200
+hp: 8
+hp_max: 10
+mp: 7
+mp_max: 10
+radiation: 1
+experience: 3
+attributes:
+  strength: 3
+  agility: 4
+  wits: 4
+  empathy: 3
+skills:
+  force: 1
+  melee: 1
+  dexterity: 2
+  infiltration: 0
+  range: 2
+  pilot: 3
+  observation: 2
+  survival: 1
+  data_djinn: 1
+  medicurgy: 0
+  technology: 2
+  science: 0
+  manipulation: 3
+  command: 2
+  culture: 2
+  mystic: 0
+talents:
+  - "Bargainer — reroll a failed Manipulation test when haggling."
+  - "Void Hardened — ignore the first point of radiation each session."
+  - "Licensed — your papers survive an inspection they should not."
+personal_problem: Half his ship is owned by a creditor who has stopped sending polite reminders.
+group_concept: A free-trader crew working the Kirmala run
+group_talent: "Ship's Fortune — once per session, reroll a ship test."
+critical_wounds: []
+weapons:
+  - name: Accelerator Pistol
+    bonus: "+2"
+    damage: 1
+    crit: 3
+    range: Short
+  - name: Vibroknife
+    bonus: "+1"
+    damage: 1
+    crit: 2
+    range: Melee
+armor: Light Padding
+armor_value: 3
+equipment:
+  - Comm unit
+  - Cargo manifest slate (partly forged)
+  - Spice sample case
+  - Icon amulet of the Merchant
+notes: Blesses the ship before every run. Tells the crew it is tradition, not superstition.
+\`\`\``
   },
   "Cyberpunk RED": {
     premise: "Edgerunners hustle to survive in a neon-drenched, corp-run megacity.",
@@ -1629,7 +1810,80 @@ notes: Has read the mission briefing four times. The holes have not filled thems
     npc: e("Fixer 'Domino'", "Fixer", "Brokers the jobs, takes a cut, and always knows more than she tells."),
     pc: e("Static", "Netrunner", "Jacks into hostile systems from a beat-up van and a worse attitude."),
     threat: x("The Arasch Op", "A megacorp's deniable operation to erase a whole block — and its witnesses."),
-    item: x("The Militech Deck", "A prototype cyberdeck hot enough to fry ICE — and get you killed for owning it.")
+    item: x("The Militech Deck", "A prototype cyberdeck hot enough to fry ICE — and get you killed for owning it."),
+    sheet: `## Character Sheet
+
+\`\`\`cyberpunk-sheet
+handle: Static
+role: Netrunner
+role_ability: Interface 4
+cash: 640
+rep: 3
+stats:
+  int: 8
+  ref: 6
+  dex: 5
+  tech: 7
+  cool: 5
+  will: 6
+  luck: 6
+  move: 5
+  body: 4
+  emp: 4
+hp: 22
+hp_max: 30
+humanity: 34
+humanity_max: 40
+armor_sp: 7
+armor: Light Armorjack (SP 11, worn thin)
+skills:
+  perception: 4
+  concentration: 4
+  athletics: 2
+  stealth: 3
+  education: 4
+  cryptography: 6
+  deduction: 4
+  streetslang: 3
+  tactics: 2
+  handgun: 3
+  evasion: 3
+  brawling: 2
+  conversation: 2
+  streetwise: 4
+  persuasion: 2
+  basic_tech: 5
+  cybertech: 5
+  electronics_sectech: 6
+  first_aid: 2
+weapons:
+  - name: Medium Pistol
+    damage: 2d6
+    rof: 2
+    mag: 12
+    notes: "Concealable"
+  - name: Cyberdeck (7 slots)
+    damage: "—"
+    rof: "—"
+    mag: "—"
+    notes: "Interface 4, 3 attackers loaded"
+cyberware:
+  - name: Neural Link
+    hl: 2
+  - name: Interface Plugs
+    hl: 2
+  - name: Cybereye (Low Light)
+    hl: 3
+  - name: Chipware Socket
+    hl: 2
+gear:
+  - Beat-up van (mobile netrun rig)
+  - Agent (cracked)
+  - Medscanner
+  - Three burner shards
+lifestyle: Kibble and a mattress in the van. Rent is technically zero.
+notes: Owes Domino for the deck. Domino has not asked for payment yet, which is worse.
+\`\`\``
   },
   "Dune: Adventures in the Imperium": {
     premise: "A minor House plays for survival among sietches, spice, and Landsraad knives.",
@@ -1694,7 +1948,49 @@ notes: Has read the mission briefing four times. The holes have not filled thems
     npc: e("MU/TH/R Node", "Ship android", "Speaks in policy and protocol while something moves in the vents."),
     pc: e("Kowalski", "Teamster", "A grease-stained hauler who just wants the salvage bonus and out."),
     threat: x("The Thing in the Hold", "A parasite that got aboard with the cargo and is no longer in the cargo."),
-    item: x("The Jury-Rigged Cutter", "A plasma torch that opens sealed doors — loudly, and never quietly enough.")
+    item: x("The Jury-Rigged Cutter", "A plasma torch that opens sealed doors — loudly, and never quietly enough."),
+    sheet: `## Character Sheet
+
+\`\`\`mothership-sheet
+name: Kowalski
+class: Teamster
+pronouns: he/him
+stats:
+  strength: 35
+  speed: 30
+  intellect: 30
+  combat: 25
+saves:
+  sanity: 30
+  fear: 25
+  body: 40
+health: 14
+health_max: 18
+wounds: 1
+wounds_max: 2
+stress: 4
+credits: 180
+armor_points: 3
+trained:
+  - Industrial Equipment
+  - Zero-G
+  - Jury-Rigging
+  - Rimwise
+expert:
+  - Mechanical Repair
+master: []
+trauma_response: "Once per session, may take Advantage on a Panic Check."
+loadout:
+  - Vaccsuit (patched twice)
+  - Cutting torch
+  - Magnetic boots
+  - Salvage tags
+conditions:
+  - "Cracked helmet seal — Body save at Disadvantage in vacuum."
+trinket: A child's drawing, laminated
+patch: "I'M NOT PAID ENOUGH FOR THIS"
+notes: Wants the salvage bonus and the next shuttle out, in that order.
+\`\`\``
   },
   Starfinder: {
     premise: "A diverse crew adventures across a magitech galaxy of stations and starships.",
@@ -1778,7 +2074,46 @@ notes: Detached-duty scout with a scanner, a grudge against paperwork, and nowhe
     npc: e("Vaughn", "Broker", "Aspect: 'A Favour for Every Face.' Knows everyone, trusts no one."),
     pc: e("Sam Okoro", "The reformed rogue", "High concept: 'Ex-Thief With a Conscience.' Trouble: 'Old Debts Come Calling.'"),
     threat: x("The Looming Deal", "A dangerous bargain that will reshape the region if it closes."),
-    item: x("The MacGuffin", "An aspected object — 'Everyone Wants It' — that drives the whole scenario.")
+    item: x("The MacGuffin", "An aspected object — 'Everyone Wants It' — that drives the whole scenario."),
+    sheet: `## Character Sheet
+
+\`\`\`fate-sheet
+name: Sam Okoro
+description: Lean, quick-handed, dressed a little better than the job requires
+fate_points: 3
+refresh: 3
+aspects:
+  high_concept: Ex-Thief With a Conscience
+  trouble: Old Debts Come Calling
+  other:
+    - "I Know Every Door in The Crossroads"
+    - "Vaughn Owes Me One (And Resents It)"
+    - "Never Steal From Someone Who Can't Afford It"
+skills:
+  burglary: 5
+  notice: 4
+  contacts: 4
+  athletics: 3
+  deceive: 3
+  rapport: 3
+  stealth: 2
+  will: 2
+  investigate: 2
+  fight: 1
+  physique: 1
+  resources: 1
+stress:
+  physical: 3
+  physical_used: 1
+  mental: 3
+  mental_used: 0
+consequences:
+  mild: "Wrenched Shoulder"
+stunts:
+  - "Nimble Fingers — +2 to Burglary when picking a lock under time pressure."
+  - "The Old Crew — once per session, declare that a Crossroads fixer owes Sam a favour."
+  - "Casing the Joint — use Burglary instead of Notice to spot a building's weak point."
+\`\`\``
   },
   "Savage Worlds": {
     premise: "Fast, furious, pulp-flavoured heroes leap from one two-fisted set piece to the next.",
