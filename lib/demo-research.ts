@@ -71,6 +71,7 @@ const FAMILY_BY_GAME: Record<GameType, DemoFamily> = {
   "Cyberpunk RED": "scifi",
   Mothership: "scifi",
   Starfinder: "scifi",
+  "Dune: Adventures in the Imperium": "scifi",
   Traveller: "scifi",
   "Warhammer 40,000 Roleplay": "dark-fantasy",
   "Fate Core": "generic",
@@ -134,6 +135,7 @@ const SYSTEM_FIELDS: Partial<Record<GameType, string[]>> = {
   "Burning Wheel": ["Stock", "Lifepaths", "Beliefs", "Instincts", "Traits", "Stats", "Skills", "Resources", "Circles", "Steel"],
   "Dungeons & Dragons": ["Ancestry", "Class & Level", "Ability Scores", "Saving Throws", "Skills", "Armor Class", "Hit Points", "Attacks", "Features", "Spells"],
   Pathfinder: ["Ancestry", "Background", "Class", "Ability Scores", "Proficiency Ranks", "Armor Class", "Hit Points", "Feats", "Actions", "Spells"],
+  "Dune: Adventures in the Imperium": ["House", "Homeworld", "Archetype", "Skills", "Drives", "Drive Statements", "Focuses", "Talents", "Assets", "Traits", "Determination"],
   Traveller: ["Species", "Career", "Characteristics", "Skills", "Status", "Armour", "Weapons", "Equipment", "Credits", "Ship Shares", "Contacts"],
   "Vampire: The Masquerade": ["Clan", "Predator Type", "Attributes", "Skills", "Disciplines", "Hunger", "Humanity", "Health", "Willpower", "Touchstones"],
   "Mage: The Ascension": ["Tradition", "Essence", "Attributes", "Abilities", "Spheres", "Arete", "Quintessence", "Paradox", "Willpower", "Focus"],
@@ -149,6 +151,7 @@ const SYSTEM_FIELDS: Partial<Record<GameType, string[]>> = {
 const SYSTEM_CONCEPTS: Partial<Record<GameType, string>> = {
   "Dungeons & Dragons": "Heroic fantasy built around a party of adventurers, class identity, escalating danger, tactical encounters, exploration, and treasure. The demo should show clear party-facing lore and a character sheet that separates ability scores, combat state, features, and spell/gear notes.",
   Pathfinder: "Crunchier heroic fantasy with strong ancestry/background/class identity, proficiency tiers, feats, and action economy. The demo sheet should make ranks and action tags easy to scan.",
+  "Dune: Adventures in the Imperium": "Feudal science-fiction intrigue about houses, loyalty, and the cost of ambition. Characters are defined less by gear than by their Drives and the statements attached to them, so the demo sheet should foreground Skills, Drives, Drive Statements, Assets, and House standing rather than equipment lists.",
   Traveller: "Grounded science-fiction adventure about careers, skills, trade, travel, patrons, ships, and consequences. The demo sheet should feel like a registry record and manifest rather than a fantasy stat page.",
   "Vampire: The Masquerade": "Modern gothic personal horror about undead politics, hunger, humanity, relationships, and predation. The sheet should foreground identity, clan/type, dot-rated traits, disciplines, hunger, health, willpower, and relationship anchors.",
   "Mage: The Ascension": "Occult modern fantasy about belief, reality, paradigms, and awakened will. The sheet should show mundane competence alongside Spheres, Arete, paradox risk, and focus tools.",

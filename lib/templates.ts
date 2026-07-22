@@ -53,6 +53,7 @@ export const gameTypeGroups: { label: string; types: GameType[] }[] = [
       "Alien RPG",
       "Coriolis",
       "Cyberpunk RED",
+      "Dune: Adventures in the Imperium",
       "Mothership",
       "Starfinder",
       "Traveller",

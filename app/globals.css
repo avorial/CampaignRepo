@@ -9191,3 +9191,88 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
 .alien-consumable { display: flex; justify-content: space-between; gap: 6px; font-size: var(--text-label-sm); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-tertiary); }
 .alien-consumable b { color: var(--text-primary); }
 .alien-notes { margin: 0; color: var(--text-tertiary); font-style: italic; }
+
+/* ---- Dragonbane / Call of Cthulhu / Pendragon sheets ---- */
+
+.db-sheet, .coc-sheet, .pen-sheet {
+  background: var(--bg-overlay, rgba(0, 0, 0, 0.5));
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card, 6px);
+  color: var(--text-primary);
+  padding: 18px;
+  margin-bottom: 20px;
+  display: grid;
+  gap: 14px;
+}
+.db-sheet { --sheet-accent: #d8623a; }
+.coc-sheet { --sheet-accent: #b9a06a; }
+.pen-sheet { --sheet-accent: #8fa9d8; }
+
+.db-sheet-error, .coc-sheet-error, .pen-sheet-error { padding: 16px; color: var(--text-secondary); }
+
+.db-head, .coc-head, .pen-head {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--border-subtle, var(--border-strong)); padding-bottom: 10px;
+}
+.db-head h3, .coc-head h3, .pen-head h3 { margin: 0; color: var(--sheet-accent); letter-spacing: 0.06em; }
+.db-sub, .coc-sub, .pen-sub { margin: 4px 0 0; color: var(--text-tertiary); font-size: var(--text-label-sm); text-transform: uppercase; letter-spacing: 0.08em; }
+.coc-era { color: var(--text-tertiary); font-size: var(--text-label-sm); text-transform: uppercase; letter-spacing: 0.1em; }
+.db-purse, .pen-glory { display: flex; gap: 12px; font-size: var(--text-label-sm); text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); align-items: baseline; }
+.db-purse b, .pen-glory b { color: var(--text-primary); margin-left: 4px; }
+.db-weakness { margin: 0; color: var(--text-secondary); font-size: var(--text-label-sm); }
+
+.db-attrs { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.db-attr { border: 1px solid var(--border-strong); border-radius: 4px; padding: 8px; text-align: center; }
+.db-attr-label { display: block; color: var(--sheet-accent); font-size: var(--text-label-sm); letter-spacing: 0.12em; }
+.db-attr b { display: block; font-size: 20px; margin: 2px 0; }
+.db-cond { display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); border: 1px solid var(--border-strong); border-radius: var(--radius-pill, 999px); padding: 1px 8px; }
+.db-cond-on { color: #e08a6d; border-color: #c65f3f; background: rgba(198, 95, 63, 0.16); }
+
+.db-derived, .pen-derived, .coc-tracks, .db-tracks {
+  display: flex; gap: 16px; flex-wrap: wrap; font-size: var(--text-label-sm);
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary);
+}
+.db-derived b, .pen-derived b, .coc-track b, .db-track b { color: var(--text-primary); margin-left: 5px; }
+.coc-track, .db-track { display: flex; gap: 4px; align-items: baseline; }
+
+.db-cols, .pen-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.db-panel, .coc-panel, .pen-panel { border: 1px solid var(--border-strong); border-radius: 4px; padding: 10px 12px; }
+.db-panel h4, .coc-panel h4, .pen-panel h4 { margin: 10px 0 8px; font-size: var(--text-label-sm); text-transform: uppercase; letter-spacing: 0.12em; color: var(--sheet-accent); }
+.db-panel h4:first-child, .coc-panel h4:first-child, .pen-panel h4:first-child { margin-top: 0; }
+.db-empty, .coc-empty, .pen-empty { color: var(--text-tertiary); font-style: italic; margin: 0; }
+.db-list { margin: 0; padding-left: 18px; color: var(--text-secondary); }
+
+.db-skill, .pen-skill, .pen-passion { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; font-size: var(--text-label-sm); color: var(--text-secondary); }
+.db-skill i, .pen-skill i { color: var(--text-tertiary); font-style: normal; font-size: 10px; }
+.db-skill b, .pen-skill b, .pen-passion b { color: var(--text-primary); }
+
+.db-table, .coc-table, .pen-table { width: 100%; border-collapse: collapse; font-size: var(--text-label-sm); }
+.db-table th, .coc-table th, .pen-table th { text-align: left; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid var(--border-strong); padding: 4px 6px; font-weight: 500; }
+.db-table td, .coc-table td, .pen-table td { padding: 4px 6px; border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.06)); color: var(--text-secondary); }
+.db-armor { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; margin-top: 8px; font-size: var(--text-label-sm); text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); }
+.db-armor b { color: var(--text-primary); text-transform: none; letter-spacing: 0; }
+
+/* CoC characteristic + skill rows carry Regular / Half / Fifth columns. */
+.coc-chars, .coc-skills { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 2px 14px; }
+.coc-char, .coc-skill { display: grid; grid-template-columns: 1fr 44px 34px 34px; gap: 6px; align-items: baseline; padding: 2px 0; font-size: var(--text-label-sm); color: var(--text-secondary); }
+.coc-char span i { color: var(--text-tertiary); font-style: normal; font-size: 9px; margin-left: 5px; text-transform: uppercase; }
+.coc-char b, .coc-skill b { color: var(--text-primary); text-align: right; }
+.coc-char em, .coc-skill em { color: var(--text-tertiary); font-style: normal; text-align: right; }
+.coc-char-head, .coc-skill-head { color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; font-size: 10px; border-bottom: 1px solid var(--border-strong); }
+.coc-char-head b, .coc-skill-head b, .coc-char-head em, .coc-skill-head em { color: var(--text-tertiary); }
+.coc-flags { display: flex; gap: 6px; flex-wrap: wrap; }
+.coc-flag { border: 1px solid var(--border-strong); border-radius: var(--radius-pill, 999px); padding: 2px 10px; font-size: var(--text-label-sm); color: var(--text-tertiary); }
+.coc-flag-on { color: #e08a6d; border-color: #c65f3f; background: rgba(198, 95, 63, 0.16); }
+.coc-back { margin-bottom: 8px; }
+.coc-back span { display: block; color: var(--text-tertiary); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; }
+.coc-back p { margin: 2px 0 0; color: var(--text-secondary); }
+
+.pen-chars { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; }
+.pen-char { border: 1px solid var(--border-strong); border-radius: 4px; padding: 8px; text-align: center; }
+.pen-char span { display: block; color: var(--sheet-accent); font-size: var(--text-label-sm); letter-spacing: 0.12em; }
+.pen-char b { font-size: 20px; }
+.pen-trait { display: grid; grid-template-columns: 1fr 28px 8px 28px 1fr; gap: 4px; align-items: baseline; padding: 2px 0; font-size: var(--text-label-sm); color: var(--text-secondary); }
+.pen-trait b { color: var(--text-primary); text-align: center; }
+.pen-trait i { color: var(--text-tertiary); font-style: normal; text-align: center; }
+.pen-trait-r { text-align: right; color: var(--text-tertiary); }
+.pen-notes { margin: 0; color: var(--text-tertiary); font-style: italic; }

@@ -442,7 +442,96 @@ notes: Elder Greymane keeps telling him to wait. Fenn has never once wanted to w
     npc: e("Torun", "Dwarf smith", "Grumbles constantly, forges beautifully, and secretly loves the company."),
     pc: e("Pib", "Mallard rogue", "A dapper, feathered thief with light fingers and an even lighter conscience."),
     threat: x("Cinderwing", "A young dragon whose raids have emptied three farmsteads and one guild treasury."),
-    item: x("The Everfull Flask", "A dented flask that refills with whatever the holder needs most — usually soup.")
+    item: x("The Everfull Flask", "A dented flask that refills with whatever the holder needs most — usually soup."),
+    sheet: `## Character Sheet
+
+\`\`\`dragonbane-sheet
+name: Pib
+kin: Mallard
+age: Young
+profession: Thief
+weakness: Cannot walk past an unattended purse without at least considering it
+appearance: Dapper waistcoat, one bent tail feather, permanently innocent expression
+attributes:
+  str: 8
+  con: 10
+  agl: 16
+  int: 13
+  wil: 11
+  cha: 14
+conditions:
+  exhausted: false
+  sickly: false
+  dazed: false
+  angry: false
+  scared: true
+  disheartened: false
+damage_bonus_str: "—"
+damage_bonus_agl: D4
+movement: 12
+encumbrance_limit: 4
+hp: 7
+hp_max: 10
+wp: 9
+wp_max: 11
+death_successes: 0
+death_failures: 0
+skills:
+  acrobatics: 12
+  awareness: 10
+  bartering: 14
+  beast_lore: 5
+  bluffing: 16
+  bushcraft: 5
+  crafting: 4
+  evade: 14
+  healing: 5
+  hunting_fishing: 8
+  languages: 10
+  myths_legends: 5
+  performance: 7
+  persuasion: 12
+  riding: 8
+  seamanship: 6
+  sleight_of_hand: 18
+  sneaking: 16
+  spot_hidden: 13
+  swimming: 12
+weapon_skills_note: Knives is Pib's only trained weapon skill
+skills_weapons:
+  knives: 14
+secondary_skills:
+  - name: Pick Locks
+    value: 15
+abilities:
+  - "Backstabbing — deal extra damage when striking an unaware target."
+  - "Webbed Feet (Mallard) — swim without penalty, waddle with dignity."
+gold: 2
+silver: 14
+copper: 31
+armor: Padded jerkin
+armor_rating: 1
+helmet: None
+weapons:
+  - name: Dagger
+    grip: 1H
+    range: 2
+    damage: D8
+    durability: 8
+    features: "Subtle"
+  - name: Sling
+    grip: 1H
+    range: 20
+    damage: D6
+    durability: 6
+    features: "Loading"
+inventory:
+  - Lockpicks
+  - 10 metres of rope
+  - Tinderbox
+  - Half a pie, wrapped
+memento: A playing card from a game he definitely cheated at
+\`\`\``
   },
   "Dungeons & Dragons": {
     premise: "A band of adventurers answers the call on a troubled frontier.",
@@ -584,7 +673,83 @@ backstory: "Rilla tracked the war-band that razed Thornwatch for two winters bef
     npc: e("Steward Cadoc", "Manor steward", "Keeps the accounts, the secrets, and a low opinion of hasty young knights."),
     pc: e("Sir Gareth", "Knight of Salisbury", "Earnest, brave, and desperate to prove his family's honour."),
     threat: x("The Saxon Incursion", "Raiders pressing the borders while the great lords bicker over precedence."),
-    item: x("Ancestral Blade Dawnkeeper", "A knight's heirloom sword said to have never been drawn in a dishonourable cause.")
+    item: x("Ancestral Blade Dawnkeeper", "A knight's heirloom sword said to have never been drawn in a dishonourable cause."),
+    sheet: `## Character Sheet
+
+\`\`\`pendragon-sheet
+name: Sir Gareth
+homeland: Salisbury
+lord: Earl Roderick
+culture: Cymric
+religion: British Christian
+glory: 1240
+honor: 12
+characteristics:
+  siz: 13
+  dex: 12
+  str: 14
+  con: 14
+  app: 13
+hp: 27
+hp_max: 27
+major_wound: 14
+healing_rate: 2
+movement: 18
+armor_total: 12
+traits:
+  chaste: 13
+  energetic: 14
+  forgiving: 9
+  generous: 15
+  honest: 16
+  just: 13
+  merciful: 12
+  modest: 11
+  prudent: 8
+  spiritual: 12
+  temperate: 12
+  trusting: 13
+  valorous: 16
+passions:
+  - name: Loyalty (Lord Roderick)
+    value: 16
+  - name: Love (Family)
+    value: 15
+  - name: Hospitality
+    value: 13
+  - name: Honour
+    value: 15
+combat_skills:
+  battle: 12
+  horsemanship: 14
+  sword: 15
+  charge: 12
+  spear: 10
+  brawling: 8
+  bow: 6
+skills:
+  awareness: 8
+  courtesy: 10
+  first_aid: 8
+  folklore: 6
+  hunting: 9
+  orate: 5
+  recognize: 7
+  religion: 6
+  singing: 4
+  stewardship: 5
+attacks:
+  - name: Sword (Dawnkeeper)
+    value: 15
+    damage: 4D6
+  - name: Lance (charge)
+    value: 12
+    damage: 6D6
+  - name: Dagger
+    value: 8
+    damage: 2D6
+notes: Desperate to prove his family's honour, and young enough to mistake recklessness for valour.
+\`\`\``
   },
   Reign: {
     premise: "Founders build a company — a guild, gang, or fledgling nation — against rising rivals.",
@@ -686,7 +851,79 @@ history: Raised to rule a house that cannot afford her ambitions — and betroth
     npc: e("Professor Elias Crane", "Antiquarian", "Nervous scholar who found something in the archives he can't unsee."),
     pc: e("Dr. Mara Finch", "Alienist", "A physician of the mind, about to meet things no diagnosis covers."),
     threat: x("The Thing Beneath the Harbour", "Something vast and patient stirs in the deep water off Ashwick."),
-    item: x("The Ashwick Codex", "A water-stained tome whose reading rearranges the reader's certainties.")
+    item: x("The Ashwick Codex", "A water-stained tome whose reading rearranges the reader's certainties."),
+    sheet: `## Character Sheet
+
+\`\`\`coc-sheet
+name: Dr. Mara Finch
+occupation: Alienist
+era: 1920s Era Investigator
+age: 38
+residence: Ashwick, Massachusetts
+birthplace: Providence, Rhode Island
+characteristics:
+  str: 45
+  con: 60
+  siz: 50
+  dex: 55
+  app: 60
+  int: 75
+  pow: 70
+  edu: 85
+hp: 9
+hp_max: 11
+mp: 14
+mp_max: 14
+sanity: 63
+sanity_max: 99
+luck: 55
+move: 8
+build: 0
+damage_bonus: "0"
+temporary_insanity: false
+indefinite_insanity: false
+major_wound: false
+unconscious: false
+dying: false
+skills:
+  psychoanalysis: 65
+  psychology: 60
+  medicine: 55
+  first_aid: 45
+  library_use: 70
+  spot_hidden: 50
+  listen: 45
+  persuade: 50
+  charm: 35
+  occult: 15
+  history: 30
+  law: 20
+  drive_auto: 30
+  dodge: 27
+  cthulhu_mythos: 3
+weapons:
+  - name: Brawl
+    skill: "25%"
+    damage: 1D3
+    range: "—"
+    ammo: "—"
+  - name: .32 Revolver
+    skill: "20%"
+    damage: 1D8
+    range: 15 yds
+    ammo: 6
+personal_description: Careful, soft-spoken, and never without a notebook.
+ideology: The mind can be understood. It has to be. The alternative is unbearable.
+significant_people: Professor Elias Crane, a colleague whose letters have turned strange.
+meaningful_locations: The Ashwick asylum ward where she does her rounds at night.
+treasured_possessions: Her father's fountain pen, refilled more often than replaced.
+traits: Listens far longer than most people can stand to be listened to.
+injuries_scars: None yet.
+phobias_manias: None diagnosed. She is professionally aware of how that can change.
+arcane_tomes: The Ashwick Codex — read once, briefly, and closed again.
+encounters: None she is willing to write in a case file.
+gear: Medical bag, notebook and pen, pocket torch, letters of introduction
+\`\`\``
   },
   "Candela Obscura": {
     premise: "A circle of investigators contains supernatural bleed in a gaslit city.",
@@ -1393,6 +1630,62 @@ notes: Has read the mission briefing four times. The holes have not filled thems
     pc: e("Static", "Netrunner", "Jacks into hostile systems from a beat-up van and a worse attitude."),
     threat: x("The Arasch Op", "A megacorp's deniable operation to erase a whole block — and its witnesses."),
     item: x("The Militech Deck", "A prototype cyberdeck hot enough to fry ICE — and get you killed for owning it.")
+  },
+  "Dune: Adventures in the Imperium": {
+    premise: "A minor House plays for survival among sietches, spice, and Landsraad knives.",
+    location: x("Arrakeen Residency", "A wind-scoured House holding where every servant reports to someone else."),
+    faction: x("House Reval", "The player House — newly granted, badly funded, and watched by everyone."),
+    npc: e("Mentat Sorel", "House Mentat", "Calculates loyalties as precisely as budgets, and rarely likes the answers."),
+    pc: e("Lady Ysera Reval", "House heir", "Trained by the Bene Gesserit, bound by duty, and quietly furious about both."),
+    threat: x("The Harkonnen Audit", "A rival House's 'routine inspection' that everyone knows is a knife being sharpened."),
+    item: x("The Water Ledger", "The true accounting of the House's water debt — ruinous if it ever leaves the vault."),
+    sheet: `## Character Sheet
+
+**Name:** Lady Ysera Reval
+**House:** House Reval (Minor House, newly granted)
+**Homeworld:** Arrakis — Arrakeen Residency
+**Archetype:** Noble (Bene Gesserit training)
+**Ambition:** See House Reval outlive the people who granted it.
+
+### Skills
+
+| Skill | Rating | Focuses |
+| --- | --- | --- |
+| Battle | 5 | — |
+| Communicate | 8 | Court Intrigue, Voice |
+| Discipline | 7 | Prana-Bindu Control |
+| Move | 6 | Stillsuit Discipline |
+| Understand | 7 | Observation, House Finance |
+
+### Drives & Statements
+
+| Drive | Rating | Statement |
+| --- | --- | --- |
+| Duty | 8 | "The House comes before the woman who wears its name." |
+| Faith | 5 | "The Sisterhood taught me. It does not own me." |
+| Justice | 6 | "Debts are paid — in the order I choose." |
+| Power | 7 | "Better to be underestimated than unarmed." |
+| Truth | 4 | "Some ledgers should never be read aloud." |
+
+**Determination:** 2
+
+### Talents
+
+- **The Voice** — command obedience with a single spoken order.
+- **Read the Room** — sense the shape of a negotiation before it begins.
+- **Trained Observer** — notice the tell that betrays a lie.
+
+### Assets
+
+- Mentat Sorel (House Mentat, reluctant confidant)
+- A modest but real spice allotment
+- Bene Gesserit contacts who expect a favour someday
+
+### Traits
+
+- *Heir to a House That Cannot Afford Her*
+- *Trained by the Sisterhood*
+- *Watched by the Harkonnen Audit*`
   },
   Mothership: {
     premise: "Blue-collar spacers face lethal horror and worse contracts in the dark.",

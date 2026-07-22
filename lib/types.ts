@@ -40,6 +40,7 @@ export type GameType =
   | "Alien RPG"
   | "Coriolis"
   | "Cyberpunk RED"
+  | "Dune: Adventures in the Imperium"
   | "Mothership"
   | "Starfinder"
   | "Traveller"

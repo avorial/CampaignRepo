@@ -39,6 +39,7 @@ export const gamePackCategory: Record<GameType, "Fantasy" | "Modern" | "Sci-Fi" 
   "Cyberpunk RED": "Sci-Fi",
   Mothership: "Sci-Fi",
   Starfinder: "Sci-Fi",
+  "Dune: Adventures in the Imperium": "Sci-Fi",
   Traveller: "Sci-Fi",
   "Warhammer 40,000 Roleplay": "Sci-Fi",
   "Fate Core": "Generic",

@@ -1713,8 +1713,9 @@ function renderAlienSheetHtml(rawInput: string): string {
     return `<div class="alien-consumable"><span>${esc(c)}</span><b>${v == null ? "—" : esc(v)}</b></div>`;
   }).join("");
 
-  const health = alienNum(sheet.health);
-  const healthMax = alienNum(sheet.health_max) || Math.max(health, alienNum(attrs.strength) || 3);
+  // An unspecified current value means unhurt, not dead.
+  const healthMax = alienNum(sheet.health_max) || Math.max(alienNum(sheet.health), alienNum(attrs.strength) || 3);
+  const health = sheet.health != null ? alienNum(sheet.health) : healthMax;
   const stress = alienNum(sheet.stress);
   const radiation = alienNum(sheet.radiation);
 
@@ -1773,6 +1774,311 @@ function expandAlienSheets(content: string) {
   return content.replace(/```alien-sheet\s*\n([\s\S]*?)```/g, (_match, inner) => {
     return `\n\n${compactSheetHtml(renderAlienSheetHtml(String(inner)))}\n\n`;
   });
+}
+
+// ---- Dragonbane character sheet ----
+
+/** Each attribute owns a condition on the printed sheet; keep them paired. */
+const DB_ATTRS: { key: string; label: string; condition: string }[] = [
+  { key: "str", label: "STR", condition: "exhausted" },
+  { key: "con", label: "CON", condition: "sickly" },
+  { key: "agl", label: "AGL", condition: "dazed" },
+  { key: "int", label: "INT", condition: "angry" },
+  { key: "wil", label: "WIL", condition: "scared" },
+  { key: "cha", label: "CHA", condition: "disheartened" }
+];
+
+const DB_SKILLS: [string, string][] = [
+  ["acrobatics", "AGL"], ["awareness", "INT"], ["bartering", "CHA"], ["beast_lore", "INT"],
+  ["bluffing", "CHA"], ["bushcraft", "INT"], ["crafting", "STR"], ["evade", "AGL"],
+  ["healing", "INT"], ["hunting_fishing", "AGL"], ["languages", "INT"], ["myths_legends", "INT"],
+  ["performance", "CHA"], ["persuasion", "CHA"], ["riding", "AGL"], ["seamanship", "INT"],
+  ["sleight_of_hand", "AGL"], ["sneaking", "AGL"], ["spot_hidden", "INT"], ["swimming", "AGL"]
+];
+
+const DB_WEAPON_SKILLS: [string, string][] = [
+  ["axes", "STR"], ["bows", "AGL"], ["brawling", "STR"], ["crossbows", "AGL"], ["hammers", "STR"],
+  ["knives", "AGL"], ["slings", "AGL"], ["spears", "STR"], ["staves", "AGL"], ["swords", "STR"]
+];
+
+const titleize = (key: string) =>
+  key.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ").replace("Hunting Fishing", "Hunting & Fishing").replace("Myths Legends", "Myths & Legends");
+
+function renderDragonbaneSheetHtml(rawInput: string): string {
+  let sheet: Record<string, any>;
+  try {
+    sheet = (yaml.parse(rawInput.trim()) || {}) as Record<string, any>;
+  } catch (error) {
+    return `<section class="db-sheet db-sheet-error"><p>Dragonbane sheet data could not be parsed: ${escapeHtml(error instanceof Error ? error.message : "invalid YAML")}</p></section>`;
+  }
+  const esc = (v: unknown) => escapeHtml(String(v ?? ""));
+  const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+  const attrs = sheet.attributes || {};
+  const conds = sheet.conditions || {};
+  const skills = sheet.skills || {};
+
+  const attrCells = DB_ATTRS.map((a) => {
+    const on = Boolean(conds[a.condition]);
+    return `<div class="db-attr">
+      <span class="db-attr-label">${esc(a.label)}</span>
+      <b>${num(attrs[a.key])}</b>
+      <span class="db-cond${on ? " db-cond-on" : ""}">${esc(a.condition)}</span>
+    </div>`;
+  }).join("");
+
+  const skillRows = (defs: [string, string][]) => defs.map(([key, attr]) =>
+    `<div class="db-skill"><span>${esc(titleize(key))} <i>(${esc(attr)})</i></span><b>${num(skills[key])}</b></div>`).join("");
+
+  const secondary = Array.isArray(sheet.secondary_skills) ? sheet.secondary_skills : [];
+  const secondaryRows = secondary.length
+    ? secondary.map((s: any) => `<div class="db-skill"><span>${esc(s?.name ?? s)}</span><b>${num(s?.value)}</b></div>`).join("")
+    : `<p class="db-empty">None trained.</p>`;
+
+  const listOf = (items: unknown, empty: string) => {
+    const arr = Array.isArray(items) ? items.filter(Boolean) : [];
+    return arr.length ? `<ul class="db-list">${arr.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>` : `<p class="db-empty">${esc(empty)}</p>`;
+  };
+
+  const weapons = Array.isArray(sheet.weapons) ? sheet.weapons : [];
+  const weaponRows = weapons.length
+    ? weapons.map((w: any) => `<tr><td>${esc(w?.name)}</td><td>${esc(w?.grip ?? "")}</td><td>${esc(w?.range ?? "")}</td><td>${esc(w?.damage ?? "")}</td><td>${esc(w?.durability ?? "")}</td><td>${esc(w?.features ?? "")}</td></tr>`).join("")
+    : `<tr><td colspan="6" class="db-empty">Unarmed.</td></tr>`;
+
+  // An unspecified current value means undamaged, not dead.
+  const hpMax = num(sheet.hp_max) || num(attrs.con);
+  const hp = sheet.hp != null ? num(sheet.hp) : hpMax;
+  const wpMax = num(sheet.wp_max) || num(attrs.wil);
+  const wp = sheet.wp != null ? num(sheet.wp) : wpMax;
+
+  return `<section class="db-sheet">
+  <header class="db-head">
+    <div>
+      <h3>${esc(sheet.name || "Unnamed Adventurer")}</h3>
+      <p class="db-sub">${esc(sheet.kin || "")}${sheet.profession ? ` · ${esc(sheet.profession)}` : ""}${sheet.age ? ` · ${esc(sheet.age)}` : ""}</p>
+    </div>
+    <div class="db-purse">
+      <span>Gold <b>${num(sheet.gold)}</b></span>
+      <span>Silver <b>${num(sheet.silver)}</b></span>
+      <span>Copper <b>${num(sheet.copper)}</b></span>
+    </div>
+  </header>
+  ${sheet.weakness ? `<p class="db-weakness"><strong>Weakness:</strong> ${esc(sheet.weakness)}</p>` : ""}
+
+  <div class="db-attrs">${attrCells}</div>
+
+  <div class="db-derived">
+    <span>Damage Bonus STR <b>${esc(sheet.damage_bonus_str || "—")}</b></span>
+    <span>Damage Bonus AGL <b>${esc(sheet.damage_bonus_agl || "—")}</b></span>
+    <span>Movement <b>${num(sheet.movement)}</b></span>
+    <span>Encumbrance <b>${num(sheet.encumbrance_limit)}</b></span>
+  </div>
+
+  <div class="db-tracks">
+    <div class="db-track"><span>Hit Points</span><b>${hp}/${hpMax}</b></div>
+    <div class="db-track"><span>Willpower</span><b>${wp}/${wpMax}</b></div>
+    <div class="db-track"><span>Death Rolls</span><b>${num(sheet.death_successes)} success · ${num(sheet.death_failures)} fail</b></div>
+  </div>
+
+  <div class="db-cols">
+    <div class="db-panel"><h4>Skills</h4><div class="db-skills">${skillRows(DB_SKILLS)}</div></div>
+    <div class="db-panel"><h4>Weapon Skills</h4><div class="db-skills">${skillRows(DB_WEAPON_SKILLS)}</div>
+      <h4>Secondary Skills</h4><div class="db-skills">${secondaryRows}</div></div>
+    <div class="db-panel"><h4>Abilities &amp; Spells</h4>${listOf(sheet.abilities, "None yet.")}</div>
+  </div>
+
+  <div class="db-panel">
+    <h4>Weapons</h4>
+    <table class="db-table"><thead><tr><th>Weapon</th><th>Grip</th><th>Range</th><th>Damage</th><th>Dur.</th><th>Features</th></tr></thead><tbody>${weaponRows}</tbody></table>
+    <div class="db-armor"><span>Armor</span><b>${esc(sheet.armor || "None")}</b><span>Rating</span><b>${num(sheet.armor_rating)}</b><span>Helmet</span><b>${esc(sheet.helmet || "None")}</b></div>
+  </div>
+
+  <div class="db-cols">
+    <div class="db-panel"><h4>Inventory</h4>${listOf(sheet.inventory, "Empty pack.")}</div>
+    <div class="db-panel"><h4>Memento</h4><p>${esc(sheet.memento || "—")}</p>
+      ${sheet.appearance ? `<h4>Appearance</h4><p>${esc(sheet.appearance)}</p>` : ""}</div>
+  </div>
+</section>`;
+}
+
+function expandDragonbaneSheets(content: string) {
+  return content.replace(/```dragonbane-sheet\s*\n([\s\S]*?)```/g, (_match, inner) =>
+    `\n\n${compactSheetHtml(renderDragonbaneSheetHtml(String(inner)))}\n\n`);
+}
+
+// ---- Call of Cthulhu 7e investigator sheet ----
+
+const COC_CHARS: { key: string; label: string; note?: string }[] = [
+  { key: "str", label: "STR" }, { key: "con", label: "CON" }, { key: "siz", label: "SIZ" },
+  { key: "dex", label: "DEX" }, { key: "app", label: "APP" }, { key: "int", label: "INT", note: "Idea" },
+  { key: "pow", label: "POW" }, { key: "edu", label: "EDU", note: "Know" }
+];
+
+function renderCoCSheetHtml(rawInput: string): string {
+  let sheet: Record<string, any>;
+  try {
+    sheet = (yaml.parse(rawInput.trim()) || {}) as Record<string, any>;
+  } catch (error) {
+    return `<section class="coc-sheet coc-sheet-error"><p>Call of Cthulhu sheet data could not be parsed: ${escapeHtml(error instanceof Error ? error.message : "invalid YAML")}</p></section>`;
+  }
+  const esc = (v: unknown) => escapeHtml(String(v ?? ""));
+  const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+  const chars = sheet.characteristics || {};
+
+  // The printed sheet always shows Regular / Half / Fifth; compute them.
+  const charRows = COC_CHARS.map((c) => {
+    const v = num(chars[c.key]);
+    return `<div class="coc-char"><span>${esc(c.label)}${c.note ? `<i>${esc(c.note)}</i>` : ""}</span><b>${v}</b><em>${Math.floor(v / 2)}</em><em>${Math.floor(v / 5)}</em></div>`;
+  }).join("");
+
+  const skills = sheet.skills || {};
+  const skillRows = Object.keys(skills).length
+    ? Object.entries(skills).map(([name, value]) => {
+        const v = num(value);
+        return `<div class="coc-skill"><span>${esc(titleize(name))}</span><b>${v}%</b><em>${Math.floor(v / 2)}</em><em>${Math.floor(v / 5)}</em></div>`;
+      }).join("")
+    : `<p class="coc-empty">No skills recorded.</p>`;
+
+  const weapons = Array.isArray(sheet.weapons) ? sheet.weapons : [];
+  const weaponRows = weapons.length
+    ? weapons.map((w: any) => `<tr><td>${esc(w?.name)}</td><td>${esc(w?.skill ?? "")}</td><td>${esc(w?.damage ?? "")}</td><td>${esc(w?.range ?? "—")}</td><td>${esc(w?.ammo ?? "—")}</td></tr>`).join("")
+    : `<tr><td colspan="5" class="coc-empty">Brawl only.</td></tr>`;
+
+  const flags = ["temporary_insanity", "indefinite_insanity", "major_wound", "unconscious", "dying"]
+    .map((f) => `<span class="coc-flag${sheet[f] ? " coc-flag-on" : ""}">${esc(titleize(f))}</span>`).join("");
+
+  const backstory = ["personal_description", "ideology", "significant_people", "meaningful_locations",
+    "treasured_possessions", "traits", "injuries_scars", "phobias_manias", "arcane_tomes", "encounters"]
+    .filter((k) => sheet[k])
+    .map((k) => `<div class="coc-back"><span>${esc(titleize(k))}</span><p>${esc(sheet[k])}</p></div>`).join("");
+
+  return `<section class="coc-sheet">
+  <header class="coc-head">
+    <div>
+      <h3>${esc(sheet.name || "Unnamed Investigator")}</h3>
+      <p class="coc-sub">${esc(sheet.occupation || "")}${sheet.age ? ` · Age ${esc(sheet.age)}` : ""}${sheet.residence ? ` · ${esc(sheet.residence)}` : ""}</p>
+    </div>
+    <div class="coc-era">${esc(sheet.era || "1920s Era Investigator")}</div>
+  </header>
+
+  <div class="coc-chars"><div class="coc-char coc-char-head"><span></span><b>Reg</b><em>Half</em><em>Fifth</em></div>${charRows}</div>
+
+  <div class="coc-tracks">
+    <div class="coc-track"><span>Hit Points</span><b>${sheet.hp != null ? num(sheet.hp) : num(sheet.hp_max)}/${num(sheet.hp_max)}</b></div>
+    <div class="coc-track"><span>Magic Points</span><b>${sheet.mp != null ? num(sheet.mp) : num(sheet.mp_max)}/${num(sheet.mp_max)}</b></div>
+    <div class="coc-track"><span>Sanity</span><b>${num(sheet.sanity)}/${num(sheet.sanity_max) || 99}</b></div>
+    <div class="coc-track"><span>Luck</span><b>${num(sheet.luck)}</b></div>
+    <div class="coc-track"><span>Move</span><b>${num(sheet.move)}</b></div>
+    <div class="coc-track"><span>Build / DB</span><b>${esc(sheet.build ?? 0)} · ${esc(sheet.damage_bonus || "0")}</b></div>
+  </div>
+
+  <div class="coc-flags">${flags}</div>
+
+  <div class="coc-panel"><h4>Skills</h4><div class="coc-skills"><div class="coc-skill coc-skill-head"><span></span><b>Reg</b><em>Half</em><em>Fifth</em></div>${skillRows}</div></div>
+
+  <div class="coc-panel">
+    <h4>Combat</h4>
+    <table class="coc-table"><thead><tr><th>Weapon</th><th>Skill</th><th>Damage</th><th>Range</th><th>Ammo</th></tr></thead><tbody>${weaponRows}</tbody></table>
+  </div>
+
+  ${backstory ? `<div class="coc-panel"><h4>Backstory</h4>${backstory}</div>` : ""}
+  ${sheet.gear ? `<div class="coc-panel"><h4>Gear &amp; Possessions</h4><p>${esc(sheet.gear)}</p></div>` : ""}
+</section>`;
+}
+
+function expandCoCSheets(content: string) {
+  return content.replace(/```coc-sheet\s*\n([\s\S]*?)```/g, (_match, inner) =>
+    `\n\n${compactSheetHtml(renderCoCSheetHtml(String(inner)))}\n\n`);
+}
+
+// ---- Pendragon knight sheet ----
+
+/** The thirteen opposed trait pairs; each pair totals 20. */
+const PENDRAGON_TRAITS: [string, string][] = [
+  ["chaste", "lustful"], ["energetic", "lazy"], ["forgiving", "vengeful"], ["generous", "selfish"],
+  ["honest", "deceitful"], ["just", "arbitrary"], ["merciful", "cruel"], ["modest", "proud"],
+  ["prudent", "reckless"], ["spiritual", "worldly"], ["temperate", "indulgent"],
+  ["trusting", "suspicious"], ["valorous", "cowardly"]
+];
+
+function renderPendragonSheetHtml(rawInput: string): string {
+  let sheet: Record<string, any>;
+  try {
+    sheet = (yaml.parse(rawInput.trim()) || {}) as Record<string, any>;
+  } catch (error) {
+    return `<section class="pen-sheet pen-sheet-error"><p>Pendragon sheet data could not be parsed: ${escapeHtml(error instanceof Error ? error.message : "invalid YAML")}</p></section>`;
+  }
+  const esc = (v: unknown) => escapeHtml(String(v ?? ""));
+  const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+  const chars = sheet.characteristics || {};
+  const traits = sheet.traits || {};
+
+  const charRow = ["siz", "dex", "str", "con", "app"].map((k) =>
+    `<div class="pen-char"><span>${esc(k.toUpperCase())}</span><b>${num(chars[k])}</b></div>`).join("");
+
+  // A trait pair sums to 20; showing both halves makes the tension legible.
+  const traitRows = PENDRAGON_TRAITS.map(([good, bad]) => {
+    const g = num(traits[good] ?? 10);
+    const b = traits[bad] != null ? num(traits[bad]) : 20 - g;
+    return `<div class="pen-trait"><span>${esc(titleize(good))}</span><b>${g}</b><i>/</i><b>${b}</b><span class="pen-trait-r">${esc(titleize(bad))}</span></div>`;
+  }).join("");
+
+  const passions = Array.isArray(sheet.passions) ? sheet.passions : [];
+  const passionRows = passions.length
+    ? passions.map((p: any) => `<div class="pen-passion"><span>${esc(p?.name ?? p)}</span><b>${num(p?.value)}</b></div>`).join("")
+    : `<p class="pen-empty">No passions sworn.</p>`;
+
+  const skillGroup = (obj: unknown, empty: string) => {
+    const entries = obj && typeof obj === "object" ? Object.entries(obj as Record<string, unknown>) : [];
+    return entries.length
+      ? entries.map(([k, v]) => `<div class="pen-skill"><span>${esc(titleize(k))}</span><b>${num(v)}</b></div>`).join("")
+      : `<p class="pen-empty">${esc(empty)}</p>`;
+  };
+
+  const attacks = Array.isArray(sheet.attacks) ? sheet.attacks : [];
+  const attackRows = attacks.length
+    ? attacks.map((a: any) => `<tr><td>${esc(a?.name)}</td><td>${esc(a?.value ?? "")}</td><td>${esc(a?.damage ?? "")}</td></tr>`).join("")
+    : `<tr><td colspan="3" class="pen-empty">Unarmed.</td></tr>`;
+
+  // An unspecified current value means undamaged, not dead.
+  const hpMax = num(sheet.hp_max) || (num(chars.con) + num(chars.siz));
+  const hp = sheet.hp != null ? num(sheet.hp) : hpMax;
+
+  return `<section class="pen-sheet">
+  <header class="pen-head">
+    <div>
+      <h3>${esc(sheet.name || "Unnamed Knight")}</h3>
+      <p class="pen-sub">${esc(sheet.homeland || "")}${sheet.lord ? ` · Sworn to ${esc(sheet.lord)}` : ""}${sheet.culture ? ` · ${esc(sheet.culture)}` : ""}</p>
+    </div>
+    <div class="pen-glory"><span>Glory</span><b>${num(sheet.glory)}</b>${sheet.honor != null ? `<span>Honor</span><b>${num(sheet.honor)}</b>` : ""}</div>
+  </header>
+
+  <div class="pen-chars">${charRow}</div>
+  <div class="pen-derived">
+    <span>Hit Points <b>${hp}/${hpMax}</b></span>
+    <span>Major Wound <b>${num(sheet.major_wound) || num(chars.con)}</b></span>
+    <span>Healing <b>${num(sheet.healing_rate) || Math.floor(num(chars.con) / 5)}</b></span>
+    <span>Move <b>${num(sheet.movement) || Math.floor((num(chars.str) + num(chars.dex)) / 2) + 5}</b></span>
+    <span>Armor <b>${num(sheet.armor_total)}</b></span>
+  </div>
+
+  <div class="pen-cols">
+    <div class="pen-panel"><h4>Traits</h4><div class="pen-traits">${traitRows}</div></div>
+    <div class="pen-panel"><h4>Passions</h4>${passionRows}
+      <h4>Combat Skills</h4><div class="pen-skills">${skillGroup(sheet.combat_skills, "Untrained.")}</div></div>
+    <div class="pen-panel"><h4>Skills</h4><div class="pen-skills">${skillGroup(sheet.skills, "Untrained.")}</div></div>
+  </div>
+
+  <div class="pen-panel">
+    <h4>Attacks</h4>
+    <table class="pen-table"><thead><tr><th>Weapon</th><th>Value</th><th>Damage</th></tr></thead><tbody>${attackRows}</tbody></table>
+  </div>
+  ${sheet.notes ? `<p class="pen-notes">${esc(sheet.notes)}</p>` : ""}
+</section>`;
+}
+
+function expandPendragonSheets(content: string) {
+  return content.replace(/```pendragon-sheet\s*\n([\s\S]*?)```/g, (_match, inner) =>
+    `\n\n${compactSheetHtml(renderPendragonSheetHtml(String(inner)))}\n\n`);
 }
 
 // ══ Inventory block ═══════════════════════════════════════════════════════════
@@ -1905,6 +2211,9 @@ export function renderMarkdown(
   content = expandDnDSheets(content);
   content = expandSwordChronicleSheets(content);
   content = expandAlienSheets(content);
+  content = expandDragonbaneSheets(content);
+  content = expandCoCSheets(content);
+  content = expandPendragonSheets(content);
   content = expandInventory(content);
   content = expandTrackers(content);
   content = expandTraits(content);
