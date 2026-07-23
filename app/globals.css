@@ -9488,3 +9488,43 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
 .osr-table th, .whf-table th, .sw-table th { text-align: left; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid var(--border-strong); padding: 4px 6px; font-weight: 500; }
 .osr-table td, .whf-table td, .sw-table td { padding: 4px 6px; border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.06)); color: var(--text-secondary); }
 .osr-notes, .whf-notes, .sw-notes, .whf-armor, .sw-armor { margin: 8px 0 0; color: var(--text-tertiary); font-size: var(--text-label-sm); font-style: italic; }
+
+/* ---- Markdown tables in rendered page content ----
+   Every table rule in this file is scoped to a specific sheet renderer
+   (.alien-table, .dg-table, .dnd-attacks-table, ...), so a plain Markdown
+   table written by a user rendered with no borders, no padding, and no header
+   emphasis. Scoped to .preview so it styles page content without touching
+   tables in the app's own chrome.
+
+   Scoped with :not([class]) so it only ever touches tables Markdown produced.
+   Every sheet renderer gives its tables a class (.dg-table, .alien-table, ...),
+   and a plain `.preview tbody td` rule outranks `.dg-table td` on specificity —
+   it would silently restyle all thirteen renderers. */
+
+.preview table:not([class]) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 14px 0;
+  font-size: var(--text-body-sm, 14px);
+}
+
+.preview table:not([class]) thead th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: var(--text-label-sm, 11px);
+  border-bottom: 1px solid var(--border-strong);
+  padding: 7px 10px;
+}
+
+.preview table:not([class]) tbody td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.07));
+  color: var(--text-secondary);
+  vertical-align: top;
+  font-variant-numeric: tabular-nums;
+}
+
+.preview table:not([class]) tbody tr:last-child td { border-bottom: 0; }
