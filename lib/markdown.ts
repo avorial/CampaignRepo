@@ -2561,6 +2561,237 @@ function expandCoriolisSheets(content: string) {
     `\n\n${compactSheetHtml(renderCoriolisSheetHtml(String(inner)))}\n\n`);
 }
 
+// ---- OSR sheet (Mörk Borg, Old-School Essentials, Shadowdark) ----
+
+/**
+ * One renderer for the old-school family. The ability list is taken from the
+ * data rather than hard-coded, because these systems disagree: Mörk Borg uses
+ * four (Agility, Presence, Strength, Toughness) while OSE and Shadowdark use
+ * the classic six. Each system's signature resource is shown when present —
+ * Omens for Mörk Borg, Luck and torch timing for Shadowdark.
+ */
+function renderOsrSheetHtml(rawInput: string): string {
+  const { sheet, error } = sheetYaml(rawInput, "osr-sheet", "OSR");
+  if (error || !sheet) return error!;
+  const abilities = sheet.abilities || {};
+
+  const abilityCells = Object.entries(abilities).map(([k, v]) => {
+    const n = shNum(v);
+    return `<div class="osr-ability"><span>${shEsc(titleize(k))}</span><b>${n > 0 ? `+${n}` : n}</b></div>`;
+  }).join("") || `<p class="osr-empty">No abilities recorded.</p>`;
+
+  const hpMax = shNum(sheet.hp_max);
+  const tracks: string[] = [
+    `<div class="osr-track"><span>Hit Points</span><b>${shCurrent(sheet.hp, hpMax)}/${hpMax}</b></div>`,
+    `<div class="osr-track"><span>Armour</span><b>${shEsc(sheet.armor_class ?? sheet.armor ?? "—")}</b></div>`
+  ];
+  if (sheet.omens != null) tracks.push(`<div class="osr-track osr-omen"><span>Omens</span><b>${shNum(sheet.omens)}</b></div>`);
+  if (sheet.luck != null) tracks.push(`<div class="osr-track"><span>Luck</span><b>${shNum(sheet.luck)}</b></div>`);
+  if (sheet.torches != null) tracks.push(`<div class="osr-track"><span>Torches</span><b>${shNum(sheet.torches)}</b></div>`);
+  if (sheet.silver != null) tracks.push(`<div class="osr-track"><span>Silver</span><b>${shNum(sheet.silver)}</b></div>`);
+  if (sheet.gold != null) tracks.push(`<div class="osr-track"><span>Gold</span><b>${shNum(sheet.gold)}</b></div>`);
+
+  const saves = sheet.saves || {};
+  const saveRows = Object.keys(saves).length
+    ? Object.entries(saves).map(([k, v]) => `<div class="osr-save"><span>${shEsc(titleize(k))}</span><b>${shNum(v)}</b></div>`).join("")
+    : "";
+
+  const weapons = Array.isArray(sheet.weapons) ? sheet.weapons : [];
+  const weaponRows = weapons.length
+    ? weapons.map((w: any) => `<tr><td>${shEsc(w?.name)}</td><td>${shEsc(w?.damage ?? "")}</td><td>${shEsc(w?.notes ?? "")}</td></tr>`).join("")
+    : `<tr><td colspan="3" class="osr-empty">Unarmed.</td></tr>`;
+
+  return `<section class="osr-sheet">
+  <header class="osr-head">
+    <div>
+      <h3>${shEsc(sheet.name || "Unnamed Wretch")}</h3>
+      <p class="osr-sub">${shEsc(sheet.class || "")}${sheet.ancestry ? ` · ${shEsc(sheet.ancestry)}` : ""}${sheet.level != null ? ` · Level ${shNum(sheet.level)}` : ""}</p>
+    </div>
+    ${sheet.xp != null ? `<div class="osr-xp"><span>XP</span><b>${shNum(sheet.xp)}</b></div>` : ""}
+  </header>
+
+  <div class="osr-abilities">${abilityCells}</div>
+  <div class="osr-tracks">${tracks.join("")}</div>
+  ${saveRows ? `<div class="osr-panel"><h4>Saves</h4><div class="osr-saves">${saveRows}</div></div>` : ""}
+
+  <div class="osr-panel"><h4>Weapons</h4>
+    <table class="osr-table"><thead><tr><th>Weapon</th><th>Damage</th><th>Notes</th></tr></thead><tbody>${weaponRows}</tbody></table>
+  </div>
+
+  <div class="osr-cols">
+    <div class="osr-panel"><h4>Talents &amp; Powers</h4>${shList(sheet.talents, "None.", "osr")}</div>
+    <div class="osr-panel"><h4>Gear</h4>${shList(sheet.gear, "Nothing but rags.", "osr")}</div>
+  </div>
+  ${sheet.notes ? `<p class="osr-notes">${shEsc(sheet.notes)}</p>` : ""}
+</section>`;
+}
+
+function expandOsrSheets(content: string) {
+  return content.replace(/```osr-sheet\s*\n([\s\S]*?)```/g, (_m, inner) =>
+    `\n\n${compactSheetHtml(renderOsrSheetHtml(String(inner)))}\n\n`);
+}
+
+// ---- Warhammer d100 sheet (WFRP 4e and Warhammer 40,000 Roleplay) ----
+
+const WFRP_CHARS: [string, string][] = [
+  ["ws", "Weapon Skill"], ["bs", "Ballistic Skill"], ["s", "Strength"], ["t", "Toughness"],
+  ["i", "Initiative"], ["ag", "Agility"], ["dex", "Dexterity"], ["int", "Intelligence"],
+  ["wp", "Willpower"], ["fel", "Fellowship"]
+];
+const W40K_CHARS: [string, string][] = [
+  ["ws", "Weapon Skill"], ["bs", "Ballistic Skill"], ["s", "Strength"], ["t", "Toughness"],
+  ["ag", "Agility"], ["int", "Intelligence"], ["per", "Perception"], ["wp", "Willpower"],
+  ["fel", "Fellowship"]
+];
+
+function renderWarhammerSheetHtml(rawInput: string): string {
+  const { sheet, error } = sheetYaml(rawInput, "whf-sheet", "Warhammer");
+  if (error || !sheet) return error!;
+  const is40k = String(sheet.system || "").includes("40k");
+  const chars = sheet.characteristics || {};
+
+  // d100 systems: the characteristic IS the target number, tens digit the bonus.
+  const charRows = (is40k ? W40K_CHARS : WFRP_CHARS).map(([k, label]) => {
+    const v = shNum(chars[k]);
+    return `<div class="whf-char"><span>${shEsc(label)}</span><b>${v}</b><em>${Math.floor(v / 10)}</em></div>`;
+  }).join("");
+
+  const skills = sheet.skills || {};
+  const skillRows = Object.keys(skills).length
+    ? Object.entries(skills).sort(([a], [b]) => a.localeCompare(b))
+        .map(([n, v]) => `<div class="whf-skill"><span>${shEsc(titleize(n))}</span><b>${shNum(v)}</b></div>`).join("")
+    : `<p class="whf-empty">No advanced skills.</p>`;
+
+  const woundsMax = shNum(sheet.wounds_max);
+  const tracks: string[] = [
+    `<div class="whf-track"><span>Wounds</span><b>${shCurrent(sheet.wounds, woundsMax)}/${woundsMax}</b></div>`,
+    `<div class="whf-track"><span>Fate</span><b>${shNum(sheet.fate)}</b></div>`
+  ];
+  if (is40k) {
+    tracks.push(`<div class="whf-track"><span>Corruption</span><b>${shNum(sheet.corruption)}</b></div>`);
+    tracks.push(`<div class="whf-track"><span>Insanity</span><b>${shNum(sheet.insanity)}</b></div>`);
+  } else {
+    tracks.push(`<div class="whf-track"><span>Resilience</span><b>${shNum(sheet.resilience)}</b></div>`);
+    tracks.push(`<div class="whf-track"><span>Advantage</span><b>${shNum(sheet.advantage)}</b></div>`);
+  }
+
+  const weapons = Array.isArray(sheet.weapons) ? sheet.weapons : [];
+  const weaponRows = weapons.length
+    ? weapons.map((w: any) => `<tr><td>${shEsc(w?.name)}</td><td>${shEsc(w?.damage ?? "")}</td><td>${shEsc(w?.qualities ?? w?.notes ?? "")}</td></tr>`).join("")
+    : `<tr><td colspan="3" class="whf-empty">Unarmed.</td></tr>`;
+
+  return `<section class="whf-sheet">
+  <header class="whf-head">
+    <div>
+      <h3>${shEsc(sheet.name || "Unnamed")}</h3>
+      <p class="whf-sub">${shEsc(sheet.career || sheet.archetype || "")}${sheet.rank ? ` · ${shEsc(sheet.rank)}` : ""}${sheet.species ? ` · ${shEsc(sheet.species)}` : ""}</p>
+    </div>
+    <div class="whf-meta">${is40k ? "41st Millennium" : "The Old World"}</div>
+  </header>
+
+  <div class="whf-chars"><div class="whf-char whf-char-head"><span></span><b>Value</b><em>Bonus</em></div>${charRows}</div>
+  <div class="whf-tracks">${tracks.join("")}</div>
+
+  <div class="whf-cols">
+    <div class="whf-panel"><h4>Skills</h4><div class="whf-skills">${skillRows}</div></div>
+    <div class="whf-panel"><h4>Talents</h4>${shList(sheet.talents, "None.", "whf")}</div>
+  </div>
+
+  <div class="whf-panel"><h4>Weapons</h4>
+    <table class="whf-table"><thead><tr><th>Weapon</th><th>Damage</th><th>Qualities</th></tr></thead><tbody>${weaponRows}</tbody></table>
+    ${sheet.armor ? `<p class="whf-armor">Armour: ${shEsc(sheet.armor)}</p>` : ""}
+  </div>
+
+  <div class="whf-panel"><h4>Trappings</h4>${shList(sheet.trappings ?? sheet.gear, "Nothing of note.", "whf")}</div>
+  ${sheet.notes ? `<p class="whf-notes">${shEsc(sheet.notes)}</p>` : ""}
+</section>`;
+}
+
+function expandWarhammerSheets(content: string) {
+  return content.replace(/```warhammer-sheet\s*\n([\s\S]*?)```/g, (_m, inner) =>
+    `\n\n${compactSheetHtml(renderWarhammerSheetHtml(String(inner)))}\n\n`);
+}
+
+// ---- Savage Worlds sheet ----
+
+const SW_ATTRS = ["agility", "smarts", "spirit", "strength", "vigor"];
+
+/** Traits are die types, so values render as d4–d12 with an optional modifier. */
+function swDie(value: unknown): string {
+  if (value == null) return "—";
+  const s = String(value).trim();
+  return /^d/i.test(s) ? s.toLowerCase() : `d${s}`;
+}
+
+function renderSavageSheetHtml(rawInput: string): string {
+  const { sheet, error } = sheetYaml(rawInput, "sw-sheet", "Savage Worlds");
+  if (error || !sheet) return error!;
+  const attrs = sheet.attributes || {};
+  const skills = sheet.skills || {};
+
+  const attrCells = SW_ATTRS.map((k) =>
+    `<div class="sw-attr"><span>${shEsc(titleize(k))}</span><b>${shEsc(swDie(attrs[k]))}</b></div>`).join("");
+
+  const skillRows = Object.keys(skills).length
+    ? Object.entries(skills).sort(([a], [b]) => a.localeCompare(b))
+        .map(([n, v]) => `<div class="sw-skill"><span>${shEsc(titleize(n))}</span><b>${shEsc(swDie(v))}</b></div>`).join("")
+    : `<p class="sw-empty">No skills.</p>`;
+
+  const wounds = shNum(sheet.wounds), fatigue = shNum(sheet.fatigue);
+  const pips = (n: number, max: number, cls: string) =>
+    Array.from({ length: max }, (_, i) => `<span class="sw-pip${i < n ? ` sw-pip-on ${cls}` : ""}"></span>`).join("");
+
+  const weapons = Array.isArray(sheet.weapons) ? sheet.weapons : [];
+  const weaponRows = weapons.length
+    ? weapons.map((w: any) => `<tr><td>${shEsc(w?.name)}</td><td>${shEsc(w?.damage ?? "")}</td><td>${shEsc(w?.range ?? "—")}</td><td>${shEsc(w?.notes ?? "")}</td></tr>`).join("")
+    : `<tr><td colspan="4" class="sw-empty">Unarmed.</td></tr>`;
+
+  return `<section class="sw-sheet">
+  <header class="sw-head">
+    <div>
+      <h3>${shEsc(sheet.name || "Unnamed Hero")}</h3>
+      <p class="sw-sub">${shEsc(sheet.concept || "")}${sheet.rank ? ` · ${shEsc(sheet.rank)}` : ""}${sheet.ancestry ? ` · ${shEsc(sheet.ancestry)}` : ""}</p>
+    </div>
+    <div class="sw-bennies"><span>Bennies</span><b>${shNum(sheet.bennies)}</b></div>
+  </header>
+
+  <div class="sw-attrs">${attrCells}</div>
+
+  <div class="sw-derived">
+    <span>Pace <b>${shNum(sheet.pace) || 6}</b></span>
+    <span>Parry <b>${shNum(sheet.parry)}</b></span>
+    <span>Toughness <b>${shNum(sheet.toughness)}${sheet.armor_value ? ` (${shNum(sheet.armor_value)})` : ""}</b></span>
+  </div>
+
+  <div class="sw-status">
+    <div class="sw-track"><span>Wounds</span><div class="sw-pips">${pips(wounds, 3, "sw-pip-wound")}</div></div>
+    <div class="sw-track"><span>Fatigue</span><div class="sw-pips">${pips(fatigue, 2, "sw-pip-fatigue")}</div></div>
+  </div>
+
+  <div class="sw-panel"><h4>Skills</h4><div class="sw-skills">${skillRows}</div></div>
+
+  <div class="sw-cols">
+    <div class="sw-panel"><h4>Edges</h4>${shList(sheet.edges, "None.", "sw")}</div>
+    <div class="sw-panel"><h4>Hindrances</h4>${shList(sheet.hindrances, "None.", "sw")}</div>
+  </div>
+
+  <div class="sw-panel"><h4>Weapons</h4>
+    <table class="sw-table"><thead><tr><th>Weapon</th><th>Damage</th><th>Range</th><th>Notes</th></tr></thead><tbody>${weaponRows}</tbody></table>
+    ${sheet.armor ? `<p class="sw-armor">Armour: ${shEsc(sheet.armor)}</p>` : ""}
+  </div>
+
+  ${sheet.powers ? `<div class="sw-panel"><h4>Powers</h4>${shList(sheet.powers, "None.", "sw")}
+    <p class="sw-pp">Power Points: <b>${shNum(sheet.power_points)}</b></p></div>` : ""}
+  <div class="sw-panel"><h4>Gear</h4>${shList(sheet.gear, "Nothing of note.", "sw")}</div>
+  ${sheet.notes ? `<p class="sw-notes">${shEsc(sheet.notes)}</p>` : ""}
+</section>`;
+}
+
+function expandSavageSheets(content: string) {
+  return content.replace(/```savage-sheet\s*\n([\s\S]*?)```/g, (_m, inner) =>
+    `\n\n${compactSheetHtml(renderSavageSheetHtml(String(inner)))}\n\n`);
+}
+
 // ══ Inventory block ═══════════════════════════════════════════════════════════
 
 type InventoryItem = { name?: string; qty?: number | string; weight?: number | string; value?: string; notes?: string };
@@ -2700,6 +2931,9 @@ export function renderMarkdown(
   content = expandCyberpunkSheets(content);
   content = expandBladesSheets(content);
   content = expandCoriolisSheets(content);
+  content = expandOsrSheets(content);
+  content = expandWarhammerSheets(content);
+  content = expandSavageSheets(content);
   content = expandInventory(content);
   content = expandTrackers(content);
   content = expandTraits(content);

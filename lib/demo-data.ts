@@ -125,7 +125,56 @@ notes: Hears the city's dead constantly. Tells the crew it is a gift. It is not.
     npc: e("Ser Aldous", "Oathbound knight", "Honourable to a fault, and quietly certain the crown has lost its way."),
     pc: e("Bram", "Hedge-priest", "A wandering cleric with a beggar's coat and a scholar's stubborn faith."),
     threat: x("The Succession", "Two claimants, one throne, and a war that will be paid for in villages."),
-    item: x("The Broken Charter", "A torn founding document whose missing half could legitimize a rebellion.")
+    item: x("The Broken Charter", "A torn founding document whose missing half could legitimize a rebellion."),
+    sheet: `## Character Sheet
+
+**Name:** Aldrick Stonewend
+**Stock:** Man
+**Lifepaths:** Born Villager → Conscript → Foot Soldier → Bandit
+
+### Beliefs
+
+1. *The Baron takes and takes; I will take back what he owes my village.*
+2. *Wenna trusts me and I have not earned it — I will.*
+3. *If it comes to blood, let it be mine and not the crew's.*
+
+### Instincts
+
+1. *Always check the road behind us.*
+2. *Never draw first in a crowd.*
+3. *When someone lies to me, say nothing and remember.*
+
+### Traits
+
+*Cynical* (Char) · *Thick Skinned* (Die) · *Bloody Minded* (Call-on)
+
+### Stats
+
+| Stat | Exponent | Stat | Exponent |
+| --- | --- | --- | --- |
+| Will | B4 | Power | B5 |
+| Perception | B4 | Forte | B5 |
+| Agility | B4 | Speed | B4 |
+
+**Health:** B5 · **Steel:** B4 · **Reflexes:** B4 · **Mortal Wound:** B10
+**Circles:** B2 · **Resources:** B1 · **Stride:** 7
+
+### Skills
+
+| Skill | Exponent | Skill | Exponent |
+| --- | --- | --- | --- |
+| Sword | B4 | Soldiering | B3 |
+| Bow | B3 | Foraging | B2 |
+| Brawling | B3 | Intimidation | B3 |
+| Riding | B2 | Haggling | B2 |
+
+### Artha
+
+**Fate:** 2 · **Persona:** 1 · **Deeds:** 0
+
+### Gear
+
+Sword, gambeson, bow and a dozen arrows, a stolen signet he cannot sell.`
   },
   "Dark Ages: Fae": {
     premise: "Medieval changelings guard the Dreaming as cold Banality creeps across the land.",
@@ -688,7 +737,45 @@ backstory: "Rilla tracked the war-band that razed Thornwatch for two winters bef
     npc: e("Captain Vespera", "Airship captain", "Reckless, generous, and one storm away from her greatest story."),
     pc: e("Aster", "Spellblade", "A young duelist channeling elemental magic through a family-heirloom blade."),
     threat: x("The Fallen King Umbra", "A once-beloved ruler corrupted by a dying crystal, now unmaking the world."),
-    item: x("The Aether Shard", "A sliver of living crystal that answers to the courage of whoever bears it.")
+    item: x("The Aether Shard", "A sliver of living crystal that answers to the courage of whoever bears it."),
+    sheet: `## Character Sheet
+
+**Name:** Sera Vell
+**Identity:** *The Last Apprentice of a Burned Academy*
+**Theme:** Justice · **Origin:** Ashfall Quarter
+
+### Attributes
+
+| Attribute | Die |
+| --- | --- |
+| Dexterity | d8 |
+| Insight | d10 |
+| Might | d6 |
+| Willpower | d10 |
+
+**HP:** 34 / 42 · **MP:** 28 / 40 · **IP:** 5 / 6
+**Defense:** 11 · **Magic Defense:** 13 · **Initiative:** +2
+
+### Classes
+
+- **Elementalist** (Lv 3) — Spellblade, Elemental Magic
+- **Guardian** (Lv 2) — Fortress, Protect
+
+### Bonds
+
+- **Master Orin** — *Loyalty · Admiration* (2)
+- **The Academy's Ashes** — *Mistrust · Inferiority* (2)
+- **Kess, fellow survivor** — *Trust · Affection* (3)
+
+### Spells
+
+- **Flare** (MP 10) — ranged fire damage, may target multiple.
+- **Barrier** (MP 15) — grant a creature resistance for one scene.
+- **Aura** (MP 20) — imbue an ally's weapon with an element.
+
+### Equipment
+
+Apprentice's rod (magic, d8), academy robes (DEF +1), sealed letter never delivered.`
   },
   "Mörk Borg": {
     premise: "Doomed wretches scavenge a dying world as prophesied miseries unfold.",
@@ -697,7 +784,37 @@ backstory: "Rilla tracked the war-band that razed Thornwatch for two winters bef
     npc: e("Vsen", "Plague-prophet", "Rings a cracked bell and screams the next misery to anyone too slow to leave."),
     pc: e("Grit", "Wretched scum", "A knife, a grudge, and just enough luck to still be breathing."),
     threat: x("The Seventh Misery", "A prophesied calamity that curdles the sky and the minds beneath it."),
-    item: x("The Rust-Eaten Blade", "A ruined sword that cuts true exactly once before it crumbles.")
+    item: x("The Rust-Eaten Blade", "A ruined sword that cuts true exactly once before it crumbles."),
+    sheet: `## Character Sheet
+
+\`\`\`osr-sheet
+name: Grisha the Unclean
+class: Heretical Priest
+level: 1
+abilities:
+  agility: 1
+  presence: 2
+  strength: -1
+  toughness: 0
+hp: 6
+hp_max: 8
+armor_class: "Tier 1 (d2 protection)"
+omens: 2
+silver: 37
+weapons:
+  - name: Rusted Femur
+    damage: d4
+    notes: "Taken from something that still had a use for it"
+talents:
+  - "Unclean Scrolls — may carry and read two profane scrolls."
+  - "Palms Open to the Filth — heal d4 by drinking something terrible."
+gear:
+  - Waterskin (brackish)
+  - Rope, 10ft, fraying
+  - A tooth that is not yours
+  - Lantern and three hours of oil
+notes: The world is ending and Grisha is, on balance, in favour.
+\`\`\``
   },
   "Old-School Essentials": {
     premise: "Classic dungeon-delvers plunder a monster-haunted underworld for gold and glory.",
@@ -706,7 +823,48 @@ backstory: "Rilla tracked the war-band that razed Thornwatch for two winters bef
     npc: e("Old Castellan Voss", "Keep warden", "Sells maps of dubious accuracy and warns you not to go — for a fee."),
     pc: e("Dain", "Fighting-man", "Sturdy, plainspoken, and here strictly for the treasure."),
     threat: x("The Goblin Warren", "A sprawling nest in the keep's lower halls, better organized than it should be."),
-    item: x("The Bag of Holding", "A humble sack that swallows a room's worth of loot — mind what else you drop in.")
+    item: x("The Bag of Holding", "A humble sack that swallows a room's worth of loot — mind what else you drop in."),
+    sheet: `## Character Sheet
+
+\`\`\`osr-sheet
+name: Brick Hollowell
+class: Fighter
+ancestry: Human
+level: 2
+xp: 2400
+abilities:
+  strength: 15
+  intelligence: 9
+  wisdom: 10
+  dexterity: 12
+  constitution: 14
+  charisma: 8
+hp: 9
+hp_max: 13
+armor_class: 4
+saves:
+  death_ray: 12
+  magic_wands: 13
+  paralysis: 14
+  breath_attacks: 15
+  spells: 16
+gold: 118
+weapons:
+  - name: Longsword
+    damage: d8
+    notes: ""
+  - name: Shortbow
+    damage: d6
+    notes: "Range 50/100/150"
+talents:
+  - "Fighter — attacks on the best table, may use any armour."
+gear:
+  - Chainmail and shield
+  - Backpack, rations (5 days)
+  - Torches (6), tinderbox
+  - 50ft rope, iron spikes
+notes: Two levels deep and already reconsidering the whole enterprise.
+\`\`\``
   },
   Pathfinder: {
     premise: "Bold adventurers unravel an ancient conspiracy at a busy crossroads of the realm.",
@@ -715,7 +873,57 @@ backstory: "Rilla tracked the war-band that razed Thornwatch for two winters bef
     npc: e("Oracle Sabine", "Varisian oracle", "Reads fortunes that are always true and never quite what you wanted."),
     pc: e("Doran Vex", "Human wizard", "Ambitious evoker chasing a rune he glimpsed in a very bad dream."),
     threat: x("The Rune-Bound Giant", "A slumbering colossus a cult means to wake beneath the town."),
-    item: x("The Wayfinder", "A brass compass that points not north, but toward the nearest unsolved mystery.")
+    item: x("The Wayfinder", "A brass compass that points not north, but toward the nearest unsolved mystery."),
+    sheet: `## Character Sheet
+
+\`\`\`dnd-sheet
+system: pf2
+name: Sister Yrsa Falk
+ancestry: Dwarf
+background: Emissary
+class: Champion
+level: 3
+alignment: LG
+deity: Torag
+abilities:
+  strength: 18
+  dexterity: 12
+  constitution: 16
+  intelligence: 10
+  wisdom: 14
+  charisma: 14
+ac: 21
+hp: 34
+hp_max: 45
+speed: 20
+perception_rank: E
+saves:
+  fortitude: E
+  reflex: T
+  will: E
+skills:
+  athletics: E
+  diplomacy: T
+  religion: T
+  society: T
+  medicine: T
+attacks:
+  - name: Warhammer
+    bonus: "+11"
+    damage: "1d8+4 B"
+  - name: Steel shield (bash)
+    bonus: "+11"
+    damage: "1d4+4 B"
+feats:
+  - "Retributive Strike — punish an enemy that harms an ally in your aura."
+  - "Shield Block"
+  - "Dwarven Lore"
+gear:
+  - Splint mail and steel shield
+  - Religious symbol of Torag
+  - Repair kit
+notes: Sent as an emissary and quietly certain it was to get her out of the way.
+\`\`\``
   },
   Pendragon: {
     premise: "Knights pursue glory, love, and honour across a legendary Arthurian Britain.",
@@ -809,7 +1017,39 @@ notes: Desperate to prove his family's honour, and young enough to mistake reckl
     npc: e("Rival Captain Isadora", "Company rival", "Runs the older, larger company and would love to buy — or bury — yours."),
     pc: e("Casimir", "Company founder", "A charismatic schemer who has bet everything on this venture."),
     threat: x("The Coming War", "A neighbouring power eyeing the city, and everyone in it, for the taking."),
-    item: x("The Founding Charter", "A signed writ granting your company legal existence — and a target on its back.")
+    item: x("The Founding Charter", "A signed writ granting your company legal existence — and a target on its back."),
+    sheet: `## Character Sheet
+
+**Name:** Ilaya Sarn
+**Role:** Company Negotiator · **Company:** The Ninth Ledger
+
+### Stats & Skills (One Roll Engine)
+
+Rolls are Stat + Skill in d10s; matching dice set the width and height.
+
+| Stat | Rating | Key Skills |
+| --- | --- | --- |
+| Body | 2 | Endurance 1 |
+| Coordination | 2 | Dodge 1 |
+| Sense | 3 | Perceive 2, Scrutinize 3 |
+| Mind | 4 | Knowledge (Trade) 3, Language 2 |
+| Charm | 4 | Persuasion 4, Lie 3, Perform 1 |
+| Command | 3 | Leadership 3, Interrogate 2 |
+
+### Passions
+
+- **Loyalty:** The Ninth Ledger, even when it is wrong.
+- **Duty:** Never let a contract go unread.
+- **Craving:** To be the one who writes the terms.
+
+### Company Role
+
+**Esteem:** 3 · **Territory:** 1 · **Might:** 2 · **Treasure:** 4
+Ilaya's negotiations feed the Company's Treasure die directly.
+
+### Notes
+
+Reads every clause aloud. It is not a courtesy; it is a trap she is setting.`
   },
   "Shadowdark RPG": {
     premise: "Torchbearers plumb a lethal dark where light is life and time is running out.",
@@ -818,7 +1058,45 @@ notes: Desperate to prove his family's honour, and young enough to mistake reckl
     npc: e("Mad Wizard Oleth", "Ruin-dweller", "Lives in the depths, trades cryptic help, and has forgotten his own name."),
     pc: e("Wick", "Thief", "Fast, quiet, and acutely aware that every torch is a countdown."),
     threat: x("The Hungry Dark", "A living blackness that snuffs light and swallows anyone it touches."),
-    item: x("The Everburning Brand", "A torch that never dies — which is why three factions want to steal it.")
+    item: x("The Everburning Brand", "A torch that never dies — which is why three factions want to steal it."),
+    sheet: `## Character Sheet
+
+\`\`\`osr-sheet
+name: Wren
+class: Thief
+ancestry: Halfling
+level: 1
+xp: 3
+abilities:
+  strength: 9
+  dexterity: 16
+  constitution: 12
+  intelligence: 11
+  wisdom: 10
+  charisma: 13
+hp: 5
+hp_max: 6
+armor_class: 13
+luck: 1
+torches: 3
+gold: 22
+weapons:
+  - name: Dagger
+    damage: d4
+    notes: "Thrown, near"
+  - name: Shortbow
+    damage: d4
+    notes: "Far"
+talents:
+  - "Backstab — +1 damage die when attacking an unaware foe."
+  - "Stealthy — twice per day, become invisible for three rounds."
+gear:
+  - Leather armour
+  - Thieves' tools
+  - Rope, 60ft
+  - Torch x3 (one hour of real time each)
+notes: Counts the torches obsessively. Everyone else has stopped teasing her about it.
+\`\`\``
   },
   "Sword Chronicle": {
     premise: "Noble houses scheme, marry, and go to war over a contested succession.",
@@ -882,7 +1160,56 @@ history: Raised to rule a house that cannot afford her ambitions — and betroth
     npc: e("Haldric the Host", "Village elder", "Offers hearth and warning in equal measure to any traveller who'll listen."),
     pc: e("Brand of the Dale-lands", "Wandering adventurer", "A trader's son who took up a bow when the roads grew dark."),
     threat: x("The Shadow in the Wood", "A spreading dread that fouls the forest and stirs old, patient evils."),
-    item: x("The Heirloom of the North", "An ancestral token that heartens the weary and marks its bearer as trustworthy.")
+    item: x("The Heirloom of the North", "An ancestral token that heartens the weary and marks its bearer as trustworthy."),
+    sheet: `## Character Sheet
+
+**Name:** Beran of the Beornings
+**Culture:** Beorning
+**Calling:** Wanderer
+**Shadow Path:** Lure of Power
+
+### Attributes
+
+| Attribute | Rating | TN |
+| --- | --- | --- |
+| Strength | 7 | 13 |
+| Heart | 4 | 16 |
+| Wits | 3 | 17 |
+
+**Endurance:** 24 / 28 · **Fatigue:** 9
+**Hope:** 10 / 12 · **Shadow:** 3 (Dread)
+**Parry:** 3 · **Armour:** 4d · **Headgear:** 2
+
+### Valour & Wisdom
+
+**Valour:** 2 — *Reward:* Close-fitting mail
+**Wisdom:** 1 — *Virtue:* Beorning Skin-Coat
+
+### Skills
+
+| Skill | Rank | Skill | Rank |
+| --- | --- | --- | --- |
+| Awe | 2 | Craft | 1 |
+| Athletics | 3 | Battle | 1 |
+| Awareness | 2 | Lore | 0 |
+| Explore | 3 | Insight | 1 |
+| Hunting | 3 | Healing | 2 |
+| Song | 1 | Courtesy | 0 |
+| Riddle | 0 | Stealth | 2 |
+| Travel | 3 | Enhearten | 1 |
+
+### Combat Proficiencies
+
+- **Axes** 2 — Great axe (Damage 7, Injury 18, Heavy)
+- **Bows** 1 — Bow (Damage 5, Injury 14)
+
+### Distinctive Features
+
+*Bold* · *Generous* · *Wary*
+
+### Rewards & Notes
+
+Travels the Vales alone by choice. Tells himself it is by choice.`
   },
   "Warhammer Fantasy Roleplay": {
     premise: "Ordinary folk stumble into grim intrigue and corruption in the crumbling Old World.",
@@ -891,7 +1218,58 @@ history: Raised to rule a house that cannot afford her ambitions — and betroth
     npc: e("Witch Hunter Kessler", "Templar of Sigmar", "Zealous, humourless, and not always wrong about who to burn."),
     pc: e("Otto", "Rat catcher", "Knows the sewers better than anyone — which is exactly the problem."),
     threat: x("The Skaven Below", "Ratmen tunnelling beneath Grünburg, whom the authorities insist do not exist."),
-    item: x("Sigmar's Blessed Hammer", "A warrior-priest's relic that smites the unnatural and terrifies the corrupt.")
+    item: x("Sigmar's Blessed Hammer", "A warrior-priest's relic that smites the unnatural and terrifies the corrupt."),
+    sheet: `## Character Sheet
+
+\`\`\`warhammer-sheet
+system: wfrp
+name: Grizel Vantt
+species: Human (Reiklander)
+career: Witch Hunter
+rank: Interrogator (Brass 3)
+characteristics:
+  ws: 44
+  bs: 35
+  s: 38
+  t: 41
+  i: 39
+  ag: 36
+  dex: 30
+  int: 42
+  wp: 48
+  fel: 33
+wounds: 9
+wounds_max: 13
+fate: 2
+resilience: 3
+advantage: 0
+skills:
+  intimidate: 55
+  intuition: 49
+  lore_witches: 52
+  melee_basic: 54
+  perception: 47
+  ranged_blackpowder: 45
+  religion: 40
+talents:
+  - "Menacing — +1 SL on Intimidate."
+  - "Sharp — +1 SL on Perception."
+  - "Read/Write"
+weapons:
+  - name: Rapier
+    damage: "+SB 4"
+    qualities: "Fast"
+  - name: Pistol
+    damage: "+9"
+    qualities: "Damaging, Reload 2"
+armor: Leather jack (1 AP body, arms)
+trappings:
+  - Warrant of investigation, sealed
+  - Manacles and a brand
+  - Copy of the Sigmarite catechism
+  - Lantern, oil, and tinder
+notes: Has burned four people. Is certain about three of them.
+\`\`\``
   },
 
   // ------------------------------- Modern --------------------------------
@@ -983,7 +1361,39 @@ gear: Medical bag, notebook and pen, pocket torch, letters of introduction
     npc: e("The Lightkeeper", "Circle handler", "Assigns the cases, hides the worst files, and grieves every loss quietly."),
     pc: e("Iris Vane", "Face (investigator)", "A former stage magician who now debunks the fake to fight the real."),
     threat: x("The Bleed at Marrow Bridge", "A widening wound in reality leaking nightmares into the fog."),
-    item: x("The Warding Candle", "A blessed flame that reveals — and briefly repels — what shouldn't be there.")
+    item: x("The Warding Candle", "A blessed flame that reveals — and briefly repels — what shouldn't be there."),
+    sheet: `## Character Sheet
+
+**Name:** Dr. Wilhelmina Roe
+**Role:** Face · **Style:** Lucky
+**Circle:** The Ashcroft Chapter
+
+### Actions
+
+| Drive | Actions |
+| --- | --- |
+| **Physical** (Resistance 2) | Force 1 · Move 1 · Strike 0 · Control 1 |
+| **Presence** (Resistance 3) | Sway 3 · Read 2 · Hide 0 · Focus 1 |
+| **Quick** (Resistance 2) | Fix 0 · Rig 1 · Sneak 1 · Tinker 0 |
+| **Intuition** (Resistance 3) | Study 3 · Survey 2 · Sense 1 · Discern 2 |
+
+### Resistances & Marks
+
+**Bleed:** 1 mark · **Brittle:** 0 · **Bent:** 2 marks
+**Scars:** *"I no longer trust a locked door."*
+
+### Gilded Die
+
+Available — spend for an extra die on one roll per session.
+
+### Abilities
+
+- **A Way With Words** — take +1d when Swaying someone who wants to believe you.
+- **Bedside Manner** — clear a teammate's Bleed mark between scenes.
+
+### Items
+
+Medical bag · Chapter credentials · A patient's letter she should have burned`
   },
   "Changeling: The Dreaming": {
     premise: "Modern faerie souls chase wonder while cold reason drains the world of magic.",
@@ -1411,7 +1821,44 @@ notes: Buys back her own grave goods from Dr. Halloway, politely, one relic at a
     npc: e("Gideon Marsh", "Haunted playwright", "Adapted the forbidden script and now can't stop hearing the applause."),
     pc: e("Cora Ellison", "Theatre critic", "Investigating a rash of 'suicides' among the play's cast and crew."),
     threat: x("The Second Act", "The point in the play past which nothing is ever the same."),
-    item: x("The Yellow Manuscript", "A slim script bound in pale leather — reading it is the whole danger.")
+    item: x("The Yellow Manuscript", "A slim script bound in pale leather — reading it is the whole danger."),
+    sheet: `## Character Sheet
+
+**Name:** Amélie Duclos
+**Occupation:** Theatre critic, *Le Réveil*
+**Age:** 34 · **Residence:** Montmartre, Paris
+
+### Characteristics
+
+| Stat | Value | Half | Fifth |
+| --- | --- | --- | --- |
+| STR | 45 | 22 | 9 |
+| CON | 55 | 27 | 11 |
+| SIZ | 50 | 25 | 10 |
+| DEX | 60 | 30 | 12 |
+| APP | 65 | 32 | 13 |
+| INT | 80 | 40 | 16 |
+| POW | 60 | 30 | 12 |
+| EDU | 75 | 37 | 15 |
+
+**Hit Points:** 8 / 10 · **Magic Points:** 12 · **Sanity:** 54 / 99 · **Luck:** 50
+
+### Skills
+
+Art (Criticism) 70% · Library Use 65% · Persuade 55% · Psychology 45%
+Spot Hidden 50% · Listen 45% · History 40% · Occult 20% · Language (French) 75%
+Language (English) 40% · Dodge 30% · Stealth 25%
+
+### The Play
+
+**Performances attended:** 1 · **Act II read:** No
+Each exposure to *The King in Yellow* demands a Sanity roll and offers knowledge no one should want.
+
+### Backstory
+
+**Ideology:** Art should disturb. She is about to learn the price of being right.
+**Significant person:** Her editor, who assigned the review.
+**Treasured possession:** A first-edition programme from the Paris premiere.`
   },
   "Twilight: 2000": {
     premise: "Stranded soldiers survive the aftermath of a war that shattered the world.",
@@ -1420,7 +1867,48 @@ notes: Buys back her own grave goods from Dr. Halloway, politely, one relic at a
     npc: e("Warlord Bortko", "Militia boss", "Controls the only working fuel depot for fifty kilometres."),
     pc: e("Sgt. Marta Kane", "Stranded soldier", "Holding her squad together on grit, memory, and dwindling ammo."),
     threat: x("The Long Winter", "Fuel, food, and medicine running out faster than anyone will admit."),
-    item: x("The Running Truck", "A fuel-hauling 4x4 that actually starts — worth more than gold out here.")
+    item: x("The Running Truck", "A fuel-hauling 4x4 that actually starts — worth more than gold out here."),
+    sheet: `## Character Sheet
+
+**Name:** Sgt. Danil Kovach
+**Nationality:** Polish · **Branch:** Mechanised Infantry
+**Rank:** Sergeant · **Career terms:** 3
+
+### Attributes
+
+| Attribute | Die | Damage |
+| --- | --- | --- |
+| Strength | B (d10) | 3 |
+| Agility | C (d8) | — |
+| Intelligence | C (d8) | 2 (stress) |
+| Empathy | C (d8) | — |
+
+**Hit Capacity:** 3 / 5 · **Stress Capacity:** 2 / 4
+**Coolness Under Fire:** C · **Radiation:** 2 rads
+
+### Skills
+
+| Skill | Die | Skill | Die |
+| --- | --- | --- | --- |
+| Close Combat | C | Ranged Combat | B |
+| Heavy Weapons | D | Stamina | B |
+| Driving | C | Mobility | C |
+| Recon | C | Survival | C |
+| Tech | D | Command | C |
+| Medical Aid | D | Persuasion | D |
+
+### Specialties
+
+*Rifleman* · *Combat Awareness* · *Quartermaster*
+
+### Gear & Ammunition
+
+AKM (4 mags) · Entrenching tool · Radiation dosimeter · 2 days rations
+**Encumbrance:** 8 / 10
+
+### Notes
+
+Has not seen his unit in nine weeks. Still wears the patch.`
   },
   "Vampire: The Masquerade": {
     premise: "Newly-embraced vampires navigate deadly undead politics in a modern city.",
@@ -1650,7 +2138,41 @@ notes: Her Shadow whispers that being forgotten would hurt less. It is not entir
     npc: e("Administrator Voss", "Colony director", "Balances survival, quotas, and secrets she was paid not to share."),
     pc: e("Scout Devi Rao", "Frontier scout", "Maps the wilds beyond the perimeter and trusts her instruments more than people."),
     threat: x("The Biosphere Anomaly", "The planet's ecology is adapting to the colony — and it isn't friendly."),
-    item: x("The Survey Drone 'Kite'", "A rugged recon drone carrying data three factions would kill to read.")
+    item: x("The Survey Drone 'Kite'", "A rugged recon drone carrying data three factions would kill to read."),
+    sheet: `## Character Sheet
+
+**Name:** Scout Devi Rao
+**Career:** Colonial Survey Service (4 terms) · **Nationality:** Manchurian Commonwealth
+**Homeworld:** Aurelis, near-frontier
+
+### Characteristics
+
+| Stat | Value | Mod |
+| --- | --- | --- |
+| STR | 8 | 0 |
+| DEX | 11 | +1 |
+| END | 10 | +1 |
+| INT | 12 | +2 |
+| EDU | 10 | +1 |
+| SOC | 6 | -1 |
+
+**Hits:** 18 / 18 · **Armour:** 4 (survey suit)
+
+### Skills
+
+Survey 3 · Recon 2 · Navigation 2 · Vacc Suit 2 · Sensors 2
+Science (Planetology) 2 · Pilot (Small Craft) 1 · Comms 1 · Medic 1
+Gun Combat (Slug) 1 · Survival 2 · Athletics (Dexterity) 1
+
+### Equipment
+
+Survey scanner · Core sampler · Vacc suit (patched twice) · Emergency beacon
+Sidearm, rarely loaded · Field notebook, handwritten · Drone control slate
+
+### Notes
+
+Trusts her instruments more than the people who read them.
+Has named four landforms after colleagues who never wrote back.`
   },
   "Alien RPG": {
     premise: "Working-class crews face corporate greed and a perfect organism in cold space.",
@@ -1999,7 +2521,53 @@ notes: Wants the salvage bonus and the next shuttle out, in that order.
     npc: e("TX-9 'Tock'", "Android mechanic", "Keeps the docks running and collects favours like spare parts."),
     pc: e("Selara", "Lashunta envoy", "A silver-tongued diplomat who talks the crew into (and out of) trouble."),
     threat: x("The Swarm Signal", "A hive-mind incursion homing in on a relic hidden aboard the station."),
-    item: x("The Magitech Core", "A humming artifact that powers a starship — or a very large explosion.")
+    item: x("The Magitech Core", "A humming artifact that powers a starship — or a very large explosion."),
+    sheet: `## Character Sheet
+
+\`\`\`dnd-sheet
+name: Tavik Oreth
+ancestry: Lashunta
+background: Icon
+class: Technomancer
+level: 4
+alignment: CG
+abilities:
+  strength: 10
+  dexterity: 14
+  constitution: 12
+  intelligence: 18
+  wisdom: 12
+  charisma: 14
+ac: 17
+hp: 22
+hp_max: 30
+speed: 30
+saves:
+  fortitude: "+3"
+  reflex: "+6"
+  will: "+5"
+skills:
+  computers: "+12"
+  engineering: "+11"
+  mysticism: "+8"
+  piloting: "+9"
+  culture: "+8"
+attacks:
+  - name: Tactical semi-auto pistol
+    bonus: "+6"
+    damage: "1d6+2 P"
+  - name: Static arc pistol
+    bonus: "+6"
+    damage: "1d6+2 E"
+feats:
+  - "Spell Focus"
+  - "Skill Synergy (Computers, Engineering)"
+gear:
+  - Second Skin armour
+  - Datapad and hacking kit
+  - Serum of healing (2)
+notes: Famous on three stations for a broadcast he now wishes he had not made.
+\`\`\``
   },
   Traveller: {
     premise: "Free traders and scouts seek fortune and trouble across a subsector of worlds.",
@@ -2063,7 +2631,55 @@ notes: Detached-duty scout with a scanner, a grudge against paperwork, and nowhe
     npc: e("Inquisitor Thal", "Ordo agent", "Wields terrifying authority and trusts no one, least of all his own."),
     pc: e("Acolyte Vein", "Inquisitorial acolyte", "A hive-scum survivor elevated to service, expendable and knows it."),
     threat: x("The Cult of the Ashen Star", "A Chaos cult metastasizing through the hive's under-levels."),
-    item: x("The Inquisitorial Rosette", "A badge of absolute authority — flashing it is power, and a death sentence.")
+    item: x("The Inquisitorial Rosette", "A badge of absolute authority — flashing it is power, and a death sentence."),
+    sheet: `## Character Sheet
+
+\`\`\`warhammer-sheet
+system: 40k
+name: Interrogator Vex Talleran
+archetype: Acolyte (Imperial Scholar)
+rank: Interrogator
+characteristics:
+  ws: 32
+  bs: 38
+  s: 30
+  t: 34
+  ag: 36
+  int: 45
+  per: 42
+  wp: 40
+  fel: 35
+wounds: 8
+wounds_max: 11
+fate: 3
+corruption: 6
+insanity: 12
+skills:
+  awareness: 42
+  common_lore_imperium: 45
+  forbidden_lore_heresy: 35
+  inquiry: 40
+  logic: 45
+  scholastic_lore_occult: 38
+  scrutiny: 42
+talents:
+  - "Peer (Adeptus Administratum)"
+  - "Sound Constitution"
+  - "Melee Weapon Training (Primitive)"
+weapons:
+  - name: Laspistol
+    damage: "1d10+2 E"
+    qualities: "Reliable, Clip 15"
+  - name: Mono-knife
+    damage: "1d5+3 R"
+    qualities: "Mono"
+armor: Flak cloak (AP 3 body, arms)
+trappings:
+  - Inquisitorial rosette (borrowed, unauthorised)
+  - Data-slate of forbidden citations
+  - Vial of sacred unguent
+notes: Reads what he is forbidden to read. Records what he is forbidden to record.
+\`\`\``
   },
 
   // ------------------------------- Generic -------------------------------
@@ -2122,7 +2738,60 @@ stunts:
     npc: e("Rocky Malone", "Two-fisted ally", "A grinning brawler who's your best friend and worst bar tab."),
     pc: e("Ace Calloway", "Pulp hero", "A daring troubleshooter with a lucky coin and a knack for the impossible."),
     threat: x("Baron Vex", "A monologuing villain with henchmen, a doomsday scheme, and terrible aim."),
-    item: x("The Lightning Gadget", "A crackling invention that does something amazing — usually at the worst moment.")
+    item: x("The Lightning Gadget", "A crackling invention that does something amazing — usually at the worst moment."),
+    sheet: `## Character Sheet
+
+\`\`\`savage-sheet
+name: Cass Ryder
+concept: Frontier scout turned reluctant guide
+rank: Seasoned
+ancestry: Human
+bennies: 3
+attributes:
+  agility: d8
+  smarts: d6
+  spirit: d8
+  strength: d6
+  vigor: d8
+pace: 6
+parry: 6
+toughness: 7
+armor_value: 2
+wounds: 1
+fatigue: 0
+skills:
+  athletics: d8
+  common_knowledge: d6
+  fighting: d8
+  notice: d8
+  persuasion: d4
+  shooting: d10
+  stealth: d8
+  survival: d8
+  riding: d6
+edges:
+  - "Marksman — ignore up to 2 points of penalties when shooting."
+  - "Woodsman — +2 to Survival and Stealth in the wild."
+hindrances:
+  - "Loyal (Minor) — will not abandon a friend."
+  - "Stubborn (Minor) — always wants their own way."
+weapons:
+  - name: Lever-action rifle
+    damage: 2d8
+    range: "24/48/96"
+    notes: "ROF 1"
+  - name: Bowie knife
+    damage: "Str+d4+1"
+    range: "—"
+    notes: ""
+armor: Reinforced duster (+2)
+gear:
+  - Bedroll and trail rations
+  - Spyglass
+  - 40ft rope
+  - Horse (saddled)
+notes: Took the job to get out of town. The town is following.
+\`\`\``
   },
   Custom: {
     premise: "A ready-made starter scenario you can reskin to any world you like.",
@@ -2131,7 +2800,57 @@ stunts:
     npc: e("Mentor Alden", "Guild mentor", "The wise, weary guide who points new heroes toward their first quest."),
     pc: e("The Newcomer", "Sample hero", "A blank-slate protagonist ready to be made your own."),
     threat: x("The Rising Danger", "A vague, gathering menace waiting for you to give it a name and a face."),
-    item: x("The Quest Token", "A mysterious object that kicks off the adventure the moment it's picked up.")
+    item: x("The Quest Token", "A mysterious object that kicks off the adventure the moment it's picked up."),
+    // Deliberately system-neutral: the Custom kit is meant to be reskinned, so
+    // this sheet names the slots every system has rather than any one system's.
+    sheet: `## Character Sheet
+
+**Name:** The Newcomer
+**Role / Class:** _whatever your system calls it_
+**Origin:** Millhaven
+**Player:**
+
+### Traits
+
+| Trait | Rating |
+| --- | --- |
+| _Physical_ | |
+| _Mental_ | |
+| _Social_ | |
+| _Other_ | |
+
+> Replace these with your system's attributes — abilities, characteristics,
+> approaches, stats. Add or remove rows freely.
+
+### Skills & Training
+
+- _Skill_ — rating
+- _Skill_ — rating
+- _Skill_ — rating
+
+### Health & Resources
+
+**Health / Hit Points:** ____ / ____
+**Resource** (mana, stress, luck, fate): ____ / ____
+**Defence / Armour:** ____
+
+### Abilities & Gear
+
+- **Ability** — what it lets you do.
+- **Item** — what it is and why it matters.
+
+### Ties
+
+- [[Mentor Alden]] — the guild mentor who pointed you here.
+- [[The Wayfarers' Guild]] — who pays and who asks questions.
+
+### Notes
+
+Swap in your own system's terms and delete the rest. If your system has a
+renderer here — D&D, Traveller, Sword Chronicle, World of Darkness, ALIEN,
+Dragonbane, Call of Cthulhu, Pendragon, Fate, Mothership, Delta Green,
+Cyberpunk RED, Blades, Coriolis, OSR, Warhammer, or Savage Worlds — use its
+fenced block instead and the sheet will render properly.`
   }
 };
 
