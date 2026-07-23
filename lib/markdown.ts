@@ -2575,9 +2575,15 @@ function renderOsrSheetHtml(rawInput: string): string {
   if (error || !sheet) return error!;
   const abilities = sheet.abilities || {};
 
+  // Mörk Borg's abilities are modifiers (-3..+3) and read as "+2"; the classic
+  // games use 3-18 ability *scores*, where "+16" would be nonsense. Sign only
+  // when the system actually uses modifiers.
+  const signed = String(sheet.ability_style || sheet.system || "").toLowerCase().includes("mork")
+    || String(sheet.ability_style || "").toLowerCase() === "modifier";
   const abilityCells = Object.entries(abilities).map(([k, v]) => {
     const n = shNum(v);
-    return `<div class="osr-ability"><span>${shEsc(titleize(k))}</span><b>${n > 0 ? `+${n}` : n}</b></div>`;
+    const shown = signed && n > 0 ? `+${n}` : String(n);
+    return `<div class="osr-ability"><span>${shEsc(titleize(k))}</span><b>${shown}</b></div>`;
   }).join("") || `<p class="osr-empty">No abilities recorded.</p>`;
 
   const hpMax = shNum(sheet.hp_max);

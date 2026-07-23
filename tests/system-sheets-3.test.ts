@@ -26,10 +26,19 @@ describe("OSR sheet renderer", () => {
     expect(ose).not.toContain("Omens");   // only shown when the system has them
   });
 
-  it("signs positive modifiers and shows optional resources only when present", () => {
-    const html = render("osr-sheet", ["name: Wren", "abilities:", "  dexterity: 3",
-      "luck: 1", "torches: 3", "hp_max: 6"]);
-    expect(html).toContain("+3");
+  it("signs modifiers only for systems that use them", () => {
+    // Mörk Borg abilities are modifiers (-3..+3) and read as "+2". Old-School
+    // Essentials and Shadowdark use 3-18 ability SCORES, where "+16" is wrong.
+    const mb = render("osr-sheet", ["system: mork-borg", "abilities:", "  presence: 2"]);
+    expect(mb).toMatch(/Presence<\/span><b>\+2</);
+
+    const sd = render("osr-sheet", ["name: Wren", "abilities:", "  dexterity: 16"]);
+    expect(sd).toMatch(/Dexterity<\/span><b>16</);
+    expect(sd).not.toContain("+16");
+  });
+
+  it("shows optional resources only when present", () => {
+    const html = render("osr-sheet", ["name: Wren", "luck: 1", "torches: 3", "hp_max: 6"]);
     expect(html).toContain("Luck");
     expect(html).toContain("Torches");
   });

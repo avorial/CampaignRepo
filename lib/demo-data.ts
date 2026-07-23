@@ -788,6 +788,7 @@ Apprentice's rod (magic, d8), academy robes (DEF +1), sealed letter never delive
     sheet: `## Character Sheet
 
 \`\`\`osr-sheet
+system: mork-borg
 name: Grisha the Unclean
 class: Heretical Priest
 level: 1
