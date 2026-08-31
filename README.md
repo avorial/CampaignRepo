@@ -1,32 +1,60 @@
 # CampaignRepo
 
-CampaignRepo is a Git-backed campaign platform for tabletop RPG game masters. Every campaign lives in a normal repository - GitHub or a local folder - and a purpose-built web app turns that repository into a wiki, map viewer, session workspace, relationship graph, calendar, and more. The Markdown files stay portable; nothing requires CampaignRepo to read them.
+**A campaign wiki built for the table, not the desk.** CampaignRepo turns a plain
+Markdown repository into a shared wiki where the GM keeps secrets, players see
+only what they should, and an AI can help fill it all in — while every word
+stays as portable Markdown in a repo you own.
 
-GMs get version history, private notes, a review queue, and full control over what players see. Players get a clean portal that only exposes approved, player-safe lore - no GitHub account needed.
+Your whole world lives in a normal GitHub repo (or a local folder). A
+purpose-built web app renders it as a wiki, map viewer, relationship graph,
+session tracker, calendar, and character-sheet system — but nothing requires
+CampaignRepo to read your files. Delete the app tomorrow and you still have a
+clean folder of Markdown.
 
-## Where We Are Now
+## Why not just use Obsidian (or Notion, or a Google Doc)?
 
-CampaignRepo is now a usable campaign management app, not just a wiki
-prototype. It supports local-folder and GitHub-backed campaigns; private GM
-workspaces; player-safe portals; public published worlds; public campaign
-discovery and cloning; session planning; quest tracking; fantasy calendars;
-maps; relationship graphs; manuscripts; boards; lexicons; AI tools; MCP access;
-full ZIP/JSON campaign backups; and Docker/GHCR deployment.
+Those are excellent tools — for **one person taking notes**. Running a game is a
+different job: you are keeping secrets from the very people you are sharing with,
+across sessions, for months. That is the job CampaignRepo is built for.
 
-The next priority is reliability. CampaignRepo's long-term shape is
-**app-first, Git-backed**:
+| | CampaignRepo | Obsidian / Notion / Docs |
+| --- | --- | --- |
+| **Running a game for others** | Built in: GM/player roles, a review queue, and a no-login player portal | You are the only user; sharing means a second copy or a paid sync add-on |
+| **Secrets on the page** | `:::gm` blocks — the *same* page shows the villain's true plan to you and only the rumor to players | You redact by hand, or keep two vaults in sync |
+| **Knows it's a TTRPG tool** | Character sheets for 40+ systems, a relationship graph, family trees, sessions, quests, a fantasy calendar, and battle maps — out of the box | A pile of community plugins you assemble and maintain yourself |
+| **AI that touches your world** | An MCP endpoint lets Claude read and *write* your campaign — and its changes wait in your review queue | Not native; copy-paste in and out |
+| **Sharing a whole world** | A public gallery: publish your setting, or clone someone else's as a starting point | Export a zip and hope the other person can import it |
+| **Your files** | Plain Markdown in **your** GitHub repo — versioned, diffable, yours | Plain Markdown on your disk — also yours (this part they get right) |
 
-- CampaignRepo should feel fast even when GitHub is slow.
-- Markdown and repo files remain portable and durable.
-- The app should keep a local working copy for live editing.
-- Git commits should be batched sync operations, not the hot path for every
-  sidebar move, approval, or page edit.
-- Generated files such as `.campaignrepo/index.json` and
-  `wiki/search/index.json` should be rebuildable snapshots, not irreplaceable
-  sources of truth.
+The honest version: if you keep a solo worldbuilding vault and never share it,
+Obsidian is wonderful and you should keep using it. The moment real players,
+hidden lore, and "what did we decide three sessions ago?" enter the picture,
+those tools make you do the coordination by hand. CampaignRepo does it for you —
+without giving up the portable-Markdown promise that made you trust them.
 
-See [ROADMAP.md](ROADMAP.md) for the reliability and sync roadmap, including
-testing, fallbacks, and the biggest hidden risks.
+## What it does for your game — at the table
+
+- **Prep once, reveal slowly.** Write the secret and its public face on one page.
+  Players only ever load the public half; you flip a switch when they earn the rest.
+- **Never lose the thread.** A relationship graph answers "wait, how does this NPC
+  connect to the cult?" at a glance, and full-text search is instant even mid-scene
+  because reads are served locally, not fetched from GitHub every time.
+- **Give players a living recap.** Send one link to a no-login site that shows only
+  approved, player-safe lore and open quests — their window into the world between games.
+- **Turn notes into canon.** After a session, hand your scrawl to the built-in AI (or
+  your own MCP client) and it drafts linked, categorized pages — that land unapproved
+  in your queue, so the AI never rewrites your canon behind your back.
+- **Run the fiddly bits.** Session agendas, quest clocks, a custom calendar, initiative
+  and world timelines, character sheets that actually render for your system.
+
+## Status
+
+CampaignRepo is a working, self-hostable app (Docker/GHCR), not a prototype:
+GitHub-backed and local campaigns, GM workspaces, player portals, public
+discovery and world-cloning, sessions, quests, calendars, maps, graphs, imports,
+AI/MCP, and full backups all ship today. The active focus is reliability — see
+[ROADMAP.md](ROADMAP.md) for the app-first, Git-backed sync work and the biggest
+hidden risks.
 
 ## Product Tour
 
@@ -77,6 +105,54 @@ Players see only pages that are both approved and marked player-visible. GM-only
 - Exports a full CampaignRepo backup as ZIP or JSON, including pages, media, maps, sessions, quests, search data, templates, and settings.
 - Offers AI page generation and full-campaign Q&A over Markdown with citations.
 - Exposes an MCP JSON-RPC API for AI tools and external clients.
+
+## FAQ
+
+**Do I need to know Git or GitHub?**
+No. Connect a repo once and the app handles every commit, push, and pull in the
+background. You edit in the browser. (If you *do* know Git, everything is plain
+Markdown you can also edit directly — the app catches up on the next sync.)
+
+**Do my players need accounts?**
+No. Publish your campaign and share one link — the public player portal shows only
+approved, player-visible pages, with no login. Accounts are for you and your
+co-GMs, not the table.
+
+**What happens to my world if CampaignRepo goes away?**
+Nothing. It was never locked in the app. Your campaign is a folder of Markdown and
+YAML in your own GitHub repo; the generated index and search files are disposable
+snapshots. Clone the repo and you have the whole world, readable in any text editor.
+
+**Is it free? Can I self-host?**
+Yes. CampaignRepo ships as a Docker image (GHCR) you run yourself. See
+[Docker](#docker) and [Quick Start](#quick-start).
+
+**Which game systems does it support?**
+Any system works as a wiki. On top of that, dozens of systems ship a ready-made
+starter kit, and the most popular ones — D&D 5e, Pathfinder 2e, Traveller, the
+World of Darkness lines, Dune, Call of Cthulhu, Cyberpunk RED, Blades in the Dark,
+and more — get real, rendered character sheets rather than plain tables.
+
+**Can I bring my existing notes?**
+Yes. Importers cover Obsidian, Notion, Google Docs, Foundry (actors and journals),
+Roll20, LegendKeeper, World Anvil, character JSON, and CSV. You don't have to start
+from a blank page.
+
+**Won't the AI mess with my canon?**
+No — that's the point of the review queue. Anything the AI (or an import) creates
+lands as **unapproved** and invisible to players until you approve it. The AI can
+draft; only you canonize.
+
+**How is this different from a private GitHub wiki?**
+A GitHub wiki is raw pages with no notion of players, secrets, sessions, or sheets.
+CampaignRepo adds per-page visibility and `:::gm` blocks, a player portal, character
+sheets, a relationship graph, session and quest tracking, maps, and AI — while still
+being *just* Markdown in a repo underneath.
+
+**Is it any good for solo worldbuilding?**
+It's fine — but if you never share your world and never hide lore from players,
+you're not using the parts that make it worth switching from a local notes app.
+CampaignRepo earns its keep the moment other people join your table.
 
 ## Core Features
 
