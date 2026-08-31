@@ -12,6 +12,14 @@ const schema = z.object({
   inviteToken: z.string().optional()
 });
 
+/**
+ * Registration is invitation-only by default: the operator provisions accounts
+ * from the admin panel (like Calibre-Web), and GMs bring players in via campaign
+ * invites. An operator who wants an open, public sign-up form can set
+ * ALLOW_OPEN_REGISTRATION=1.
+ */
+const openRegistration = process.env.ALLOW_OPEN_REGISTRATION === "1";
+
 export async function POST(req: Request) {
   const input = schema.parse(await req.json());
   if (input.inviteToken) {
@@ -19,6 +27,11 @@ export async function POST(req: Request) {
     if (!invite || invite.revokedAt || invite.acceptedAt) {
       return NextResponse.json({ error: "Invite is no longer active." }, { status: 400 });
     }
+  } else if (!openRegistration) {
+    return NextResponse.json(
+      { error: "This server is invite-only. Ask your GM for a campaign invite, or the server's admin to create your account." },
+      { status: 403 }
+    );
   }
 
   const passwordHash = await hashPassword(input.password);

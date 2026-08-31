@@ -14,11 +14,15 @@ function LoginForm() {
   const oauthError = searchParams.get("oauth_error") || "";
   const [error, setError] = useState(oauthError);
   const [providers, setProviders] = useState<{ google: boolean; github: boolean } | null>(null);
+  const [openRegistration, setOpenRegistration] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth/oauth/providers")
       .then((res) => res.json())
-      .then((data) => setProviders(data.providers || { google: false, github: false }))
+      .then((data) => {
+        setProviders(data.providers || { google: false, github: false });
+        setOpenRegistration(Boolean(data.openRegistration));
+      })
       .catch(() => setProviders({ google: false, github: false }));
   }, []);
 
@@ -72,7 +76,11 @@ function LoginForm() {
             <p className="muted">Google and GitHub sign-in are not configured on this server yet.</p>
           )}
         </details>
-        <p className="muted">No account yet? <Link href="/register">Create one</Link>.</p>
+        {openRegistration ? (
+          <p className="muted">No account yet? <Link href="/register">Create one</Link>.</p>
+        ) : (
+          <p className="muted">Need an account? Ask your GM for a campaign invite, or the server&apos;s admin to set one up.</p>
+        )}
         <p className="muted">New here? <Link href="/getting-started">Read the getting-started guide</Link>.</p>
         <p className="muted">Just browsing? <Link href="/site">Explore public worlds</Link> — no account needed.</p>
       </section>
