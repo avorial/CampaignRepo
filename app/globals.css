@@ -549,7 +549,8 @@ code {
 /* King in Yellow: show the WHOLE picture, never cropped, at a modest size.
    Undo the right-floated 4:5 cover-crop figure treatment and instead centre
    each content image, contained within a bounded height. Same for the cover. */
-.app-shell[data-theme="king-in-yellow"] .content-body p:has(> img:only-child) {
+.app-shell[data-theme="king-in-yellow"] .content-body p:has(> img:only-child),
+.app-shell[data-theme="king-in-yellow"] .content-body p:has(> a.image-fullsize-link:only-child) {
   float: none;
   width: auto;
   max-width: 100%;
@@ -559,6 +560,10 @@ code {
   border: 0;
   box-shadow: none;
   text-align: center;
+}
+.app-shell[data-theme="king-in-yellow"] .content-body .image-fullsize-link {
+  display: inline-block;
+  max-width: 100%;
 }
 .app-shell[data-theme="king-in-yellow"] .content-body img {
   display: block;
@@ -1352,8 +1357,9 @@ button.nav-link.active {
 .page-cover {
   display: block;
   width: 100%;
-  max-height: 280px;
-  object-fit: cover;
+  height: auto;
+  max-height: 60vh;
+  object-fit: contain;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-soft);
   margin-bottom: 18px;
@@ -3151,36 +3157,47 @@ button.nav-link.active {
   text-transform: uppercase;
 }
 
-.preview > div > p:has(> img:only-child) {
+.preview > div > p:has(> img:only-child),
+.preview > div > p:has(> a.image-fullsize-link:only-child) {
   background:
     linear-gradient(180deg, rgba(102, 217, 239, 0.08), transparent 120px),
     var(--wiki-panel);
   border: 1px solid var(--wiki-cyan-soft);
   box-shadow: 0 0 0 1px rgba(160, 117, 255, 0.08), 0 18px 50px rgba(0, 0, 0, 0.32);
-  float: right;
-  margin: 0 0 18px 28px;
+  float: none;
+  margin: 18px auto;
   padding: 0;
-  width: min(30%, 360px);
+  max-width: 100%;
+  text-align: center;
+  width: fit-content;
 }
 
-.preview > div > p:has(> img:only-child) img {
-  aspect-ratio: 4 / 5;
+.preview > div .image-fullsize-link {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.preview > div > p:has(> img:only-child) img,
+.preview > div > p:has(> a.image-fullsize-link:only-child) img {
+  aspect-ratio: auto;
   display: block;
   height: auto;
-  max-height: 420px;
-  object-fit: cover;
+  max-height: 70vh;
+  max-width: 100%;
+  object-fit: contain;
   object-position: center top;
-  width: 100%;
+  width: auto;
 }
 
-.preview > div > p:has(> img:only-child) + table {
+.preview > div > p:has(> img:only-child) + table,
+.preview > div > p:has(> a.image-fullsize-link:only-child) + table {
   background: var(--wiki-panel);
   border: 1px solid var(--wiki-cyan-soft);
   box-shadow: 0 0 0 1px rgba(160, 117, 255, 0.08), 0 18px 50px rgba(0, 0, 0, 0.28);
-  clear: right;
-  float: right;
-  margin: 0 0 24px 28px;
-  width: min(30%, 360px);
+  clear: none;
+  float: none;
+  margin: 16px 0 24px;
+  width: 100%;
 }
 
 .preview > div > h2 {
@@ -3962,14 +3979,17 @@ button.nav-link.active {
   }
 
   .preview > div > p:has(> img:only-child),
-  .preview > div > p:has(> img:only-child) + table {
+  .preview > div > p:has(> a.image-fullsize-link:only-child),
+  .preview > div > p:has(> img:only-child) + table,
+  .preview > div > p:has(> a.image-fullsize-link:only-child) + table {
     clear: none;
     float: none;
     margin: 16px 0;
     width: 100%;
   }
 
-  .preview > div > p:has(> img:only-child) img {
+  .preview > div > p:has(> img:only-child) img,
+  .preview > div > p:has(> a.image-fullsize-link:only-child) img {
     max-height: 360px;
   }
 }
