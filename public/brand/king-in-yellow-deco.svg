@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <!-- Seamless Art Deco fan-scallop lattice. Circles centred on the tile
+       corners (the tiling lattice) so quarters complete across neighbours.
+       Transparent ground: the theme's gold glow / oxblood footlight show
+       through, and opaque panels sit on top so text is never over pattern. -->
+  <defs>
+    <g id="fan">
+      <circle cx="0" cy="0" r="26"/>
+      <circle cx="0" cy="0" r="52"/>
+      <circle cx="0" cy="0" r="78"/>
+      <circle cx="0" cy="0" r="104"/>
+      <circle cx="0" cy="0" r="130"/>
+      <circle cx="0" cy="0" r="156"/>
+      <circle cx="0" cy="0" r="182"/>
+    </g>
+  </defs>
+  <g fill="none" stroke="#c8a24a" stroke-width="1.4" stroke-opacity="0.36">
+    <use href="#fan" x="0"   y="0"/>
+    <use href="#fan" x="200" y="0"/>
+    <use href="#fan" x="0"   y="200"/>
+    <use href="#fan" x="200" y="200"/>
+  </g>
+  <!-- radiating hairline rays from each corner spring-point -->
+  <g stroke="#c8a24a" stroke-width="0.8" stroke-opacity="0.24">
+    <line x1="0"   y1="0"   x2="34"  y2="14"/>
+    <line x1="0"   y1="0"   x2="14"  y2="34"/>
+    <line x1="200" y1="0"   x2="166" y2="14"/>
+    <line x1="200" y1="0"   x2="186" y2="34"/>
+    <line x1="0"   y1="200" x2="34"  y2="186"/>
+    <line x1="0"   y1="200" x2="14"  y2="166"/>
+    <line x1="200" y1="200" x2="166" y2="186"/>
+    <line x1="200" y1="200" x2="186" y2="166"/>
+  </g>
+  <!-- oxblood keystone where four scallops meet -->
+  <g>
+    <path d="M100 90 L110 100 L100 110 L90 100 Z" fill="#9c2230" fill-opacity="0.85"/>
+    <path d="M100 90 L110 100 L100 110 L90 100 Z" fill="none" stroke="#c8a24a" stroke-width="1" stroke-opacity="0.6"/>
+  </g>
+</svg>
