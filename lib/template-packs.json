@@ -1,4 +1,132 @@
 {
+  "The King in Yellow RPG": [
+    {
+      "slug": "character-sheet",
+      "frontmatter": {
+        "category": "character",
+        "type": "character",
+        "name": "Character Sheet",
+        "summary": "Ready-to-fill Yellow King Paris character sheet with portrait, sheet fields, abilities, pushes, and anchors.",
+        "tags": [
+          "pc",
+          "character",
+          "sheet",
+          "yellow-king"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo",
+        "cover": "/wiki/media/REPLACE.jpg"
+      },
+      "body": "# Character Sheet\n\n<div class=\"wiki-layout\">\n<div class=\"wiki-main\">\n\n<section class=\"wiki-section\">\n<h2>Identity</h2>\n<p><strong>Field:</strong> The character's social, professional, or artistic territory.</p>\n<p><strong>Drive:</strong> The reason this character keeps going when the play turns ugly.</p>\n<p><strong>Pushes:</strong> 2</p>\n</section>\n\n<section class=\"wiki-section\">\n<h2>Investigative Abilities</h2>\n\n<table class=\"wiki-stat-table\">\n<thead>\n<tr><th>Ability</th><th>Notes</th></tr>\n</thead>\n<tbody>\n<tr><td>Art History</td><td>Paintings, schools, provenance, fashionable names.</td></tr>\n<tr><td>Charm</td><td>Drawing-room warmth, flirtation, patronage.</td></tr>\n<tr><td>Inspiration</td><td>Reading the emotional charge of art or performance.</td></tr>\n<tr><td>Occult Studies</td><td>Symbols, rites, forbidden books, old rumors.</td></tr>\n<tr><td>Reassurance</td><td>Calming witnesses, students, servants, or friends.</td></tr>\n<tr><td>Research</td><td>Archives, newspapers, letters, catalogues.</td></tr>\n<tr><td></td><td></td></tr>\n<tr><td></td><td></td></tr>\n</tbody>\n</table>\n</section>\n\n<section class=\"wiki-section\">\n<h2>Anchors</h2>\n\n<table class=\"wiki-stat-table\">\n<thead>\n<tr><th>Prompt</th><th>Answer</th></tr>\n</thead>\n<tbody>\n<tr><td>I Rely On</td><td></td></tr>\n<tr><td>I Seek To Protect</td><td></td></tr>\n<tr><td>That Deuced Peculiar Business</td><td></td></tr>\n</tbody>\n</table>\n</section>\n\n<section class=\"wiki-section\">\n<h2>Possessions</h2>\n\n<table class=\"wiki-stat-table\">\n<thead>\n<tr><th>Item</th><th>Notes</th></tr>\n</thead>\n<tbody>\n<tr><td>Sketchbook / notebook</td><td></td></tr>\n<tr><td>Calling cards</td><td></td></tr>\n<tr><td>Unsettling keepsake</td><td></td></tr>\n</tbody>\n</table>\n</section>\n\n</div>\n\n<aside class=\"wiki-infobox\">\n<figure>\n<img src=\"/wiki/media/REPLACE.jpg\" alt=\"Character portrait\" />\n<figcaption>Character portrait</figcaption>\n</figure>\n\n<table>\n<tbody>\n<tr><th>Player</th><td></td></tr>\n<tr><th>Pronouns</th><td></td></tr>\n<tr><th>Field</th><td></td></tr>\n<tr><th>Drive</th><td></td></tr>\n<tr><th>Pushes</th><td>2</td></tr>\n</tbody>\n</table>\n\n<table>\n<caption>General Abilities</caption>\n<tbody>\n<tr><th>Athletics (Physical)</th><td></td></tr>\n<tr><th>Composure (Presence)</th><td></td></tr>\n<tr><th>Fighting (Physical)</th><td></td></tr>\n<tr><th>First Aid (Focus)</th><td></td></tr>\n<tr><th>Health (Physical)</th><td></td></tr>\n<tr><th>Mechanics (Focus)</th><td></td></tr>\n<tr><th>Preparedness (Presence)</th><td></td></tr>\n<tr><th>Riding (Physical)</th><td></td></tr>\n<tr><th>Sense Trouble (Presence)</th><td></td></tr>\n<tr><th>Sneaking (Focus)</th><td></td></tr>\n</tbody>\n</table>\n</aside>\n</div>\n\n:::gm\n## GM Notes\n\nSecrets, flags, obligations, and the pressure points most likely to make this character choose badly.\n:::\n"
+    },
+    {
+      "slug": "character",
+      "frontmatter": {
+        "category": "character",
+        "type": "character",
+        "name": "Character",
+        "summary": "Yellow King character with portrait, Paris sheet fields, investigative abilities, and ready stats.",
+        "tags": [
+          "character",
+          "yellow-king"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo",
+        "cover": "/wiki/media/REPLACE.jpg"
+      },
+      "body": "# Character\n\n<div class=\"wiki-layout\">\n<div class=\"wiki-main\">\n\n<section class=\"wiki-section\">\n<h2>Concept</h2>\n<p>Describe who they are in one playable paragraph: social position, artistic life, public reputation, field of expertise, and why they are close to the campaign's trouble.</p>\n</section>\n\n<section class=\"wiki-section\">\n<h2>Drive</h2>\n<p>What pulls them forward when a sensible person would leave Paris, burn the letter, or stop looking at the painting?</p>\n</section>\n\n<section class=\"wiki-section\">\n<h2>Ties</h2>\n<p>Name the people and places that already have a claim on them, then add rendered wiki links in the relationship table below.</p>\n</section>\n\n</div>\n\n<aside class=\"wiki-infobox\">\n<figure>\n<img src=\"/wiki/media/REPLACE.jpg\" alt=\"Character portrait\" />\n<figcaption>Character portrait</figcaption>\n</figure>\n\n<table>\n<tbody>\n<tr><th>Player</th><td></td></tr>\n<tr><th>Pronouns</th><td></td></tr>\n<tr><th>Age</th><td></td></tr>\n<tr><th>Field</th><td>Student / artist / patron / investigator</td></tr>\n<tr><th>Residence</th><td></td></tr>\n<tr><th>Style</th><td>How they look at first glance</td></tr>\n<tr><th>Vice</th><td>What gets them into trouble</td></tr>\n</tbody>\n</table>\n\n<table>\n<caption>QuickShock Stats</caption>\n<tbody>\n<tr><th>Athletics (Physical)</th><td></td></tr>\n<tr><th>Composure (Presence)</th><td></td></tr>\n<tr><th>Fighting (Physical)</th><td></td></tr>\n<tr><th>First Aid (Focus)</th><td></td></tr>\n<tr><th>Health (Physical)</th><td></td></tr>\n<tr><th>Mechanics (Focus)</th><td></td></tr>\n<tr><th>Preparedness (Presence)</th><td></td></tr>\n<tr><th>Riding (Physical)</th><td></td></tr>\n<tr><th>Sense Trouble (Presence)</th><td></td></tr>\n<tr><th>Sneaking (Focus)</th><td></td></tr>\n</tbody>\n</table>\n</aside>\n</div>\n\n## Paris Sheet Notes\n\n| Field | Drive | Pushes |\n| --- | --- | ---: |\n| | | 2 |\n\n| I Rely On | I Seek To Protect |\n| --- | --- |\n| | |\n\n| That Deuced Peculiar Business |\n| --- |\n| |\n\n## Investigative Abilities\n\n| Ability | Notes |\n| --- | --- |\n| Art History | Paintings, schools, provenance, fashionable names. |\n| Charm | Drawing-room warmth, flirtation, patronage. |\n| Inspiration | Reading the emotional charge of art or performance. |\n| Occult Studies | Symbols, rites, forbidden books, old rumors. |\n| Reassurance | Calming witnesses, students, servants, or friends. |\n| Research | Archives, newspapers, letters, catalogues. |\n\n## Relationships\n\n| Person or Place | Bond | Complication |\n| --- | --- | --- |\n| [[Someone]] | | |\n\n:::gm\n## Hidden Truth\n\nWhat do they know, carry, remember, or dream that should not be public yet?\n\n## Pressure\n\n- What tempts them?\n- What frightens them?\n- Who can make them act against their better judgment?\n:::\n"
+    },
+    {
+      "slug": "npc",
+      "frontmatter": {
+        "category": "npc",
+        "type": "npc",
+        "name": "NPC",
+        "summary": "Ready-to-run Yellow King NPC with portrait, motives, tells, Paris abilities, and scene notes.",
+        "tags": [
+          "npc",
+          "yellow-king"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo",
+        "cover": "/wiki/media/REPLACE.jpg"
+      },
+      "body": "# NPC\n\n<div class=\"wiki-layout\">\n<div class=\"wiki-main\">\n\n<section class=\"wiki-section\">\n<h2>At The Table</h2>\n<p>Give the NPC a first impression players can act on: posture, voice, clothes, scent, the way they hesitate before a particular name. Keep this paragraph concrete enough that you can read it aloud.</p>\n</section>\n\n<section class=\"wiki-section\">\n<h2>What They Want</h2>\n<p>Write the thing they are trying to get before the scene ends. Then write what they will not admit, even under pressure.</p>\n</section>\n\n<section class=\"wiki-section\">\n<h2>What They Know</h2>\n<p>List the clue, rumor, contradiction, or introduction this NPC can provide. If the information points to another page, add the rendered wiki link below.</p>\n</section>\n\n</div>\n\n<aside class=\"wiki-infobox\">\n<figure>\n<img src=\"/wiki/media/REPLACE.jpg\" alt=\"NPC portrait\" />\n<figcaption>NPC portrait</figcaption>\n</figure>\n\n<table>\n<tbody>\n<tr><th>Role</th><td>Patron / artist / servant / witness</td></tr>\n<tr><th>Age</th><td></td></tr>\n<tr><th>Pronouns</th><td></td></tr>\n<tr><th>Residence</th><td></td></tr>\n<tr><th>Public Manner</th><td>Courteous, distracted, too still</td></tr>\n<tr><th>Private Pressure</th><td>Debt, blackmail, grief, ambition</td></tr>\n<tr><th>Tell</th><td>What they do when lying</td></tr>\n</tbody>\n</table>\n\n<table>\n<caption>QuickShock Stats</caption>\n<tbody>\n<tr><th>Athletics (Physical)</th><td>3</td></tr>\n<tr><th>Composure (Presence)</th><td>3</td></tr>\n<tr><th>Fighting (Physical)</th><td>3</td></tr>\n<tr><th>First Aid (Focus)</th><td>3</td></tr>\n<tr><th>Health (Physical)</th><td>3</td></tr>\n<tr><th>Mechanics (Focus)</th><td>3</td></tr>\n<tr><th>Preparedness (Presence)</th><td>3</td></tr>\n<tr><th>Riding (Physical)</th><td>3</td></tr>\n<tr><th>Sense Trouble (Presence)</th><td>3</td></tr>\n<tr><th>Sneaking (Focus)</th><td>3</td></tr>\n</tbody>\n</table>\n</aside>\n</div>\n\n## Paris Sheet Notes\n\n| Field | Drive | Pushes |\n| --- | --- | ---: |\n| Art critic / servant / patron / student | What keeps them in the story | 2 |\n\n| I Rely On | I Seek To Protect |\n| --- | --- |\n| Person, reputation, habit, vice, or institution | Person, secret, place, or fragile belief |\n\n| That Deuced Peculiar Business |\n| --- |\n| The odd fact, scandal, haunting, coincidence, or Carcosan pressure attached to them. |\n\n## Investigative Abilities\n\n| Ability | Notes |\n| --- | --- |\n| Art History | Paintings, schools, provenance, fashionable names. |\n| Charm | Drawing-room warmth, flirtation, patronage. |\n| Inspiration | Reading the emotional charge of art or performance. |\n| Occult Studies | Symbols, rites, forbidden books, old rumors. |\n| Reassurance | Calming witnesses, students, servants, or friends. |\n| Research | Archives, newspapers, letters, catalogues. |\n\n## Scene Use\n\n| If the characters... | This NPC... |\n| --- | --- |\n| flatter them | offers a useful introduction. |\n| threaten them | protects their secret first, then their pride. |\n| mention Carcosa | pretends not to recognize the word. |\n\n:::gm\n## GM Truth\n\nState the real motive, the secret they are protecting, and what would make them betray their current loyalty.\n\n## Pressure Moves\n\n- They arrange a private meeting where someone else can listen.\n- They give true information with one missing name.\n- They send word to the person the characters are asking about.\n:::\n"
+    },
+    {
+      "slug": "location",
+      "frontmatter": {
+        "category": "location",
+        "type": "location",
+        "name": "Location",
+        "summary": "",
+        "tags": [
+          "location",
+          "yellow-king"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Location\n\n## Overview\n\n## Notable Sites\n\n:::gm\nHidden truths here.\n:::\n"
+    },
+    {
+      "slug": "event",
+      "frontmatter": {
+        "category": "event",
+        "type": "event",
+        "name": "Event",
+        "summary": "",
+        "tags": [
+          "event",
+          "yellow-king"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo",
+        "eventDate": ""
+      },
+      "body": "# Event\n\n## Summary\n\n## Aftermath\n\n:::gm\nWhat really happened.\n:::\n"
+    },
+    {
+      "slug": "game",
+      "frontmatter": {
+        "category": "game",
+        "type": "game",
+        "name": "Game Note",
+        "summary": "",
+        "tags": [
+          "game",
+          "yellow-king"
+        ],
+        "visibility": "gm",
+        "approvalStatus": "approved",
+        "knownToPlayers": false,
+        "keyLinks": [],
+        "aliases": [],
+        "lastEditedBy": "CampaignRepo"
+      },
+      "body": "# Game Note\n\n## Overview\n\n:::gm\nGM-only rules notes.\n:::\n"
+    }
+  ],
   "Sword Chronicle": [
     {
       "slug": "character-sheet",

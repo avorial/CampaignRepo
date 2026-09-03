@@ -43,6 +43,29 @@ describe("template packs", () => {
     expect(template?.body).toContain("destiny: 3");
     expect(template?.body).toContain("oaths: []");
   });
+
+  it("seeds Yellow King Paris characters with portrait panels and ready stats", () => {
+    const sheet = packFor("The King in Yellow RPG").find((item) => item.slug === "character-sheet");
+    const character = packFor("The King in Yellow RPG").find((item) => item.slug === "character");
+    const npc = packFor("The King in Yellow RPG").find((item) => item.slug === "npc");
+
+    expect(sheet?.body).toContain('<aside class="wiki-infobox">');
+    expect(sheet?.body).toContain('<img src="/wiki/media/REPLACE.jpg" alt="Character portrait" />');
+    expect(sheet?.body).toContain("<strong>Pushes:</strong> 2");
+    expect(sheet?.body).toContain("I Rely On");
+    expect(sheet?.body).toContain("That Deuced Peculiar Business");
+    expect(sheet?.body).toContain("<caption>General Abilities</caption>");
+    expect(sheet?.body).toContain("Athletics (Physical)");
+    expect(sheet?.body).toContain("Sense Trouble (Presence)");
+
+    expect(character?.body).toContain("<caption>QuickShock Stats</caption>");
+    expect(character?.body).toContain("| Field | Drive | Pushes |");
+    expect(character?.body).toContain("| Art History | Paintings, schools, provenance, fashionable names. |");
+
+    expect(npc?.body).toContain('<img src="/wiki/media/REPLACE.jpg" alt="NPC portrait" />');
+    expect(npc?.body).toContain("<caption>QuickShock Stats</caption>");
+    expect(npc?.body).toContain("| If the characters... | This NPC... |");
+  });
 });
 
 describe("template directory names", () => {

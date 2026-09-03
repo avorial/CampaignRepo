@@ -264,7 +264,362 @@ Secret loyalties, hidden bastards, and the oath they intend to break.
   });
 }
 
+const kingYellowGeneralAbilities = [
+  "Athletics (Physical)",
+  "Composure (Presence)",
+  "Fighting (Physical)",
+  "First Aid (Focus)",
+  "Health (Physical)",
+  "Mechanics (Focus)",
+  "Preparedness (Presence)",
+  "Riding (Physical)",
+  "Sense Trouble (Presence)",
+  "Sneaking (Focus)"
+];
+
+const kingYellowInvestigativeAbilities = [
+  ["Art History", "Paintings, schools, provenance, fashionable names."],
+  ["Charm", "Drawing-room warmth, flirtation, patronage."],
+  ["Inspiration", "Reading the emotional charge of art or performance."],
+  ["Occult Studies", "Symbols, rites, forbidden books, old rumors."],
+  ["Reassurance", "Calming witnesses, students, servants, or friends."],
+  ["Research", "Archives, newspapers, letters, catalogues."]
+];
+
+function kingYellowGeneralAbilityRows(defaultValue = "") {
+  return kingYellowGeneralAbilities
+    .map((ability) => `<tr><th>${ability}</th><td>${defaultValue}</td></tr>`)
+    .join("\n");
+}
+
+function kingYellowInvestigativeRows() {
+  return kingYellowInvestigativeAbilities
+    .map(([ability, note]) => `<tr><td>${ability}</td><td>${note}</td></tr>`)
+    .join("\n");
+}
+
+function kingYellowCharacterSheet() {
+  return t("character-sheet", "Character Sheet", "character", ["pc", "character", "sheet", "yellow-king"], `
+# Character Sheet
+
+<div class="wiki-layout">
+<div class="wiki-main">
+
+<section class="wiki-section">
+<h2>Identity</h2>
+<p><strong>Field:</strong> The character's social, professional, or artistic territory.</p>
+<p><strong>Drive:</strong> The reason this character keeps going when the play turns ugly.</p>
+<p><strong>Pushes:</strong> 2</p>
+</section>
+
+<section class="wiki-section">
+<h2>Investigative Abilities</h2>
+
+<table class="wiki-stat-table">
+<thead>
+<tr><th>Ability</th><th>Notes</th></tr>
+</thead>
+<tbody>
+${kingYellowInvestigativeRows()}
+<tr><td></td><td></td></tr>
+<tr><td></td><td></td></tr>
+</tbody>
+</table>
+</section>
+
+<section class="wiki-section">
+<h2>Anchors</h2>
+
+<table class="wiki-stat-table">
+<thead>
+<tr><th>Prompt</th><th>Answer</th></tr>
+</thead>
+<tbody>
+<tr><td>I Rely On</td><td></td></tr>
+<tr><td>I Seek To Protect</td><td></td></tr>
+<tr><td>That Deuced Peculiar Business</td><td></td></tr>
+</tbody>
+</table>
+</section>
+
+<section class="wiki-section">
+<h2>Possessions</h2>
+
+<table class="wiki-stat-table">
+<thead>
+<tr><th>Item</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Sketchbook / notebook</td><td></td></tr>
+<tr><td>Calling cards</td><td></td></tr>
+<tr><td>Unsettling keepsake</td><td></td></tr>
+</tbody>
+</table>
+</section>
+
+</div>
+
+<aside class="wiki-infobox">
+<figure>
+<img src="/wiki/media/REPLACE.jpg" alt="Character portrait" />
+<figcaption>Character portrait</figcaption>
+</figure>
+
+<table>
+<tbody>
+<tr><th>Player</th><td></td></tr>
+<tr><th>Pronouns</th><td></td></tr>
+<tr><th>Field</th><td></td></tr>
+<tr><th>Drive</th><td></td></tr>
+<tr><th>Pushes</th><td>2</td></tr>
+</tbody>
+</table>
+
+<table>
+<caption>General Abilities</caption>
+<tbody>
+${kingYellowGeneralAbilityRows()}
+</tbody>
+</table>
+</aside>
+</div>
+
+:::gm
+## GM Notes
+
+Secrets, flags, obligations, and the pressure points most likely to make this character choose badly.
+:::
+`, {
+    summary: "Ready-to-fill Yellow King Paris character sheet with portrait, sheet fields, abilities, pushes, and anchors.",
+    cover: "/wiki/media/REPLACE.jpg"
+  });
+}
+
+function kingYellowCharacter() {
+  return t("character", "Character", "character", ["character", "yellow-king"], `
+# Character
+
+<div class="wiki-layout">
+<div class="wiki-main">
+
+<section class="wiki-section">
+<h2>Concept</h2>
+<p>Describe who they are in one playable paragraph: social position, artistic life, public reputation, field of expertise, and why they are close to the campaign's trouble.</p>
+</section>
+
+<section class="wiki-section">
+<h2>Drive</h2>
+<p>What pulls them forward when a sensible person would leave Paris, burn the letter, or stop looking at the painting?</p>
+</section>
+
+<section class="wiki-section">
+<h2>Ties</h2>
+<p>Name the people and places that already have a claim on them, then add rendered wiki links in the relationship table below.</p>
+</section>
+
+</div>
+
+<aside class="wiki-infobox">
+<figure>
+<img src="/wiki/media/REPLACE.jpg" alt="Character portrait" />
+<figcaption>Character portrait</figcaption>
+</figure>
+
+<table>
+<tbody>
+<tr><th>Player</th><td></td></tr>
+<tr><th>Pronouns</th><td></td></tr>
+<tr><th>Age</th><td></td></tr>
+<tr><th>Field</th><td>Student / artist / patron / investigator</td></tr>
+<tr><th>Residence</th><td></td></tr>
+<tr><th>Style</th><td>How they look at first glance</td></tr>
+<tr><th>Vice</th><td>What gets them into trouble</td></tr>
+</tbody>
+</table>
+
+<table>
+<caption>QuickShock Stats</caption>
+<tbody>
+${kingYellowGeneralAbilityRows()}
+</tbody>
+</table>
+</aside>
+</div>
+
+## Paris Sheet Notes
+
+| Field | Drive | Pushes |
+| --- | --- | ---: |
+| | | 2 |
+
+| I Rely On | I Seek To Protect |
+| --- | --- |
+| | |
+
+| That Deuced Peculiar Business |
+| --- |
+| |
+
+## Investigative Abilities
+
+| Ability | Notes |
+| --- | --- |
+${kingYellowInvestigativeAbilities.map(([ability, note]) => `| ${ability} | ${note} |`).join("\n")}
+
+## Relationships
+
+| Person or Place | Bond | Complication |
+| --- | --- | --- |
+| [[Someone]] | | |
+
+:::gm
+## Hidden Truth
+
+What do they know, carry, remember, or dream that should not be public yet?
+
+## Pressure
+
+- What tempts them?
+- What frightens them?
+- Who can make them act against their better judgment?
+:::
+`, {
+    summary: "Yellow King character with portrait, Paris sheet fields, investigative abilities, and ready stats.",
+    cover: "/wiki/media/REPLACE.jpg"
+  });
+}
+
+function kingYellowNpc() {
+  return t("npc", "NPC", "npc", ["npc", "yellow-king"], `
+# NPC
+
+<div class="wiki-layout">
+<div class="wiki-main">
+
+<section class="wiki-section">
+<h2>At The Table</h2>
+<p>Give the NPC a first impression players can act on: posture, voice, clothes, scent, the way they hesitate before a particular name. Keep this paragraph concrete enough that you can read it aloud.</p>
+</section>
+
+<section class="wiki-section">
+<h2>What They Want</h2>
+<p>Write the thing they are trying to get before the scene ends. Then write what they will not admit, even under pressure.</p>
+</section>
+
+<section class="wiki-section">
+<h2>What They Know</h2>
+<p>List the clue, rumor, contradiction, or introduction this NPC can provide. If the information points to another page, add the rendered wiki link below.</p>
+</section>
+
+</div>
+
+<aside class="wiki-infobox">
+<figure>
+<img src="/wiki/media/REPLACE.jpg" alt="NPC portrait" />
+<figcaption>NPC portrait</figcaption>
+</figure>
+
+<table>
+<tbody>
+<tr><th>Role</th><td>Patron / artist / servant / witness</td></tr>
+<tr><th>Age</th><td></td></tr>
+<tr><th>Pronouns</th><td></td></tr>
+<tr><th>Residence</th><td></td></tr>
+<tr><th>Public Manner</th><td>Courteous, distracted, too still</td></tr>
+<tr><th>Private Pressure</th><td>Debt, blackmail, grief, ambition</td></tr>
+<tr><th>Tell</th><td>What they do when lying</td></tr>
+</tbody>
+</table>
+
+<table>
+<caption>QuickShock Stats</caption>
+<tbody>
+${kingYellowGeneralAbilityRows("3")}
+</tbody>
+</table>
+</aside>
+</div>
+
+## Paris Sheet Notes
+
+| Field | Drive | Pushes |
+| --- | --- | ---: |
+| Art critic / servant / patron / student | What keeps them in the story | 2 |
+
+| I Rely On | I Seek To Protect |
+| --- | --- |
+| Person, reputation, habit, vice, or institution | Person, secret, place, or fragile belief |
+
+| That Deuced Peculiar Business |
+| --- |
+| The odd fact, scandal, haunting, coincidence, or Carcosan pressure attached to them. |
+
+## Investigative Abilities
+
+| Ability | Notes |
+| --- | --- |
+${kingYellowInvestigativeAbilities.map(([ability, note]) => `| ${ability} | ${note} |`).join("\n")}
+
+## Scene Use
+
+| If the characters... | This NPC... |
+| --- | --- |
+| flatter them | offers a useful introduction. |
+| threaten them | protects their secret first, then their pride. |
+| mention Carcosa | pretends not to recognize the word. |
+
+:::gm
+## GM Truth
+
+State the real motive, the secret they are protecting, and what would make them betray their current loyalty.
+
+## Pressure Moves
+
+- They arrange a private meeting where someone else can listen.
+- They give true information with one missing name.
+- They send word to the person the characters are asking about.
+:::
+`, {
+    summary: "Ready-to-run Yellow King NPC with portrait, motives, tells, Paris abilities, and scene notes.",
+    cover: "/wiki/media/REPLACE.jpg"
+  });
+}
+
 const packs = {
+  "The King in Yellow RPG": [
+    kingYellowCharacterSheet(),
+    kingYellowCharacter(),
+    kingYellowNpc(),
+    t("location", "Location", "location", ["location", "yellow-king"], `
+# Location
+
+## Overview
+
+## Notable Sites
+
+:::gm
+Hidden truths here.
+:::`),
+    t("event", "Event", "event", ["event", "yellow-king"], `
+# Event
+
+## Summary
+
+## Aftermath
+
+:::gm
+What really happened.
+:::`, { eventDate: "" }),
+    t("game", "Game Note", "game", ["game", "yellow-king"], `
+# Game Note
+
+## Overview
+
+:::gm
+GM-only rules notes.
+:::`)
+  ],
+
   "Sword Chronicle": [
     swordChronicleCharacterSheet(),
     t("house", "House", "npc", ["faction", "house"], `
