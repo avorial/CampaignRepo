@@ -406,7 +406,14 @@ function renderInline(markdown: string, resolve?: WikiLinkResolver, resolveMedia
   return linkStandaloneImages(html);
 }
 
-function mediaSrc(path: string, resolveMedia?: MediaPathResolver) {
+/**
+ * Resolve a stored media reference (frontmatter cover, portrait, etc.) to a
+ * servable URL. Mirrors how inline markdown images are resolved: pass http(s)
+ * URLs through untouched, otherwise strip an optional leading `wiki/media/`
+ * before handing the bare relative path to `resolveMedia`. Exported so cover
+ * images resolve the same way inline images do.
+ */
+export function mediaSrc(path: string, resolveMedia?: MediaPathResolver) {
   const trimmed = path.trim();
   if (/^https?:\/\//i.test(trimmed) || !resolveMedia) return trimmed;
   const rel = trimmed.replace(/^\/?wiki\/media\//, "");

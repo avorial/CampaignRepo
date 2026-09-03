@@ -546,6 +546,37 @@ code {
   box-shadow: var(--shadow-panel);
 }
 
+/* King in Yellow: show the WHOLE picture, never cropped, at a modest size.
+   Undo the right-floated 4:5 cover-crop figure treatment and instead centre
+   each content image, contained within a bounded height. Same for the cover. */
+.app-shell[data-theme="king-in-yellow"] .content-body p:has(> img:only-child) {
+  float: none;
+  width: auto;
+  max-width: 100%;
+  margin: 18px auto;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  text-align: center;
+}
+.app-shell[data-theme="king-in-yellow"] .content-body img {
+  display: block;
+  aspect-ratio: auto;
+  object-fit: contain;
+  width: auto;
+  max-width: 100%;
+  max-height: 60vh;
+  height: auto;
+  margin-left: auto;
+  margin-right: auto;
+}
+.app-shell[data-theme="king-in-yellow"] .page-cover {
+  object-fit: contain;
+  max-height: 300px;
+  height: auto;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .auth-kinetic-row,
   .auth-kinetic-row.auth-kinetic-reverse {

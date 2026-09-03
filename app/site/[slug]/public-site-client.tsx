@@ -3,7 +3,7 @@
 import { CSSProperties, MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { WikiPage } from "@/lib/types";
 import type { Quest } from "@/lib/quests";
-import { renderMarkdown, type IncludeResolver, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
+import { mediaSrc, renderMarkdown, type IncludeResolver, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
 import { rollFromElement } from "@/lib/dice";
 import { themeToCssVars, type CampaignTheme } from "@/lib/theme";
@@ -221,7 +221,7 @@ export default function PublicSiteClient({
     [pages]
   );
 
-  const cover = selectedPage?.frontmatter.cover ? resolveMedia(selectedPage.frontmatter.cover) : "";
+  const cover = selectedPage?.frontmatter.cover ? mediaSrc(selectedPage.frontmatter.cover, resolveMedia) : "";
   const themeVars = useMemo(() => themeToCssVars(theme) as CSSProperties, [theme]);
   const selectPublicPage = (page: WikiPage) => {
     if (!page.content) {
