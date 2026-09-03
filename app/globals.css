@@ -535,6 +535,17 @@ code {
   padding: 16px 24px;
 }
 
+/* King in Yellow: put the public reader article on a solid plate so long-form
+   page prose never sits over the Deco wallpaper (public site + share links).
+   Scoped to readers inside .workspace, so the in-app split-pane editor
+   preview (a bare .reader-shell) is untouched. */
+.app-shell[data-theme="king-in-yellow"] .workspace .page-reader {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-panel);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .auth-kinetic-row,
   .auth-kinetic-row.auth-kinetic-reverse {
