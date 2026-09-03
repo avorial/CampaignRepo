@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { getPublicSiteCampaign } from "@/lib/db";
 import { loadCampaignTheme } from "@/lib/public-site";
 import { getStorageAdapter } from "@/lib/storage";
-import { parsePage, renderMarkdown, stripGmBlocks } from "@/lib/markdown";
+import { mediaSrc, parsePage, renderMarkdown, stripGmBlocks } from "@/lib/markdown";
 import { themeToCssVars } from "@/lib/theme";
 import Logo from "@/app/components/logo";
 
@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       return { title: campaign.name };
     }
     const ogImages = page.frontmatter.cover
-      ? [{ url: `/public-media/${slug}/${encodeURIComponent(page.frontmatter.cover)}` }]
+      ? [{ url: mediaSrc(page.frontmatter.cover, (p) => `/public-media/${slug}/${p.split("/").map(encodeURIComponent).join("/")}`) }]
       : [];
     return {
       title: `${page.frontmatter.name} — ${campaign.name}`,
@@ -73,7 +73,7 @@ export default async function PublicPageRoute({ params }: { params: Promise<{ sl
   const themeVars = themeToCssVars(theme) as CSSProperties;
 
   const coverUrl = pageCover
-    ? `/public-media/${slug}/${pageCover.split("/").map(encodeURIComponent).join("/")}`
+    ? mediaSrc(pageCover, (p) => `/public-media/${slug}/${p.split("/").map(encodeURIComponent).join("/")}`)
     : "";
 
   return (

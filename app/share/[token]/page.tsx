@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { getPageShare, getCampaignByIdPublic } from "@/lib/db";
 import { loadCampaignTheme } from "@/lib/public-site";
 import { getStorageAdapter } from "@/lib/storage";
-import { parsePage, renderMarkdown, stripGmBlocks } from "@/lib/markdown";
+import { mediaSrc, parsePage, renderMarkdown, stripGmBlocks } from "@/lib/markdown";
 import { parseQuest } from "@/lib/quests";
 import { themeToCssVars } from "@/lib/theme";
 import Logo from "@/app/components/logo";
@@ -144,7 +144,7 @@ export default async function PageShareRoute({ params }: { params: Promise<{ tok
     notFound();
   }
 
-  const coverUrl = pageCover ? mediaResolver(pageCover) : "";
+  const coverUrl = pageCover ? mediaSrc(pageCover, mediaResolver) : "";
 
   return (
     <main className="app-shell" data-theme={theme.preset || undefined} style={themeVars}>
