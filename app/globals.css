@@ -524,6 +524,17 @@ code {
   );
 }
 
+/* King in Yellow: a Deco nameplate box around the masthead title block
+   (eyebrow, campaign title, repo/system meta) so the main title sits on
+   its own solid plate rather than floating over the wallpaper. */
+.app-shell[data-theme="king-in-yellow"] .topbar > div:first-child {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-panel);
+  padding: 16px 24px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .auth-kinetic-row,
   .auth-kinetic-row.auth-kinetic-reverse {
