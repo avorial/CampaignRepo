@@ -506,6 +506,35 @@ code {
 }
 .app-shell[data-theme="fantasy"] section.band > h2:first-child { padding-left: 44px; }
 
+/* King in Yellow: solid top band so the masthead, primary nav and tabs read
+   clean over the gilt Deco wallpaper — the header text sits on the base
+   colour, and the wallpaper fades in below where content panels take over. */
+.app-shell[data-theme="king-in-yellow"]::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(11, 9, 6, 0.98) 0%,
+    rgba(11, 9, 6, 0.94) 15%,
+    rgba(11, 9, 6, 0.55) 30%,
+    rgba(11, 9, 6, 0) 44%
+  );
+}
+
+/* King in Yellow: a Deco nameplate box around the masthead title block
+   (eyebrow, campaign title, repo/system meta) so the main title sits on
+   its own solid plate rather than floating over the wallpaper. */
+.app-shell[data-theme="king-in-yellow"] .topbar > div:first-child {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-panel);
+  padding: 16px 24px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .auth-kinetic-row,
   .auth-kinetic-row.auth-kinetic-reverse {
