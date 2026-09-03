@@ -448,3 +448,65 @@
     #070612; /* @kind other */
   --backdrop-size: auto, auto, 70px 70px, 70px 70px, auto;
 }
+
+/* ================= FLAGSHIP: THE KING IN YELLOW ================= */
+/* Art Deco theatre of Carcosa — lacquer black, gilt marquee gold, oxblood
+   red. Geometric, sharp-edged, wide-tracked. Surfaces are near-opaque plates
+   so the gilt lattice backdrop only shows in the gutters and never interrupts
+   reading. Grand and gilded, with the wrongness under the gold. */
+[data-theme="king-in-yellow"] {
+  --bg-base: #0b0906;
+  --bg-surface: #15110b;
+  --bg-elevated: #1e1810;
+  --bg-glass: rgba(21, 17, 11, 0.88);   /* solid block so text on glass headers stays readable */
+  --field-bg: #080604;
+
+  --border-faint: rgba(200, 165, 74, 0.10);
+  --border-soft: rgba(200, 165, 74, 0.20);
+  --border-strong: rgba(200, 165, 74, 0.42);
+
+  --gold: #c8a24a;          /* gilt marquee gold primary */
+  --gold-bright: #e6c46b;
+  --gold-glow: rgba(200, 165, 74, 0.34);
+  --purple: #9c2230;        /* oxblood red secondary */
+  --purple-deep: #6e1622;
+  --purple-glow: rgba(156, 34, 48, 0.30);
+
+  --text-primary: #f0e7cf;  /* warm gilt ivory */
+  --text-secondary: #b9ac86;
+  --text-tertiary: #8a7d5a;
+  --text-muted: #574d36;
+  --danger: #cf4b3a;
+
+  --font-display: "Cinzel", Georgia, serif;
+  --font-body: "EB Garamond", Georgia, serif;
+  --font-mono: "Cinzel", Georgia, serif;
+  --tracking-eyebrow: 0.28em;   /* wide Deco letterspacing */
+  --tracking-label: 0.16em;
+  --tracking-tight: 0.01em;
+
+  --radius-sm: 0px;             /* sharp geometric Deco edges */
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 3px;
+  --radius-2xl: 4px;
+  --radius-pill: 999px;
+  --control-h: 42px;
+
+  --shadow-panel: 0 22px 58px rgba(0, 0, 0, 0.80);
+  --shadow-pop: 0 12px 30px rgba(0, 0, 0, 0.62);
+  --ring-gold: 0 0 0 3px rgba(200, 165, 74, 0.34);
+  --ring-purple: 0 0 0 3px rgba(156, 34, 48, 0.30);
+  --wash-gold: rgba(200, 165, 74, 0.12);
+  --wash-purple: rgba(156, 34, 48, 0.12);
+
+  /* Gilt Deco wallpaper: a tiled fan-scallop lattice over a gold marquee
+     glow and oxblood footlight. Transparent-ground SVG so the glows bleed
+     through; opaque panels sit on top so text is never over the pattern. */
+  --backdrop:
+    radial-gradient(1100px 680px at 50% -14%, rgba(200, 165, 74, 0.12), transparent 60%),
+    radial-gradient(900px 700px at 50% 120%, rgba(156, 34, 48, 0.10), transparent 62%),
+    url("/brand/king-in-yellow-deco.svg"),
+    #0b0906; /* @kind other */
+  --backdrop-size: auto, auto, 200px 200px, auto;
+}

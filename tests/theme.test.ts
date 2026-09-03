@@ -45,6 +45,7 @@ describe("game theme presets", () => {
     expect(themePresetForGame("Traveller")).toBe("traveller");
     expect(themePresetForGame("Vampire: The Masquerade")).toBe("vampire");
     expect(themePresetForGame("Mage: The Ascension")).toBe("mage");
+    expect(themePresetForGame("The King in Yellow RPG")).toBe("king-in-yellow");
     expect(themePresetForGame("Dungeons & Dragons")).toBe("fantasy");
   });
 });
