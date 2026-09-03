@@ -126,7 +126,17 @@ describe("renderMarkdown", () => {
   it("rewrites campaign media paths with the provided resolver", () => {
     const html = renderMarkdown("![Portrait](/wiki/media/Portrait-Example.png)", "gm", undefined, (path) => `/campaign-media/1/${path}`);
     expect(html).toContain('src="/campaign-media/1/Portrait-Example.png"');
+    expect(html).toContain('href="/campaign-media/1/Portrait-Example.png"');
+    expect(html).toContain('class="image-fullsize-link"');
+    expect(html).toContain('target="_blank"');
     expect(html).toContain('alt="Portrait"');
+  });
+
+  it("does not rewrap already linked Markdown images", () => {
+    const html = renderMarkdown("[![Map](/wiki/media/map.png)](/wiki/media/map.png)", "gm", undefined, (path) => `/media/${path}`);
+    expect((html.match(/image-fullsize-link/g) || []).length).toBe(0);
+    expect(html).toContain('href="/media/map.png"');
+    expect(html).toContain('src="/media/map.png"');
   });
 
   it("renders sword-chronicle-sheet fenced blocks with derived stats", () => {

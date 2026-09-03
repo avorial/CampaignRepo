@@ -382,6 +382,13 @@ function addHeadingIds(html: string) {
   });
 }
 
+function linkStandaloneImages(html: string) {
+  return html.replace(/<p>(<img\b[^>]*\bsrc="([^"]+)"[^>]*>)<\/p>/g, (_match, image, src) => {
+    const href = escapeHtml(String(src));
+    return `<p><a class="image-fullsize-link" href="${href}" target="_blank" rel="noreferrer">${image}</a></p>`;
+  });
+}
+
 /** Convert wiki-link syntax, run through marked, but do not sanitize (caller wraps). */
 function renderInline(markdown: string, resolve?: WikiLinkResolver, resolveMedia?: MediaPathResolver) {
   // Any leftover (nested) include markers degrade to normal links.
@@ -396,7 +403,7 @@ function renderInline(markdown: string, resolve?: WikiLinkResolver, resolveMedia
       return `${attr}="${escapeHtml(resolveMedia(decodeURIComponent(String(path))))}"`;
     });
   }
-  return html;
+  return linkStandaloneImages(html);
 }
 
 function mediaSrc(path: string, resolveMedia?: MediaPathResolver) {
@@ -2967,5 +2974,5 @@ export function renderMarkdown(
     out += renderInline(content.slice(last), resolve, resolveMedia);
     html = out;
   }
-  return DOMPurify.sanitize(html, { ADD_ATTR: ["data-label", "data-missing", "data-target", "data-roll", "data-mod", "style"] });
+  return DOMPurify.sanitize(html, { ADD_ATTR: ["data-label", "data-missing", "data-target", "data-roll", "data-mod", "style", "target"] });
 }
