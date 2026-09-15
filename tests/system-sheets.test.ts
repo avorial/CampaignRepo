@@ -78,6 +78,34 @@ describe("Pendragon sheet renderer", () => {
   });
 });
 
+describe("Yellow King Paris sheet renderer", () => {
+  const html = renderMarkdown(fence("yellow-king-paris-sheet", [
+    "name: Bruce Carter",
+    "player: Mark",
+    "field: Architect - Tinkerer",
+    "drive: Rationalism",
+    "pushes: 2",
+    "investigative:",
+    "  - Architecture",
+    "  - Art History",
+    "general:",
+    "  Athletics: 3",
+    "  Mechanics: 7",
+    "relyOn: David as \"Jang\"",
+    "seekToProtect: Edward Vine",
+    "peculiarBusiness: Repaired a fortune teller machine."
+  ].join("\n")), "gm");
+
+  it("renders as a designed sheet block instead of escaped source text", () => {
+    expect(html).toContain("yksheet");
+    expect(html).toContain("Bruce Carter");
+    expect(html).toContain("Architect - Tinkerer");
+    expect(html).toContain("Mechanics (Focus)");
+    expect(html).not.toContain("yellow-king-paris-sheet");
+    expect(html).not.toContain("&lt;section");
+  });
+});
+
 describe("demo library coverage", () => {
   it("Dune is a registered game system with its own kit", () => {
     expect(gameTypes).toContain("Dune: Adventures in the Imperium");

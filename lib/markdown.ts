@@ -844,6 +844,79 @@ function expandTravellerSheets(content: string) {
   });
 }
 
+function ykList(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String).map((item) => item.trim()).filter(Boolean);
+  if (typeof value === "string") return value.split(/\n|,/).map((item) => item.trim()).filter(Boolean);
+  if (value && typeof value === "object") return Object.entries(value as Record<string, unknown>).map(([name, note]) => note ? `${name} - ${String(note)}` : name);
+  return [];
+}
+
+function ykRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function renderYellowKingParisSheetHtml(rawInput: string) {
+  let raw: Record<string, unknown>;
+  try {
+    raw = yaml.parse(rawInput) || {};
+  } catch (error) {
+    return `<section class="yksheet yksheet-error"><p>Yellow King sheet data could not be parsed: ${escapeHtml(error instanceof Error ? error.message : "invalid YAML")}</p></section>`;
+  }
+
+  const abilities = ykRecord(raw.generalAbilities || raw.general || raw.abilities);
+  const investigative = ykList(raw.investigativeAbilities || raw.investigative);
+  const pushes = asNumber(raw.pushes, 2);
+  const generalNames = [
+    "Athletics (Physical)", "Composure (Presence)", "Fighting (Physical)", "First Aid (Focus)", "Health (Physical)",
+    "Mechanics (Focus)", "Preparedness (Presence)", "Riding (Physical)", "Sense Trouble (Presence)", "Sneaking (Focus)"
+  ];
+  const ratingFor = (label: string) => {
+    const simple = label.replace(/\s*\([^)]+\)\s*$/, "");
+    const value = abilities[label] ?? abilities[simple] ?? abilities[simple.toLowerCase()] ?? abilities[label.toLowerCase()];
+    return value == null || value === "" ? "" : String(value);
+  };
+  const linedRows = (items: string[], count: number) => Array.from({ length: Math.max(count, items.length) }, (_, index) =>
+    `<li>${escapeHtml(items[index] || "")}</li>`
+  ).join("");
+  const pushesHtml = Array.from({ length: Math.max(0, pushes) }, () => `<span></span>`).join("");
+
+  return `<section class="yksheet">
+  <header class="yksheet-head">
+    <h3>Paris</h3>
+    <div></div>
+    <h4>Character Sheet</h4>
+  </header>
+  <div class="yksheet-fields">
+    <div><b>Name</b><span>${escapeHtml(String(raw.name || ""))}</span></div>
+    <div><b>Player</b><span>${escapeHtml(String(raw.player || ""))}</span></div>
+    <div><b>Field</b><span>${escapeHtml(String(raw.field || ""))}</span></div>
+    <div><b>Drive</b><span>${escapeHtml(String(raw.drive || ""))}</span></div>
+  </div>
+  <div class="yksheet-grid">
+    <section class="yksheet-panel">
+      <h5>Investigative Abilities</h5>
+      <ul class="yksheet-lines">${linedRows(investigative, 5)}</ul>
+      <div class="yksheet-pushes"><strong>Pushes (${pushes}):</strong>${pushesHtml}</div>
+      <h5>General Abilities</h5>
+      <div class="yksheet-abilities">
+        ${generalNames.map((label) => `<div><span>${escapeHtml(label)}</span><b>${escapeHtml(ratingFor(label))}</b></div>`).join("")}
+      </div>
+    </section>
+    <section class="yksheet-panel">
+      <div class="yksheet-anchor"><em>I Rely On</em><p>${escapeHtml(String(raw.relyOn || raw.rely_on || ""))}</p></div>
+      <div class="yksheet-anchor"><em>I Seek To Protect</em><p>${escapeHtml(String(raw.seekToProtect || raw.protect || raw.seek_to_protect || ""))}</p></div>
+      <div class="yksheet-business"><em>That Deuced Peculiar Business</em><p>${escapeHtml(String(raw.peculiarBusiness || raw.business || raw.thatDeucedPeculiarBusiness || ""))}</p></div>
+    </section>
+  </div>
+</section>`;
+}
+
+function expandYellowKingParisSheets(content: string) {
+  return content.replace(/```yellow-king-paris-sheet\s*\n([\s\S]*?)```/g, (_match, inner) => {
+    return `\n\n${compactSheetHtml(renderYellowKingParisSheetHtml(String(inner)))}\n\n`;
+  });
+}
+
 /** Expand fenced `wod-sheet` YAML blocks into the WoD character sheet. */
 function expandWoDSheets(content: string) {
   return content.replace(/```wod-sheet\s*\n([\s\S]*?)```/g, (_match, inner) => {
@@ -2938,6 +3011,7 @@ export function renderMarkdown(
   content = expandIncludes(content, resolveInclude);
   content = expandGalleries(content, resolveMedia);
   content = expandTravellerSheets(content);
+  content = expandYellowKingParisSheets(content);
   content = expandWoDSheets(content);
   content = expandDnDSheets(content);
   content = expandSwordChronicleSheets(content);

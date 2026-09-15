@@ -5535,6 +5535,184 @@ button.danger:hover:not(:disabled) { background: #c0392b; }
 
 .tsheet-credits { color: #ffb331; font-family: var(--font-mono); margin: 10px 0 0; }
 
+/* ---- The Yellow King: Paris character sheet ---- */
+.yksheet {
+  background: #eee7dc;
+  border: 14px solid #f6c1b6;
+  box-shadow: inset 0 0 0 1px #f0a696;
+  color: #2d2725;
+  display: grid;
+  gap: 16px;
+  margin: 16px 0;
+  padding: 30px 38px 34px;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.yksheet-head {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  text-align: center;
+}
+
+.yksheet-head h3 {
+  color: rgba(206, 101, 83, 0.28);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 64px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 0.95;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.yksheet-head div {
+  border-top: 3px double #efa797;
+  width: min(78%, 720px);
+}
+
+.yksheet-head h4 {
+  color: #2d2725;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  letter-spacing: 0;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.yksheet-fields {
+  display: grid;
+  gap: 8px;
+}
+
+.yksheet-fields div {
+  align-items: end;
+  background: rgba(255, 255, 255, 0.55);
+  border-bottom: 2px solid #efa797;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 86px minmax(0, 1fr);
+  min-height: 34px;
+  padding: 0 10px 5px;
+}
+
+.yksheet-fields b,
+.yksheet-panel h5 {
+  color: #2d2725;
+  font-variant: small-caps;
+}
+
+.yksheet-grid {
+  display: grid;
+  gap: 26px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.yksheet-panel {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.yksheet-panel h5 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.yksheet-lines {
+  background: rgba(255, 255, 255, 0.55);
+  display: grid;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.yksheet-lines li {
+  border-bottom: 2px solid #efa797;
+  min-height: 31px;
+  padding: 6px 8px 2px;
+}
+
+.yksheet-pushes {
+  align-items: center;
+  display: flex;
+  gap: 9px;
+  margin: 8px 0;
+}
+
+.yksheet-pushes strong {
+  font-size: 17px;
+  text-transform: uppercase;
+}
+
+.yksheet-pushes span {
+  border: 3px solid #efa797;
+  border-radius: 999px;
+  display: inline-block;
+  height: 26px;
+  width: 26px;
+}
+
+.yksheet-abilities {
+  display: grid;
+  gap: 7px;
+}
+
+.yksheet-abilities div {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 52px;
+  font-size: 20px;
+}
+
+.yksheet-abilities b {
+  border-bottom: 2px solid #efa797;
+  color: #2d2725;
+  min-height: 25px;
+  text-align: center;
+}
+
+.yksheet-anchor,
+.yksheet-business {
+  background: rgba(255, 255, 255, 0.55);
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 31px, #efa797 32px);
+  line-height: 32px;
+  min-height: 72px;
+  padding: 7px 10px;
+}
+
+.yksheet-business {
+  min-height: 316px;
+}
+
+.yksheet-anchor em,
+.yksheet-business em {
+  display: block;
+  color: #625752;
+  font-style: italic;
+}
+
+.yksheet-anchor p,
+.yksheet-business p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.yksheet-error {
+  background: rgba(120, 20, 20, 0.16);
+  border-color: #c43;
+  color: var(--text-primary);
+}
+
+@media (max-width: 760px) {
+  .yksheet { padding: 24px 20px 28px; }
+  .yksheet-head h3 { font-size: 46px; }
+  .yksheet-grid { grid-template-columns: 1fr; }
+}
+
 /* sheet editor */
 .tsheet-editor { display: grid; gap: 8px; }
 .tsheet-editor-chars { display: grid; gap: 6px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
