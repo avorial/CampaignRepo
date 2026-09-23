@@ -312,17 +312,23 @@ export default function AdminClient({ campaign, isGlobalAdmin = false, publicSlu
     if (!window.confirm(`${verb} all ${reviews.length} pending page(s)? This cannot be undone in bulk.`)) return;
     setBulkBusy(true);
     setMessage(`${verb}ing all ${reviews.length} page(s)…`);
-    const res = await fetch(`/api/campaigns/${campaign.id}/admin/reviews`, {
-      method: "PATCH",
-      body: JSON.stringify({ all: true, decision })
-    });
-    const data = await res.json();
-    setBulkBusy(false);
-    if (res.ok) {
-      setReviews(data.reviews);
-      setMessage(`${data.updated} page(s) ${decision}.`);
-    } else {
-      setMessage(data.error || "Could not update reviews.");
+    try {
+      const res = await fetch(`/api/campaigns/${campaign.id}/admin/reviews`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ all: true, decision })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setReviews(data.reviews || []);
+        setMessage(`${data.updated} page(s) ${decision}.`);
+      } else {
+        setMessage(data.error || `Could not ${verb.toLowerCase()} all reviews.`);
+      }
+    } catch {
+      setMessage(`Could not ${verb.toLowerCase()} all reviews. Check your connection and try again.`);
+    } finally {
+      setBulkBusy(false);
     }
   }
 

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearRepositoryTreeCacheForTests,
+  commitFiles,
   getTextFile,
   listDirectory,
   listDirectoryTextFiles
@@ -213,5 +214,40 @@ describe("GitHub repository tree loading", () => {
       .map((call) => String(call[0]))
       .filter((url) => url.includes("/contents/"));
     expect(contentRequests).toEqual(["https://api.github.com/repos/avorial/campaign/contents/wiki/pages/one.md?ref=main"]);
+  });
+});
+
+describe("GitHub bulk commits", () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("writes UTF-8 files inline without creating a blob per page", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/git/ref/heads/main")) return json({ object: { sha: "base-commit" } });
+      if (url.endsWith("/git/commits/base-commit")) return json({ tree: { sha: "base-tree" } });
+      if (url.endsWith("/git/trees")) return json({ sha: "next-tree" });
+      if (url.endsWith("/git/commits")) return json({ sha: "next-commit" });
+      if (url.endsWith("/git/refs/heads/main")) return json({ object: { sha: "next-commit" } });
+      return json({ message: `unexpected request: ${url}`, init }, 500);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await commitFiles("token", makeCampaign(), [
+      { path: "wiki/pages/one.md", content: "# One\n" },
+      { path: "wiki/pages/two.md", content: "# Two\n" }
+    ], "Approve all");
+
+    expect(fetchMock.mock.calls.some((call) => String(call[0]).endsWith("/git/blobs"))).toBe(false);
+    const treeCall = fetchMock.mock.calls.find((call) => String(call[0]).endsWith("/git/trees"));
+    const body = JSON.parse(String(treeCall?.[1]?.body));
+    expect(body).toEqual({
+      base_tree: "base-tree",
+      tree: [
+        { path: "wiki/pages/one.md", mode: "100644", type: "blob", content: "# One\n" },
+        { path: "wiki/pages/two.md", mode: "100644", type: "blob", content: "# Two\n" }
+      ]
+    });
   });
 });

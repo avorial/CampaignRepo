@@ -445,9 +445,14 @@ export async function commitFiles(
     if (file.delete) {
       return { path: file.path, mode: "100644" as const, type: "blob" as const, sha: null };
     }
+    // GitHub's tree API accepts UTF-8 content directly. Keeping it inline turns
+    // large page-only commits from one request per file into a single request.
+    if (file.encoding !== "base64") {
+      return { path: file.path, mode: "100644" as const, type: "blob" as const, content: file.content ?? "" };
+    }
     const blob = await gh<{ sha: string }>(token, `${repoBase}/git/blobs`, {
       method: "POST",
-      body: JSON.stringify({ content: file.content ?? "", encoding: file.encoding === "base64" ? "base64" : "utf-8" })
+      body: JSON.stringify({ content: file.content ?? "", encoding: "base64" })
     });
     return { path: file.path, mode: "100644" as const, type: "blob" as const, sha: blob.sha };
   });
