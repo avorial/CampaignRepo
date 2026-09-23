@@ -6,7 +6,7 @@ import { getStorageAdapter } from "@/lib/storage";
 import { parsePage, serializePage } from "@/lib/markdown";
 import { listReviewPages } from "@/lib/reviews";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
-import { upsertPageInCache } from "@/lib/page-cache";
+import { readPageCache, upsertPageInCache } from "@/lib/page-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -42,8 +42,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   let updated = 0;
   if (input.all) {
     const files = await storage.listDirectoryTextFiles("wiki/pages");
-    const updates = files
-      .map((file) => parsePage(file.name.replace(/\.md$/, ""), file.text ?? "", file.sha))
+    const cachedPages = new Map(readPageCache(campaign.id).pages.map((page) => [page.slug, page]));
+    const pages = await Promise.all(files.map(async (file) => {
+      const slug = file.name.replace(/\.md$/, "");
+      if (file.text !== null) return parsePage(slug, file.text, file.sha);
+
+      const cached = cachedPages.get(slug);
+      if (cached?.sha === file.sha && cached.raw) return cached;
+
+      const fullFile = await storage.getTextFile(file.path);
+      return parsePage(slug, fullFile.text, fullFile.sha);
+    }));
+    const updates = pages
       .filter((page) => page.frontmatter.approvalStatus !== "approved")
       .map((page) => ({ path: `wiki/pages/${page.slug}.md`, content: serializePage({ ...page.frontmatter, approvalStatus: input.decision, lastEditedBy: `${user.name} via GM review` }, page.content) }));
     if (updates.length) await storage.commitFiles(updates, `CampaignRepo: ${verb} ${updates.length} pages (bulk)`);
