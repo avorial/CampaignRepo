@@ -1,18 +1,22 @@
-﻿import crypto from "node:crypto";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { currentUser } from "@/lib/auth";
 import { getCampaignRepositoryToken, getDb, getPublicSiteCampaign, incrementCloneCount } from "@/lib/db";
 import { commitFiles, createRepo, getContent, GitHubError, initializeRepo, isGitHubAppConnection } from "@/lib/github";
 import { loadCampaignTheme, loadPublicPages, saveCampaignTheme } from "@/lib/public-site";
 import { serializePage } from "@/lib/markdown";
-import { slugify } from "@/lib/slug";
 import type { Campaign } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
+const cloneSchema = z.object({
+  repoName: z.string().trim().min(1).max(100).regex(/^[A-Za-z0-9._-]+$/, "Repository names may contain letters, numbers, periods, underscores, and hyphens."),
+  private: z.boolean().default(true)
+});
+
 // Clone a published world into a NEW GitHub repo + campaign owned by the viewer.
 // Cloning always targets GitHub (GitHub App access is blocked).
-export async function POST(_: Request, { params }: { params: Promise<{ slug: string }> }) {
+export async function POST(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in to clone this world." }, { status: 401 });
   if (!user.githubToken) return NextResponse.json({ error: "Connect GitHub to clone a world into your own repo." }, { status: 400 });
@@ -23,12 +27,14 @@ export async function POST(_: Request, { params }: { params: Promise<{ slug: str
   const source = getPublicSiteCampaign(slug);
   if (!source) return NextResponse.json({ error: "World not found." }, { status: 404 });
 
+  const parsed = cloneSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message || "Choose a repository name." }, { status: 400 });
+
   try {
     const [pages, theme] = await Promise.all([loadPublicPages(source), loadCampaignTheme(source)]);
 
-    // 1. A fresh private repo + campaign, owned by the cloner.
-    const repoName = `${slugify(source.name) || "campaign"}-${crypto.randomBytes(3).toString("hex")}`;
-    const created = await createRepo(user.githubToken, repoName, true);
+    // 1. A fresh repo + campaign, owned by the cloner.
+    const created = await createRepo(user.githubToken, parsed.data.repoName, parsed.data.private);
     const insert = getDb()
       .prepare("INSERT INTO campaigns (userId, name, owner, repo, branch, gameType, storageBackend, forkOf) VALUES (?, ?, ?, ?, ?, ?, 'github', ?)")
       .run(user.id, `${source.name} (clone)`, created.owner.login, created.name, created.default_branch || "main", source.gameType, slug);

@@ -32,6 +32,9 @@ export default function PublicSiteClient({
   const [selectedQuestSlug, setSelectedQuestSlug] = useState(pages[0] ? "" : quests[0]?.slug || "");
   const [query, setQuery] = useState("");
   const [cloning, setCloning] = useState(false);
+  const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
+  const [cloneRepoName, setCloneRepoName] = useState(slug);
+  const [clonePrivate, setClonePrivate] = useState(true);
   const [cloneMsg, setCloneMsg] = useState("");
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [diceRoll, setDiceRoll] = useState<{ label: string; detail: string; total: number } | null>(null);
@@ -50,7 +53,11 @@ export default function PublicSiteClient({
   async function cloneWorld() {
     setCloning(true);
     setCloneMsg("Cloning this world into your own repo…");
-    const res = await fetch(`/api/site/${slug}/clone`, { method: "POST" });
+    const res = await fetch(`/api/site/${slug}/clone`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ repoName: cloneRepoName.trim(), private: clonePrivate })
+    });
     if (res.status === 401) {
       window.location.href = "/login";
       return;
@@ -290,10 +297,42 @@ export default function PublicSiteClient({
           {site?.contributionGuidelines && <p className="muted public-contribution-note">{site.contributionGuidelines}</p>}
         </div>
         <div className="topbar-actions">
-          <button type="button" onClick={cloneWorld} disabled={cloning}>Clone this world</button>
+          <button type="button" onClick={() => { setCloneMsg(""); setCloneDialogOpen(true); }} disabled={cloning}>Clone this world</button>
           {cloneMsg && <span className="public-clone-message">{cloneMsg}</span>}
         </div>
       </header>
+
+      {cloneDialogOpen && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="clone-world-title" onMouseDown={(event) => {
+          if (event.target === event.currentTarget && !cloning) setCloneDialogOpen(false);
+        }}>
+          <form className="modal-card" onSubmit={(event) => { event.preventDefault(); void cloneWorld(); }}>
+            <h2 id="clone-world-title">Clone {campaignName}</h2>
+            <p className="muted">CampaignRepo will create a new repository in your connected GitHub account and copy this world's public pages and media into it.</p>
+            <label>
+              GitHub repository name
+              <input
+                value={cloneRepoName}
+                onChange={(event) => setCloneRepoName(event.target.value)}
+                pattern="[A-Za-z0-9._-]+"
+                maxLength={100}
+                required
+                autoFocus
+                disabled={cloning}
+              />
+            </label>
+            <label className="checkbox-row">
+              <input type="checkbox" checked={clonePrivate} onChange={(event) => setClonePrivate(event.target.checked)} disabled={cloning} />
+              Private repository
+            </label>
+            {cloneMsg && <p className="public-clone-message" role="status">{cloneMsg}</p>}
+            <div className="modal-actions">
+              <button type="submit" disabled={cloning || !cloneRepoName.trim()}>{cloning ? "Cloning…" : "Create repository and clone"}</button>
+              <button type="button" className="secondary" onClick={() => setCloneDialogOpen(false)} disabled={cloning}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <div className="workspace">
         <aside className="side-nav">
