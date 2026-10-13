@@ -501,16 +501,6 @@ function kingYellowNpc() {
 <p>Give the NPC a first impression players can act on: posture, voice, clothes, scent, the way they hesitate before a particular name. Keep this paragraph concrete enough that you can read it aloud.</p>
 </section>
 
-<section class="wiki-section">
-<h2>What They Want</h2>
-<p>Write the thing they are trying to get before the scene ends. Then write what they will not admit, even under pressure.</p>
-</section>
-
-<section class="wiki-section">
-<h2>What They Know</h2>
-<p>List the clue, rumor, contradiction, or introduction this NPC can provide. If the information points to another page, add the rendered wiki link below.</p>
-</section>
-
 </div>
 
 <aside class="wiki-infobox">
@@ -526,8 +516,6 @@ function kingYellowNpc() {
 <tr><th>Pronouns</th><td></td></tr>
 <tr><th>Residence</th><td></td></tr>
 <tr><th>Public Manner</th><td>Courteous, distracted, too still</td></tr>
-<tr><th>Private Pressure</th><td>Debt, blackmail, grief, ambition</td></tr>
-<tr><th>Tell</th><td>What they do when lying</td></tr>
 </tbody>
 </table>
 
@@ -560,6 +548,23 @@ ${kingYellowGeneralAbilityRows("3")}
 | --- | --- |
 ${kingYellowInvestigativeAbilities.map(([ability, note]) => `| ${ability} | ${note} |`).join("\n")}
 
+:::gm
+## Private Pressure
+
+Debt, blackmail, grief, ambition.
+
+## Tell
+
+What they do when lying.
+
+## What They Want
+
+Write the thing they are trying to get before the scene ends. Then write what they will not admit, even under pressure.
+
+## What They Know
+
+List the clue, rumor, contradiction, or introduction this NPC can provide. If the information points to another page, add the rendered wiki link below.
+
 ## Scene Use
 
 | If the characters... | This NPC... |
@@ -568,7 +573,6 @@ ${kingYellowInvestigativeAbilities.map(([ability, note]) => `| ${ability} | ${no
 | threaten them | protects their secret first, then their pride. |
 | mention Carcosa | pretends not to recognize the word. |
 
-:::gm
 ## GM Truth
 
 State the real motive, the secret they are protecting, and what would make them betray their current loyalty.

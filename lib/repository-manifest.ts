@@ -1,7 +1,8 @@
 import type { SearchDocument, WikiPage } from "@/lib/types";
 import type { StorageAdapter } from "@/lib/storage";
-import { normalizeFrontmatter } from "@/lib/markdown";
+import { normalizeFrontmatter, parseWikiLinks, stripGmBlocks } from "@/lib/markdown";
 import { slugify } from "@/lib/slug";
+import { createHash } from "node:crypto";
 
 export const repositoryManifestPath = ".campaignrepo/index.json";
 export const repositoryManifestSchemaVersion = 1;
@@ -13,6 +14,7 @@ export type RepositoryManifestPage = {
   type: string;
   tags: string[];
   links: string[];
+  playerLinks?: string[];
   aliases?: string[];
   summary?: string;
   visibility?: "gm" | "players";
@@ -20,6 +22,7 @@ export type RepositoryManifestPage = {
   keyLinks?: string[];
   parent?: string;
   cover?: string;
+  coverDisplay?: "auto" | "portrait" | "banner" | "none";
   sha?: string;
 };
 
@@ -64,6 +67,7 @@ export function validateRepositoryManifest(value: unknown): ManifestValidationRe
     if (!page.type || typeof page.type !== "string") errors.push(`Page ${page.id || index} is missing type.`);
     if (!Array.isArray(page.tags)) errors.push(`Page ${page.id || index} tags must be an array.`);
     if (!Array.isArray(page.links)) errors.push(`Page ${page.id || index} links must be an array.`);
+    if (page.playerLinks !== undefined && !Array.isArray(page.playerLinks)) errors.push(`Page ${page.id || index} playerLinks must be an array.`);
     const idKey = page.id?.toLowerCase();
     if (idKey) {
       if (ids.has(idKey)) errors.push(`Duplicate page id: ${page.id}`);
@@ -77,7 +81,7 @@ export function validateRepositoryManifest(value: unknown): ManifestValidationRe
   }
 
   for (const page of manifest.pages) {
-    for (const link of page.links || []) {
+    for (const link of [...(Array.isArray(page.links) ? page.links : []), ...(Array.isArray(page.playerLinks) ? page.playerLinks : [])]) {
       if (String(link).startsWith("unresolved:")) continue;
       if (!ids.has(String(link).toLowerCase())) errors.push(`Page ${page.id} links to unknown id: ${link}`);
     }
@@ -111,7 +115,8 @@ function pageFromManifestEntry(entry: RepositoryManifestPage): WikiPage {
     knownToPlayers: entry.visibility === "players",
     keyLinks: entry.keyLinks || [],
     parent: entry.parent,
-    cover: entry.cover
+    cover: entry.cover,
+    coverDisplay: entry.coverDisplay
   }, entry.title);
   return {
     slug: slugFromManifestPath(entry.path),
@@ -120,6 +125,7 @@ function pageFromManifestEntry(entry: RepositoryManifestPage): WikiPage {
     content: "",
     raw: "",
     outgoingLinks: (entry.links || []).map((target) => ({ target, label: target })),
+    playerOutgoingLinks: (entry.playerLinks || []).map((target) => ({ target, label: target })),
     backlinks: []
   };
 }
@@ -162,12 +168,15 @@ export function manifestPageFromSearchDocument(doc: SearchDocument): RepositoryM
     type,
     tags: doc.tags || [],
     links: doc.links || [],
+    playerLinks: doc.playerLinks || [],
     aliases: doc.aliases || [],
     summary: doc.summary || "",
     visibility: doc.visibility,
     approvalStatus: doc.approvalStatus,
     keyLinks: doc.keyLinks || [],
-    parent: doc.parent
+    parent: doc.parent,
+    cover: doc.cover,
+    coverDisplay: doc.coverDisplay
   };
 }
 
@@ -179,6 +188,7 @@ export function manifestPageFromWikiPage(slug: string, path: string, page: WikiP
     type: page.frontmatter.category,
     tags: page.frontmatter.tags || [],
     links: page.outgoingLinks.map((link) => `unresolved:${slugify(link.target) || "link"}`),
+    playerLinks: parseWikiLinks(stripGmBlocks(page.content)).map((link) => `unresolved:${slugify(link.target) || "link"}`),
     aliases: page.frontmatter.aliases || [],
     summary: page.frontmatter.summary || "",
     visibility: page.frontmatter.visibility,
@@ -186,6 +196,7 @@ export function manifestPageFromWikiPage(slug: string, path: string, page: WikiP
     keyLinks: page.frontmatter.keyLinks || [],
     parent: page.frontmatter.parent,
     cover: page.frontmatter.cover,
+    coverDisplay: page.frontmatter.coverDisplay,
     sha: page.sha
   };
 }
@@ -196,8 +207,13 @@ export function buildRepositoryManifestFromSearchDocuments(docs: SearchDocument[
     return page ? [page] : [];
   });
   const targetToId = new Map<string, string>();
+  const counts = new Map<string, number>();
+  for (const page of pages) counts.set(page.id.toLowerCase(), (counts.get(page.id.toLowerCase()) || 0) + 1);
+  for (const page of pages) {
+    if ((counts.get(page.id.toLowerCase()) || 0) > 1) page.id = collisionId(page);
+  }
   for (const doc of docs) {
-    const page = manifestPageFromSearchDocument(doc);
+    const page = pages.find((entry) => entry.path === `wiki/pages/${doc.slug}.md`);
     if (!page) continue;
     targetToId.set(doc.slug.toLowerCase(), page.id);
     targetToId.set((doc.title || "").toLowerCase(), page.id);
@@ -209,6 +225,10 @@ export function buildRepositoryManifestFromSearchDocuments(docs: SearchDocument[
     const existing = pages.find((entry) => entry.path === page.path);
     if (existing) {
       existing.links = (doc.links || []).map((link) => {
+        const key = String(link).trim().toLowerCase();
+        return targetToId.get(key) || targetToId.get(slugify(key)) || `unresolved:${slugify(key) || "link"}`;
+      });
+      existing.playerLinks = (doc.playerLinks || []).map((link) => {
         const key = String(link).trim().toLowerCase();
         return targetToId.get(key) || targetToId.get(slugify(key)) || `unresolved:${slugify(key) || "link"}`;
       });
@@ -225,18 +245,26 @@ export function upsertManifestPage(manifest: RepositoryManifest | null, entry: R
   const next: RepositoryManifest = manifest
     ? { ...manifest, generatedAt: new Date().toISOString(), pages: [...manifest.pages] }
     : { schemaVersion: repositoryManifestSchemaVersion, generatedAt: new Date().toISOString(), pages: [] };
-  const existing = next.pages.findIndex((page) => page.id === entry.id || page.path === entry.path);
+  const existing = next.pages.findIndex((page) => page.path === entry.path);
+  const collision = next.pages.find((page, index) => index !== existing && page.id.toLowerCase() === entry.id.toLowerCase());
+  if (collision) entry = { ...entry, id: collisionId(entry) };
+  else if (existing >= 0 && next.pages[existing].id === collisionId(entry)) entry = { ...entry, id: next.pages[existing].id };
   if (existing >= 0) {
     const previousId = next.pages[existing].id;
     next.pages[existing] = { ...next.pages[existing], ...entry };
     if (previousId !== entry.id) {
       next.pages = next.pages.map((page) => ({
         ...page,
-        links: page.links.map((link) => (link === previousId ? entry.id : link))
+        links: page.links.map((link) => (link === previousId ? entry.id : link)),
+        playerLinks: page.playerLinks?.map((link) => (link === previousId ? entry.id : link))
       }));
     }
   } else next.pages.push(entry);
   return next;
+}
+
+function collisionId(page: RepositoryManifestPage) {
+  return `${page.id}-${createHash("sha256").update(page.path).digest("hex").slice(0, 12)}`;
 }
 
 /** A valid, empty manifest — seeded into new repos so the indexed path works from page one. */
@@ -273,7 +301,8 @@ export async function removePageFromRepositoryManifest(storage: StorageAdapter, 
       .filter((page) => !removedIds.has(page.id.toLowerCase()))
       .map((page) => ({
         ...page,
-        links: page.links.map((link) => (removedIds.has(String(link).toLowerCase()) ? `unresolved:${slugify(slug) || "link"}` : link))
+        links: page.links.map((link) => (removedIds.has(String(link).toLowerCase()) ? `unresolved:${slugify(slug) || "link"}` : link)),
+        playerLinks: page.playerLinks?.map((link) => (removedIds.has(String(link).toLowerCase()) ? `unresolved:${slugify(slug) || "link"}` : link))
       }));
     const next: RepositoryManifest = { ...manifest, generatedAt: new Date().toISOString(), pages };
     await storage.putFile(repositoryManifestPath, serializeRepositoryManifest(next), `CampaignRepo: remove ${slug} from index`, file.sha);

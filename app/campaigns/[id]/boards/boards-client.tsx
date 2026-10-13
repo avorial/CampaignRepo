@@ -1,5 +1,7 @@
 "use client";
 
+import { useRepoRefresh } from "@/app/components/use-repo-refresh";
+
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
 type BoardNode = { id: string; type: "page" | "note" | "image" | "group"; x: number; y: number; w?: number; h?: number; pageSlug?: string; text?: string; color?: string; imagePath?: string };
@@ -54,6 +56,26 @@ export default function BoardsClient({ campaignId }: { campaignId: number }) {
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const board = boards.find((b) => b.slug === selected) ?? null;
+
+  useRepoRefresh(campaignId, async () => {
+    const [boardRes, pageRes, mediaRes] = await Promise.all([
+      fetch(api, { cache: "no-store" }),
+      fetch(`/api/campaigns/${campaignId}/pages`, { cache: "no-store" }),
+      fetch(`/api/campaigns/${campaignId}/media`, { cache: "no-store" })
+    ]);
+    if (!boardRes.ok || !pageRes.ok || !mediaRes.ok) throw new Error("Could not reload boards.");
+    const [boardData, pageData, mediaData] = await Promise.all([boardRes.json(), pageRes.json(), mediaRes.json()]);
+    setBoards((current) => {
+      const remote: Board[] = boardData.boards || [];
+      return dirty
+        ? [...remote.filter((b) => b.slug !== selected), ...current.filter((b) => b.slug === selected)]
+        : remote;
+    });
+    setSelected((current) => dirty || (boardData.boards || []).some((b: Board) => b.slug === current)
+      ? current : boardData.boards?.[0]?.slug || "");
+    setPages((pageData.pages || []).map((p: any) => ({ slug: p.slug, name: p.frontmatter?.name || p.slug, category: p.frontmatter?.category || "" })));
+    setMedia(((mediaData.media || []) as MediaItem[]).filter((m) => m.mediaType === "image"));
+  });
 
   useEffect(() => {
     fetch(api).then((r) => r.json()).then((d) => {

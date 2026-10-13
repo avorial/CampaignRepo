@@ -199,7 +199,8 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         .filter((page) => !removedIds.has(page.id.toLowerCase()))
         .map((page) => ({
           ...page,
-          links: page.links.map((link) => (removedIds.has(String(link).toLowerCase()) ? `unresolved:${String(link)}` : link))
+          links: page.links.map((link) => (removedIds.has(String(link).toLowerCase()) ? `unresolved:${String(link)}` : link)),
+          playerLinks: page.playerLinks?.map((link) => (removedIds.has(String(link).toLowerCase()) ? `unresolved:${String(link)}` : link))
         }));
       commitFiles.push({
         path: repositoryManifestPath,

@@ -1,5 +1,7 @@
 "use client";
 
+import { useRepoRefresh } from "@/app/components/use-repo-refresh";
+
 import { useEffect, useState } from "react";
 import type { Campaign } from "@/lib/types";
 
@@ -44,11 +46,12 @@ export default function CalendarClient({ campaign }: { campaign: Campaign }) {
   const [events, setEvents] = useState<WorldEvent[]>([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [dirty, setDirty] = useState(false);
 
-  useEffect(() => {
-    fetch(`${api}/calendar`).then((r) => (r.ok ? r.json() : null)).then((d) => d && setCal(d.calendar)).catch(() => setMessage("Could not load calendar."));
+  function loadCalendar(preserveDraft = false) {
+    const calendarRequest = fetch(`${api}/calendar`).then((r) => (r.ok ? r.json() : null)).then((d) => { if (d && !preserveDraft) setCal(d.calendar); }).catch(() => setMessage("Could not load calendar."));
     // Fetch sessions, event pages, and quests for the world timeline
-    Promise.all([
+    const eventsRequest = Promise.all([
       fetch(`${api}/sessions`).then((r) => r.ok ? r.json() : { sessions: [] }).catch(() => ({ sessions: [] })),
       fetch(`${api}/pages`).then((r) => r.ok ? r.json() : { pages: [] }).catch(() => ({ pages: [] })),
       fetch(`${api}/quests`).then((r) => r.ok ? r.json() : { quests: [] }).catch(() => ({ quests: [] })),
@@ -75,10 +78,14 @@ export default function CalendarClient({ campaign }: { campaign: Campaign }) {
       setEvents(evts);
     });
     // Holidays are injected from cal after cal loads — handled in the derived `allEvents` below.
-  }, []);
+    return Promise.all([calendarRequest, eventsRequest]);
+  }
+
+  useEffect(() => { loadCalendar(); }, [campaign.id]);
+  useRepoRefresh(campaign.id, () => loadCalendar(dirty || busy));
 
   if (!cal) return <p className="muted">{message || "Loading calendar…"}</p>;
-  const patch = (p: Partial<Calendar>) => setCal({ ...cal, ...p });
+  const patch = (p: Partial<Calendar>) => { setDirty(true); setCal({ ...cal, ...p }); };
   const setDate = (d: WorldDate) => patch({ currentDate: clamp(d) });
   function clamp(d: WorldDate): WorldDate {
     const month = Math.min(cal!.months.length, Math.max(1, d.month));
@@ -106,7 +113,7 @@ export default function CalendarClient({ campaign }: { campaign: Campaign }) {
     const res = await fetch(`${api}/calendar`, { method: "PUT", body: JSON.stringify({ calendar: cal }) });
     const data = await res.json();
     setBusy(false);
-    if (res.ok) { setCal(data.calendar); setMessage("Calendar saved to campaign.yaml."); }
+    if (res.ok) { setDirty(false); setCal(data.calendar); setMessage("Calendar saved to campaign.yaml."); }
     else setMessage(data.error || "Save failed.");
   }
 

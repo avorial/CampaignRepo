@@ -1,8 +1,11 @@
+import ArticleContent from "@/app/components/article-content";
 import type { Metadata } from "next";
+
+import { renderArticle } from "@/lib/article";
 import type { CSSProperties } from "react";
 import { notFound } from "next/navigation";
 import { getPublicSiteCampaign } from "@/lib/db";
-import { loadCampaignTheme } from "@/lib/public-site";
+import { loadCampaignTheme, sanitizePlayerPage } from "@/lib/public-site";
 import { getStorageAdapter } from "@/lib/storage";
 import { mediaSrc, parsePage, renderMarkdown, stripGmBlocks } from "@/lib/markdown";
 import { themeToCssVars } from "@/lib/theme";
@@ -18,7 +21,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     const storage = getStorageAdapter(campaign, null);
     if (!storage) return { title: campaign.name };
     const file = await storage.getTextFile(`wiki/pages/${pageSlug}.md`);
-    const page = parsePage(pageSlug, file.text, file.sha);
+    const page = sanitizePlayerPage(parsePage(pageSlug, file.text, file.sha));
     if (page.frontmatter.visibility !== "players" || page.frontmatter.approvalStatus !== "approved") {
       return { title: campaign.name };
     }
@@ -46,20 +49,21 @@ export default async function PublicPageRoute({ params }: { params: Promise<{ sl
   let pageHtml = "";
   let pageName = "";
   let pageSummary = "";
-  let pageCover = "";
+
 
   try {
     const file = await storage.getTextFile(`wiki/pages/${pageSlug}.md`);
-    const page = parsePage(pageSlug, file.text, file.sha);
+    const page = sanitizePlayerPage(parsePage(pageSlug, file.text, file.sha));
     if (page.frontmatter.visibility !== "players" || page.frontmatter.approvalStatus !== "approved") notFound();
 
     pageName = page.frontmatter.name;
     pageSummary = page.frontmatter.summary || "";
-    pageCover = page.frontmatter.cover || "";
+
 
     const content = stripGmBlocks(page.content);
-    pageHtml = renderMarkdown(
+    pageHtml = renderArticle(
       content,
+      page.frontmatter,
       "handout",
       (target) => ({ href: `/site/${slug}#${target}`, missing: false }),
       (path) => `/public-media/${slug}/${path.split("/").map(encodeURIComponent).join("/")}`,
@@ -71,10 +75,6 @@ export default async function PublicPageRoute({ params }: { params: Promise<{ sl
 
   const theme = await loadCampaignTheme(campaign, null);
   const themeVars = themeToCssVars(theme) as CSSProperties;
-
-  const coverUrl = pageCover
-    ? mediaSrc(pageCover, (p) => `/public-media/${slug}/${p.split("/").map(encodeURIComponent).join("/")}`)
-    : "";
 
   return (
     <main className="app-shell" data-theme={theme.preset || undefined} style={themeVars}>
@@ -91,16 +91,8 @@ export default async function PublicPageRoute({ params }: { params: Promise<{ sl
       <div className="workspace">
         <div className="reader-shell" style={{ gridColumn: "1 / -1" }}>
           <article className="preview page-reader">
-            {coverUrl && <img className="page-cover" src={coverUrl} alt={pageName} />}
-            <header className="handout-header">
-              <h1>{pageName}</h1>
-              {pageSummary && <p className="page-summary muted">{pageSummary}</p>}
-            </header>
 
-            <div
-              className="content-body"
-              dangerouslySetInnerHTML={{ __html: pageHtml }}
-            />
+            <ArticleContent html={pageHtml} />
 
             <footer style={{ marginTop: 32, paddingTop: 16, borderTop: "1px solid var(--border)", fontSize: 13 }}>
               <a href={`/site/${slug}`} className="quiet-link muted">← Back to {campaign.name}</a>

@@ -1,503 +1,91 @@
 # CampaignRepo
 
-**A campaign wiki built for the table, not the desk.** CampaignRepo turns a plain
-Markdown repository into a shared wiki where the GM keeps secrets, players see
-only what they should, and an AI can help fill it all in — while every word
-stays as portable Markdown in a repo you own.
+CampaignRepo is a self-hosted campaign manager for tabletop roleplaying games. It turns a GitHub repository or local folder into a shared wiki with session notes, characters, maps, relationships, quests, and a player portal.
 
-Your whole world lives in a normal GitHub repo (or a local folder). A
-purpose-built web app renders it as a wiki, map viewer, relationship graph,
-session tracker, calendar, and character-sheet system — but nothing requires
-CampaignRepo to read your files. Delete the app tomorrow and you still have a
-clean folder of Markdown.
+Campaign content stays in portable Markdown, YAML, JSON, and media files. The app adds editing, search, permissions, publishing, and optional AI assistance; you can still read and edit the repository without it.
 
-## Why not just use Obsidian (or Notion, or a Google Doc)?
+## Start Here
 
-Those are excellent tools — for **one person taking notes**. Running a game is a
-different job: you are keeping secrets from the very people you are sharing with,
-across sessions, for months. That is the job CampaignRepo is built for.
+- **Run the app:** [Quick start](#quick-start) or [Docker](#docker).
+- **Set up a campaign:** [Campaign setup](#campaign-setup).
+- **Edit campaign files directly:** [Repository structure](#repository-structure) and [Refresh and repair](#refresh-and-repair).
+- **Connect an AI client:** [AI and MCP](#ai-and-mcp).
+- **Follow development:** [Roadmap](ROADMAP.md) and [future ideas](ROADMAP-IDEAS.md).
 
-| | CampaignRepo | Obsidian / Notion / Docs |
-| --- | --- | --- |
-| **Running a game for others** | Built in: GM/player roles, a review queue, and a no-login player portal | You are the only user; sharing means a second copy or a paid sync add-on |
-| **Secrets on the page** | `:::gm` blocks — the *same* page shows the villain's true plan to you and only the rumor to players | You redact by hand, or keep two vaults in sync |
-| **Knows it's a TTRPG tool** | Character sheets for 40+ systems, a relationship graph, family trees, sessions, quests, a fantasy calendar, and battle maps — out of the box | A pile of community plugins you assemble and maintain yourself |
-| **AI that touches your world** | An MCP endpoint lets Claude read and *write* your campaign — and its changes wait in your review queue | Not native; copy-paste in and out |
-| **Sharing a whole world** | A public gallery: publish your setting, or clone someone else's as a starting point | Export a zip and hope the other person can import it |
-| **Your files** | Plain Markdown in **your** GitHub repo — versioned, diffable, yours | Plain Markdown on your disk — also yours (this part they get right) |
+## What You Can Do
 
-The honest version: if you keep a solo worldbuilding vault and never share it,
-Obsidian is wonderful and you should keep using it. The moment real players,
-hidden lore, and "what did we decide three sessions ago?" enter the picture,
-those tools make you do the coordination by hand. CampaignRepo does it for you —
-without giving up the portable-Markdown promise that made you trust them.
+| Area | Capabilities |
+| --- | --- |
+| Campaign wiki | Markdown editing and previews, wiki links, aliases, backlinks, categories, cover images, galleries, and transclusion |
+| Characters | Game-specific templates, rendered character sheets, source-preserving imports, and supported dice rollers |
+| Sessions | Agendas, attendees, dates, notes, pinned clues, handouts, and report pages |
+| Quests | Objectives, status, participants, locations, arcs, and faction clocks |
+| Maps | Image maps with linked pins, nested map links, discovery state, and GM/player layers |
+| Relationships | Typed relationship graphs and a dedicated family-tree view |
+| Worldbuilding | Custom calendars, timelines, lexicons, manuscripts, and canvas boards |
+| Organization | Media management, bulk page edits, filters, full-text search, and campaign health checks |
+| Collaboration | Owner, GM, and player roles; invitations; reviews; assignments; watches; and notifications |
+| Publishing | Approved player-visible pages, public campaign sites, individual share links, a world gallery, and campaign cloning |
+| Portability | Local-folder or GitHub storage, import tools, and ZIP/JSON backups |
+| AI tools | Optional generation, campaign Q&A with citations, and an MCP endpoint for external clients |
 
-## What it does for your game — at the table
+Any game can use the wiki. Built-in template packs cover fantasy, modern, science-fiction, and generic systems. Sheet features vary by system; Traveller currently has the most complete editor and dice-roller workflow. See [the game-system catalog](lib/templates.ts) and [the roadmap](ROADMAP.md) for current coverage and remaining work.
 
-- **Prep once, reveal slowly.** Write the secret and its public face on one page.
-  Players only ever load the public half; you flip a switch when they earn the rest.
-- **Never lose the thread.** A relationship graph answers "wait, how does this NPC
-  connect to the cult?" at a glance, and full-text search is instant even mid-scene
-  because reads are served locally, not fetched from GitHub every time.
-- **Give players a living recap.** Send one link to a no-login site that shows only
-  approved, player-safe lore and open quests — their window into the world between games.
-- **Turn notes into canon.** After a session, hand your scrawl to the built-in AI (or
-  your own MCP client) and it drafts linked, categorized pages — that land unapproved
-  in your queue, so the AI never rewrites your canon behind your back.
-- **Run the fiddly bits.** Session agendas, quest clocks, a custom calendar, initiative
-  and world timelines, character sheets that actually render for your system.
-
-## Status
-
-CampaignRepo is a working, self-hostable app (Docker/GHCR), not a prototype:
-GitHub-backed and local campaigns, GM workspaces, player portals, public
-discovery and world-cloning, sessions, quests, calendars, maps, graphs, imports,
-AI/MCP, and full backups all ship today. The active focus is reliability — see
-[ROADMAP.md](ROADMAP.md) for the app-first, Git-backed sync work and the biggest
-hidden risks.
-
-## Product Tour
-
-### Campaign Dashboard
-
-Search across every connected campaign, open a repo, or expand setup tools only when you need them. Once GitHub is connected, setup panels stay collapsed by default.
+### Screenshots
 
 ![Campaign dashboard](docs/screenshots/dashboard.png)
 
-### Campaign Workspace
-
-Each campaign has a workspace with a wiki, maps, relationship graph, timeline, calendar, session board, quest tracker, media manager, settings, and health center. Campaign themes reskin the workspace for any RPG system.
-
 ![Campaign workspace](docs/screenshots/workspace.png)
 
-### Wiki Page Editor
-
-Pages are Markdown with YAML frontmatter. The editor shows source and preview side by side, with a slash-command menu, format toolbar, paste-to-upload images, wiki-link insert, gallery blocks, transclusion, and GM-only blocks.
-
-![Wiki page editor](docs/screenshots/editor.png)
-
-### GM Review Queue
-
-AI-created, imported, or otherwise unapproved content waits for GM review before it becomes player-visible.
-
-![GM review queue](docs/screenshots/review-queue.png)
-
-### Player Portal
-
-Players see only pages that are both approved and marked player-visible. GM-only blocks, import metadata, and draft content are stripped.
-
-![Player portal](docs/screenshots/player-portal.png)
-
-## What CampaignRepo Does
-
-- Stores everything in Git: pages, media, maps, sessions, quests, templates, calendar config, and campaign settings as Markdown and YAML.
-- Loads campaign navigation from a generated `.campaignrepo/index.json` manifest, so large repos do not need to enumerate every folder or download every Markdown file on startup.
-- Renders wiki pages with `[[links]]`, aliases, backlinks, covers, galleries, transclusion, and `:::gm` secret blocks.
-- Provides an interactive map viewer with pins, player/GM layers, nested map links, and article panels.
-- Shows a force-directed relationship graph with typed edges, category filters, and a detail panel.
-- Tracks quests with objectives, faction clocks, participant links, and arc grouping.
-- Runs a session workspace with agenda checklists, pinned pages, GM notes, handout queues, and session-to-event report generation.
-- Manages a custom fantasy calendar with configurable months, weekdays, and eras - and a world timeline across sessions and events.
-- Keeps a version history for every page with diff and restore-to-editor workflows.
-- Publishes a no-login public site for approved, player-visible lore and quests - shareable and cloneable.
-- Sends in-app notifications for review requests, assignments, mentions, and watched page changes.
-- Imports from Foundry actors and journals, character JSON, Obsidian, Notion, Google Docs, CSV, Roll20, LegendKeeper, World Anvil, and other world/journal exports.
-- Exports a full CampaignRepo backup as ZIP or JSON, including pages, media, maps, sessions, quests, search data, templates, and settings.
-- Offers AI page generation and full-campaign Q&A over Markdown with citations.
-- Exposes an MCP JSON-RPC API for AI tools and external clients.
-
-## FAQ
-
-**Do I need to know Git or GitHub?**
-No. Connect a repo once and the app handles every commit, push, and pull in the
-background. You edit in the browser. (If you *do* know Git, everything is plain
-Markdown you can also edit directly — the app catches up on the next sync.)
-
-**Do my players need accounts?**
-No. Publish your campaign and share one link — the public player portal shows only
-approved, player-visible pages, with no login. Accounts are for you and your
-co-GMs, not the table.
-
-**What happens to my world if CampaignRepo goes away?**
-Nothing. It was never locked in the app. Your campaign is a folder of Markdown and
-YAML in your own GitHub repo; the generated index and search files are disposable
-snapshots. Clone the repo and you have the whole world, readable in any text editor.
-
-**Is it free? Can I self-host?**
-Yes. CampaignRepo ships as a Docker image (GHCR) you run yourself. See
-[Docker](#docker) and [Quick Start](#quick-start).
-
-**Which game systems does it support?**
-Any system works as a wiki. On top of that, dozens of systems ship a ready-made
-starter kit, and the most popular ones — D&D 5e, Pathfinder 2e, Traveller, the
-World of Darkness lines, Dune, Call of Cthulhu, Cyberpunk RED, Blades in the Dark,
-and more — get real, rendered character sheets rather than plain tables.
-
-**Can I bring my existing notes?**
-Yes. Importers cover Obsidian, Notion, Google Docs, Foundry (actors and journals),
-Roll20, LegendKeeper, World Anvil, character JSON, and CSV. You don't have to start
-from a blank page.
-
-**Won't the AI mess with my canon?**
-No — that's the point of the review queue. Anything the AI (or an import) creates
-lands as **unapproved** and invisible to players until you approve it. The AI can
-draft; only you canonize.
-
-**How is this different from a private GitHub wiki?**
-A GitHub wiki is raw pages with no notion of players, secrets, sessions, or sheets.
-CampaignRepo adds per-page visibility and `:::gm` blocks, a player portal, character
-sheets, a relationship graph, session and quest tracking, maps, and AI — while still
-being *just* Markdown in a repo underneath.
-
-**Is it any good for solo worldbuilding?**
-It's fine — but if you never share your world and never hide lore from players,
-you're not using the parts that make it worth switching from a local notes app.
-CampaignRepo earns its keep the moment other people join your table.
-
-## Core Features
-
-### Accounts and Permissions
-
-- Local accounts with username/password login.
-- Seeded admin account with forced first-login password change.
-- Global admin dashboard for users, campaign memberships, roles, password resets, and disabled accounts.
-- Per-campaign GM tools for members, invite links, and player access.
-- Owner, GM, and player campaign roles.
-
-### Storage Backends
-
-- **Local folder** - no GitHub account required; works offline; compatible with Dropbox, Syncthing, Nextcloud, or OneDrive for optional sync.
-- **GitHub** - version history, offsite backup, collaboration, multi-machine access via GitHub App or personal token.
-
-GitHub-backed campaigns are powerful, but GitHub is not a low-latency database.
-The roadmap moves routine editing toward a local DB working copy with queued
-Git sync, so page organization and approvals stay fast while repositories
-remain the durable archive.
-
-### Wiki and Editor
-
-- Markdown pages with YAML frontmatter and structured fields per article type.
-- Categories: characters, NPCs, organizations, species, locations, items, events, lore, game notes, and more.
-- `[[Page]]` and `[[Page|Label]]` wiki links, aliases, key links, and backlinks.
-- Slash-command menu (`/`) for headings, tables, code blocks, dividers, GM blocks, transclusion, and task lists.
-- Paste an image into the editor to upload and insert it in one step.
-- `:::gm` GM-only blocks, `:::gallery` image grids with lightbox, and `:::include` transclusion.
-- Cover images rendered as article banners.
-- Save conflict detection when a file changes after it was opened.
-- GM preview, player preview, and handout views.
-- In-editor slash commands, format toolbar, and diff-based history restore.
-
-### Maps
-
-- Upload a map image and place pins that link to wiki pages.
-- Organize pins into player-visible or GM-only layers.
-- Mark locations discovered/undiscovered and preview the player-safe map view.
-- Link pins to nested maps as well as wiki pages.
-- Click a pin to open an article panel without leaving the map.
-- Pins stored as portable JSON alongside the map image.
-- Early UI exists for routes, regions, measuring, and journeys; the full 2.0 map model still needs complete persistence.
-
-### Relationship Graph
-
-- Force-directed SVG graph of all pages as nodes colored by category.
-- 20 built-in typed relationships (member-of, located-in, allied-with, parent-of, appears-in-session, and more) with defined inverses.
-- Typed edges dashed and labeled on hover; category filter checkboxes and typed-only toggle.
-- Click a node to focus: dims unconnected nodes, shows detail panel with outgoing and incoming links.
-
-### Family Tree
-
-- Dedicated family-tree route separate from the general relationship graph.
-- Shows only family relationships: parent, child, spouse, sibling, guardian, and ward.
-- Defaults to hierarchy layout, places spouses beside each other, and uses existing page portraits/images when available.
-- Edits write normal relationship frontmatter, so genealogy stays portable in the campaign repo.
-
-### Sessions
-
-- Sessions stored as `wiki/sessions/<slug>.md` with YAML frontmatter and Markdown notes.
-- Agenda checklist, pinned pages, status, date, private GM notes, and handout queue with copy-link.
-- "Make report page" converts checked agenda items and notes into a wiki event page.
-- Next-session widget on the campaign overview dashboard.
-
-### Quests
-
-- Quests stored as `wiki/quests/<slug>.md` with status, arc, reward, visibility, objectives, and participant/location links.
-- Faction clocks: SVG ring segments with click-to-fill and configurable segment count.
-- Active quests widget on the campaign overview dashboard.
-- Player-visible quests appear in the player portal and public `/site/<slug>` view.
-
-### Calendar and World Timeline
-
-- Custom calendar per campaign: configurable months (name + length), weekdays, and era name.
-- Tracks the current in-world date with weekday-correct formatting.
-- Advance the date by day, week, or month from the calendar view.
-- World timeline on the calendar page shows past and future sessions and events sorted by in-world date with a "Now" divider.
-- Current date widget on the campaign overview dashboard.
-
-### Version History and Activity
-
-- History tab in the page reader: last 20 commits with date, author, message, SHA, and GitHub diff link.
-- Diff viewer: click-to-compare any historical version against the current text, with colored add/remove/unchanged lines.
-- Restore: load any historical version into the editor for review before saving.
-- Campaign activity feed on the overview dashboard: last 30 repo commits with author, date, and message.
-
-### Campaign Overview Dashboard
-
-- Configurable widget layout stored in `campaign.yaml`.
-- Widgets: page counts, active quests, next session, current calendar date, recent activity, review queue, and campaign health.
-- GMs enable/disable and drag-to-reorder widgets; players get a spoiler-safe view (GM-only widgets are never rendered).
-
-### Campaign Health Center
-
-- Scans every page for broken wiki links, invalid parents, parent category mismatches, missing media, duplicate aliases, empty names, unapproved pages, orphaned pages (no incoming links and no parent), and oversized media files.
-- Findings grouped by type with severity badges and links to affected pages.
-- Inline bulk repair: approve all unapproved, clear invalid parents, and more.
-
-### Bulk Organization
-
-- Table view for pages with filters, sorting, multi-select, and bulk changes for category, visibility, approval, parent, and tags in one commit.
-- Media table with name/type/tag/unused filters, sorting, bulk tag add/remove, and bulk delete.
-
-### Character Import Sync
-
-- Single-character JSON imports preserve the original source under `wiki/imports/characters`.
-- Imported pages store the source path, source ID, and stable source hash in frontmatter so later imports can be recognized as new, unchanged, or changed.
-
-### Character Sheets
-
-- **Traveller (Mongoose 2e)**: characteristics (STR/DEX/END/INT/EDU/SOC) with computed DMs, skills, weapons, armour, equipment, contacts, and credits. Click any characteristic or skill to roll 2D6 + that modifier with an animated result toast.
-- **D&D 5e**: fenced `dnd-sheet` YAML blocks render as designed character sheets, and Foundry D&D actor import can create those blocks.
-- **Pathfinder 2e**: fenced `dnd-sheet` YAML blocks with `system: pathfinder2` render rank-aware skills, saves, actions, feats, equipment, and spell/focus sections.
-- **World of Darkness**: fenced `wod-sheet` YAML blocks render World of Darkness style sheets.
-- Traveller has the most complete editor/roller experience today; D&D, Pathfinder, and World of Darkness still need deeper field editors and more print polish.
-
-### Public Site and Discovery
-
-- GMs publish a no-login public site for any campaign at a stable `/site/<slug>` URL.
-- Public link names can be customized from campaign settings.
-- Public sites include approved player-visible pages, media, covers, galleries, wiki links, and player-visible quests.
-- Individual pages and quests can also get token-based public share links at `/share/<token>`.
-- Public gallery at `/site` lists all published worlds, sorted by most-cloned, with name and system search.
-- "Clone this world" copies a published campaign into the viewer's own GitHub repo as a new campaign.
-- Fork proposals are available for public-world collaboration; true cross-repo GitHub pull requests are still roadmap work.
-
-### Command Palette
-
-- `Cmd/Ctrl+K` from any authenticated screen: search pages, navigate to workspace sections, and find media.
-
-### Imports and MCP
-
-- Foundry Actor JSON and generic character JSON import with optional field mapping and source diffing for re-import.
-- Foundry journal, Obsidian, Notion, Google Docs, CSV, Roll20, LegendKeeper, World Anvil, and world export import routes.
-- Basic export downloads as ZIP or JSON from the import/export hub.
-- Media upload, rename, delete, captions, alt text, tags, and repo-persisted metadata.
-- SQLite full-text search, portable `/wiki/search/index.json` snapshots, and the repository navigation manifest at `/.campaignrepo/index.json`.
-- MCP JSON-RPC endpoint at `/api/mcp` with tools for search, page reads/creates/updates, templates, media, graph data, review queues, and setup instructions.
-
-### AI Tools
-
-- Random-table generators for NPCs, settlements, factions, rumors, quests, and encounters.
-- Optional OpenAI-compatible endpoint expansion with generated drafts kept unapproved until reviewed.
-- Full-campaign Q&A chat over the search index with page citations.
-
-### Collaboration and Workflow
-
-- Review queue for player-visible drafts.
-- In-app notifications for review requests, assignments, mentions, and watched page changes.
-- Page watches and assignee frontmatter.
-- Presence endpoint foundation for future soft locks and live collaboration.
-
-### Theming
-
-- Per-campaign accent colors, display font, and banner image stored in `campaign.yaml`.
-- Flagship themes for specific RPG systems (Traveller, Dark Ages: Vampire, and others) with curated palettes and campaign title logos.
-- Applied to the workspace, player portal, and public site.
+More views: [page editor](docs/screenshots/editor.png), [GM review queue](docs/screenshots/review-queue.png), and [player portal](docs/screenshots/player-portal.png).
 
 ## Quick Start
 
-Install dependencies and run the development server:
+Install the project dependencies and start the development server:
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open:
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000).
 
-```text
-http://127.0.0.1:3000
-```
+A new database seeds an administrator account:
 
-The local database seeds this first admin account:
+| Field | Initial value |
+| --- | --- |
+| Email | `admin@example.local` |
+| Password | `admin` |
 
-```text
-Email: admin@example.local
-Password: admin
-```
+The account must change its password before using the dashboard or authenticated APIs. Registration is invitation-only by default. Administrators can create accounts, and GMs can invite players into campaigns.
 
-CampaignRepo forces the seeded admin password to be changed before the dashboard or APIs can be used.
-
-## Common Commands
+### Development Commands
 
 ```bash
-npm run dev        # Start local development server
-npm run typecheck  # TypeScript check
-npm test           # Run Vitest tests
+npm run dev        # Development server
+npm run typecheck  # TypeScript checks
+npm test           # Vitest test suite
 npm run build      # Production build
-npm start          # Start built Next.js app
+npm start          # Run the production build
 ```
 
-## GitHub App Setup
-
-The easiest setup path is from the CampaignRepo dashboard:
-
-1. Sign in as a global admin.
-2. Click **Connect GitHub**.
-3. Let GitHub create the CampaignRepo GitHub App from the manifest.
-4. Choose the campaign repositories the app can access.
-5. Return to CampaignRepo and connect or repair a campaign repo.
-
-CampaignRepo stores the GitHub App configuration in SQLite and uses short-lived installation tokens for repo access.
-
-To create the GitHub App manually, create a new app at:
-
-```text
-https://github.com/settings/apps/new
-```
-
-Use these values:
-
-- Homepage URL: your CampaignRepo URL.
-- Callback URL: `https://YOUR-CAMPAIGNREPO-HOST/api/github/app/callback`.
-- Setup URL: `https://YOUR-CAMPAIGNREPO-HOST/api/github/app/callback`.
-- Repository permissions:
-  - Contents: read/write.
-  - Metadata: read-only.
-- Installation access: only the repositories CampaignRepo should manage.
-
-After adding the `GITHUB_APP_*` environment variables and restarting the app, use **Install or update GitHub App access** from the dashboard.
-
-## Campaign Repo Layout
-
-CampaignRepo creates and expects this structure inside each campaign repo:
-
-```text
-/.campaignrepo
-  index.json
-/wiki
-  /pages
-  /media
-    media.json
-  /templates/<game-type>
-  /imports/characters
-  /sessions
-  /quests
-  /maps
-  /search
-    index.json
-  campaign.yaml
-README.md
-```
-
-Manual edits are welcome. Preserve YAML frontmatter and CampaignRepo conventions for wiki links, visibility, approvals, and GM-only blocks.
-
-### Repository Manifest
-
-CampaignRepo repositories include a generated manifest at:
-
-```text
-.campaignrepo/index.json
-```
-
-The manifest is the fast navigation/index layer for CampaignRepo. It stores page IDs, titles, paths, types, tags, aliases, summaries, visibility, approval status, parent metadata, and link metadata. Markdown files remain the canonical source for page content and frontmatter; the manifest does not duplicate full Markdown bodies.
-
-Normal repository loading uses this pattern:
-
-```text
-Open campaign:
-1. Fetch .campaignrepo/index.json
-2. Build sidebar, tags, links, backlinks, and public navigation from the manifest
-
-Open page:
-1. Fetch that one Markdown file
-2. Render the page body
-```
-
-If `.campaignrepo/index.json` is missing, CampaignRepo falls back to `wiki/search/index.json` and older cache/rebuild paths. Rebuilding the search index also writes the repository manifest. Creating a page through CampaignRepo commits the Markdown file and manifest update together, keeping the repository index consistent.
-
-Generated indexes are disposable. If a manifest, search snapshot, or DB cache
-disagrees with real page content, the repair path should rebuild generated
-state from the canonical page source rather than treating the generated file as
-truth.
-
-The Git Trees API is used for recovery and rebuild paths, not as the normal navigation source. The GitHub Contents API remains suitable for reading or writing a single known file.
-
-## Visibility Rules
-
-Player safety is based on page metadata and GM-only blocks:
-
-- `visibility: players` makes a page eligible for player view.
-- `approvalStatus: approved` is required before players can see it.
-- `:::gm` blocks are removed from player reads.
-- Source import metadata is hidden from player reads.
-- Players can read campaign content without GitHub credentials.
+The application uses Next.js, React, TypeScript, and SQLite. Its database holds accounts, memberships, search data, page caches, and queued work.
 
 ## Docker
 
-Run the prebuilt image from GitHub Container Registry:
+Run the published image:
 
 ```bash
 docker compose -f docker-compose.image.yml up -d
 ```
 
-The published image is:
+The image is `ghcr.io/avorial/campaignrepo:latest`. The Compose file maps port 3000 and persists application data in the `campaignrepo-data` volume at `/app/data`.
 
-```text
-ghcr.io/avorial/campaignrepo:latest
-```
-
-For Portainer, create a stack from `docker-compose.image.yml` or use this image in your own compose file. The SQLite database is stored in the `campaignrepo-data` volume at `/app/data`.
-
-After the first publish, make the GHCR package public in GitHub Packages if you want unauthenticated pulls.
-
-To build locally instead:
+To build from this checkout:
 
 ```bash
 docker compose up -d --build
 ```
-
-Open:
-
-```text
-http://127.0.0.1:3000
-```
-
-Useful environment variables:
-
-```bash
-APP_URL=https://campaignrepo.example.com
-SECURE_COOKIES=true
-GITHUB_APP_ID=123456
-GITHUB_APP_SLUG=your-github-app-slug
-GITHUB_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----"
-GOOGLE_CLIENT_ID=your-google-oauth-client-id
-GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
-GITHUB_OAUTH_CLIENT_ID=your-github-oauth-client-id
-GITHUB_OAUTH_CLIENT_SECRET=your-github-oauth-client-secret
-```
-
-Set `SECURE_COOKIES=true` when serving behind HTTPS so session cookies use the `Secure` flag.
-
-Google and GitHub login are optional. The Docker image only contains the OAuth
-code; each server supplies its own credentials at runtime. Use these redirect
-URLs when creating OAuth clients:
-
-- Google: `https://your-domain.example/api/auth/oauth/google/callback`
-- GitHub OAuth App: `https://your-domain.example/api/auth/oauth/github/callback`
-
-GitHub OAuth login requests `repo` access so it can also act as the user's
-GitHub connection inside CampaignRepo. Use the separate GitHub App settings
-above if you want repository connection through the install-per-repo flow
-instead.
 
 Without Compose:
 
@@ -506,24 +94,158 @@ docker build -t campaignrepo .
 docker run -p 3000:3000 -v campaignrepo-data:/app/data campaignrepo
 ```
 
-## Portainer Updates
+For Portainer, use the supplied Compose file. A Git-based stack can track `refs/heads/main` in this repository using `docker-compose.yml`; an image-based stack uses `docker-compose.image.yml`.
 
-For a local Portainer install, GitOps polling is simpler than a webhook while testing.
+### Configuration
 
-Recommended stack settings:
+| Variable | Purpose |
+| --- | --- |
+| `APP_URL` | Public application URL, including the scheme |
+| `SECURE_COOKIES` | Set to `true` when serving over HTTPS |
+| `GITHUB_APP_ID` | GitHub App identifier for manually configured installations |
+| `GITHUB_APP_SLUG` | GitHub App slug |
+| `GITHUB_APP_PRIVATE_KEY` | App private key; escaped newlines are supported |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional Google sign-in credentials |
+| `GITHUB_OAUTH_CLIENT_ID`, `GITHUB_OAUTH_CLIENT_SECRET` | Optional GitHub sign-in credentials |
+| `ALLOW_OPEN_REGISTRATION` | Set to `1` to permit registration without an invitation |
+| `CAMPAIGNREPO_DB` | Optional SQLite database path; defaults to `data/campaignrepo.sqlite` |
 
-- Repository: `https://github.com/avorial/CampaignRepo.git`
-- Reference: `refs/heads/main`
-- Compose path: `docker-compose.yml`
-- Update method: polling
-- Polling interval: 5 minutes
+OAuth callback URLs are:
 
-## Roadmap
+- Google: `https://YOUR-HOST/api/auth/oauth/google/callback`
+- GitHub OAuth: `https://YOUR-HOST/api/auth/oauth/github/callback`
 
-See [ROADMAP.md](ROADMAP.md) for the current shipped/partial/open feature
-status, the reliability/sync architecture plan, and the recommended next
-release sequence.
+GitHub OAuth sign-in requests repository access and can supply the user's GitHub connection. A GitHub App is a separate connection option with access limited to selected repositories.
 
-## License
+## Campaign Setup
 
-See [LICENSE](LICENSE).
+From the dashboard, choose a game system and create or connect a campaign:
+
+1. **Local folder:** Create or connect a folder accessible to the server. No GitHub account is required.
+2. **GitHub repository:** Connect an existing repository, or create one using a connected personal token.
+3. **Starter content:** CampaignRepo initializes the required configuration, templates, starter pages, indexes, and README when missing.
+
+A local folder is on the machine running CampaignRepo, which may differ from the machine running your browser. If using Docker, mount any local campaign directories into the container.
+
+### GitHub App Connection
+
+The dashboard's **Connect GitHub** flow can create the GitHub App through GitHub's manifest setup:
+
+1. Sign in as a global administrator.
+2. Connect GitHub and complete the App setup.
+3. Select the repositories the installation may access.
+4. Return to CampaignRepo and connect the campaign.
+
+CampaignRepo stores the App configuration in SQLite and uses short-lived installation tokens. GitHub App access can connect existing repositories; creating repositories requires a personal-token connection.
+
+For manual App setup, use the application URL as the homepage and `https://YOUR-HOST/api/github/app/callback` as the callback and setup URL. Grant repository **Contents: read/write** and **Metadata: read-only**, then configure the `GITHUB_APP_*` variables.
+
+## Repository Structure
+
+The application repository contains the software. Each campaign has its own content repository or local folder:
+
+```text
+README.md
+.campaignrepo/
+  index.json
+wiki/
+  campaign.yaml
+  pages/
+  media/
+    media.json
+  templates/<game-type>/
+  imports/characters/
+  sessions/
+  quests/
+  maps/
+  search/
+    index.json
+```
+
+Additional tools create their own content files as needed. Template folder names are sanitized for filesystem compatibility, so a system such as `Vampire: The Masquerade` uses a Windows-safe directory name.
+
+Markdown pages and their YAML frontmatter are the source of truth. Media files and the JSON/YAML records used by other campaign tools are portable too. The navigation manifest, search snapshot, and SQLite page cache are generated state.
+
+### Writing Pages
+
+Pages belong in `wiki/pages/<Slug>.md` and begin with YAML frontmatter:
+
+```markdown
+---
+name: The Old Observatory
+category: location
+type: location
+summary: An abandoned observatory above the harbor.
+tags:
+  - location
+visibility: players
+approvalStatus: approved
+knownToPlayers: true
+keyLinks: []
+aliases: []
+---
+
+# The Old Observatory
+
+The observatory overlooks [[Harbor District]].
+
+:::gm
+The keeper still watches the harbor from beneath the dome.
+:::
+```
+
+Use `[[Page Name]]` or `[[Page Name|label]]` for wiki links. Media links use paths such as `/wiki/media/observatory.png`. Preserve frontmatter when editing files outside the app.
+
+### Article Images
+
+Articles use one title and summary, followed by the page's authored sections. A primary image defaults to a full, uncropped sidebar portrait; an existing matching sidebar image takes precedence over a duplicate cover. On narrow screens, the sidebar moves above the article text. Images open at full size when clicked or activated with the keyboard.
+
+The editor's image-placement setting maps to `coverDisplay`: `auto` or `portrait` for the sidebar, `banner` for a full-width uncropped image, and `none` to suppress only the generated primary image. Authored body images and galleries remain intact.
+
+### Visibility and Reviews
+
+A page must be both `visibility: players` and `approvalStatus: approved` to appear in player views. GM-only blocks, protected summary text, source-import metadata, and hidden relationships are stripped from player reads. Keep private motives and scene instructions inside `:::gm` blocks; Health flags explicitly labeled private sections left outside those blocks.
+
+AI-created pages and imported drafts normally wait for GM review. Owners and GMs decide which content becomes player-visible. Authenticated player portals, published no-login campaign sites, and individual share links are different sharing options.
+
+These controls apply to content served by CampaignRepo. They do not restrict access to raw files on GitHub or in a shared folder; use repository and folder permissions appropriate to the material stored there.
+
+## Refresh and Repair
+
+After editing or pushing files outside CampaignRepo, click **Refresh repo**. It reloads page source, rebuilds the search and navigation indexes, and tells the open campaign views to reload their data. The shared button is available on campaign routes, including newly created campaigns. Unsaved editor drafts are preserved.
+
+The **Maintenance** menu in campaign settings groups search, synchronization, and repair commands. Health offers index repair alongside its scan results. **Refresh repo** remains directly available:
+
+| Control | Purpose |
+| --- | --- |
+| Refresh repo | Read current source, rebuild indexes, and update the open view |
+| Rebuild search | Rebuild full-text search and the portable search/navigation snapshots |
+| Repair indexes | Re-parse source pages, rebuild the cache and indexes, and report verification results |
+| Sync now | Flush queued local page edits to Git |
+| Repair structure | Create missing required folders and starter files |
+
+GitHub-backed page editing uses a local working copy with queued synchronization. Some operations still write directly to repository storage. Check sync status and campaign health when work has not reached Git or when a view disagrees with the source files.
+
+Generated indexes can be rebuilt. Do not replace real campaign content with an index snapshot.
+
+## Imports and Backups
+
+The import/export hub supports character JSON, Foundry actors and journals, Obsidian, Notion, Google Docs exports, CSV, Roll20, LegendKeeper, World Anvil, and other supported world/journal exports. Imported character sources can be retained for comparison during later updates.
+
+Export a campaign as ZIP or JSON to preserve its content and settings. Back up the application database separately: it contains accounts, access controls, App configuration, and other server state that is not part of a campaign repository.
+
+GitHub-backed campaigns offer repository commit history and page diff/restore workflows. A local-folder campaign does not require Git.
+
+## AI and MCP
+
+AI features are optional. Configure an OpenAI-compatible endpoint for page generation and campaign Q&A, or connect an external client to the MCP JSON-RPC endpoint at `/api/mcp`.
+
+MCP tools cover campaign search, page reads and drafts, bulk changes, templates, media, relationships, review queues, and repository setup. Personal API tokens are managed from the dashboard.
+
+Review generated facts, links, and visibility before sharing them. An index refresh updates discovery; it does not approve drafts.
+
+## Project Status
+
+CampaignRepo has a broad working feature set, with ongoing work on synchronization, recovery, imports, and system-specific sheets. Some map controls and collaboration features remain partial. The [roadmap](ROADMAP.md) distinguishes shipped features from unfinished work.
+
+The software is licensed under the [MIT License](LICENSE). Campaign content and third-party game material retain their own applicable rights and licenses.

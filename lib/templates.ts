@@ -206,8 +206,107 @@ export function gameTypeFromTemplateDirName(dirName: string): string {
   return match || dirName;
 }
 
-export function repoReadme(name: string) {
-  return `# ${name}\n\nThis campaign repository is managed by CampaignRepo.\n\n## Structure\n\n- Pages live in \`/wiki/pages\`.\n- Media lives in \`/wiki/media\`.\n- Templates live in \`/wiki/templates\`.\n- Character imports live in \`/wiki/imports/characters\`.\n- The portable search snapshot lives in \`/wiki/search/index.json\`.\n- Campaign settings live in \`/wiki/campaign.yaml\`.\n\nManual edits are welcome. Preserve YAML frontmatter and CampaignRepo conventions for wiki links, visibility, and approvals.\n\n## Links\n\n- GitHub docs: https://docs.github.com/repositories/creating-and-managing-repositories/creating-a-new-repository\n- CampaignRepo wiki links: use \`[[Page Name]]\` or \`[[Page Name|label]]\`.\n- GM-only sections: wrap secret content in \`:::gm\` blocks.\n`;
+const readmeSystems: Partial<Record<GameType, { text: string; url: string; label: string }>> = {
+  "Traveller": {
+    "text": "Traveller is a science-fiction roleplaying game about people making their way between worlds. Exploration, trade, patrons, starships, military service, and difficult choices can all drive a campaign. Character backgrounds and practical skills give the setting a grounded, lived-in feel.",
+    "url": "https://www.mongoosepublishing.com/collections/traveller-rpgs",
+    "label": "Mongoose Publishing's Traveller overview"
+  },
+  "Sword Chronicle": {
+    "text": "Sword Chronicle is a feudal fantasy roleplaying game using Green Ronin's Chronicle System. Noble houses, personal loyalties, courtly intrigue, and warfare shape play. Characters can influence a household's fortunes as well as their own, with social conflicts and political decisions carrying weight alongside battles.",
+    "url": "https://greenronin.com/blog/2020/07/27/whats-different-about-sword-chronicle/",
+    "label": "Green Ronin's Sword Chronicle overview"
+  },
+  "Dungeons & Dragons": {
+    "text": "Dungeons & Dragons is a fantasy roleplaying game in which a party of adventurers explores a world presented by the Dungeon Master. Players choose their characters' actions, solve problems, negotiate, and confront dangerous creatures. Character abilities and dice resolve uncertain outcomes as the group's choices shape the story.",
+    "url": "https://www.dndbeyond.com/posts/1480-what-is-dungeons-dragons",
+    "label": "Wizards of the Coast's D&D introduction"
+  },
+  "Vampire: The Masquerade": {
+    "text": "Vampire: The Masquerade is a World of Darkness game of personal and political horror. Players portray vampires navigating hunger, rivalries, secrecy, and the struggle to retain their humanity. Clans and supernatural powers matter, but relationships and the costs of survival are central to the chronicle.",
+    "url": "https://www.paradoxinteractive.com/games/world-of-darkness/about",
+    "label": "The official World of Darkness overview"
+  },
+  "Dark Ages: Vampire": {
+    "text": "Dark Ages: Vampire places vampiric horror in a medieval world of faith, feudal power, and ancient bloodlines. Characters balance their supernatural appetites with loyalties, beliefs, and the demands of elders and mortal society. The chronicle's chosen edition and house rules determine the mechanics used at the table.",
+    "url": "https://theonyxpath.com/now-available-v20-dark-ages/",
+    "label": "Onyx Path's Dark Ages overview"
+  },
+  "Mage: The Ascension": {
+    "text": "Mage: The Ascension is a World of Darkness game about people whose awakened beliefs and will can reshape reality. Magic, faith, and technology become competing ways of understanding and changing the world. Stories explore the responsibility of power and conflicts over what reality should become.",
+    "url": "https://theonyxpath.com/mage-the-ascension-20th-anniversary-edition-faq-part-1/",
+    "label": "Onyx Path's Mage introduction"
+  },
+  "The King in Yellow RPG": {
+    "text": "The Yellow King Roleplaying Game is an investigative horror game inspired by Robert W. Chambers. Its stories connect unsettling art, unreliable reality, and lives across different settings and timelines. Investigators follow clues while confronting the physical and psychological consequences of contact with the Yellow King's influence.",
+    "url": "https://pelgranepress.com/product/the-yellow-king-rpg/",
+    "label": "Pelgrane Press's Yellow King overview"
+  }
+};
+
+export function repoReadme(name: string, gameType: GameType = "Custom") {
+  const system = readmeSystems[gameType];
+  const genre = gameTypeGroups.find((group) => group.types.includes(gameType))?.label;
+  const overview = system
+    ? `${system.text} [${system.label}](${system.url}).`
+    : gameType === "Custom"
+      ? "This campaign uses a custom game system. Record the group's rules, house conventions, and character options in the wiki and templates."
+      : `This campaign uses ${gameType}, listed in CampaignRepo's ${genre || "game-system"} template catalog. Use the selected game's rulebooks for play and the repository's templates for campaign records; note the edition and house rules in the wiki.`;
+  return `# ${name.trim()}
+
+A tabletop roleplaying campaign using **${gameType}**, managed with [CampaignRepo](https://github.com/avorial/CampaignRepo).
+
+## Game System
+
+${overview}
+
+The group's chosen edition and house rules govern play. Campaign notes and templates supplement the rulebooks.
+
+## About the Campaign
+
+This repository holds the campaign's characters, places, factions, session notes, and reference material. Its premise and current situation can be maintained on the campaign home page in \`wiki/pages/\`.
+
+## What CampaignRepo Does
+
+CampaignRepo turns this repository into a searchable browser-based wiki with linked pages, media, maps, relationship graphs, calendars, sessions, and quests. Owners and GMs can review drafts, keep private notes, and share approved player-facing content through a player portal or public campaign site.
+
+The content remains portable Markdown, YAML, JSON, and media files that can be read without the app.
+
+## Repository Structure
+
+| Path | Contents |
+| --- | --- |
+| \`wiki/pages/\` | Wiki pages, characters, lore, and reports |
+| \`wiki/media/\` | Images, maps, and handouts |
+| \`wiki/templates/\` | Game-specific page and character templates |
+| \`wiki/imports/characters/\` | Preserved character import sources |
+| \`wiki/sessions/\` | Session preparation and notes, when used |
+| \`wiki/quests/\` | Quest records, when used |
+| \`wiki/maps/\` | Map records, when used |
+| \`wiki/campaign.yaml\` | Campaign configuration |
+| \`.campaignrepo/index.json\` | Generated navigation manifest |
+| \`wiki/search/index.json\` | Generated search snapshot |
+
+Some folders are created when their tools are first used. Page source and frontmatter remain authoritative; indexes can be rebuilt.
+
+## Editing and Sharing
+
+- Preserve YAML frontmatter when editing wiki pages.
+- Use \`[[Page Name]]\` or \`[[Page Name|label]]\` for wiki links.
+- Reference media with paths such as \`/wiki/media/image.png\`.
+- Player-visible pages need \`visibility: players\` and \`approvalStatus: approved\`.
+- Wrap private sections in \`:::gm\` blocks.
+- After external file edits or pushes, click **Refresh repo** to reload source, rebuild indexes, and update the open view.
+- Use **Repair indexes** in settings or the Health center when generated state needs recovery.
+
+Player visibility applies to CampaignRepo views, not raw repository access. Anyone who can read the repository files can also read GM notes.
+
+## Links
+
+- [Wiki pages](wiki/pages/)
+- [Campaign configuration](wiki/campaign.yaml)
+- [CampaignRepo setup and documentation](https://github.com/avorial/CampaignRepo)
+`;
 }
 
 /** Starter pages seeded into a brand-new campaign so the wiki is never empty. */

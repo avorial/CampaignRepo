@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { gameTypes } from "@/lib/templates";
 import { packFor } from "@/lib/template-packs";
+import { stripGmBlocks } from "@/lib/markdown";
 
 describe("template packs", () => {
+  it("protects Yellow King NPC motives and scene instructions by default", () => {
+    const body = packFor("The King in Yellow RPG").find((item) => item.slug === "npc")!.body;
+    const publicBody = stripGmBlocks(body);
+    expect(body).toContain("Private Pressure");
+    for (const secret of ["Private Pressure", "What They Want", "What They Know", "Scene Use", "What they do when lying"]) expect(publicBody).not.toContain(secret);
+    expect(publicBody).toContain("At The Table");
+  });
   it("includes a character sheet template for every game type", () => {
     for (const gameType of gameTypes) {
       expect(packFor(gameType).some((template) => template.slug === "character-sheet"), gameType).toBe(true);

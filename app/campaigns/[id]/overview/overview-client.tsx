@@ -1,5 +1,7 @@
 "use client";
 
+import { useRepoRefresh } from "@/app/components/use-repo-refresh";
+
 import { DragEvent, useEffect, useRef, useState } from "react";
 import type { Campaign } from "@/lib/types";
 
@@ -93,9 +95,11 @@ export default function OverviewClient({ campaign, canManage }: { campaign: Camp
     setData(Object.fromEntries(entries));
     setLoading(false);
   }
+  useRepoRefresh(campaign.id, load);
+
   useEffect(() => {
     load();
-  }, []);
+  }, [campaign.id]);
 
   const visible = widgets.filter((id) => canManage || !gmOnly(id));
 

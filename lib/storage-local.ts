@@ -201,7 +201,7 @@ export class LocalFolderAdapter implements StorageAdapter {
   }
 
   async initializeRepo(campaign: Campaign): Promise<void> {
-    await this.ensureFile("README.md", repoReadme(campaign.name), "");
+    await this.ensureFile("README.md", repoReadme(campaign.name, campaign.gameType), "");
     await this.ensureFile("wiki/campaign.yaml", campaignYaml(campaign.name, campaign.gameType as GameType), "");
     await this.ensureFile("wiki/pages/.gitkeep", "", "");
     await this.ensureFile("wiki/search/index.json", "[]\n", "");

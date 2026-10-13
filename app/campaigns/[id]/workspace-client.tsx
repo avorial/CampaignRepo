@@ -1,5 +1,8 @@
 "use client";
 
+import { useRepoRefresh } from "@/app/components/use-repo-refresh";
+import MaintenanceMenu from "@/app/components/maintenance-menu";
+
 import Link from "next/link";
 import { FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
@@ -101,6 +104,8 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
   const pendingReviews = pages.filter((page) => page.frontmatter.approvalStatus !== "approved").length;
   const pageTemplates = templates.filter((template) => template.category === pageCategory);
 
+  useRepoRefresh(campaign.id, () => load(true));
+
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(`campaignrepo:media-filters:${campaign.id}`);
@@ -119,7 +124,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     }
   }, [campaign.id, savedMediaFilters]);
 
-  async function load() {
+  async function load(preserveDrafts = false) {
     const canManage = campaign.role === "owner" || campaign.role === "gm";
     const [pagesRes, graphRes, setupRes, templatesRes, mediaRes, validationRes, publicRes, themeRes, categoriesRes] = await Promise.all([
       fetch(`/api/campaigns/${campaign.id}/pages`),
@@ -150,15 +155,17 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     setMedia(mediaData.media || []);
     setValidation(validationData);
     setPublicSite(publicData.site || null);
-    setPublicLinkName(publicData.site?.slug || publicLinkInput(campaign.name));
-    setPublicDescription(publicData.site?.description || "");
-    setPublicTags(publicData.site?.tags || []);
-    setPublicCommunityKind(publicData.site?.communityKind || "campaign");
-    setPublicContributionGuidelines(publicData.site?.contributionGuidelines || "");
-    setTheme(themeData.theme || {});
-    if (categoriesData.categories?.length) {
-      setCampaignCategories(categoriesData.categories);
-      if (!categoriesData.categories.some((category: { id: string }) => category.id === pageCategory)) setPageCategory(categoriesData.categories[0].id);
+    if (!preserveDrafts) {
+      setPublicLinkName(publicData.site?.slug || publicLinkInput(campaign.name));
+      setPublicDescription(publicData.site?.description || "");
+      setPublicTags(publicData.site?.tags || []);
+      setPublicCommunityKind(publicData.site?.communityKind || "campaign");
+      setPublicContributionGuidelines(publicData.site?.contributionGuidelines || "");
+      setTheme(themeData.theme || {});
+      if (categoriesData.categories?.length) {
+        setCampaignCategories(categoriesData.categories);
+        if (!categoriesData.categories.some((category: { id: string }) => category.id === pageCategory)) setPageCategory(categoriesData.categories[0].id);
+      }
     }
   }
 
@@ -268,7 +275,7 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [campaign.id]);
 
   // Remember the last category/template/visibility used to create a page, per
   // campaign — most pages are created in runs of the same kind, so prefill them.
@@ -1305,10 +1312,12 @@ export default function CampaignClient({ campaign, categories }: { campaign: Cam
                 <p className="muted">Checks the GitHub repo for the required CampaignRepo folders and starter files. Wrong type means CampaignRepo expected a file or folder but GitHub reported something else at that path.</p>
               </div>
               <div className="member-actions">
-                <button type="button" className="secondary" onClick={rebuildIndex}>Rebuild search</button>
-                <button type="button" className="secondary" onClick={syncNow} title="Commit unsynced local edits to Git in one commit">Sync now</button>
-                <button type="button" className="secondary" onClick={repairIndexes} title="Rebuild the repository manifest, search snapshot, and page cache from the Markdown page source">Repair indexes</button>
-                <button type="button" className="secondary" onClick={repairRepo}>Repair structure</button>
+                <MaintenanceMenu actions={[
+                  { label: "Rebuild search", kind: "index", run: rebuildIndex },
+                  { label: "Sync now", kind: "sync", run: syncNow },
+                  { label: "Repair indexes", kind: "repair", run: repairIndexes },
+                  { label: "Repair structure", kind: "repair", run: repairRepo }
+                ]} />
               </div>
             </div>
             <div className="validation-list">

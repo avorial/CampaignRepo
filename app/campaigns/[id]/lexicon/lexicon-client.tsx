@@ -1,5 +1,7 @@
 "use client";
 
+import { useRepoRefresh } from "@/app/components/use-repo-refresh";
+
 import { useEffect, useMemo, useState } from "react";
 import type { LexiconEntry, LexiconPhonemes } from "@/lib/lexicon";
 
@@ -56,8 +58,8 @@ export default function LexiconClient({ campaignId }: { campaignId: number }) {
   // Inline editing
   const [editEntry, setEditEntry] = useState<LexiconEntry | null>(null);
 
-  useEffect(() => {
-    fetch(api).then((r) => r.json()).then((d) => {
+  function loadLexicon() {
+    return fetch(api).then((r) => r.json()).then((d) => {
       const lex = d.lexicon || {};
       setTerms(lex.terms || []);
       setPhonemes(lex.phonemes || {});
@@ -67,7 +69,17 @@ export default function LexiconClient({ campaignId }: { campaignId: number }) {
       if (lex.patterns?.length) setPatternInput(lex.patterns.join(" "));
       setLoading(false);
     });
-  }, []);
+  }
+
+  useRepoRefresh(campaignId, () => {
+    if (dirty || saving || editingId || showPhonemes) {
+      setMessage("Repo refreshed. Save your lexicon edits before reloading it.");
+      return;
+    }
+    return loadLexicon();
+  });
+
+  useEffect(() => { loadLexicon(); }, [campaignId]);
 
   const filtered = useMemo(() => {
     const f = filter.trim().toLowerCase();

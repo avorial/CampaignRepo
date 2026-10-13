@@ -44,6 +44,8 @@ export function normalizeFrontmatter(raw: Record<string, unknown>, fallbackName:
     aliases: Array.isArray(raw.aliases) ? raw.aliases.map(String) : [],
     parent: raw.parent ? String(raw.parent) : undefined,
     cover: raw.cover ? String(raw.cover) : undefined,
+    coverDisplay: ["auto", "portrait", "banner", "none"].includes(String(raw.coverDisplay))
+      ? raw.coverDisplay as WikiPageFrontmatter["coverDisplay"] : undefined,
     tradeCodes: Array.isArray(raw.tradeCodes) ? raw.tradeCodes.map(String) : undefined
   };
 }

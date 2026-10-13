@@ -1,4 +1,7 @@
+import ArticleContent from "@/app/components/article-content";
 import type { Metadata } from "next";
+
+import { renderArticle } from "@/lib/article";
 import type { CSSProperties } from "react";
 import { notFound } from "next/navigation";
 import { getPageShare, getCampaignByIdPublic } from "@/lib/db";
@@ -127,7 +130,7 @@ export default async function PageShareRoute({ params }: { params: Promise<{ tok
   let pageHtml = "";
   let pageName = "";
   let pageSummary = "";
-  let pageCover = "";
+
   let pageCategory = "";
 
   try {
@@ -135,16 +138,16 @@ export default async function PageShareRoute({ params }: { params: Promise<{ tok
     const page = parsePage(share.slug, file.text, file.sha);
 
     pageName = page.frontmatter.name;
-    pageSummary = page.frontmatter.summary || "";
-    pageCover = page.frontmatter.cover || "";
+    pageSummary = stripGmBlocks(page.frontmatter.summary || "");
+
     pageCategory = page.frontmatter.category || "";
 
-    pageHtml = renderMarkdown(stripGmBlocks(page.content), "handout", () => ({ href: "#", missing: false }), mediaResolver, () => null);
+    pageHtml = renderArticle(stripGmBlocks(page.content), { ...page.frontmatter, summary: pageSummary }, "handout", () => ({ href: "#", missing: false }), mediaResolver, () => null);
   } catch {
     notFound();
   }
 
-  const coverUrl = pageCover ? mediaSrc(pageCover, mediaResolver) : "";
+
 
   return (
     <main className="app-shell" data-theme={theme.preset || undefined} style={themeVars}>
@@ -161,14 +164,8 @@ export default async function PageShareRoute({ params }: { params: Promise<{ tok
       <div className="workspace">
         <div className="reader-shell" style={{ gridColumn: "1 / -1" }}>
           <article className="preview page-reader">
-            {coverUrl && <img className="page-cover" src={coverUrl} alt={pageName} />}
-            <header className="handout-header">
-              {pageCategory && <p className="muted" style={{ fontSize: 12, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>{pageCategory}</p>}
-              <h1>{pageName}</h1>
-              {pageSummary && <p className="page-summary muted">{pageSummary}</p>}
-            </header>
 
-            <div className="content-body" dangerouslySetInnerHTML={{ __html: pageHtml }} />
+            <ArticleContent html={pageHtml} />
 
             <footer className="share-page-footer">
               Created with <a href="/" className="quiet-link">CampaignRepo</a>

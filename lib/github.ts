@@ -531,7 +531,7 @@ export async function getFileAtCommit(
 }
 
 export async function initializeRepo(token: string, campaign: Campaign) {
-  await ensureFile(token, campaign, "README.md", repoReadme(campaign.name), "CampaignRepo: add README");
+  await ensureFile(token, campaign, "README.md", repoReadme(campaign.name, campaign.gameType), "CampaignRepo: add README");
   await ensureFile(token, campaign, "wiki/campaign.yaml", campaignYaml(campaign.name, campaign.gameType as GameType), "CampaignRepo: add campaign config");
   await ensureFile(token, campaign, "wiki/pages/.gitkeep", "", "CampaignRepo: add pages folder");
   await ensureFile(token, campaign, "wiki/search/index.json", "[]\n", "CampaignRepo: add search snapshot");

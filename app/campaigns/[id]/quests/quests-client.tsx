@@ -1,5 +1,7 @@
 "use client";
 
+import { useRepoRefresh } from "@/app/components/use-repo-refresh";
+
 import { FormEvent, useEffect, useState } from "react";
 import type { Campaign } from "@/lib/types";
 
@@ -26,9 +28,11 @@ export default function QuestsClient({ campaign }: { campaign: Campaign }) {
     setQuests(data.quests || []);
     setLoading(false);
   }
+  useRepoRefresh(campaign.id, load);
+
   useEffect(() => {
     load();
-  }, []);
+  }, [campaign.id]);
 
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

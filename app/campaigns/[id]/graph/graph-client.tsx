@@ -1,5 +1,7 @@
 "use client";
 
+import { useRepoRefresh } from "@/app/components/use-repo-refresh";
+
 import Link from "next/link";
 import type { PointerEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -244,6 +246,14 @@ export default function GraphClient({ campaignId, mode = "relationship" }: { cam
     setFamilyDirty(false);
     setLoading(false);
   }, [campaignId]);
+
+  useRepoRefresh(campaignId, () => {
+    if (familyDirty || familySaveBusy) {
+      setFamilySaveMsg("Repo refreshed. Save your family tree edits before reloading the graph.");
+      return;
+    }
+    return loadGraph();
+  });
 
   useEffect(() => {
     loadGraph();

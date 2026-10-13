@@ -1369,6 +1369,212 @@ button.nav-link.active {
   cursor: zoom-in;
 }
 
+.article-content {
+  container-type: inline-size;
+  container-name: article;
+  min-width: 0;
+}
+
+.preview .article-header {
+  border-bottom: 1px solid var(--border-soft);
+  margin: 0 0 24px;
+  padding-bottom: 18px;
+}
+
+.preview .article-header h1 {
+  font-size: 30px;
+  line-height: 1.2;
+  letter-spacing: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.preview .article-category {
+  color: var(--text-secondary);
+  font-size: 11px;
+  letter-spacing: 0;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.preview .article-summary {
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 12px 0 0;
+}
+
+.preview .article-content .wiki-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 300px);
+  gap: 28px;
+}
+
+.preview .article-content .wiki-main {
+  display: block;
+  min-width: 0;
+}
+
+.preview .article-content .wiki-section {
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+  margin-bottom: 24px;
+}
+
+.preview .article-content .wiki-section h2 {
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+.preview .article-content .wiki-infobox {
+  background: none;
+  border: 0;
+  border-left: 1px solid var(--border-soft);
+  box-shadow: none;
+  padding-left: 18px;
+}
+
+.preview .article-content .wiki-infobox img {
+  aspect-ratio: auto;
+  height: auto;
+  max-height: 440px;
+  object-fit: contain;
+  width: 100%;
+}
+
+.article-portrait, .article-banner {
+  margin: 0;
+}
+
+.article-banner {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.article-banner img {
+  display: block;
+  height: auto;
+  max-height: 420px;
+  max-width: 100%;
+  object-fit: contain;
+  margin: 0 auto;
+}
+
+.article-content img {
+  cursor: zoom-in;
+}
+
+.article-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.article-modes {
+  display: inline-flex;
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  max-width: 100%;
+}
+
+.article-modes button {
+  border: 0;
+  border-radius: 0;
+  min-height: 36px;
+  font-size: 12px;
+}
+
+.article-modes button + button {
+  border-left: 1px solid var(--border-soft);
+}
+
+.article-more {
+  position: relative;
+}
+
+.article-more summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.article-more summary::-webkit-details-marker {
+  display: none;
+}
+
+.article-more > button {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 50;
+  min-width: 150px;
+  background: var(--bg-surface);
+}
+
+@container article (max-width: 660px) {
+  .preview .article-content .wiki-layout {
+    display: flex;
+    flex-direction: column;
+  }
+  .preview .article-content .wiki-infobox {
+    order: -1;
+    position: static;
+    align-self: center;
+    border-left: 0;
+    padding-left: 0;
+    width: min(100%, 320px);
+  }
+  .preview .article-content .wiki-main {
+    width: 100%;
+  }
+}
+
+.maintenance-control {
+  position: relative;
+}
+
+.maintenance-menu summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+  padding: 8px 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+}
+
+.maintenance-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.maintenance-options {
+  display: grid;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 50;
+  min-width: 200px;
+  padding: 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+}
+
+.maintenance-options button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-start;
+  white-space: nowrap;
+}
+
 .gallery {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -3812,6 +4018,9 @@ button.nav-link.active {
 }
 
 .repo-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-height: 0;
   padding: 8px 12px;
   background: var(--bg-elevated);
@@ -3820,7 +4029,7 @@ button.nav-link.active {
   color: var(--text-primary);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   text-transform: uppercase;
   box-shadow: var(--shadow-pop);
   cursor: pointer;

@@ -170,6 +170,7 @@ export type WikiPageFrontmatter = {
   relationships?: WikiRelationship[];
   parent?: string;
   cover?: string;
+  coverDisplay?: "auto" | "portrait" | "banner" | "none";
   foundryLink?: string;
   sourceImport?: string;
   status?: string;
@@ -392,6 +393,7 @@ export type WikiPage = {
   content: string;
   raw: string;
   outgoingLinks: WikiLink[];
+  playerOutgoingLinks?: WikiLink[];
   backlinks: string[];
 };
 
@@ -502,7 +504,10 @@ export type SearchDocument = {
   /** Short player-safe preview kept in the committed snapshot, which carries no full bodies. */
   excerpt?: string;
   links: string[];
+  playerLinks?: string[];
   backlinks: string[];
   keyLinks: string[];
   parent?: string;
+  cover?: string;
+  coverDisplay?: WikiPageFrontmatter["coverDisplay"];
 };

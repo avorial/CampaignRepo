@@ -1,9 +1,13 @@
 "use client";
 
+import ArticleContent from "@/app/components/article-content";
+
+import { useRepoRefresh } from "@/app/components/use-repo-refresh";
+
 import { useEffect, useMemo, useState } from "react";
 import type { Manuscript } from "@/lib/manuscripts";
 import type { WikiPage } from "@/lib/types";
-import { renderMarkdown } from "@/lib/markdown";
+import { renderArticle } from "@/lib/article";
 
 type KnownPage = { slug: string; name: string; category: string };
 
@@ -33,8 +37,8 @@ export default function ManuscriptsClient({ campaignId }: { campaignId: number }
   const [readPages, setReadPages] = useState<WikiPage[]>([]);
   const [readLoading, setReadLoading] = useState(false);
 
-  useEffect(() => {
-    Promise.all([
+  function loadManuscripts() {
+    return Promise.all([
       fetch(`${api}/manuscripts`).then((r) => r.json()),
       fetch(`${api}/pages`).then((r) => r.json())
     ]).then(([mData, pData]) => {
@@ -43,7 +47,20 @@ export default function ManuscriptsClient({ campaignId }: { campaignId: number }
       setAllPages(pages.map((p) => ({ slug: p.slug, name: p.frontmatter.name, category: p.frontmatter.category })));
       setLoading(false);
     });
-  }, [campaignId]);
+  }
+
+  useRepoRefresh(campaignId, async () => {
+    await loadManuscripts();
+    if (view === "read" && selected) {
+      const res = await fetch(`${api}/manuscripts`, { cache: "no-store" });
+      const data = await res.json();
+      const current = (data.manuscripts || []).find((m: Manuscript) => m.slug === selected.slug);
+      if (current) await openRead(current);
+      else { setSelected(null); setReadPages([]); setView("list"); }
+    }
+  });
+
+  useEffect(() => { loadManuscripts(); }, [campaignId]);
 
   function openEdit(m: Manuscript) {
     setSelected(m);
@@ -154,13 +171,8 @@ export default function ManuscriptsClient({ campaignId }: { campaignId: number }
         </div>
         <div className="manuscript-reader">
           {readLoading ? <p className="muted">Loading pages…</p> : readPages.map((p, i) => (
-            <article key={p.slug} className="manuscript-chapter">
-              <h1 className="manuscript-chapter-title">{p.frontmatter.name}</h1>
-              {p.frontmatter.summary && <p className="manuscript-chapter-summary">{p.frontmatter.summary}</p>}
-              <div
-                className="prose"
-                dangerouslySetInnerHTML={{ __html: renderMarkdown(p.content, "gm") }}
-              />
+            <article key={p.slug} className="manuscript-chapter preview">
+              <ArticleContent html={renderArticle(p.content, p.frontmatter, "gm", undefined, (path) => `/campaign-media/${campaignId}/${path.split("/").map(encodeURIComponent).join("/")}`)} />
               {i < readPages.length - 1 && <hr className="manuscript-break" />}
             </article>
           ))}

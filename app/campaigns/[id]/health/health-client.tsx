@@ -1,5 +1,8 @@
 "use client";
 
+import { useRepoRefresh } from "@/app/components/use-repo-refresh";
+import MaintenanceMenu from "@/app/components/maintenance-menu";
+
 import { useEffect, useState } from "react";
 import type { Campaign } from "@/lib/types";
 
@@ -24,6 +27,7 @@ type RepairReport = {
 
 // Display order + friendly labels for each finding type.
 const GROUPS: { type: string; label: string }[] = [
+  { type: "player-secret-risk", label: "Player-facing private references" },
   { type: "page-conflict", label: "Page conflicts (local vs remote)" },
   { type: "unsynced-local-edits", label: "Unsynced local edits" },
   { type: "empty-cache-body", label: "Cached pages missing their body" },
@@ -66,9 +70,11 @@ export default function HealthClient({ campaign }: { campaign: Campaign }) {
     else setError((await res.json().catch(() => ({})))?.error || "Could not run health checks.");
     setLoading(false);
   }
+  useRepoRefresh(campaign.id, load);
+
   useEffect(() => {
     load();
-  }, []);
+  }, [campaign.id]);
 
   async function repairIndexes() {
     setMessage("Rebuilding indexes from page source…");
@@ -142,7 +148,7 @@ export default function HealthClient({ campaign }: { campaign: Campaign }) {
           <p className="muted">{total} finding{total === 1 ? "" : "s"} across {data.pageCount} pages{data.mediaCount ? ` and ${data.mediaCount} media files` : ""}.</p>
         )}
         <div style={{ display: "flex", gap: "8px" }}>
-          <button type="button" className="secondary" onClick={repairIndexes} title="Rebuild the repository manifest, search snapshot, and page cache from the Markdown page source">Repair indexes</button>
+          <MaintenanceMenu actions={[{ label: "Repair indexes", kind: "repair", run: repairIndexes }]} />
           <button type="button" className="secondary" onClick={load}>Re-scan</button>
         </div>
       </div>

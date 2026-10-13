@@ -2,6 +2,7 @@
 import { requireApiUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign, listCampaigns, searchDocs } from "@/lib/db";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
+import { sanitizePlayerPage } from "@/lib/public-site";
 import { gameTypeFromTemplateDirName, templateDirName, categoryIds, defaultFrontmatter, gameTypes, starterBody } from "@/lib/templates";
 import { slugify } from "@/lib/slug";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
@@ -111,8 +112,8 @@ async function buildMcpGraph(storage: StorageAdapter, campaign: Campaign) {
   const allPages = files.map((file) => {
     const slug = file.name.replace(/\.md$/, "");
     const raw = file.text ?? "";
-    const text = campaign.role === "player" ? stripGmBlocks(raw) : raw;
-    return parsePage(slug, text, file.sha);
+    const page = parsePage(slug, raw, file.sha);
+    return campaign.role === "player" ? sanitizePlayerPage(page) : page;
   });
   const pages = allPages.filter((page) => visibleForRole(page, campaign.role));
   const aliases = aliasMapFromPages(pages);
@@ -288,7 +289,7 @@ export async function POST(req: Request) {
       if (campaign.role === "player" && (page.frontmatter.visibility !== "players" || page.frontmatter.approvalStatus !== "approved")) {
         throw new Error("Forbidden");
       }
-      return toolResult(body.id, campaign.role === "player" ? parsePage(args.slug, stripGmBlocks(file.text), file.sha) : page);
+      return toolResult(body.id, campaign.role === "player" ? sanitizePlayerPage(page) : page);
     }
     if (name === "create_page") {
       const campaign = getCampaign(user.id, Number(args.campaignId));

@@ -1,5 +1,7 @@
 "use client";
 
+import { useRepoRefresh } from "@/app/components/use-repo-refresh";
+
 import { useEffect, useMemo, useState } from "react";
 import type { Campaign, WikiPage } from "@/lib/types";
 
@@ -57,6 +59,8 @@ export default function GenerateClient({ campaign }: { campaign: Campaign }) {
   const [aiKey, setAiKey] = useState("");
   const [savingAI, setSavingAI] = useState(false);
 
+  useRepoRefresh(campaign.id, () => fetch(`${api}/pages`, { cache: "no-store" }).then((r) => r.json()).then((d) => setPages(d.pages || [])));
+
   useEffect(() => {
     fetch(`${api}/pages`).then((r) => r.json()).then((d) => setPages(d.pages || []));
     fetch(`${api}/ai-settings`).then((r) => r.json()).then((d) => {
@@ -66,7 +70,7 @@ export default function GenerateClient({ campaign }: { campaign: Campaign }) {
         setAiModel(d.config.model || "");
       }
     });
-  }, []);
+  }, [campaign.id]);
 
   const filteredPages = useMemo(() => {
     const f = pageFilter.trim().toLowerCase();

@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useRepoRefresh } from "@/app/components/use-repo-refresh";
+
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Campaign } from "@/lib/types";
 import {
   analyzeSessionAgenda,
@@ -60,6 +62,9 @@ export default function SessionEditor({ campaign, slug }: { campaign: Campaign; 
   const api = `/api${base}`;
   const [fm, setFm] = useState<Frontmatter | null>(null);
   const [notes, setNotes] = useState("");
+  const savedDraft = useRef("");
+  const currentDraft = useRef("");
+  currentDraft.current = JSON.stringify([fm, notes]);
   const [pages, setPages] = useState<PageRef[]>([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -75,8 +80,10 @@ export default function SessionEditor({ campaign, slug }: { campaign: Campaign; 
   const [newAssetUrl, setNewAssetUrl] = useState("");
   const [calendar, setCalendar] = useState<CalendarConfig | null>(null);
 
-  useEffect(() => {
-    (async () => {
+  useRepoRefresh(campaign.id, () => loadEditor(true));
+
+  function loadEditor(refreshing = false) {
+    return (async () => {
       const [sRes, pRes, calRes] = await Promise.all([
         fetch(`${api}/sessions/${slug}`),
         fetch(`${api}/pages`),
@@ -86,7 +93,7 @@ export default function SessionEditor({ campaign, slug }: { campaign: Campaign; 
         const data = await sRes.json();
         const s = data.session;
         const rawStatus = s.frontmatter.status;
-        setFm({
+        const nextFm: Frontmatter = {
           title: s.frontmatter.title || "",
           number: s.frontmatter.number,
           date: s.frontmatter.date || "",
@@ -103,8 +110,12 @@ export default function SessionEditor({ campaign, slug }: { campaign: Campaign; 
           threads: s.frontmatter.threads || [],
           pinned: s.frontmatter.pinned || [],
           handouts: s.frontmatter.handouts || []
-        });
-        setNotes(s.notes || "");
+        };
+        if (!refreshing || (!busy && currentDraft.current === savedDraft.current)) {
+          setFm(nextFm);
+          setNotes(s.notes || "");
+          savedDraft.current = JSON.stringify([nextFm, s.notes || ""]);
+        }
       } else {
         setMessage("Could not load session.");
       }
@@ -117,7 +128,9 @@ export default function SessionEditor({ campaign, slug }: { campaign: Campaign; 
         if (data.calendar) setCalendar(data.calendar);
       }
     })();
-  }, [slug]);
+  }
+
+  useEffect(() => { loadEditor(); }, [campaign.id, slug]);
 
   const nameBySlug = useMemo(() => new Map(pages.map((p) => [p.slug, p.name])), [pages]);
   const readiness = useMemo(() => analyzeSessionAgenda(fm?.agenda || []), [fm?.agenda]);
@@ -144,6 +157,7 @@ export default function SessionEditor({ campaign, slug }: { campaign: Campaign; 
       })
     });
     setBusy(false);
+    if (res.ok) savedDraft.current = JSON.stringify([fm, notes]);
     setMessage(res.ok ? "Session saved." : (await res.json().catch(() => ({})))?.error || "Save failed.");
   }
 

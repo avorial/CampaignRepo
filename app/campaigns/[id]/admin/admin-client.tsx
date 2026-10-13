@@ -1,5 +1,7 @@
 "use client";
 
+import { useRepoRefresh } from "@/app/components/use-repo-refresh";
+
 import { FormEvent, useEffect, useState } from "react";
 import type { Campaign, CampaignInvite, CampaignMembership } from "@/lib/types";
 import type { ForkProposal } from "@/lib/db";
@@ -67,10 +69,12 @@ export default function AdminClient({ campaign, isGlobalAdmin = false, publicSlu
     setCategoryProperties(catPropsData.categoryProperties || {});
   }
 
+  useRepoRefresh(campaign.id, load);
+
   useEffect(() => {
     load();
     setOrigin(window.location.origin);
-  }, []);
+  }, [campaign.id]);
 
   function inviteUrl(token: string) {
     return `${origin || ""}/invite/${token}`;

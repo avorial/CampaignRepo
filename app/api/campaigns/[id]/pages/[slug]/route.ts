@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { canManageCampaign, createNotifications, getCampaign, getCampaignGmUserIds, getCampaignMemberUsers, getMemberGroups, getPageWatcherUserIds, getUserIdByEmail } from "@/lib/db";
 import { getStorageAdapter, isConflictError, isNotFoundError } from "@/lib/storage";
 import { parsePage, serializePage, stripGmBlocks } from "@/lib/markdown";
+import { sanitizePlayerPage } from "@/lib/public-site";
 import { removePageFromSearchIndex, scheduleSearchIndexRebuild } from "@/lib/search";
 import { readPageCache, refreshPageCache, removePageFromCache, upsertPageInCache } from "@/lib/page-cache";
 import { findRepositoryManifestPage, removePageFromRepositoryManifest } from "@/lib/repository-manifest";
@@ -17,15 +18,6 @@ const schema = z.object({
   sha: z.string().optional(),
   ai: z.boolean().default(false)
 });
-
-function sanitizePlayerPage<T extends ReturnType<typeof parsePage>>(page: T, visibleGroups?: Set<string>): T {
-  return {
-    ...page,
-    content: stripGmBlocks(page.content, visibleGroups),
-    raw: stripGmBlocks(page.raw, visibleGroups),
-    frontmatter: { ...page.frontmatter, sourceImport: undefined }
-  };
-}
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string; slug: string }> }) {
   const user = await requireUser();

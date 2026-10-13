@@ -2,18 +2,27 @@ import YAML from "yaml";
 import type { Campaign, SearchDocument, WikiPage } from "@/lib/types";
 import { themePresetForGame, categoryPresetForGame } from "@/lib/game-pack-branding";
 import { getStorageAdapter, type StorageAdapter } from "@/lib/storage";
-import { normalizeFrontmatter, parsePage, stripGmBlocks } from "@/lib/markdown";
+import { normalizeFrontmatter, parsePage, parseWikiLinks, serializePage, stripGmBlocks } from "@/lib/markdown";
 import { parseQuest, type Quest } from "@/lib/quests";
 import { sanitizeTheme, type CampaignTheme } from "@/lib/theme";
 import { readRepositoryManifestSnapshot } from "@/lib/repository-manifest";
 
 /** Strip GM-only content and internal import metadata from a page before it leaves the server. */
 export function sanitizePlayerPage(page: WikiPage, visibleGroups?: Set<string>): WikiPage {
+  const content = stripGmBlocks(page.content, visibleGroups);
+  const frontmatter = {
+    ...page.frontmatter,
+    summary: stripGmBlocks(page.frontmatter.summary || "", visibleGroups),
+    sourceImport: undefined,
+    relationships: page.frontmatter.relationships?.filter((relationship) => !relationship.hidden)
+  };
   return {
     ...page,
-    content: stripGmBlocks(page.content, visibleGroups),
-    raw: stripGmBlocks(page.raw, visibleGroups),
-    frontmatter: { ...page.frontmatter, sourceImport: undefined }
+    content,
+    raw: page.raw ? serializePage(frontmatter, content) : "",
+    outgoingLinks: page.content ? parseWikiLinks(content) : page.playerOutgoingLinks || [],
+    backlinks: [],
+    frontmatter
   };
 }
 
@@ -35,11 +44,14 @@ function publicPageFromSearchDocument(doc: SearchDocument): WikiPage | null {
       approvalStatus: doc.approvalStatus,
       knownToPlayers: true,
       keyLinks: doc.keyLinks || [],
-      parent: doc.parent
+      parent: doc.parent,
+      cover: doc.cover,
+      coverDisplay: doc.coverDisplay
     }, name),
     content: "",
     raw: "",
     outgoingLinks: (doc.links || []).map((target) => ({ target, label: target })),
+    playerOutgoingLinks: (doc.playerLinks || []).map((target) => ({ target, label: target })),
     backlinks: doc.backlinks || []
   });
 }

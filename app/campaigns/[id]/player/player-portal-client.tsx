@@ -1,5 +1,11 @@
 "use client";
 
+import ArticleContent from "@/app/components/article-content";
+
+import { renderArticle } from "@/lib/article";
+
+import { useRepoRefresh } from "@/app/components/use-repo-refresh";
+
 import { FormEvent, MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { Campaign, WikiPage } from "@/lib/types";
 import { renderMarkdown, type IncludeResolver, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
@@ -25,8 +31,8 @@ export default function PlayerPortalClient({ campaign, categories }: { campaign:
   const [quests, setQuests] = useState<PlayerQuest[]>([]);
   const [questsLoaded, setQuestsLoaded] = useState(false);
 
-  useEffect(() => {
-    fetch(`/api/campaigns/${campaign.id}/pages?mode=player`)
+  function loadPages() {
+    return fetch(`/api/campaigns/${campaign.id}/pages?mode=player`)
       .then((res) => res.json())
       .then((data) => {
         const safePages = Array.isArray(data.pages) ? data.pages : [];
@@ -34,7 +40,35 @@ export default function PlayerPortalClient({ campaign, categories }: { campaign:
         setPages(safePages);
         setSelectedSlug((current) => current || (safePages.some((page: WikiPage) => page.slug === hashSlug) ? hashSlug : safePages[0]?.slug || ""));
       });
-  }, [campaign.id]);
+  }
+
+  async function loadArticle(slug: string) {
+    if (!slug) return;
+    const response = await fetch(`/api/campaigns/${campaign.id}/pages/${encodeURIComponent(slug)}?mode=player`, { cache: "no-store" });
+    if (!response.ok) {
+      if (response.status === 403 || response.status === 404) setPages((current) => current.filter((page) => page.slug !== slug));
+      else throw new Error("Could not load article.");
+      return;
+    }
+    const data = await response.json();
+    if (data.page) setPages((current) => current.map((page) => page.slug === slug ? data.page : page));
+  }
+
+  useRepoRefresh(campaign.id, async () => {
+    await loadPages();
+    await loadArticle(selectedSlug);
+    if (questsLoaded) {
+      const res = await fetch(`/api/campaigns/${campaign.id}/quests?mode=player`, { cache: "no-store" });
+      if (!res.ok) throw new Error("Could not reload quests.");
+      const data = await res.json();
+      setQuests(data.quests || []);
+    }
+  });
+
+  useEffect(() => { loadPages(); }, [campaign.id]);
+  useEffect(() => {
+    loadArticle(selectedSlug).catch(() => setMessage("Could not load article."));
+  }, [campaign.id, selectedSlug]);
 
   const filteredPages = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -80,7 +114,7 @@ export default function PlayerPortalClient({ campaign, categories }: { campaign:
     };
   }, [pages]);
 
-  const preview = useMemo(() => renderMarkdown(selectedPage?.content || "", "handout", resolveLink, resolveMedia, resolveInclude), [selectedPage, resolveLink, resolveMedia, resolveInclude]);
+  const preview = useMemo(() => selectedPage ? renderArticle(selectedPage.content || "", selectedPage.frontmatter, "handout", resolveLink, resolveMedia, resolveInclude) : "", [selectedPage, resolveLink, resolveMedia, resolveInclude]);
 
   const onPreviewClick = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
@@ -200,21 +234,13 @@ export default function PlayerPortalClient({ campaign, categories }: { campaign:
             </form>
           </aside>
 
-          <article className="player-reader panel">
+          <article className="player-reader preview page-reader">
             {selectedPage ? (
               <>
-                <header className="handout-header">
-                  <p>{categoryLabels.get(selectedPage.frontmatter.category) || selectedPage.frontmatter.category}</p>
-                  <h1>{selectedPage.frontmatter.name}</h1>
-                  {selectedPage.frontmatter.summary && <span>{selectedPage.frontmatter.summary}</span>}
-                  <div className="badges">
-                    {(selectedPage.frontmatter.tags || []).map((tag) => <span key={tag}>{tag}</span>)}
-                  </div>
-                </header>
                 <div className="player-reader-actions">
                   <button type="button" className="secondary" onClick={copyHandoutLink}>Copy Link</button>
                 </div>
-                <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
+                <ArticleContent html={preview} onClick={onPreviewClick} />
               </>
             ) : (
               <p className="muted">No approved player-visible pages yet.</p>

@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useRepoRefresh } from "@/app/components/use-repo-refresh";
+
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Campaign } from "@/lib/types";
 
 type Objective = { text: string; done: boolean };
@@ -76,6 +78,9 @@ export default function QuestEditor({ campaign, slug }: { campaign: Campaign; sl
   const api = `/api${base}`;
   const [fm, setFm] = useState<Frontmatter | null>(null);
   const [description, setDescription] = useState("");
+  const savedDraft = useRef("");
+  const currentDraft = useRef("");
+  currentDraft.current = JSON.stringify([fm, description]);
   const [pages, setPages] = useState<PageRef[]>([]);
   const [newObj, setNewObj] = useState("");
   const [addPart, setAddPart] = useState("");
@@ -86,20 +91,28 @@ export default function QuestEditor({ campaign, slug }: { campaign: Campaign; sl
   const [shareLinks, setShareLinks] = useState<{ token: string }[]>([]);
   const [shareCopied, setShareCopied] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
+  useRepoRefresh(campaign.id, () => loadEditor(true));
+
+  function loadEditor(refreshing = false) {
+    return (async () => {
       const [qRes, pRes] = await Promise.all([fetch(`${api}/quests/${slug}`), fetch(`${api}/pages`)]);
       if (qRes.ok) {
         const data = await qRes.json();
-        setFm({ ...data.quest.frontmatter, clocks: data.quest.frontmatter.clocks || [] });
-        setDescription(data.quest.description || "");
+        const nextFm = { ...data.quest.frontmatter, clocks: data.quest.frontmatter.clocks || [] };
+        if (!refreshing || (!busy && currentDraft.current === savedDraft.current)) {
+          setFm(nextFm);
+          setDescription(data.quest.description || "");
+          savedDraft.current = JSON.stringify([nextFm, data.quest.description || ""]);
+        }
       } else setMessage("Could not load quest.");
       if (pRes.ok) {
         const data = await pRes.json();
         setPages((data.pages || []).map((p: any) => ({ slug: p.slug, name: p.frontmatter.name })));
       }
     })();
-  }, [slug]);
+  }
+
+  useEffect(() => { loadEditor(); }, [campaign.id, slug]);
 
   const nameBySlug = useMemo(() => new Map(pages.map((p) => [p.slug, p.name])), [pages]);
   const patch = (p: Partial<Frontmatter>) => setFm((f) => (f ? { ...f, ...p } : f));
@@ -110,6 +123,7 @@ export default function QuestEditor({ campaign, slug }: { campaign: Campaign; sl
     setMessage("Saving…");
     const res = await fetch(`${api}/quests/${slug}`, { method: "PUT", body: JSON.stringify({ frontmatter: fm, description }) });
     setBusy(false);
+    if (res.ok) savedDraft.current = JSON.stringify([fm, description]);
     setMessage(res.ok ? "Quest saved." : (await res.json().catch(() => ({})))?.error || "Save failed.");
   }
   async function remove() {

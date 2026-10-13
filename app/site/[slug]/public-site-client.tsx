@@ -1,5 +1,9 @@
 "use client";
 
+import ArticleContent from "@/app/components/article-content";
+
+import { renderArticle } from "@/lib/article";
+
 import { CSSProperties, MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { WikiPage } from "@/lib/types";
 import type { Quest } from "@/lib/quests";
@@ -192,7 +196,7 @@ export default function PublicSiteClient({
   }, [pages]);
 
   const preview = useMemo(
-    () => renderMarkdown(selectedPage?.content || "", "handout", resolveLink, resolveMedia, resolveInclude),
+    () => selectedPage ? renderArticle(selectedPage.content || "", selectedPage.frontmatter, "handout", resolveLink, resolveMedia, resolveInclude) : "",
     [selectedPage, resolveLink, resolveMedia, resolveInclude]
   );
   const questPreview = useMemo(
@@ -208,7 +212,13 @@ export default function PublicSiteClient({
         setDiceRoll(rollFromElement(rollEl));
         return;
       }
-      const galleryAnchor = (event.target as HTMLElement).closest("a.gallery-item");
+      const image = (event.target as HTMLElement).closest("img");
+      if (image) {
+        event.preventDefault();
+        setLightboxSrc(image.getAttribute("src") || null);
+        return;
+      }
+      const galleryAnchor = (event.target as HTMLElement).closest("a.gallery-item, a.image-fullsize-link");
       if (galleryAnchor) {
         event.preventDefault();
         setLightboxSrc(galleryAnchor.getAttribute("href") || null);
@@ -228,7 +238,6 @@ export default function PublicSiteClient({
     [pages]
   );
 
-  const cover = selectedPage?.frontmatter.cover ? mediaSrc(selectedPage.frontmatter.cover, resolveMedia) : "";
   const themeVars = useMemo(() => themeToCssVars(theme) as CSSProperties, [theme]);
   const selectPublicPage = (page: WikiPage) => {
     if (!page.content) {
@@ -451,31 +460,11 @@ export default function PublicSiteClient({
               </>
             ) : selectedPage ? (
               <>
-                {cover && <img className="page-cover page-cover-clickable" src={cover} alt={selectedPage.frontmatter.name} onClick={() => setLightboxSrc(cover)} />}
-                <header className="handout-header">
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-                    <div>
-                      <p>{categoryLabels[selectedPage.frontmatter.category] || selectedPage.frontmatter.category}</p>
-                      <h1>{selectedPage.frontmatter.name}</h1>
-                      {selectedPage.frontmatter.summary && <span>{selectedPage.frontmatter.summary}</span>}
-                    </div>
-                    <a
-                      href={`/site/${slug}/pages/${selectedPage.slug}`}
-                      className="button secondary small"
-                      title="Direct link to this page"
-                      style={{ flexShrink: 0, marginTop: 4 }}
-                    >Share</a>
-                  </div>
-                  {Boolean(selectedPage.frontmatter.tags?.length) && (
-                    <div className="badges">
-                      {(selectedPage.frontmatter.tags || []).map((tag) => (
-                        <span key={tag}>{tag}</span>
-                      ))}
-                    </div>
-                  )}
-                </header>
+                <div className="article-actions">
+                  <a href={`/site/${slug}/pages/${selectedPage.slug}`} className="button secondary small" title="Direct link to this page">Share</a>
+                </div>
                 {selectedPage.content ? (
-                  <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
+                  <ArticleContent html={preview} onClick={onPreviewClick} />
                 ) : (
                   // Index-backed lists carry no bodies; the full article lives on its own page.
                   <p className="muted">

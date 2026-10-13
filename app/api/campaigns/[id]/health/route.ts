@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { canManageCampaign, getCampaign } from "@/lib/db";
 import { getStorageAdapter } from "@/lib/storage";
 import { parsePage } from "@/lib/markdown";
+import { playerSecretRisks } from "@/lib/page-privacy";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import { REL_TYPE_MAP } from "@/lib/relationships";
 import { readPageCache, readRemoteCheckState } from "@/lib/page-cache";
@@ -54,6 +55,11 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
   for (const page of pages) {
     const name = page.frontmatter.name?.trim();
+    const secretRisks = playerSecretRisks(page);
+    if (secretRisks.length) {
+      findings.push({ type: "player-secret-risk", severity: "warn", slug: page.slug, title: name || page.slug,
+        detail: `Player-visible content includes private reference labels: ${secretRisks.join(", ")}. Review these sections and move unrevealed material into GM blocks.` });
+    }
     if (!name) {
       findings.push({ type: "empty-name", severity: "error", slug: page.slug, title: page.slug, detail: "Page has no name in its frontmatter." });
     }

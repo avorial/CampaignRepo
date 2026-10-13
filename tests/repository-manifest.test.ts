@@ -9,6 +9,8 @@ import {
   validateRepositoryManifest
 } from "@/lib/repository-manifest";
 import type { StorageAdapter } from "@/lib/storage";
+import { buildRepositoryManifestFromSearchDocuments } from "@/lib/repository-manifest";
+import type { SearchDocument } from "@/lib/types";
 
 function manifestText(overrides: Record<string, unknown> = {}) {
   return JSON.stringify({
@@ -22,6 +24,7 @@ function manifestText(overrides: Record<string, unknown> = {}) {
         type: "npc",
         tags: ["ally"],
         links: ["location-jardin"],
+        playerLinks: ["location-jardin"],
         visibility: "players",
         approvalStatus: "approved"
       },
@@ -41,6 +44,17 @@ function manifestText(overrides: Record<string, unknown> = {}) {
 }
 
 describe("repository manifest", () => {
+  it("keeps distinct source paths when normalized page IDs collide", () => {
+    const docs = ["The-Legend-of-Oh", "The Legend of Oh"].map((slug) => ({ slug, title: slug, category: "lore", links: [slug], playerLinks: [slug] })) as SearchDocument[];
+    const manifest = buildRepositoryManifestFromSearchDocuments(docs);
+    expect(validateRepositoryManifest(manifest).ok).toBe(true);
+    expect(new Set(manifest.pages.map((page) => page.id)).size).toBe(2);
+    expect(buildRepositoryManifestFromSearchDocuments([...docs].reverse()).pages.map((page) => page.id).sort()).toEqual(manifest.pages.map((page) => page.id).sort());
+    const updated = upsertManifestPage(manifest, { ...manifest.pages[0], id: "lore-The-Legend-of-Oh" });
+    expect(updated.pages).toHaveLength(2);
+    expect(updated.pages[0].id).toBe(manifest.pages[0].id);
+    expect(validateRepositoryManifest(updated).ok).toBe(true);
+  });
   it("loads pages from the manifest without enumerating repository files", async () => {
     const storage = {
       getTextFile: vi.fn(async (path: string) => {
@@ -83,6 +97,7 @@ describe("repository manifest", () => {
   it("rewrites internal links when an upsert changes a page id", () => {
     const manifest = readRepositoryManifestText(manifestText());
     manifest.pages[1].links = ["npc-alain"];
+    manifest.pages[1].playerLinks = ["npc-alain"];
     const next = upsertManifestPage(manifest, {
       id: "organization-alain",
       title: "Alain",
@@ -96,6 +111,7 @@ describe("repository manifest", () => {
 
     expect(next.pages[0].id).toBe("organization-alain");
     expect(next.pages[1].links).toEqual(["organization-alain"]);
+    expect(next.pages[1].playerLinks).toEqual(["organization-alain"]);
     expect(serializeRepositoryManifest(next)).toContain("organization-alain");
   });
 
@@ -134,6 +150,7 @@ describe("repository manifest", () => {
     const written = readRepositoryManifestText(writtenText);
     expect(written.pages.map((page) => page.id)).toEqual(["npc-alain"]);
     expect(written.pages[0].links).toEqual(["unresolved:jardin"]);
+    expect(written.pages[0].playerLinks).toEqual(["unresolved:jardin"]);
   });
 
   it("treats a missing manifest as nothing to purge", async () => {

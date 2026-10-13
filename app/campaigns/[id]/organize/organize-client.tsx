@@ -1,5 +1,7 @@
 "use client";
 
+import { useRepoRefresh } from "@/app/components/use-repo-refresh";
+
 import { useEffect, useMemo, useState } from "react";
 import type { Campaign, WikiPage, CampaignMedia } from "@/lib/types";
 
@@ -70,7 +72,9 @@ export default function OrganizeClient({ campaign, categories }: { campaign: Cam
     setSelected(new Set());
     setLoading(false);
   }
-  useEffect(() => { load(); }, []);
+  useRepoRefresh(campaign.id, () => mediaLoaded ? loadMedia() : load());
+
+  useEffect(() => { load(); }, [campaign.id]);
 
   // ── Media loading (lazy) ──────────────────────────────────────────
   async function loadMedia() {

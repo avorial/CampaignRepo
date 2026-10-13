@@ -1,5 +1,7 @@
 "use client";
 
+import { useRepoRefresh } from "@/app/components/use-repo-refresh";
+
 import { FormEvent, useEffect, useState } from "react";
 import type { Campaign } from "@/lib/types";
 import { DatePicker, formatDateDisplay } from "./date-picker";
@@ -50,7 +52,9 @@ export default function SessionsClient({ campaign }: { campaign: Campaign }) {
     if (calRes.ok) { const d = await calRes.json(); if (d.calendar) setCalendar(d.calendar); }
     setLoading(false);
   }
-  useEffect(() => { load(); }, []);
+  useRepoRefresh(campaign.id, load);
+
+  useEffect(() => { load(); }, [campaign.id]);
 
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -1,8 +1,14 @@
 "use client";
 
+import ArticleContent from "@/app/components/article-content";
+
+import { renderArticle } from "@/lib/article";
+
+import { useRepoRefresh } from "@/app/components/use-repo-refresh";
+
 import { FormEvent, KeyboardEvent, MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bold, Code2, Heading1, Heading2, Heading3, Italic, Link2, List, ListOrdered, Minus, Printer, Quote, Table2 } from "lucide-react";
+import { Bold, Code2, Eye, Heading1, Heading2, Heading3, History, Italic, Link2, List, ListOrdered, Minus, MoreHorizontal, Pencil, Printer, Quote, Share2, Table2, Trash2 } from "lucide-react";
 import type { Campaign, CampaignMedia, WikiPage } from "@/lib/types";
 import { renderMarkdown, type IncludeResolver, type MediaPathResolver, type WikiLinkResolver } from "@/lib/markdown";
 import { buildAliasMap, resolveLinkTarget } from "@/lib/links";
@@ -319,11 +325,26 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
       .then((data) => data?.calendar && setPageCalendar(data.calendar));
   }, [campaign.id, canManage, loadPage, slug]);
 
-  useEffect(() => {
-    const handler = () => { void loadPage(); };
-    window.addEventListener("campaignrepo:repo-refreshed", handler);
-    return () => window.removeEventListener("campaignrepo:repo-refreshed", handler);
-  }, [loadPage]);
+  useRepoRefresh(campaign.id, async () => {
+    const requests: Promise<unknown>[] = [
+      fetch(`/api/campaigns/${campaign.id}/pages`, { cache: "no-store" })
+        .then((res) => res.json()).then((data) => setKnownPages(data.pages || [])),
+      fetch(`/api/campaigns/${campaign.id}/calendar`, { cache: "no-store" })
+        .then((res) => res.ok ? res.json() : null).then((data) => data?.calendar && setPageCalendar(data.calendar))
+    ];
+    if (canManage) {
+      requests.push(
+        fetch(`/api/campaigns/${campaign.id}/media`, { cache: "no-store" })
+          .then((res) => res.json()).then((data) => setMedia(data.media || [])),
+        fetch(`/api/campaigns/${campaign.id}/category-properties`, { cache: "no-store" })
+          .then((res) => res.json()).then((data) => setCategoryProps(data.categoryProperties || {}))
+      );
+    }
+    if (!isEditing && !isSaving) requests.push(loadPage());
+    else setMessage("Repo refreshed. Your current edits have been kept.");
+    setHistoryCommits([]);
+    await Promise.all(requests);
+  });
 
   const resolveLink = useMemo<WikiLinkResolver>(() => {
     const aliasMap = buildAliasMap(
@@ -350,26 +371,28 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
       if (target === slug) return null; // no self-embed
       const resolved = aliasMap.get(target.trim().toLowerCase());
       const page = resolved ? bySlug.get(resolved) : undefined;
-      return page ? page.content : null;
+      return page && (mode === "gm" || (page.frontmatter.visibility === "players" && page.frontmatter.approvalStatus === "approved")) ? page.content : null;
     };
-  }, [knownPages, slug]);
+  }, [knownPages, slug, mode]);
 
-  const preview = useMemo(() => renderMarkdown(content, mode, resolveLink, resolveMedia, resolveInclude), [content, mode, resolveLink, resolveMedia, resolveInclude]);
+  const preview = useMemo(() => renderArticle(content, frontmatter, mode, resolveLink, resolveMedia, resolveInclude), [content, frontmatter, mode, resolveLink, resolveMedia, resolveInclude]);
+  const visibleRelationships = (frontmatter.relationships || []).filter((relationship: any) => mode === "gm" || !relationship.hidden);
 
   const incomingRelationships = useMemo(() => {
     if (!page) return [];
     const bySlug = new Map(knownPages.map(p => [p.slug, p]));
     const byName = new Map(knownPages.map(p => [p.frontmatter.name.toLowerCase(), p]));
     return knownPages.flatMap(p => {
-      if (p.slug === slug) return [];
+      if (p.slug === slug || (mode !== "gm" && (p.frontmatter.visibility !== "players" || p.frontmatter.approvalStatus !== "approved"))) return [];
       return (p.frontmatter.relationships || [])
         .filter((r: any) => {
+          if (mode !== "gm" && r.hidden) return false;
           const resolved = bySlug.get(r.target) ?? byName.get((r.target || "").toLowerCase());
           return resolved?.slug === slug;
         })
         .map((r: any) => ({ sourceSlug: p.slug, sourceName: p.frontmatter.name, type: r.type }));
     });
-  }, [knownPages, slug, page]);
+  }, [knownPages, slug, page, mode]);
 
   const onPreviewClick = useCallback(
     async (event: MouseEvent<HTMLDivElement>) => {
@@ -379,7 +402,13 @@ export default function PageEditor({ campaign, slug, categories }: { campaign: C
         setDiceRoll(rollFromElement(rollEl));
         return;
       }
-      const galleryAnchor = (event.target as HTMLElement).closest("a.gallery-item");
+      const image = (event.target as HTMLElement).closest("img");
+      if (image) {
+        event.preventDefault();
+        setLightboxSrc(image.getAttribute("src") || null);
+        return;
+      }
+      const galleryAnchor = (event.target as HTMLElement).closest("a.gallery-item, a.image-fullsize-link");
       if (galleryAnchor) {
         event.preventDefault();
         setLightboxSrc(galleryAnchor.getAttribute("href") || null);
@@ -1223,9 +1252,6 @@ notes: ""
     </nav>
   );
 
-  const coverRaw = frontmatter.cover ? String(frontmatter.cover) : "";
-  const coverSrc = coverRaw ? (/^https?:\/\//i.test(coverRaw) ? coverRaw : resolveMedia(coverRaw.replace(/^\/?wiki\/media\//, ""))) : "";
-  const coverEl = coverSrc ? <img className="page-cover page-cover-clickable" src={coverSrc} alt="" onClick={() => setLightboxSrc(coverSrc)} /> : null;
   const editorCategories = frontmatter.category && !categories.some((category) => category.id === frontmatter.category)
     ? [...categories, { id: frontmatter.category, label: frontmatter.category }]
     : categories;
@@ -1235,20 +1261,25 @@ notes: ""
       <section className="reader-shell">
         <div className="editor-panel">
           <div className="editor-toolbar">
+            <div className="article-modes" role="group" aria-label="Article view">
             {canManage && <button type="button" className={mode === "gm" ? "active" : ""} onClick={() => { setShowHistory(false); setMode("gm"); }}>GM preview</button>}
             <button type="button" className={mode === "player" ? "active" : ""} onClick={() => { setShowHistory(false); setMode("player"); }}>Player preview</button>
             <button type="button" className={mode === "handout" ? "active" : ""} onClick={() => { setShowHistory(false); setMode("handout"); }}>Handout</button>
-            {canManage && <button type="button" className={showHistory ? "active" : ""} onClick={showHistory ? () => setShowHistory(false) : openHistory}>History</button>}
-            <button type="button" className={watching ? "active" : "secondary"} disabled={watchLoading} onClick={toggleWatch} title={watching ? "Stop watching this page" : "Watch for changes"}>
-              {watching ? "Watching" : "Watch"}
+            </div>
+            {canManage && <button type="button" className={showHistory ? "active icon-button" : "icon-button"} title="Page history" aria-label="Page history" onClick={showHistory ? () => setShowHistory(false) : openHistory}><History size={17} /></button>}
+            <button type="button" className={watching ? "active icon-button" : "secondary icon-button"} aria-label={watching ? "Stop watching this page" : "Watch for changes"} aria-pressed={watching} disabled={watchLoading} onClick={toggleWatch} title={watching ? "Stop watching this page" : "Watch for changes"}>
+              <Eye size={17} />
             </button>
             {canManage && (
-              <button type="button" className={shareOpen ? "active" : "secondary"} onClick={shareOpen ? () => setShareOpen(false) : openShare} title="Create a public share link for this page">
-                Share
+              <button type="button" className={shareOpen ? "active icon-button" : "secondary icon-button"} aria-label="Share page" onClick={shareOpen ? () => setShareOpen(false) : openShare} title="Share page">
+                <Share2 size={17} />
               </button>
             )}
-            {canManage && <button type="button" onClick={() => setIsEditing(true)}>Edit page</button>}
-            {canManage && <button type="button" className="danger" disabled={isSaving} onClick={deletePage}>Delete page</button>}
+            {canManage && <button type="button" onClick={() => setIsEditing(true)}><Pencil size={16} aria-hidden="true" />Edit page</button>}
+            {canManage && <details className="article-more">
+              <summary title="More page actions" aria-label="More page actions"><MoreHorizontal size={18} /></summary>
+              <button type="button" className="danger" disabled={isSaving} onClick={deletePage}><Trash2 size={16} aria-hidden="true" />Delete page</button>
+            </details>}
           </div>
           {shareOpen && canManage && (
             <div className="page-share-panel">
@@ -1361,21 +1392,13 @@ notes: ""
           <>
           {mode !== "handout" && breadcrumbsEl}
           <article className={mode === "handout" ? "preview page-reader handout-preview" : "preview page-reader"}>
-            {coverEl}
-            {mode === "handout" && (
-              <header className="handout-header">
-                <p>Player Handout</p>
-                <h1>{frontmatter.name}</h1>
-                {frontmatter.summary && <span>{frontmatter.summary}</span>}
-              </header>
-            )}
-            <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
+            <ArticleContent html={preview} onClick={onPreviewClick} />
           </article>
-          {mode !== "handout" && (frontmatter.relationships?.length > 0 || incomingRelationships.length > 0) && (
+          {mode !== "handout" && (visibleRelationships.length > 0 || incomingRelationships.length > 0) && (
             <section className="rel-panel">
               <h4>Connections</h4>
               <div className="rel-groups">
-                {(frontmatter.relationships || []).map((rel: any, i: number) => {
+                {visibleRelationships.map((rel: any, i: number) => {
                   const rtDef = REL_TYPE_MAP.get(rel.type);
                   const targetPage = pageBySlug.get(rel.target) ?? knownPages.find(p => p.frontmatter.name.toLowerCase() === (rel.target || "").toLowerCase());
                   const timeMeta = [rel.since ? `since ${rel.since}` : null, rel.until ? `until ${rel.until}` : null].filter(Boolean).join(", ");
@@ -1670,7 +1693,15 @@ notes: ""
         <div className="field-group">
           <h3>Links</h3>
           <label>Key links<input value={keyLinks.join(", ")} onChange={(e) => updateField("keyLinks", e.target.value.split(",").map((v) => v.trim()).filter(Boolean))} readOnly={!fieldsEditable} /></label>
-          <label>Cover image<input value={frontmatter.cover || ""} onChange={(e) => updateField("cover", e.target.value || undefined)} readOnly={!fieldsEditable} placeholder="filename.jpg (in /wiki/media) or URL" /></label>
+          <label>Primary image<input value={frontmatter.cover || ""} onChange={(e) => updateField("cover", e.target.value || undefined)} readOnly={!fieldsEditable} placeholder="filename.jpg (in /wiki/media) or URL" /></label>
+          <label>Image placement
+            <select value={frontmatter.coverDisplay || "auto"} onChange={(event) => updateField("coverDisplay", event.target.value)} disabled={!fieldsEditable}>
+              <option value="auto">Automatic (reuse article image)</option>
+              <option value="portrait">Sidebar image</option>
+              <option value="banner">Top banner</option>
+              <option value="none">Metadata only</option>
+            </select>
+          </label>
           <label>Foundry link<input value={frontmatter.foundryLink || ""} onChange={(e) => updateField("foundryLink", e.target.value)} readOnly={!fieldsEditable} placeholder="Actor UUID or scene URL" /></label>
         </div>
 
@@ -1963,28 +1994,13 @@ notes: ""
             <div className="editor-split" data-pane={mobilePane}>
               <textarea ref={textareaRef} value={content} onChange={onContentChange} onKeyDown={onEditorKeyDown} onPaste={onPaste} spellCheck={false} readOnly={!fieldsEditable} />
               <article className={mode === "handout" ? "preview handout-preview" : "preview"}>
-                {mode === "handout" && (
-                  <header className="handout-header">
-                    <p>Player Handout</p>
-                    <h1>{frontmatter.name}</h1>
-                    {frontmatter.summary && <span>{frontmatter.summary}</span>}
-                  </header>
-                )}
-                <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
+                <ArticleContent html={preview} onClick={onPreviewClick} />
               </article>
             </div>
           </div>
         ) : (
           <article className={mode === "handout" ? "preview page-reader handout-preview" : "preview page-reader"}>
-            {coverEl}
-            {mode === "handout" && (
-              <header className="handout-header">
-                <p>Player Handout</p>
-                <h1>{frontmatter.name}</h1>
-                {frontmatter.summary && <span>{frontmatter.summary}</span>}
-              </header>
-            )}
-            <div onClick={onPreviewClick} dangerouslySetInnerHTML={{ __html: preview }} />
+            <ArticleContent html={preview} onClick={onPreviewClick} />
           </article>
         )}
       </section>

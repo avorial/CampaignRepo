@@ -1,5 +1,7 @@
 "use client";
 
+import { useRepoRefresh } from "@/app/components/use-repo-refresh";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -20,10 +22,14 @@ export default function CommandPalette() {
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const [repoRevision, setRepoRevision] = useState(0);
+
   const currentId = useMemo(() => {
     const match = pathname?.match(/\/campaigns\/(\d+)/);
     return match ? Number(match[1]) : null;
   }, [pathname]);
+
+  useRepoRefresh(currentId, () => setRepoRevision((revision) => revision + 1));
 
   // Only activate for signed-in users (keeps Cmd+K inert on login/register).
   useEffect(() => {
@@ -52,7 +58,7 @@ export default function CommandPalette() {
       .then((r) => (r.ok ? r.json() : { media: [] }))
       .then((d) => setMedia(d.media || []))
       .catch(() => undefined);
-  }, [open, currentId]);
+  }, [open, currentId, repoRevision]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -90,7 +96,7 @@ export default function CommandPalette() {
         .catch(() => setResults([]));
     }, 150);
     return () => clearTimeout(timer);
-  }, [query, open]);
+  }, [query, open, repoRevision]);
 
   const currentCampaign = campaigns.find((c) => c.id === currentId);
   const canManage = Boolean(currentCampaign && (currentCampaign.role === "owner" || currentCampaign.role === "gm"));

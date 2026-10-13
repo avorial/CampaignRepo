@@ -1,4 +1,4 @@
-import { stripGmBlocks } from "@/lib/markdown";
+import { parseWikiLinks, stripGmBlocks } from "@/lib/markdown";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import type { Campaign, SearchDocument, WikiPage } from "@/lib/types";
 import { deleteSearchDocument, getDb, upsertSearchDocuments } from "@/lib/db";
@@ -82,9 +82,12 @@ export async function buildSearchDocuments(storage: StorageAdapter, campaign: Ca
     text: page.content,
     playerText: stripGmBlocks(page.content),
     links: page.outgoingLinks.map((link) => link.target),
+    playerLinks: parseWikiLinks(stripGmBlocks(page.content)).map((link) => link.target),
     backlinks: page.backlinks,
     keyLinks: page.frontmatter.keyLinks,
-    parent: page.frontmatter.parent
+    parent: page.frontmatter.parent,
+    cover: page.frontmatter.cover,
+    coverDisplay: page.frontmatter.coverDisplay
   }));
   const mediaDocs = await buildMediaSearchDocuments(storage, campaign);
   return [...pageDocs, ...mediaDocs];

@@ -2,19 +2,17 @@
 
 import { useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { RefreshCw } from "lucide-react";
+import { campaignIdFromPath, refreshRepository } from "@/lib/repo-refresh";
 
 const HIDDEN_PREFIXES = ["/login", "/register", "/change-password"];
-
-function campaignIdFromPath(pathname: string) {
-  const match = pathname.match(/^\/campaigns\/(\d+)(?:\/|$)/);
-  return match?.[1] || null;
-}
 
 export default function RepoRefreshButton() {
   const pathname = usePathname() || "";
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [failed, setFailed] = useState(false);
   const campaignId = useMemo(() => campaignIdFromPath(pathname), [pathname]);
 
   if (HIDDEN_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return null;
@@ -23,18 +21,15 @@ export default function RepoRefreshButton() {
   async function refresh() {
     if (!campaignId || busy) return;
     setBusy(true);
-    setMessage("Refreshing repo...");
+    setMessage("Refreshing repo and indexes...");
+    setFailed(false);
     try {
-      const pages = await fetch(`/api/campaigns/${campaignId}/pages?refresh=wait`, { cache: "no-store" });
-      if (!pages.ok) throw new Error("Page refresh failed.");
-      const index = await fetch(`/api/campaigns/${campaignId}/search-index`, { method: "POST", cache: "no-store" });
-      if (!index.ok) throw new Error("Article list refresh failed.");
-      await fetch(`/api/campaigns/${campaignId}/graph`, { cache: "no-store" }).catch(() => undefined);
-      window.dispatchEvent(new CustomEvent("campaignrepo:repo-refreshed"));
+      await refreshRepository(campaignId);
       router.refresh();
       setMessage("Repo refreshed.");
       window.setTimeout(() => setMessage(""), 3000);
     } catch (error) {
+      setFailed(true);
       setMessage(error instanceof Error ? error.message : "Refresh failed.");
     } finally {
       setBusy(false);
@@ -43,8 +38,9 @@ export default function RepoRefreshButton() {
 
   return (
     <div className="repo-refresh-fab">
-      {message && <span className={message.includes("failed") ? "repo-refresh-status error" : "repo-refresh-status"}>{message}</span>}
-      <button type="button" className="repo-refresh-btn" onClick={refresh} disabled={busy} title="Force a full repo refresh from storage">
+      {message && <span className={failed ? "repo-refresh-status error" : "repo-refresh-status"}>{message}</span>}
+      <button type="button" className="repo-refresh-btn" onClick={refresh} disabled={busy} title="Reload repo content, rebuild indexes, and update the current view" aria-busy={busy}>
+        <RefreshCw size={16} aria-hidden="true" />
         {busy ? "Refreshing..." : "Refresh repo"}
       </button>
     </div>

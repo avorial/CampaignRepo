@@ -1,5 +1,7 @@
 "use client";
 
+import { useRepoRefresh } from "@/app/components/use-repo-refresh";
+
 import { FormEvent, MouseEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Campaign, CampaignMedia, WikiPage } from "@/lib/types";
@@ -21,6 +23,7 @@ function layersOf(map: CampaignMap): Layer[] {
 export default function MapsClient({ campaign }: { campaign: Campaign }) {
   const router = useRouter();
   const [maps, setMaps] = useState<CampaignMap[]>([]);
+  const [dirtyMaps, setDirtyMaps] = useState<Set<string>>(new Set());
   const [pages, setPages] = useState<WikiPage[]>([]);
   const [images, setImages] = useState<string[]>([]);
   const [selected, setSelected] = useState("");
@@ -43,6 +46,24 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
   const [editingJourneyId, setEditingJourneyId] = useState<string | null>(null);
   const [playerView, setPlayerView] = useState(false);
 
+  useRepoRefresh(campaign.id, async () => {
+    const [mapRes, pageRes, mediaRes] = await Promise.all([
+      fetch(`/api/campaigns/${campaign.id}/maps`, { cache: "no-store" }),
+      fetch(`/api/campaigns/${campaign.id}/pages`, { cache: "no-store" }),
+      fetch(`/api/campaigns/${campaign.id}/media`, { cache: "no-store" })
+    ]);
+    if (!mapRes.ok || !pageRes.ok || !mediaRes.ok) throw new Error("Could not reload maps.");
+    const [mapData, pageData, mediaData] = await Promise.all([mapRes.json(), pageRes.json(), mediaRes.json()]);
+    setMaps((current) => {
+      const remote: CampaignMap[] = mapData.maps || [];
+      return [...remote.filter((m) => !dirtyMaps.has(m.slug)), ...current.filter((m) => dirtyMaps.has(m.slug))];
+    });
+    setSelected((current) => dirtyMaps.has(current) || (mapData.maps || []).some((m: CampaignMap) => m.slug === current)
+      ? current : mapData.maps?.[0]?.slug || "");
+    setPages(pageData.pages || []);
+    setImages(((mediaData.media || []) as CampaignMedia[]).filter((m) => m.mediaType === "image").map((m) => m.name));
+  });
+
   useEffect(() => {
     fetch(`/api/campaigns/${campaign.id}/maps`).then((r) => r.json()).then((d) => {
       const list: CampaignMap[] = d.maps || [];
@@ -59,6 +80,7 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
   const layers = map ? layersOf(map) : [DEFAULT_LAYER];
 
   function patchMap(slug: string, patch: Partial<CampaignMap>) {
+    setDirtyMaps((current) => new Set(current).add(slug));
     setMaps((ms) => ms.map((m) => (m.slug === slug ? { ...m, ...patch } : m)));
   }
 
@@ -158,7 +180,10 @@ export default function MapsClient({ campaign }: { campaign: Campaign }) {
     if (!map) return;
     const res = await fetch(`/api/campaigns/${campaign.id}/maps`, { method: "PUT", body: JSON.stringify(map) });
     const body = await res.json();
-    if (res.ok) setMaps(body.maps || []);
+    if (res.ok) {
+      setMaps(body.maps || []);
+      setDirtyMaps((current) => { const next = new Set(current); next.delete(map.slug); return next; });
+    }
     setMessage(res.ok ? "Map saved." : body.error || "Save failed.");
   }
 
