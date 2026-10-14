@@ -8,6 +8,7 @@ import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import { REL_TYPE_MAP } from "@/lib/relationships";
 import { readPageCache, readRemoteCheckState } from "@/lib/page-cache";
 import { countDirtyPages, listPageConflicts } from "@/lib/sync-queue";
+import { listCampaignPendingJobs } from "@/lib/pending-jobs";
 import { getLastGitHubRateLimit } from "@/lib/github";
 import { readRepositoryManifestText, repositoryManifestPath } from "@/lib/repository-manifest";
 
@@ -333,6 +334,15 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   generated.remoteCheckedAt = remoteCheck.remoteCheckedAt;
   generated.remoteHeadSha = remoteCheck.remoteHeadSha;
   const dirtyPages = countDirtyPages(campaign.id);
+  for (const job of listCampaignPendingJobs(campaign.id)) {
+    const label = job.kind === "sync" ? "Git sync" : "Index rebuild";
+    findings.push({
+      type: "pending-background-job",
+      severity: job.lastError ? "warn" : "info",
+      title: `${label} ${job.lastError ? "retry queued" : "queued"}`,
+      detail: `Scheduled for ${new Date(job.dueAt).toISOString()}.${job.lastError ? ` Failed attempts: ${job.attempts || 0}. Last error: ${job.lastError}` : ""}`
+    });
+  }
   const conflicts = listPageConflicts(campaign.id);
   (generated as { dirtyPages?: number }).dirtyPages = dirtyPages;
   if (dirtyPages) {

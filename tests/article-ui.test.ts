@@ -31,16 +31,15 @@ describe("article image interaction", () => {
     });
     expect(sizing).toMatchObject({ width: "100%", "min-width": "0", "max-width": "1200px" });
   });
-  it("opens the original image, closes with Escape, and restores keyboard focus", async () => {
-    await act(async () => root.render(createElement(ArticleContent, { html: '<img tabindex="0" src="/original.png" alt="Portrait">' })));
-    const image = container.querySelector("img")!;
-    image.focus();
-    await act(async () => image.click());
-    expect(document.querySelector('[role="dialog"] img')?.getAttribute("src")).toBe("/original.png");
-    expect(document.activeElement?.getAttribute("aria-label")).toBe("Close image");
-    await act(async () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })));
+  it("leaves image links native so they open in a new tab without a popup viewer", async () => {
+    const click = vi.fn();
+    await act(async () => root.render(createElement(ArticleContent, { html: '<a class="image-fullsize-link" href="/original.png" target="_blank" rel="noopener noreferrer"><img src="/original.png" alt="Portrait"></a>', onClick: click })));
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+    await act(async () => container.querySelector("img")!.dispatchEvent(event));
+    expect(event.defaultPrevented).toBe(false);
+    expect(click).not.toHaveBeenCalled();
+    expect(container.querySelector("a")?.getAttribute("target")).toBe("_blank");
     expect(document.querySelector('[role="dialog"]')).toBeNull();
-    expect(document.activeElement).toBe(image);
   });
 
   it("keeps wiki and dice interactions delegated to the existing handler", async () => {

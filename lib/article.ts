@@ -36,10 +36,20 @@ export function prepareArticleHtml(html: string, metadata: ArticleMetadata, reso
   }
 
   for (const image of Array.from(body.querySelectorAll("img"))) {
-    if (!image.closest("a")) {
-      image.setAttribute("tabindex", "0");
-      image.setAttribute("role", "button");
-      image.setAttribute("aria-label", `Enlarge ${image.getAttribute("alt") || "image"}`);
+    if (image.closest("[data-roll]")) continue;
+    let link = image.closest("a");
+    if (!link && image.getAttribute("src")) {
+      link = document.createElement("a");
+      link.className = "image-fullsize-link";
+      link.setAttribute("href", image.getAttribute("src")!);
+      image.replaceWith(link);
+      link.append(image);
+    }
+    if (link) {
+      link.setAttribute("target", "_blank");
+      link.setAttribute("rel", "noopener noreferrer");
+      link.setAttribute("aria-label", `Open ${image.getAttribute("alt") || "image"} in a new tab`);
+      link.removeAttribute("download");
     }
   }
 
@@ -50,7 +60,8 @@ export function prepareArticleHtml(html: string, metadata: ArticleMetadata, reso
     link.className = "image-fullsize-link";
     link.setAttribute("href", source);
     link.setAttribute("target", "_blank");
-    link.setAttribute("rel", "noreferrer");
+    link.setAttribute("rel", "noopener noreferrer");
+    link.setAttribute("aria-label", `Open ${metadata.name} image in a new tab`);
     const image = document.createElement("img");
     image.setAttribute("src", source);
     image.setAttribute("alt", metadata.name);

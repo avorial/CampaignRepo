@@ -3,9 +3,18 @@
 New feature directions that are **not** on the current [ROADMAP.md](ROADMAP.md)
 and have not been part of any release wave so far.
 
+Updated 2026-10-13: this is an unscheduled ideas list, not a delivery promise.
+The main roadmap's reliability milestones take precedence. Existing sessions,
+named secret groups, maps with discovery state, and manuscript assembly provide
+foundations for several ideas below; those foundations do not mean the proposed
+recap, reveal-ledger, knowledge-map, or export workflows are complete. A small
+clue-trail pilot is now a candidate on the main roadmap.
+
 **Positioning rule:** most tables run their sessions in **Foundry VTT**.
-CampaignRepo should never compete with the VTT on live play — no initiative
-trackers, dice rollers, battle maps, or fog of war. CampaignRepo is the **world
+CampaignRepo should not expand into a competing live-play VTT: no new initiative
+trackers, battle maps, or fog of war. Existing sheet dice controls are already
+shipped; the scope boundary here is against a full live-play engine, not a
+claim that those controls do not exist. CampaignRepo is the **world
 layer**: canon, memory, players, prep, and everything between sessions. The
 VTT runs the fight; the repo remembers what it meant.
 
@@ -247,7 +256,8 @@ when a session report or reveal says so.
 Recorded so they don't creep back in:
 
 - Initiative / encounter / combat trackers
-- Dice rollers and roll logs
+- A new live-play dice engine or shared roll-log workflow (existing sheet
+  controls remain supported)
 - Battle maps, grids, tokens, fog of war
 - Live GM screens and in-session automation
 - Rollable-table *play* mechanics (authoring tables as content is fine;

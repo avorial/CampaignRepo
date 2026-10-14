@@ -5,6 +5,7 @@ import { getStorageAdapter, isNotFoundError } from "@/lib/storage";
 import { parsePage } from "@/lib/markdown";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
 import { refreshPageCacheInBackground } from "@/lib/page-cache";
+import { executePendingJob, persistPendingJob } from "@/lib/pending-jobs";
 
 export type PageConflict = {
   id: number;
@@ -201,18 +202,14 @@ const scheduledSyncs = new Map<number, ReturnType<typeof setTimeout>>();
 export function scheduleCampaignSync(campaign: Campaign, delayMs = 60_000) {
   const existing = scheduledSyncs.get(campaign.id);
   if (existing) clearTimeout(existing);
-  // Shadow the timer durably so a restart-dropped retry is recovered by the
-  // pending-jobs sweep instead of leaving dirty rows waiting on manual Sync.
-  getDb().prepare(
-    "INSERT INTO pending_jobs (campaignId, kind, dueAt) VALUES (?, 'sync', ?) ON CONFLICT(campaignId, kind) DO UPDATE SET dueAt = excluded.dueAt"
-  ).run(campaign.id, Date.now() + delayMs);
+  persistPendingJob(campaign.id, "sync", Date.now() + delayMs);
   const timer = setTimeout(() => {
     scheduledSyncs.delete(campaign.id);
-    getDb().prepare("DELETE FROM pending_jobs WHERE campaignId = ? AND kind = 'sync'").run(campaign.id);
-    const storage = getStorageAdapter(campaign);
-    if (!storage) return;
-    void flushCampaignSync(storage, campaign).catch((error) => {
-      console.error(`Background sync failed for campaign ${campaign.id}.`, error);
+    void executePendingJob({ campaignId: campaign.id, kind: "sync", dueAt: Date.now() }, async () => {
+      const storage = getStorageAdapter(campaign);
+      if (!storage) throw new Error("Campaign storage is unavailable.");
+      const result = await flushCampaignSync(storage, campaign);
+      if (result.error) throw new Error(result.error);
     });
   }, delayMs);
   scheduledSyncs.set(campaign.id, timer);

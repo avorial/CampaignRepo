@@ -1,5 +1,8 @@
 # CampaignRepo Roadmap
 
+Last reconciled with the code: **2026-10-14**. "Shipped" below means implemented
+in the repository, not independently verified on every hosted deployment.
+
 CampaignRepo is past **1.0** and into the reliability wave. The platform
 surface is broad - wiki, maps, sessions, quests, publishing, dashboards,
 imports, AI tools, and local/GitHub storage - so the focus has shifted from
@@ -14,6 +17,38 @@ Effort key: **S** = days, **M** = about a week, **L** = multi-week.
 
 > Looking for what comes *after* this roadmap? New, not-yet-scheduled feature
 > directions live in [ROADMAP-IDEAS.md](ROADMAP-IDEAS.md).
+
+## Next Work
+
+The core repair and working-copy foundation exists. Prioritize closing its
+failure paths before adding more product surfaces:
+
+1. **Reliable background retries - implemented, 2026-10-14.** Timers and restart
+   recovery now retain pending work until success, including returned sync
+   errors and thrown rebuild failures. Retries back off from five minutes to
+   one hour; Health shows queued work, failed attempts, and the last error.
+   Revision checks preserve newer schedules and process-local deduplication
+   prevents overlapping runs. Interrupted work stays durable for recovery on
+   subsequent page-list requests. Conflicts remain for explicit review rather
+   than indefinite retry. Dedicated boot-time workers and cross-process leases
+   are still separate future work.
+2. **Conflict review and remote deletions - M.** Show local/remote text before
+   whole-page resolution. Treat a remote deletion of a previously synced dirty
+   page as a conflict rather than silently recreating it. A true three-way
+   merge needs the base text retained, not just a base SHA. Regenerate indexes
+   after either resolution choice, with tests for changed and deleted pages.
+3. **Working-copy consistency - M.** Finish moving organize, review, and public
+   preview flows onto the same authoritative working-copy queries. Verify that
+   offline edits, approvals, and parent changes agree across every view.
+4. **Release accessibility checks - S-M.** Add automated browser coverage for
+   keyboard navigation, image dialogs, Maintenance menus, and player previews;
+   retain desktop/mobile screenshot checks as release criteria.
+5. **Investigation prep pilot - M.** Build a small clue-trail workflow on
+   existing page properties: source, points-to, discovered state, and reveal
+   session. Start with The Golden Ruin rather than a separate opaque data store.
+
+Conflict review (item 2) is the recommended next implementation. Items 2-5 remain
+planned work, not shipped features or release-date commitments.
 
 ## Reliability and Sync Roadmap
 
@@ -56,7 +91,7 @@ Shipped: `POST /api/campaigns/[id]/repair` rebuilds the SQLite page cache,
 `wiki/search/index.json`, and `.campaignrepo/index.json` from canonical page
 source with a per-step report (the cache rebuild re-parses every page rather
 than trusting sha-matching rows, so poisoned rows cannot survive). "Repair
-indexes" buttons live in the Health center and campaign Settings. Health now
+indexes" is available in the Maintenance menus in Health and campaign Settings. Health now
 reports generated-state drift: manifest/search/cache counts vs page files,
 missing or invalid manifest and snapshot, cache refresh errors, and cached
 pages that lost their body while source has content. Empty source pages are
@@ -64,8 +99,8 @@ reported, never silently filled. Page detail reads already recover from empty
 cache rows. Regression tests cover manifest/snapshot recreation, poisoned
 cache rows, empty source pages, and named-step failures.
 
-Remaining for later waves: last-Git-sync status surfacing (R4 territory) and
-the `campaignrepo repair` CLI form (R6).
+Remaining: last-successful-Git-sync status surfacing. Headless repair already
+has a script against a running instance; see R6 for the shipped command.
 
 The original R1 plan, for reference:
 
@@ -105,6 +140,8 @@ the snapshot rebuild fails after page writes landed, the response reports
 `indexesStale` with the reason instead of failing the edit, and health/Repair
 reconciles. The committed snapshot is now lean (metadata + excerpt, no full
 bodies) — full text lives in Markdown (canonical) and SQLite FTS (live search).
+Manifest rebuilds also distinguish source paths whose normalized IDs collide,
+without requiring either source page to be renamed.
 
 Also shipped toward R3/R4: local-first page lists. Reads serve the SQLite
 cache with zero GitHub calls inside a 5-minute remote-check window; once
@@ -150,8 +187,9 @@ working copy as dirty and the editor reports "saved locally — Git sync failed
 and will retry" instead of losing the edit. Dirty rows survive full cache
 refreshes and Repair (local edits outrank the remote copy until synced or
 resolved), and reads already serve the cache first with the 5-minute remote
-window. Remaining: moving organize/review/public-preview reads fully onto
-working-copy queries and a dirty-state badge in page lists.
+window. Page lists expose dirty/conflict state and the workspace navigation
+badges affected pages. Remaining: moving organize/review/public-preview reads
+fully onto working-copy queries.
 
 The original R3 plan, for reference:
 
@@ -197,10 +235,17 @@ Shipped: `lib/sync-queue.ts` flushes every dirty page in one commit
 ("CampaignRepo: sync N pages"), with a conflict guard per page before writing.
 Commit failure keeps all dirty flags and records the error per row; success
 clears flags and schedules the index rebuild. Sync Now lives in the Health
-center, campaign Settings, and `POST /api/campaigns/[id]/sync` (API-token
-capable). Failed local saves schedule a 60-second background retry. Health
-shows the dirty count. Note: the retry timer is in-process — a restart drops
-it, and the manual Sync Now or next failed-save reschedules.
+center, the campaign Settings Maintenance menu, and
+`POST /api/campaigns/[id]/sync` (API-token capable). Failed local saves schedule
+a 60-second background retry. Health shows the dirty count.
+
+Sync/rebuild schedules are shadowed in SQLite `pending_jobs`, and page-list
+requests trigger a throttled overdue-job sweep. Pending rows remain until
+successful completion, and returned sync errors and thrown failures schedule
+automatic retries with bounded backoff. Health surfaces retry timing and errors.
+Newer schedules survive older completions, and conflicts wait for explicit
+review. After a restart, recovery is request-driven, not a boot-time worker;
+cross-process execution leases are not yet implemented.
 
 The original R4 plan, for reference:
 
@@ -326,10 +371,15 @@ Tests:
   cache bodies from source, cache refreshes refuse to sweep a populated cache
   down by more than half, and page lists distrust a cache far thinner than
   the last remote index count.
-- **In-process timers.** The rebuild debounce, sync retry, and background
-  refresh dedupe live in process memory; a container restart drops any
-  scheduled work until the next request or manual Sync/Repair. A persisted
-  queue with a boot sweep would close this.
+- **Background work coordination.** Durable jobs survive interrupted execution
+  and retain retries for failures; same-process runs are deduplicated. Recovery
+  after restart still depends on page-list requests, and multiple app processes
+  do not yet share execution leases. Background refresh deduplication remains
+  process-local.
+- **Privacy audit limits.** Health flags explicitly labeled private sections;
+  it cannot determine whether an otherwise ordinary paragraph contains a story
+  secret. Authors still need to protect unrevealed material with GM blocks and
+  appropriate repository access permissions.
 
 ## Media Strategy Map
 
@@ -420,6 +470,9 @@ CampaignRepo currently ships:
 
 ## Shipped in the 1.1 Wave
 
+Recent additions are grouped here for continuity; these headings are feature
+records, not evidence of a separately tagged package release.
+
 ### 32. Mobile app-like chrome - shipped
 
 Phone widths get a fixed bottom tab bar (Repos / Wiki / Review / Portal), a
@@ -502,6 +555,44 @@ Follow-up candidates from the same scan:
 - Import adapter for Obsidian RPG Manager vault metadata/codeblocks, mapping
   their elements into CampaignRepo pages, relationships, sessions, and custom
   properties.
+
+### 40. Repository refresh across campaign views - shipped
+
+The shared Refresh repo button rebuilds generated state and waits for the open
+campaign views to reload. Subscribers cover workspace, page/session/quest
+editors, player portal, maps, boards, calendar, and the other campaign tools.
+Unsaved drafts are preserved. Failure responses, including HTTP-200 cache
+fallbacks carrying errors, are surfaced instead of reporting false success.
+New campaigns use the same button and index initialization path.
+
+### 41. Consistent article images and controls - shipped
+
+A shared article renderer uses one title and summary and avoids a duplicate
+top cover when the same portrait already exists in the sidebar. Portraits are
+uncropped, move above the text on narrow screens, and open in a keyboard-
+accessible full-size image link opening in a new tab. `coverDisplay` supports sidebar, banner, and
+metadata-only placement. Editor previews, player portals, public pages, shares,
+and manuscript readers use the shared rendering path. Maintenance commands are
+grouped, while Refresh repo stays directly available.
+
+### 42. Player-safety hardening and documentation - shipped
+
+Player payloads strip protected summaries, import metadata, hidden
+relationships, and GM-only link metadata; raw payloads are serialized from
+the filtered page. Player previews also filter hidden connections and private
+page embeds. Health warns about explicitly labeled private sections outside
+GM blocks, and the Yellow King NPC template protects motives and scene use by
+default. A content pass protected reference sections on 67 existing campaign
+pages and rebuilt the affected campaign indexes.
+
+The application README and ten campaign READMEs were refreshed with campaign
+context, system synopses, repository usage, and maintenance guidance. Newly
+created campaigns receive the expanded README format.
+
+Verification for items 40-42: 249 automated tests passed, type checking and a
+production build passed, and desktop/mobile browser checks covered portraits,
+image zoom/focus, player privacy, portal loading, and maintenance controls.
+This was a targeted verification pass, not a full accessibility certification.
 
 ## Deferred Feature Track: Per-Game Sheet & Template Pass - L
 
@@ -617,51 +708,34 @@ lists and dashboards, clue trails as first-class prep objects, GM task boards,
 and creation wizards for high-friction prep jobs. Keep the data portable by
 storing these as Markdown/YAML/frontmatter, not opaque app state.
 
-## Recommended Next Release Sequence
+## Delivery Milestones
 
-### Release 1.2 - Reliability and repair
+The previous proposed 1.2-1.6 sequence is superseded by the code reconciliation
+above. Repair, bulk source-first editing, a dirty working copy, batched sync,
+and whole-page conflict choices already exist. Do not treat them as future
+release requirements or infer actual release tags from the old numbering.
 
-1. Ship the repair/rebuild action for manifest, search index, and page cache.
-2. Expand health checks for empty bodies, stale generated state, invalid
-   parents, mismatched counts, and last Git sync status.
-3. Make page detail reads recover from empty cache when source content exists.
-4. Make generated indexes explicitly disposable and rebuildable.
-5. Add regression tests for blank cache, parent nesting, public/GM drift, and
-   generated-index rebuilds.
+### Next - Finish Reliability
 
-### Release 1.3 - Bulk edit safety
+Acceptance criteria:
 
-1. Rework bulk organize to update page source first.
-2. Rebuild generated snapshots from page source after bulk changes.
-3. Commit page changes and generated snapshots together when Git sync succeeds.
-4. Preserve local intent and mark indexes stale when Git sync or rebuild fails.
-5. Add large-campaign tests for parent moves, approvals, category changes, and
-   GitHub listings with missing file text.
+- Completed locally: failed background jobs remain pending with bounded retry
+  timing; interrupted jobs remain durable until successful completion.
+- Remote deletions are reviewed explicitly when local edits exist.
+- Either conflict resolution choice leaves cache, search, and navigation in
+  agreement with the resolved page set.
+- Tests exercise returned failures as well as exceptions and successful syncs.
 
-### Release 1.4 - DB working copy and sync queue
+### Following - Consistent Reads and Accessible Controls
 
-1. Introduce the page working-copy table.
-2. Move page list/detail/organize/review/public preview reads to the working
-   copy.
-3. Add dirty flags, last sync SHA, and last sync error.
-4. Batch Git writes behind a sync queue and explicit Sync Now action.
-5. Show "saved locally, Git sync failed" instead of making failed pushes look
-   like lost edits.
+Finish working-copy reads for organize/review/public preview, add conflict
+comparison before resolution, and make keyboard/screen-reader/browser checks
+part of release verification. Measure large-campaign lists and media loading
+before choosing virtualization or thumbnail work.
 
-### Release 1.5 - Conflict handling and offline foundations
+### Then - Investigation Prep and System Depth
 
-1. Add three-way page conflict records for local dirty vs. remote changed pages.
-2. Regenerate generated JSON after conflict resolution instead of manually
-   merging snapshot files.
-3. Make dirty local edits survive restart and network outage.
-4. Lay the foundation for offline/PWA work.
-
-### Release 1.6 - Game system depth and scale polish
-
-1. Resume the per-game sheet/template checklist pass.
-2. Keyboard/screen-reader accessibility pass.
-3. Performance budgets, virtualized lists, thumbnails, and large-campaign
-   testing.
-4. Re-import previews, Foundry module sync research, and extension rules.
-5. Expand session readiness into clue trails, prep tasks, and guided creation
-   wizards.
+Pilot clue trails and session prep with an existing investigation campaign.
+Resume the per-game sheet checklist one system at a time. Deeper Foundry
+integration, imports, offline/PWA work, and extension APIs remain separate
+backlog tracks rather than prerequisites for the next reliability patch.

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
 
 // getStorageAdapter lazy-requires ./storage-local for Next bundling; vitest's
@@ -21,7 +21,8 @@ import path from "node:path";
 import { getDb } from "@/lib/db";
 import { clearPendingJob, listOverduePendingJobs, persistPendingJob, runPendingJob } from "@/lib/jobs";
 import { scheduleSearchIndexRebuild } from "@/lib/search";
-import { markPageDirty, countDirtyPages } from "@/lib/sync-queue";
+import { markPageDirty, countDirtyPages, scheduleCampaignSync } from "@/lib/sync-queue";
+import { listCampaignPendingJobs } from "@/lib/pending-jobs";
 import { parsePage } from "@/lib/markdown";
 import type { Campaign } from "@/lib/types";
 
@@ -29,6 +30,7 @@ let campaign: Campaign;
 let tmpDir = "";
 
 beforeEach(() => {
+  adapterHolder.make = (localPath: string) => new LocalFolderAdapter(localPath);
   const db = getDb();
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "crepo-jobs-"));
   fs.mkdirSync(path.join(tmpDir, "wiki", "pages"), { recursive: true });
@@ -43,7 +45,71 @@ beforeEach(() => {
   campaign = { id: campaignId, userId, name: "Jobs Test", owner: "o", repo: "r", branch: "main", gameType: "Traveller", storageBackend: "local", localPath: tmpDir, createdAt: "" } as Campaign;
 });
 
+afterEach(() => {
+  clearPendingJob(campaign.id, "sync");
+  clearPendingJob(campaign.id, "rebuild");
+  vi.clearAllTimers();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
+
 describe("pending jobs survive restarts", () => {
+  it.each(["sweep", "timer"])("retains dirty pages and a retry when %s sync returns failure", async path => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    adapterHolder.make = localPath => {
+      const storage = new LocalFolderAdapter(localPath);
+      storage.commitFiles = vi.fn().mockRejectedValue(new Error("Git unreachable"));
+      return storage;
+    };
+    markPageDirty(campaign.id, parsePage("Recovered", "---\nname: Recovered\n---\nSaved locally."));
+    if (path === "timer") {
+      scheduleCampaignSync(campaign, 100);
+      await vi.advanceTimersByTimeAsync(100);
+      await vi.waitFor(() => expect(listCampaignPendingJobs(campaign.id)[0]?.attempts).toBe(1));
+    } else {
+      persistPendingJob(campaign.id, "sync", Date.now());
+      expect(await runPendingJob({ campaignId: campaign.id, kind: "sync", dueAt: Date.now() })).toBe(false);
+    }
+    expect(countDirtyPages(campaign.id)).toBe(1);
+    expect(listCampaignPendingJobs(campaign.id)[0]).toMatchObject({ kind: "sync", attempts: 1, lastError: "Git unreachable" });
+  });
+
+  it("retains timer-driven rebuild failures for retry", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    adapterHolder.make = localPath => {
+      const storage = new LocalFolderAdapter(localPath);
+      storage.commitFiles = vi.fn().mockRejectedValue(new Error("Index write failed"));
+      return storage;
+    };
+    scheduleSearchIndexRebuild(campaign, 100);
+    await vi.advanceTimersByTimeAsync(100);
+    await vi.waitFor(() => expect(listCampaignPendingJobs(campaign.id)[0]?.attempts).toBe(1));
+    expect(listCampaignPendingJobs(campaign.id)[0]).toMatchObject({ kind: "rebuild", attempts: 1, lastError: "Index write failed" });
+  });
+
+  it("keeps unavailable-storage jobs queued rather than dropping them", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    adapterHolder.make = null;
+    persistPendingJob(campaign.id, "sync", Date.now());
+    expect(await runPendingJob({ campaignId: campaign.id, kind: "sync", dueAt: Date.now() })).toBe(false);
+    expect(listCampaignPendingJobs(campaign.id)[0]).toMatchObject({ attempts: 1, lastError: "Campaign storage is unavailable." });
+  });
+
+  it("does not repeatedly retry conflicts requiring a user choice", async () => {
+    vi.useFakeTimers();
+    const storage = new LocalFolderAdapter(tmpDir);
+    const base = await storage.getTextFile("wiki/pages/Seed.md");
+    markPageDirty(campaign.id, parsePage("Seed", "---\nname: Seed\n---\nLocal changes.", base.sha), base.sha);
+    await storage.putFile("wiki/pages/Seed.md", "---\nname: Seed\n---\nRemote changes.", "Remote edit", base.sha);
+    persistPendingJob(campaign.id, "sync", Date.now());
+    expect(await runPendingJob({ campaignId: campaign.id, kind: "sync", dueAt: Date.now() })).toBe(true);
+    expect(countDirtyPages(campaign.id)).toBe(1);
+    expect(listCampaignPendingJobs(campaign.id)).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
+  });
   it("schedules persist a durable row that outlives the in-process timer", () => {
     vi.useFakeTimers();
     try {

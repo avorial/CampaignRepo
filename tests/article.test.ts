@@ -13,6 +13,16 @@ const media = (name: string) => "/campaign-media/1/" + name;
 const documentFor = (html: string) => new JSDOM(html).window.document;
 
 describe("shared article presentation", () => {
+  it("opens authored sidebar pictures and galleries in new tabs without download attributes", () => {
+    const html = prepareArticleHtml('<aside class="wiki-infobox"><img src="/portrait.png" alt="Portrait"></aside><a class="gallery-item" href="/scene.png" download><img src="/scene.png"></a><button data-roll="2d6"><img src="/dice.png"></button>', { ...metadata, cover: undefined });
+    const document = documentFor(html);
+    const portrait = document.querySelector(".wiki-infobox a")!;
+    expect(portrait.getAttribute("href")).toBe("/portrait.png");
+    expect(portrait.getAttribute("target")).toBe("_blank");
+    expect(portrait.getAttribute("aria-label")).toContain("new tab");
+    expect(document.querySelector(".gallery-item")?.hasAttribute("download")).toBe(false);
+    expect(document.querySelector("[data-roll] a")).toBeNull();
+  });
   it("keeps the existing sidebar portrait without adding a duplicate cover", () => {
     const content = '# Example Person\n\n<div class="wiki-layout"><div class="wiki-main"><h2>Public Face</h2><p>Public facts.</p></div><aside class="wiki-infobox"><img src="/wiki/media/portrait.png" alt="Portrait" /></aside></div>';
     const document = documentFor(renderArticle(content, metadata, "player", undefined, media));

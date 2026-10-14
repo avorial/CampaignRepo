@@ -30,6 +30,7 @@ const GROUPS: { type: string; label: string }[] = [
   { type: "player-secret-risk", label: "Player-facing private references" },
   { type: "page-conflict", label: "Page conflicts (local vs remote)" },
   { type: "unsynced-local-edits", label: "Unsynced local edits" },
+  { type: "pending-background-job", label: "Queued background work" },
   { type: "empty-cache-body", label: "Cached pages missing their body" },
   { type: "invalid-manifest", label: "Invalid repository manifest" },
   { type: "stale-manifest", label: "Repository manifest drift" },

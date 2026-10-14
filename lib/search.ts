@@ -1,10 +1,11 @@
 import { parseWikiLinks, stripGmBlocks } from "@/lib/markdown";
 import { aliasMapFromPages, resolveTarget } from "@/lib/links";
 import type { Campaign, SearchDocument, WikiPage } from "@/lib/types";
-import { deleteSearchDocument, getDb, upsertSearchDocuments } from "@/lib/db";
+import { deleteSearchDocument, upsertSearchDocuments } from "@/lib/db";
 import { getStorageAdapter, type StorageAdapter } from "@/lib/storage";
 import { refreshPageCache } from "@/lib/page-cache";
 import { buildRepositoryManifestFromSearchDocuments, repositoryManifestPath, serializeRepositoryManifest } from "@/lib/repository-manifest";
+import { executePendingJob, persistPendingJob } from "@/lib/pending-jobs";
 
 type MediaMetadata = {
   alt?: string;
@@ -151,18 +152,13 @@ const scheduledRebuilds = new Map<number, ReturnType<typeof setTimeout>>();
 export function scheduleSearchIndexRebuild(campaign: Campaign, delayMs = 15_000) {
   const existing = scheduledRebuilds.get(campaign.id);
   if (existing) clearTimeout(existing);
-  // Shadow the timer durably so a restart-dropped rebuild is recovered by the
-  // pending-jobs sweep instead of vanishing.
-  getDb().prepare(
-    "INSERT INTO pending_jobs (campaignId, kind, dueAt) VALUES (?, 'rebuild', ?) ON CONFLICT(campaignId, kind) DO UPDATE SET dueAt = excluded.dueAt"
-  ).run(campaign.id, Date.now() + delayMs);
+  persistPendingJob(campaign.id, "rebuild", Date.now() + delayMs);
   const timer = setTimeout(() => {
     scheduledRebuilds.delete(campaign.id);
-    getDb().prepare("DELETE FROM pending_jobs WHERE campaignId = ? AND kind = 'rebuild'").run(campaign.id);
-    const storage = getStorageAdapter(campaign);
-    if (!storage) return;
-    void rebuildSearchIndex(storage, campaign).catch((error) => {
-      console.error(`Background search rebuild failed for campaign ${campaign.id}.`, error);
+    void executePendingJob({ campaignId: campaign.id, kind: "rebuild", dueAt: Date.now() }, async () => {
+      const storage = getStorageAdapter(campaign);
+      if (!storage) throw new Error("Campaign storage is unavailable.");
+      await rebuildSearchIndex(storage, campaign);
     });
   }, delayMs);
   scheduledRebuilds.set(campaign.id, timer);

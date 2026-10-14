@@ -195,6 +195,9 @@ CREATE TABLE IF NOT EXISTS pending_jobs (
   campaignId INTEGER NOT NULL,
   kind TEXT NOT NULL CHECK(kind IN ('rebuild', 'sync')),
   dueAt INTEGER NOT NULL,
+  revision INTEGER NOT NULL DEFAULT 0,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  lastError TEXT,
   PRIMARY KEY (campaignId, kind)
 );
 CREATE TABLE IF NOT EXISTS page_conflicts (
@@ -211,6 +214,10 @@ CREATE TABLE IF NOT EXISTS page_conflicts (
 `);
 
 const cacheStateColumns = db.prepare("PRAGMA table_info(campaign_page_cache_state)").all() as Array<{ name: string }>;
+const jobColumns = db.prepare("PRAGMA table_info(pending_jobs)").all() as Array<{ name: string }>;
+for (const [name, definition] of [["revision", "INTEGER NOT NULL DEFAULT 0"], ["attempts", "INTEGER NOT NULL DEFAULT 0"], ["lastError", "TEXT"]]) {
+  if (!jobColumns.some(column => column.name === name)) db.exec(`ALTER TABLE pending_jobs ADD COLUMN ${name} ${definition}`);
+}
 if (!cacheStateColumns.some((c) => c.name === "remoteCheckedAt")) {
   try { db.exec("ALTER TABLE campaign_page_cache_state ADD COLUMN remoteCheckedAt TEXT"); } catch { /* already migrated */ }
 }

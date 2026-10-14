@@ -198,7 +198,7 @@ Use `[[Page Name]]` or `[[Page Name|label]]` for wiki links. Media links use pat
 
 ### Article Images
 
-Articles use one title and summary, followed by the page's authored sections. A primary image defaults to a full, uncropped sidebar portrait; an existing matching sidebar image takes precedence over a duplicate cover. On narrow screens, the sidebar moves above the article text. Images open at full size when clicked or activated with the keyboard.
+Articles use one title and summary, followed by the page's authored sections. A primary image defaults to a full, uncropped sidebar portrait; an existing matching sidebar image takes precedence over a duplicate cover. On narrow screens, the sidebar moves above the article text. Image links open the full image in a new browser tab, including keyboard and middle-click activation. Media responses identify supported image formats explicitly and serve them inline rather than as generic downloads.
 
 The editor's image-placement setting maps to `coverDisplay`: `auto` or `portrait` for the sidebar, `banner` for a full-width uncropped image, and `none` to suppress only the generated primary image. Authored body images and galleries remain intact.
 
@@ -227,6 +227,12 @@ The **Maintenance** menu in campaign settings groups search, synchronization, an
 GitHub-backed page editing uses a local working copy with queued synchronization. Some operations still write directly to repository storage. Check sync status and campaign health when work has not reached Git or when a view disagrees with the source files.
 
 Generated indexes can be rebuilt. Do not replace real campaign content with an index snapshot.
+
+Background sync and index rebuild jobs stay queued until completion. Failures
+retry after five minutes with backoff capped at one hour; Health shows queued
+work and the last error. Conflicts require review instead of repeated retries.
+After a restart, page-list requests recover overdue work; there is no separate
+always-running queue worker or cross-process execution lease.
 
 ## Imports and Backups
 
