@@ -5,6 +5,8 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import ArticleContent from "@/app/components/article-content";
 import MaintenanceMenu from "@/app/components/maintenance-menu";
+import { readFileSync } from "node:fs";
+import { parse } from "postcss";
 
 let root: Root;
 let container: HTMLDivElement;
@@ -21,6 +23,14 @@ afterEach(async () => {
 });
 
 describe("article image interaction", () => {
+  it("gives centered readers an explicit width despite article size containment", () => {
+    const css = parse(readFileSync("app/globals.css", "utf8"));
+    const sizing: Record<string, string> = {};
+    css.walkRules(".reader-shell", rule => {
+      rule.walkDecls(declaration => { sizing[declaration.prop] = declaration.value; });
+    });
+    expect(sizing).toMatchObject({ width: "100%", "min-width": "0", "max-width": "1200px" });
+  });
   it("opens the original image, closes with Escape, and restores keyboard focus", async () => {
     await act(async () => root.render(createElement(ArticleContent, { html: '<img tabindex="0" src="/original.png" alt="Portrait">' })));
     const image = container.querySelector("img")!;
